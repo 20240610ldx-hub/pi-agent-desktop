@@ -12,6 +12,7 @@ import { chromium } from "playwright";
 import { checkFilePanel, filePanelFixture, filePanelStylesheet } from "./file-panel.mjs";
 import { checkExtensionDialogs, extensionSource } from "./extension-dialog.mjs";
 import { checkChatAppearance } from "./chat-appearance.mjs";
+import { checkSidebarBreakpoint } from "./sidebar-breakpoint.mjs";
 import { checkMcpManager } from "./mcp-manager.mjs";
 import { checkMissingWorkspace, MISSING_WORKSPACE, missingWorkspaceReply } from "./missing-workspace.mjs";
 
@@ -464,6 +465,7 @@ try {
       await page.goto(`${base}/?session=${RICH}`, { waitUntil: "domcontentloaded" });
       await page.locator(".markdown-code-block pre").waitFor();
       await checkChatAppearance(page);
+      await checkSidebarBreakpoint(page);
       await checkMcpManager(page, { agentDir, cwd: project });
     }
     assert.deepEqual(errors, [], `Browser errors at width ${viewport.width}`);

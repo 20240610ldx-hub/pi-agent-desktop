@@ -262,6 +262,7 @@ export function AppShell() {
   const [projectTrustBusy, setProjectTrustBusy] = useState(false);
   const [projectTrustError, setProjectTrustError] = useState<ProjectTrustFailure | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(() => !initialNavigation.sidebarCollapsed);
+  const desktopSidebarOpenRef = useRef(!initialNavigation.sidebarCollapsed);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [rightPanelExpanded, setRightPanelExpanded] = useState(false);
   const rightPanelFullWidth = rightPanelOpen && rightPanelExpanded && !isMobile;
@@ -363,7 +364,7 @@ export function AppShell() {
   // On mobile the sidebar is an overlay drawer; hide it by default so the chat
   // is visible on load. Runs once the breakpoint resolves after hydration.
   useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
+    setSidebarOpen(isMobile ? false : desktopSidebarOpenRef.current);
   }, [isMobile]);
   // Close right panel when viewport is too narrow for split-panel layout.
   // Uses matchMedia's change event (not just the rightPanelOpen dependency)
@@ -534,7 +535,11 @@ export function AppShell() {
 
   const handleSidebarToggle = useCallback(() => {
     if (isMobile) setActiveTopPanel(null);
-    setSidebarOpen((open) => !open);
+    setSidebarOpen((open) => {
+      const next = !open;
+      if (!isMobile) desktopSidebarOpenRef.current = next;
+      return next;
+    });
   }, [isMobile]);
 
   const handleRightPanelToggle = useCallback(() => {
