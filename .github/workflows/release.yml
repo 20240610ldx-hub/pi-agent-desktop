@@ -222,3 +222,40 @@ jobs:
 
           This issue is reused for subsequent failures; close it once a release is green."
           fi
+
+  # Keeps Casks/pi-agent.rb (the Homebrew tap: `brew tap abcwyc/pi-agent-desktop
+  # https://github.com/abcwyc/pi-agent-desktop`) on the release that was just
+  # published. Runs only after `manifest` has published it, so a draft or partly
+  # failed release never reaches Homebrew users. Placed after `notify` because
+  # release-workflows.test.mjs slices the manifest job up to `notify:`.
+  homebrew:
+    needs: manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pi-agent-desktop
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Point the cask at the published DMG
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./src-tauri/pi-agent-desktop-package.json').version")"
+          digest="$(gh release view "v$version" --json assets \
+            --jq '.assets[] | select(.name | endswith("_aarch64.dmg")) | .digest')"
+          if [ -z "$digest" ]; then
+            echo "No aarch64 DMG digest on release v$version" >&2
+            exit 1
+          fi
+          node scripts/update-homebrew-cask.mjs "$version" "$digest"
+          if git diff --quiet -- Casks; then
+            echo "Cask already at $version"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/pi-agent.rb
+          git commit -m "chore(homebrew): update cask to $version"
+          git push origin HEAD:main
