@@ -1771,6 +1771,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
+        // Restores the window's size, position and maximized state on the next
+        // launch and saves them when it closes or the app exits. Only those
+        // three: VISIBLE would resurrect a window the user hid to the tray
+        // before quitting (this app owns show/hide itself), and DECORATIONS
+        // would fight the custom window chrome.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::SIZE
+                        | tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::MAXIMIZED,
+                )
+                .build(),
+        )
         .on_menu_event(|app, event| {
             // A popup menu's click: hand it to the command waiting on it.
             if event.id().as_ref().starts_with(POPUP_ID_PREFIX) {
