@@ -375,6 +375,13 @@ export async function quitAppNative(): Promise<void> {
   await invoke("quit_app");
 }
 
+/** Clear the webview's disk caches; resolves to the bytes freed (0 in a browser). */
+export async function clearAppCacheNative(): Promise<number> {
+  if (!isTauriDesktop()) return 0;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<number>("clear_app_cache");
+}
+
 export async function showMainWindowNative(): Promise<void> {
   if (!isTauriDesktop()) return;
   const { invoke } = await import("@tauri-apps/api/core");

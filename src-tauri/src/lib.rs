@@ -859,6 +859,72 @@ fn set_ui_theme(app: AppHandle, theme: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Total size in bytes of every regular file under `path` (0 when missing).
+fn dir_size(path: &Path) -> u64 {
+    let Ok(entries) = fs::read_dir(path) else { return 0 };
+    entries
+        .flatten()
+        .map(|entry| match entry.file_type() {
+            Ok(kind) if kind.is_dir() => dir_size(&entry.path()),
+            Ok(kind) if kind.is_file() => entry.metadata().map(|m| m.len()).unwrap_or(0),
+            _ => 0,
+        })
+        .sum()
+}
+
+/// Remove `path` and report how many bytes it held. Failures (a file the
+/// webview still has open on Windows) are skipped rather than reported: the
+/// next launch clears what is left, and a partial clear is still a clear.
+fn remove_counting(path: &Path) -> u64 {
+    let size = dir_size(path);
+    if fs::remove_dir_all(path).is_ok() {
+        size
+    } else {
+        size.saturating_sub(dir_size(path))
+    }
+}
+
+/// Delete the webview's disk caches while the app runs and return the bytes
+/// freed. Deliberately narrower than `clear_webview_caches`: on macOS that one
+/// removes `~/Library/WebKit/<id>`, which also holds `localStorage` (sidebar
+/// width, drafts, open tabs), so a user-triggered clear must not touch it.
+/// Sessions, settings and credentials live in `~/.pi/agent` and are never
+/// reached from here.
+fn clear_runtime_caches(app: &AppHandle) -> u64 {
+    let mut freed = 0;
+    // macOS ~/Library/Caches/<id> (WebKit network cache), Linux ~/.cache/<id>,
+    // Windows %LOCALAPPDATA%\<id>.
+    if let Ok(cache_dir) = app.path().app_cache_dir() {
+        for entry in fs::read_dir(&cache_dir).into_iter().flatten().flatten() {
+            freed += remove_counting(&entry.path());
+        }
+    }
+    // Linux WebKitGTK keeps its HTTP cache beside the app data.
+    #[cfg(target_os = "linux")]
+    if let Ok(data_dir) = app.path().app_data_dir() {
+        freed += remove_counting(&data_dir.join("WebKitCache"));
+    }
+    // Windows WebView2: cache folders inside each profile, never the profile
+    // itself (it holds localStorage and cookies).
+    #[cfg(target_os = "windows")]
+    if let Ok(data_dir) = app.path().app_data_dir() {
+        for profile in fs::read_dir(data_dir.join("EBWebView")).into_iter().flatten().flatten() {
+            for name in ["Cache", "Code Cache", "GPUCache"] {
+                freed += remove_counting(&profile.path().join(name));
+            }
+        }
+    }
+    freed
+}
+
+/// Clear the webview's disk caches on demand (Settings › General).
+#[tauri::command]
+async fn clear_app_cache(app: AppHandle) -> Result<u64, String> {
+    tauri::async_runtime::spawn_blocking(move || clear_runtime_caches(&app))
+        .await
+        .map_err(|error| error.to_string())
+}
+
 fn ui_prefs_path(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app
         .path()
@@ -1808,7 +1874,8 @@ pub fn run() {
             set_close_quits,
             quit_app,
             show_main_window_cmd,
-            set_ui_theme
+            set_ui_theme,
+            clear_app_cache
         ])
         .setup(move |app| {
             // The updater public key is embedded at compile time by the release
