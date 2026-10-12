@@ -57,3 +57,8 @@ commands.allow = ["get_desktop_api_token"]
 identifier = "allow-show-popup-menu"
 description = "Allows the UI to show a native popup menu described as plain data and learn which item was picked."
 commands.allow = ["show_popup_menu"]
+
+[[permission]]
+identifier = "allow-clear-app-cache"
+description = "Allows the UI to clear the webview's disk caches and learn how many bytes were freed."
+commands.allow = ["clear_app_cache"]
