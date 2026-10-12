@@ -5,7 +5,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
-    sync::Mutex,
+    sync::{Mutex, OnceLock},
     thread,
     time::{Duration, Instant},
 };
@@ -536,6 +536,16 @@ fn open_path(path: String) -> Result<(), String> {
     open_path_with_default_app(Path::new(&path))
 }
 
+/// Opens the app log directory (`desktop.log`, `server.log`) in the file
+/// manager. Takes no path from the UI: the directory is fixed, so the command
+/// cannot be turned into a general "open anything" primitive.
+#[tauri::command]
+fn open_log_dir(app: AppHandle) -> Result<(), String> {
+    let dir = app.path().app_log_dir().map_err(|error| error.to_string())?;
+    fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    open_path_with_default_app(&dir)
+}
+
 #[tauri::command]
 fn reveal_item_in_dir(path: String) -> Result<(), String> {
     reveal_path_in_file_manager(Path::new(&path))
@@ -701,22 +711,92 @@ const POPUP_ID_PREFIX: &str = "popup:";
 const POPUP_SELECTION_GRACE: Duration = Duration::from_millis(400);
 const DESKTOP_LOG_MAX_BYTES: u64 = 256 * 1024;
 
-/// Appends a line to `desktop.log` in the app log directory. Best effort: the
-/// log exists so a hang during a popup leaves the last step on disk.
-fn desktop_log(app: &AppHandle, message: &str) {
-    let Ok(dir) = app.path().app_log_dir() else { return };
-    let _ = fs::create_dir_all(&dir);
+/// Formats epoch milliseconds as `YYYY-MM-DDTHH:MM:SS.mmmZ` (UTC) without a
+/// date-time dependency (Howard Hinnant's civil-from-days algorithm).
+fn format_utc_millis(epoch_millis: u128) -> String {
+    let millis = (epoch_millis % 1000) as u32;
+    let total_secs = (epoch_millis / 1000) as u64;
+    let days = (total_secs / 86_400) as i64;
+    let secs_of_day = total_secs % 86_400;
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let year = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = if month <= 2 { year + 1 } else { year };
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{millis:03}Z",
+        secs_of_day / 3600,
+        secs_of_day % 3600 / 60,
+        secs_of_day % 60
+    )
+}
+
+/// App log directory, recorded once the app exists so the panic hook (which
+/// has no `AppHandle`) can still reach `desktop.log`.
+static DESKTOP_LOG_DIR: OnceLock<PathBuf> = OnceLock::new();
+
+/// Appends a timestamped line to `desktop.log` in `dir`. Best effort. When the
+/// file passes the size cap it is moved to `desktop.log.1` (replacing the
+/// previous one) so a crash entry is never lost to the rotation itself.
+fn append_desktop_log(dir: &Path, message: &str) {
+    let _ = fs::create_dir_all(dir);
     let path = dir.join("desktop.log");
     if fs::metadata(&path).is_ok_and(|meta| meta.len() > DESKTOP_LOG_MAX_BYTES) {
-        let _ = fs::remove_file(&path);
+        let _ = fs::rename(&path, dir.join("desktop.log.1"));
     }
     let millis = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|elapsed| elapsed.as_millis())
         .unwrap_or(0);
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
-        let _ = writeln!(file, "{millis} {message}");
+        let _ = writeln!(file, "{} {message}", format_utc_millis(millis));
     }
+}
+
+/// Appends a line to `desktop.log` in the app log directory. The log exists so
+/// a hang during a popup, a panic, or an unexpected exit leaves its last step
+/// on disk.
+fn desktop_log(app: &AppHandle, message: &str) {
+    let Ok(dir) = app.path().app_log_dir() else { return };
+    let _ = DESKTOP_LOG_DIR.set(dir.clone());
+    append_desktop_log(&dir, message);
+}
+
+/// Writes panics to `desktop.log` before the default hook runs. The release
+/// profile uses `panic = "abort"`, so without this a panic on any thread kills
+/// the app with nothing but a macOS crash report to show for it.
+fn install_panic_hook() {
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        if let Some(dir) = DESKTOP_LOG_DIR.get() {
+            let thread = thread::current();
+            let payload = info.payload();
+            let message = payload
+                .downcast_ref::<&str>()
+                .map(|text| (*text).to_string())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "non-string panic payload".to_string());
+            let location = info
+                .location()
+                .map(|place| format!("{}:{}:{}", place.file(), place.line(), place.column()))
+                .unwrap_or_else(|| "unknown location".to_string());
+            let backtrace = std::backtrace::Backtrace::force_capture();
+            append_desktop_log(
+                dir,
+                &format!(
+                    "PANIC v{} on thread '{}' at {location}: {message}\n{backtrace}",
+                    env!("CARGO_PKG_VERSION"),
+                    thread.name().unwrap_or("<unnamed>")
+                ),
+            );
+        }
+        previous(info);
+    }));
 }
 
 fn build_popup_items(
@@ -1346,6 +1426,86 @@ fn server_identity_matches(address: SocketAddr, expected_instance_id: &str) -> b
     response_has_instance_id(&response, expected_instance_id)
 }
 
+/// How often the monitor checks the server, and how many failed probes in a
+/// row count as "not answering". A probe waits at most ~1.2 s, so a blocked
+/// event loop is reported roughly 10 s after it stops responding.
+#[cfg(feature = "custom-protocol")]
+const SERVER_MONITOR_INTERVAL: Duration = Duration::from_secs(5);
+#[cfg(feature = "custom-protocol")]
+const SERVER_UNRESPONSIVE_AFTER: u32 = 2;
+
+/// Watches the packaged server and records what happened in `desktop.log`:
+/// the process dying on its own (with its exit status) and the process staying
+/// alive but no longer answering HTTP, which is what a hung UI looks like from
+/// the outside. Observation only: nothing is restarted or killed here.
+#[cfg(feature = "custom-protocol")]
+fn spawn_server_monitor(app: AppHandle, address: SocketAddr, instance_id: String) {
+    let _ = thread::Builder::new()
+        .name("server-monitor".into())
+        .spawn(move || {
+            let mut failures = 0_u32;
+            let mut first_failure: Option<Instant> = None;
+            loop {
+                thread::sleep(SERVER_MONITOR_INTERVAL);
+                let Some(server) = app.try_state::<DesktopServer>() else {
+                    return;
+                };
+                {
+                    let Ok(mut guard) = server.child.lock() else {
+                        return;
+                    };
+                    // `None`: stop() took the child, i.e. the app is quitting.
+                    let Some(child) = guard.as_mut() else {
+                        return;
+                    };
+                    match child.try_wait() {
+                        Ok(None) => {}
+                        Ok(Some(status)) => {
+                            desktop_log(
+                                &app,
+                                &format!(
+                                    "server process exited unexpectedly ({status}); see server.log"
+                                ),
+                            );
+                            return;
+                        }
+                        Err(error) => {
+                            desktop_log(&app, &format!("server status check failed: {error}"));
+                            return;
+                        }
+                    }
+                }
+
+                if server_identity_matches(address, &instance_id) {
+                    if let Some(since) = first_failure.take() {
+                        if failures >= SERVER_UNRESPONSIVE_AFTER {
+                            desktop_log(
+                                &app,
+                                &format!(
+                                    "server answering again after {:.1}s",
+                                    since.elapsed().as_secs_f32()
+                                ),
+                            );
+                        }
+                    }
+                    failures = 0;
+                } else {
+                    failures += 1;
+                    let since = *first_failure.get_or_insert_with(Instant::now);
+                    if failures == SERVER_UNRESPONSIVE_AFTER {
+                        desktop_log(
+                            &app,
+                            &format!(
+                                "server process is alive but not answering ({failures} probes failed over {:.1}s)",
+                                since.elapsed().as_secs_f32()
+                            ),
+                        );
+                    }
+                }
+            }
+        });
+}
+
 #[cfg(feature = "custom-protocol")]
 fn wait_for_server(
     child: &mut Child,
@@ -1466,10 +1626,20 @@ fn start_packaged_server(
 
 #[cfg(all(test, feature = "custom-protocol"))]
 mod tests {
-    use super::{child_process_compatible_path, response_has_instance_id, PopupMenuEntry};
+    use super::{
+        child_process_compatible_path, format_utc_millis, response_has_instance_id, PopupMenuEntry,
+    };
     #[cfg(target_os = "linux")]
     use super::{visible_linux_tray_item, LinuxTray, LINUX_TRAY_QUIT_LABEL, LINUX_TRAY_SHOW_LABEL};
     use std::path::{Path, PathBuf};
+
+    #[test]
+    fn log_timestamps_are_utc_iso() {
+        assert_eq!(format_utc_millis(0), "1970-01-01T00:00:00.000Z");
+        // 2024-02-29 (leap day) 23:59:59.999
+        assert_eq!(format_utc_millis(1_709_251_199_999), "2024-02-29T23:59:59.999Z");
+        assert_eq!(format_utc_millis(1_791_784_131_078), "2026-10-12T05:48:51.078Z");
+    }
 
     #[test]
     fn popup_menu_entries_parse_the_shape_the_ui_sends() {
@@ -1749,6 +1919,8 @@ fn spawn_focus_monitor(app: AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    install_panic_hook();
+
     // Become the single instance (Linux). If another live instance owns the
     // lock, focus it and exit without starting a second server/window.
     #[cfg(target_os = "linux")]
@@ -1801,6 +1973,7 @@ pub fn run() {
             get_desktop_api_token,
             open_external_url,
             open_path,
+            open_log_dir,
             reveal_item_in_dir,
             list_apps_for_file,
             open_path_with,
@@ -1811,6 +1984,15 @@ pub fn run() {
             set_ui_theme
         ])
         .setup(move |app| {
+            desktop_log(
+                app.handle(),
+                &format!(
+                    "startup v{} pid {} ({})",
+                    env!("CARGO_PKG_VERSION"),
+                    std::process::id(),
+                    env::consts::OS
+                ),
+            );
             // The updater public key is embedded at compile time by the release
             // workflow. Local development builds intentionally omit it, which
             // keeps unsigned builds from accepting production updates.
@@ -1831,7 +2013,16 @@ pub fn run() {
             #[cfg(not(feature = "custom-protocol"))]
             let (url, server) = start_development_server(app.handle())?;
 
+            desktop_log(app.handle(), &format!("server ready at {url}"));
             app.manage(server);
+            #[cfg(feature = "custom-protocol")]
+            if let Some(port) = url.port() {
+                spawn_server_monitor(
+                    app.handle().clone(),
+                    SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port),
+                    server_instance_id.clone(),
+                );
+            }
             // Clear stale webview caches when the app version changed since the
             // last successful launch (fixes WebKitGTK loading stale hashed
             // Next.js assets after an upgrade).
@@ -1877,6 +2068,7 @@ pub fn run() {
 
     app.run(|app_handle, event| match event {
         RunEvent::Exit => {
+            desktop_log(app_handle, "exit");
             #[cfg(target_os = "linux")]
             remove_instance_lock();
             if let Some(server) = app_handle.try_state::<DesktopServer>() {

@@ -162,6 +162,13 @@ export async function openPathNative(path: string): Promise<void> {
   await invoke("open_path", { path });
 }
 
+/** Open the app log folder (desktop.log, server.log) in the file manager. */
+export async function openLogDirNative(): Promise<void> {
+  if (!isTauriDesktop()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("open_log_dir");
+}
+
 /** Reveal a local path in Finder / Explorer / file manager. */
 export async function revealItemInDirNative(path: string): Promise<void> {
   if (!isTauriDesktop()) {

@@ -1506,6 +1506,7 @@ export const zhCNLocale: LocalePlugin = {
     "appSettings.closeQuitsHint": "关闭此选项时，关闭窗口会将应用隐藏到菜单栏 / 系统托盘。",
     "appSettings.notifyOnComplete": "后台任务完成时发送系统通知",
     "appSettings.notifyOnCompleteHint": "窗口失焦时，agent 完成后弹出系统通知。",
+    "appSettings.openLogs": "打开日志目录",
     "appSettings.quitApp": "退出 Pi Agent",
     "connection.offline": "与本地 Pi Agent 服务的连接已断开。",
     "connection.retry": "重新连接",
