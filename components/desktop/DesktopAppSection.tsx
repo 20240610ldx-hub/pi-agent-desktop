@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { APP_PREF_KEYS, getPrefBool, setPrefBool } from "@/lib/app-prefs";
-import { quitAppNative, setCloseQuitsNative } from "@/lib/desktop-native";
+import { openLogDirNative, quitAppNative, setCloseQuitsNative } from "@/lib/desktop-native";
 import { useI18n } from "@/hooks/useI18n";
 import { ConfigButton, ConfigSwitch } from "@/components/SettingsUi";
 
@@ -63,6 +63,9 @@ export function DesktopAppSection() {
           />
         </div>
       </div>
+      <ConfigButton className="settings-option-action" onClick={() => void openLogDirNative()}>
+        {t("appSettings.openLogs")}
+      </ConfigButton>
       <ConfigButton className="settings-option-action" onClick={() => void quitAppNative()}>
         {t("appSettings.quitApp")}
       </ConfigButton>
