@@ -98,7 +98,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "jiti": "^2.7.0",
-    "katex": "^0.16.47",
+    "katex": "^0.19.0",
     "mermaid": "^11.16.1",
     "playwright": "^1.62.1",
     "postcss": "^8.5.26",
@@ -112,5 +112,8 @@
     "remark-math": "^6.0.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^5"
+  },
+  "overrides": {
+    "katex": "$katex"
   }
 }
