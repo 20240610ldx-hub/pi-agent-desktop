@@ -193,6 +193,31 @@ function GeneralSettings({
           <AppUpdatesSection onBusyChange={onBusyChange} />
 
           <section className="settings-general-section">
+            <h3 className="settings-general-heading">{t("common.language")}</h3>
+            <div role="radiogroup" aria-label={t("common.language")} className="settings-language-options">
+              {supportedLocales.map((plugin) => {
+                const selected = locale === plugin.id;
+                return (
+                  <button
+                    key={plugin.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setLocale(plugin.id as typeof locale)}
+                    className="settings-language-option"
+                  >
+                    <span className="settings-language-radio">
+                      {selected && <span className="settings-language-radio-dot" />}
+                    </span>
+                    <span className="settings-language-label">{plugin.label}</span>
+                    <span className="settings-language-code">{plugin.id}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="settings-general-section">
             <h3 className="settings-general-heading">{t("settings.chat")}</h3>
             <div className="settings-chat-options">
               <div className="settings-chat-option settings-chat-switch-option">
@@ -369,31 +394,6 @@ function GeneralSettings({
               </div>
             </div>
             {customCssError && <p role="alert" className="settings-general-error">{customCssError}</p>}
-          </section>
-
-          <section className="settings-general-section">
-            <h3 className="settings-general-heading">{t("common.language")}</h3>
-            <div role="radiogroup" aria-label={t("common.language")} className="settings-language-options">
-              {supportedLocales.map((plugin) => {
-                const selected = locale === plugin.id;
-                return (
-                  <button
-                    key={plugin.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => setLocale(plugin.id as typeof locale)}
-                    className="settings-language-option"
-                  >
-                    <span className="settings-language-radio">
-                      {selected && <span className="settings-language-radio-dot" />}
-                    </span>
-                    <span className="settings-language-label">{plugin.label}</span>
-                    <span className="settings-language-code">{plugin.id}</span>
-                  </button>
-                );
-              })}
-            </div>
           </section>
 
           <DesktopAppSection />
