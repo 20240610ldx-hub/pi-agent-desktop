@@ -193,52 +193,6 @@ function GeneralSettings({
           <AppUpdatesSection onBusyChange={onBusyChange} />
 
           <section className="settings-general-section">
-            <h3 className="settings-general-heading">{t("settings.appearance")}</h3>
-            <div role="radiogroup" aria-label={t("settings.appearance")} className="settings-theme-options">
-              {THEME_OPTIONS.map((option) => {
-                const selected = preference === option.id;
-                return (
-                  <label
-                    key={option.id}
-                    className="settings-theme-option"
-                  >
-                    <input
-                      type="radio"
-                      name="theme"
-                      value={option.id}
-                      checked={selected}
-                      onChange={() => setThemePreference(option.id)}
-                      className="sr-only"
-                    />
-                    <ThemeIcon preference={option.id} />
-                    <span className="settings-theme-option-label">{t(option.label)}</span>
-                  </label>
-                );
-              })}
-            </div>
-            <div className="settings-option-list">
-              <div className="settings-option">
-                <span className="settings-option-text">
-                  <span className="settings-option-title">{t("appSettings.customCss")}</span>
-                  <span className="settings-option-hint">{t("appSettings.customCssHint")}</span>
-                </span>
-                {desktop && (
-                  <ConfigButton
-                    variant="secondary"
-                    size="small"
-                    className="settings-option-action"
-                    disabled={customCssBusy}
-                    onClick={() => void openCustomCss()}
-                  >
-                    {customCssBusy ? t("appSettings.customCssOpening") : t("appSettings.customCssOpen")}
-                  </ConfigButton>
-                )}
-              </div>
-            </div>
-            {customCssError && <p role="alert" className="settings-general-error">{customCssError}</p>}
-          </section>
-
-          <section className="settings-general-section">
             <h3 className="settings-general-heading">{t("settings.chat")}</h3>
             <div className="settings-chat-options">
               <div className="settings-chat-option settings-chat-switch-option">
@@ -371,6 +325,52 @@ function GeneralSettings({
         </div>
 
         <div className="settings-general-col">
+          <section className="settings-general-section">
+            <h3 className="settings-general-heading">{t("settings.appearance")}</h3>
+            <div role="radiogroup" aria-label={t("settings.appearance")} className="settings-theme-options">
+              {THEME_OPTIONS.map((option) => {
+                const selected = preference === option.id;
+                return (
+                  <label
+                    key={option.id}
+                    className="settings-theme-option"
+                  >
+                    <input
+                      type="radio"
+                      name="theme"
+                      value={option.id}
+                      checked={selected}
+                      onChange={() => setThemePreference(option.id)}
+                      className="sr-only"
+                    />
+                    <ThemeIcon preference={option.id} />
+                    <span className="settings-theme-option-label">{t(option.label)}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="settings-option-list">
+              <div className="settings-option">
+                <span className="settings-option-text">
+                  <span className="settings-option-title">{t("appSettings.customCss")}</span>
+                  <span className="settings-option-hint">{t("appSettings.customCssHint")}</span>
+                </span>
+                {desktop && (
+                  <ConfigButton
+                    variant="secondary"
+                    size="small"
+                    className="settings-option-action"
+                    disabled={customCssBusy}
+                    onClick={() => void openCustomCss()}
+                  >
+                    {customCssBusy ? t("appSettings.customCssOpening") : t("appSettings.customCssOpen")}
+                  </ConfigButton>
+                )}
+              </div>
+            </div>
+            {customCssError && <p role="alert" className="settings-general-error">{customCssError}</p>}
+          </section>
+
           <section className="settings-general-section">
             <h3 className="settings-general-heading">{t("common.language")}</h3>
             <div role="radiogroup" aria-label={t("common.language")} className="settings-language-options">
