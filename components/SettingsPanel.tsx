@@ -393,51 +393,9 @@ function GeneralSettings({
               </div>
             </div>
           </section>
-
-          {shellSettings?.isWindows && (
-            <section className="settings-general-section">
-              <h3 className="settings-general-heading">{t("settings.shellTool")}</h3>
-              <p className="settings-general-description">{t("settings.shellToolDescription")}</p>
-              <div className="settings-shell-option">
-                <span>{t("settings.usePowerShell")}</span>
-                <ConfigSwitch
-                  checked={shellSettings.powerShellEnabled}
-                  loading={shellSaving}
-                  label={t("settings.usePowerShell")}
-                  onChange={(enabled) => void togglePowerShell(enabled)}
-                />
-              </div>
-              {shellError && <p role="alert" className="settings-general-error">{shellError}</p>}
-            </section>
-          )}
         </div>
 
         <div className="settings-general-col">
-          <section className="settings-general-section">
-            <h3 className="settings-general-heading">{t("settings.pushPermission")}</h3>
-            <p className="settings-general-description">{t("settings.pushPermissionDescription")}</p>
-            <div className="settings-shell-option">
-              <span>{t("settings.pushPermission")}</span>
-              <button
-                type="button"
-                className="config-button config-button-small config-button-secondary"
-                disabled={pushRegistering}
-                onClick={() => void registerPush()}
-              >
-                {pushRegistering ? t("settings.pushRegisterLoading") : t("settings.pushRegister")}
-              </button>
-            </div>
-            {pushStatus && (
-              <p
-                role="status"
-                className="settings-general-error"
-                style={pushStatus.kind === "ok" ? { color: "var(--accent)" } : undefined}
-              >
-                {pushStatus.message}
-              </p>
-            )}
-          </section>
-
           <section className="settings-general-section">
             <h3 className="settings-general-heading">{t("common.language")}</h3>
             <div role="radiogroup" aria-label={t("common.language")} className="settings-language-options">
@@ -464,6 +422,48 @@ function GeneralSettings({
           </section>
 
           <DesktopAppSection />
+
+          {shellSettings?.isWindows && (
+            <section className="settings-general-section">
+              <h3 className="settings-general-heading">{t("settings.shellTool")}</h3>
+              <p className="settings-general-description">{t("settings.shellToolDescription")}</p>
+              <div className="settings-shell-option">
+                <span>{t("settings.usePowerShell")}</span>
+                <ConfigSwitch
+                  checked={shellSettings.powerShellEnabled}
+                  loading={shellSaving}
+                  label={t("settings.usePowerShell")}
+                  onChange={(enabled) => void togglePowerShell(enabled)}
+                />
+              </div>
+              {shellError && <p role="alert" className="settings-general-error">{shellError}</p>}
+            </section>
+          )}
+
+          <section className="settings-general-section">
+            <h3 className="settings-general-heading">{t("settings.pushPermission")}</h3>
+            <p className="settings-general-description">{t("settings.pushPermissionDescription")}</p>
+            <div className="settings-shell-option">
+              <span>{t("settings.pushPermission")}</span>
+              <button
+                type="button"
+                className="config-button config-button-small config-button-secondary"
+                disabled={pushRegistering}
+                onClick={() => void registerPush()}
+              >
+                {pushRegistering ? t("settings.pushRegisterLoading") : t("settings.pushRegister")}
+              </button>
+            </div>
+            {pushStatus && (
+              <p
+                role="status"
+                className="settings-general-error"
+                style={pushStatus.kind === "ok" ? { color: "var(--accent)" } : undefined}
+              >
+                {pushStatus.message}
+              </p>
+            )}
+          </section>
 
           {webAuthEnabled && (
             <section className="settings-general-section">
