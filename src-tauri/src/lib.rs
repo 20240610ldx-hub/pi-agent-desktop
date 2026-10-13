@@ -16,10 +16,12 @@ use std::os::unix::process::CommandExt as _;
 use std::os::windows::process::CommandExt as _;
 
 #[cfg(not(target_os = "linux"))]
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::Menu;
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+use tauri::menu::MenuItem;
 #[cfg(target_os = "macos")]
 use tauri::menu::{MenuItem as MacMenuItem, PredefinedMenuItem, Submenu};
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 #[cfg(not(target_os = "macos"))]
 use tauri::webview::Color;
@@ -300,7 +302,11 @@ fn build_linux_tray(app: &tauri::App) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-#[cfg(not(target_os = "linux"))]
+// macOS has no tray icon: the Dock icon re-shows a hidden window (the `Reopen`
+// handler below) and the app menu owns Quit, so a menu-bar item would only
+// duplicate both. Windows keeps it, since it is the only way back to a window
+// hidden on close.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn build_platform_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItem::with_id(app, "show", "Show Pi Agent", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit Pi Agent", true, None::<&str>)?;
@@ -1225,6 +1231,14 @@ fn same_origin(candidate: &Url, app_url: &Url) -> bool {
         && candidate.port_or_known_default() == app_url.port_or_known_default()
 }
 
+/// Inset of the macOS traffic lights from the window's top-left corner, in
+/// logical points. Y places the buttons' vertical centre on the middle of the
+/// 48px top bar (and of the sidebar header's controls row, which shares it).
+#[cfg(target_os = "macos")]
+const MAC_TRAFFIC_LIGHT_X: f64 = 14.0;
+#[cfg(target_os = "macos")]
+const MAC_TRAFFIC_LIGHT_Y: f64 = 24.0;
+
 fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWindow> {
     let navigation_origin = app_url.clone();
     let stored_theme = read_stored_theme(app);
@@ -1284,6 +1298,13 @@ fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWi
         builder = builder
             .title_bar_style(tauri::TitleBarStyle::Overlay)
             .hidden_title(true)
+            // The default inset centres the lights in a 28px title bar, but
+            // our top bar is 48px tall (native-theme.css `.app-topbar`), so
+            // they sat ~10px high. Keep this in step with MAC_TRAFFIC_LIGHT_*.
+            .traffic_light_position(tauri::LogicalPosition::new(
+                MAC_TRAFFIC_LIGHT_X,
+                MAC_TRAFFIC_LIGHT_Y,
+            ))
             // Transparent webview over an NSVisualEffectView (see below). The
             // `native-vibrancy` class tells native-theme.css to let the sidebar
             // show through; without it the page paints opaque as before.
@@ -2119,7 +2140,7 @@ pub fn run() {
             // top bar; only this path owns Edit commands and Cmd+,/Cmd+M.
             #[cfg(target_os = "macos")]
             build_macos_app_menu(app.handle())?;
-            #[cfg(not(target_os = "linux"))]
+            #[cfg(not(any(target_os = "linux", target_os = "macos")))]
             build_platform_tray(app)?;
 
             #[cfg(target_os = "linux")]
