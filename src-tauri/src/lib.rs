@@ -32,6 +32,9 @@ use tauri::{
 };
 
 const WINDOW_LABEL: &str = "main";
+/// Argument the launch-at-login entry passes, so a login start can be told
+/// apart from the user opening the app.
+const AUTOSTART_ARG: &str = "--autostart";
 const DESKTOP_API_TOKEN_ENV: &str = "PI_DESKTOP_API_TOKEN";
 const DESKTOP_INSTANCE_ID_ENV: &str = "PI_DESKTOP_INSTANCE_ID";
 const DESKTOP_INSTANCE_ID_HEADER: &str = "x-pi-desktop-instance";
@@ -1239,6 +1242,10 @@ const MAC_TRAFFIC_LIGHT_X: f64 = 14.0;
 #[cfg(target_os = "macos")]
 const MAC_TRAFFIC_LIGHT_Y: f64 = 24.0;
 
+fn launched_at_login() -> bool {
+    env::args().any(|arg| arg == AUTOSTART_ARG)
+}
+
 fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWindow> {
     let navigation_origin = app_url.clone();
     let stored_theme = read_stored_theme(app);
@@ -2026,6 +2033,15 @@ pub fn run() {
     #[cfg(feature = "custom-protocol")]
     let server_instance_id = desktop_instance_id.clone();
     let app = tauri::Builder::default()
+        // Launch at login. The OS entry (LaunchAgent / registry Run key /
+        // .desktop file) is the source of truth; the UI reads it back through
+        // the plugin instead of keeping its own copy. The flag lets a login
+        // launch start hidden in the tray rather than pop a window over the
+        // user's desktop.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![AUTOSTART_ARG]),
+        ))
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -2129,7 +2145,12 @@ pub fn run() {
             // last successful launch (fixes WebKitGTK loading stale hashed
             // Next.js assets after an upgrade).
             reconcile_webview_cache_for_version(app.handle());
-            build_window(app.handle(), url)?;
+            let window = build_window(app.handle(), url)?;
+            if launched_at_login() {
+                // Started by the OS at login: stay hidden. The tray (Linux /
+                // Windows) or the Dock icon (macOS) is the way back in.
+                let _ = window.hide();
+            }
             // Record the current version only after the window built cleanly,
             // so a startup crash keeps the cache clear flagged on relaunch.
             write_last_version(app.handle());
