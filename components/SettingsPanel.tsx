@@ -213,10 +213,10 @@ function GeneralSettings({
         <p className="settings-general-tagline">{t("appSettings.taglineDetails")}</p>
       </div>
 
-      <AppUpdatesSection onBusyChange={onBusyChange} />
-
       <div className="settings-general-columns">
         <div className="settings-general-col">
+          <AppUpdatesSection onBusyChange={onBusyChange} />
+
           <section className="settings-general-section">
             <h3 className="settings-general-heading">{t("settings.appearance")}</h3>
             <div role="radiogroup" aria-label={t("settings.appearance")} className="settings-theme-options">
