@@ -1225,6 +1225,14 @@ fn same_origin(candidate: &Url, app_url: &Url) -> bool {
         && candidate.port_or_known_default() == app_url.port_or_known_default()
 }
 
+/// Inset of the macOS traffic lights from the window's top-left corner, in
+/// logical points. Y places the buttons' vertical centre on the middle of the
+/// 48px top bar (and of the sidebar header's controls row, which shares it).
+#[cfg(target_os = "macos")]
+const MAC_TRAFFIC_LIGHT_X: f64 = 14.0;
+#[cfg(target_os = "macos")]
+const MAC_TRAFFIC_LIGHT_Y: f64 = 24.0;
+
 fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWindow> {
     let navigation_origin = app_url.clone();
     let stored_theme = read_stored_theme(app);
@@ -1284,6 +1292,13 @@ fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWi
         builder = builder
             .title_bar_style(tauri::TitleBarStyle::Overlay)
             .hidden_title(true)
+            // The default inset centres the lights in a 28px title bar, but
+            // our top bar is 48px tall (native-theme.css `.app-topbar`), so
+            // they sat ~10px high. Keep this in step with MAC_TRAFFIC_LIGHT_*.
+            .traffic_light_position(tauri::LogicalPosition::new(
+                MAC_TRAFFIC_LIGHT_X,
+                MAC_TRAFFIC_LIGHT_Y,
+            ))
             // Transparent webview over an NSVisualEffectView (see below). The
             // `native-vibrancy` class tells native-theme.css to let the sidebar
             // show through; without it the page paints opaque as before.

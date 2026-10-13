@@ -1537,9 +1537,12 @@ pre, code {
 
 /* On macOS (titleBarStyle: Overlay) the traffic lights float over the
    sidebar's top-left; the right-aligned controls row shares that strip, so
-   only a small extra inset is needed to keep the rows below clear. */
+   only a small extra inset is needed to keep the rows below clear. The
+   controls row is 28px tall, so a 10px top inset puts its centre at 24px:
+   the same line as the 48px top bar's centre and the traffic lights
+   (MAC_TRAFFIC_LIGHT_Y in src-tauri/src/lib.rs). */
 .session-sidebar-header--mac-inset {
-  padding-top: 12px !important;
+  padding-top: 10px !important;
 }
 
 /* Window-chrome controls row at the sidebar's top-right (theme + collapse). */
