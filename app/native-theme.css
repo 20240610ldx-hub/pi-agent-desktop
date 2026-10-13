@@ -3511,6 +3511,17 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   background: var(--bg);
 }
 
+/* The composer floats over the scrolling transcript (ChatWindow's
+   composerOverlayRef), so the rows around its rounded card show the text
+   beneath them on purpose. The extension status shelf is different: it is a
+   bordered status strip at the very bottom of the window, and upstream leaves
+   it transparent, so a scrolled transcript read straight through it and
+   printed chat lines beside the status text (#107). Give it the page
+   background so the bottom edge is a clean band. */
+.extension-status-shelf {
+  background: var(--bg);
+}
+
 .message-user {
   margin-bottom: 18px !important;
 }
