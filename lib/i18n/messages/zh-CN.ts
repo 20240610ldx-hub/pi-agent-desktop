@@ -1509,7 +1509,7 @@ export const zhCNLocale: LocalePlugin = {
     "appSettings.desktopSection": "桌面端",
     "appSettings.desktopHint": "窗口、托盘与通知等桌面行为。",
     "appSettings.closeQuits": "关闭窗口时退出应用",
-    "appSettings.closeQuitsHint": "关闭此选项时，关闭窗口会将应用隐藏到菜单栏 / 系统托盘。",
+    "appSettings.closeQuitsHint": "关闭此选项时，关闭窗口会将应用隐藏到 Dock / 系统托盘。",
     "appSettings.notifyOnComplete": "后台任务完成时发送系统通知",
     "appSettings.notifyOnCompleteHint": "窗口失焦时，agent 完成后弹出系统通知。",
     "appSettings.openLogs": "打开日志目录",

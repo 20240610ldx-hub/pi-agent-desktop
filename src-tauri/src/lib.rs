@@ -16,10 +16,12 @@ use std::os::unix::process::CommandExt as _;
 use std::os::windows::process::CommandExt as _;
 
 #[cfg(not(target_os = "linux"))]
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::Menu;
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+use tauri::menu::MenuItem;
 #[cfg(target_os = "macos")]
 use tauri::menu::{MenuItem as MacMenuItem, PredefinedMenuItem, Submenu};
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 #[cfg(not(target_os = "macos"))]
 use tauri::webview::Color;
@@ -300,7 +302,11 @@ fn build_linux_tray(app: &tauri::App) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-#[cfg(not(target_os = "linux"))]
+// macOS has no tray icon: the Dock icon re-shows a hidden window (the `Reopen`
+// handler below) and the app menu owns Quit, so a menu-bar item would only
+// duplicate both. Windows keeps it, since it is the only way back to a window
+// hidden on close.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn build_platform_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItem::with_id(app, "show", "Show Pi Agent", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit Pi Agent", true, None::<&str>)?;
@@ -2134,7 +2140,7 @@ pub fn run() {
             // top bar; only this path owns Edit commands and Cmd+,/Cmd+M.
             #[cfg(target_os = "macos")]
             build_macos_app_menu(app.handle())?;
-            #[cfg(not(target_os = "linux"))]
+            #[cfg(not(any(target_os = "linux", target_os = "macos")))]
             build_platform_tray(app)?;
 
             #[cfg(target_os = "linux")]
