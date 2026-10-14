@@ -15,6 +15,7 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 use tauri::{AppHandle, Manager, Url};
 
+#[cfg(target_os = "macos")]
 pub use macos_menu::build_macos_app_menu;
 #[cfg(target_os = "linux")]
 pub use platform_tray::build_linux_tray;

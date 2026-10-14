@@ -587,11 +587,15 @@ export function AppShell() {
 
   // The panel is a preview layer; the composer remains the home base. The
   // overlay and backslash shortcut both use this same exit.
+  // Also leaves full width, like the toggle: reopening into full width would
+  // cover the topbar toggle again. Mobile skips the focus so closing the
+  // panel does not pop the software keyboard.
   const handleRightPanelClose = useCallback(() => {
     if (isMobile) setActiveTopPanel(null);
     setTopMoreOpen(false);
     setRightPanelOpen(false);
-    chatInputRef.current?.focus();
+    setRightPanelExpanded(false);
+    if (!isMobile) chatInputRef.current?.focus();
   }, [isMobile]);
 
   const handleRightPanelExpandToggle = useCallback(() => {
@@ -1124,11 +1128,7 @@ export function AppShell() {
   useGlobalKeyboardShortcuts({
     onNewSession: (cwd: string) => handleNewSession(`kb-${Date.now()}`, cwd),
     activeCwd,
-    onCloseRightPanel: () => {
-      setTopMoreOpen(false);
-      setRightPanelOpen(false);
-      chatInputRef.current?.focus();
-    },
+    onCloseRightPanel: handleRightPanelClose,
   });
 
   // Client-built transient SessionInfo (new session / fork) lacks the
@@ -2912,6 +2912,21 @@ export function AppShell() {
               <path d={rightPanelFullWidth
                 ? "M4 9V4h5M20 15v5h-5M4 15v5h5M20 9V4h-5"
                 : "M15 4h5v5M9 20H4v-5M20 15v5h-5M4 9V4h5"} />
+            </svg>
+          </button>
+          {/* The panel's own way out. The topbar toggle is covered whenever the
+              panel spans the chat column (full width, and always on mobile). */}
+          <button
+            type="button"
+            className="file-workbench-icon-button right-panel-close-button"
+            onClick={handleRightPanelClose}
+            aria-controls="file-panel"
+            aria-expanded={rightPanelOpen}
+            title={translate("files.hidePanel")}
+            aria-label={translate("files.hidePanel")}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
           {rightPanelOpen && !isMobile && <WindowControls />}

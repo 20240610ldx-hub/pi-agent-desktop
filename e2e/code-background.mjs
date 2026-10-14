@@ -18,9 +18,13 @@ export async function checkCodeBackground(page) {
       await page.emulateMedia({ colorScheme });
       await page.waitForFunction((theme) => document.documentElement.dataset.theme === theme, colorScheme);
       await page.waitForFunction(() => {
+        // Probe inside the chat: the main column re-points --bg at the
+        // workbench surface, so body-level tokens resolve differently.
+        const host = document.querySelector(".markdown-code-block");
+        if (!host) return false;
         const probe = document.createElement("div");
         probe.style.backgroundColor = "color-mix(in srgb, var(--bg) 92%, var(--bg-panel))";
-        document.body.append(probe);
+        host.append(probe);
         const expected = getComputedStyle(probe).backgroundColor;
         probe.remove();
         const nodes = [...document.querySelectorAll(".markdown-code-block pre")];

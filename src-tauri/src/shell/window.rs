@@ -4,6 +4,7 @@ use tauri::{
     webview::NewWindowResponse, Theme, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 
+#[cfg(target_os = "macos")]
 use super::window_appkit::{self, set_title_keeping_traffic_lights};
 use crate::native_prefs::{
     is_inline_frame_document, read_stored_theme, same_origin, theme_bootstrap_script,

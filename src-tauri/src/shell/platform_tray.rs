@@ -3,7 +3,15 @@ use tauri::menu::{Menu, MenuItem};
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 #[cfg(target_os = "linux")]
+use tauri::AppHandle;
+// Brings `default_window_icon` / `app_handle` into scope, as lib.rs's glob
+// `tauri::Manager` import did before the shell modules were split out.
+#[cfg(not(target_os = "macos"))]
+#[allow(unused_imports)]
 use tauri::Manager;
+
+#[cfg(not(target_os = "macos"))]
+use super::{quit_application, show_main_window};
 
 #[cfg(target_os = "linux")]
 const LINUX_TRAY_SHOW_LABEL: &str = "Show Pi Agent";
@@ -102,7 +110,7 @@ fn linux_tray_icon(icon: &tauri::image::Image<'_>) -> ksni::Icon {
 }
 
 #[cfg(target_os = "linux")]
-fn build_linux_tray(app: &tauri::App) -> Result<(), std::io::Error> {
+pub fn build_linux_tray(app: &tauri::App) -> Result<(), std::io::Error> {
     let icon = app
         .default_window_icon()
         .ok_or_else(|| std::io::Error::other("missing default window icon"))?;
@@ -124,7 +132,7 @@ fn build_linux_tray(app: &tauri::App) -> Result<(), std::io::Error> {
 // duplicate both. Windows keeps it, since it is the only way back to a window
 // hidden on close.
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-fn build_platform_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+pub fn build_platform_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItem::with_id(app, "show", "Show Pi Agent", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit Pi Agent", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
@@ -155,4 +163,23 @@ fn build_platform_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error
         .build(app)?;
 
     Ok(())
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::{visible_linux_tray_item, LinuxTray, LINUX_TRAY_QUIT_LABEL, LINUX_TRAY_SHOW_LABEL};
+
+    #[test]
+    fn linux_tray_menu_items_publish_visible_labels() {
+        for label in [LINUX_TRAY_SHOW_LABEL, LINUX_TRAY_QUIT_LABEL] {
+            let item = visible_linux_tray_item(label, |_: &mut LinuxTray| {});
+            let ksni::MenuItem::Standard(item) = item else {
+                panic!("Linux tray command must be a standard menu item");
+            };
+
+            assert_eq!(item.label, label);
+            assert!(item.enabled);
+            assert!(item.visible);
+        }
+    }
 }
