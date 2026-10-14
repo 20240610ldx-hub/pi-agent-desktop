@@ -6428,3 +6428,93 @@ html.native-desktop :is(
   border-color: var(--accent);
   background: var(--bg-hover);
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Files a turn changed (TurnWrittenFiles)                                    */
+/* -------------------------------------------------------------------------- */
+
+/* Spans the reply's full width and uses the table / process-details card
+   recipe (hairline border, 10px radius, translucent surface) so it reads as
+   part of the transcript under vibrancy and in both themes. */
+.turn-files-card {
+  width: 100%;
+  margin-top: 10px;
+  overflow: hidden;
+  border: var(--hairline) solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 48%, transparent);
+}
+
+.turn-files-header,
+.turn-files-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.turn-files-header:hover,
+.turn-files-row:hover {
+  background: var(--bg-hover);
+}
+.turn-files-row {
+  border-top: var(--hairline) solid var(--separator);
+}
+
+.turn-files-header-icon,
+.turn-files-chevron,
+.turn-files-row-chevron {
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+.turn-files-chevron {
+  transition: transform 150ms ease;
+}
+.turn-files-header[aria-expanded="true"] .turn-files-chevron {
+  transform: rotate(90deg);
+}
+
+.turn-files-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.turn-files-title,
+.turn-files-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.turn-files-title {
+  font-weight: 500;
+}
+.turn-files-name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+}
+
+.turn-files-stats {
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+.turn-files-added {
+  color: var(--success);
+}
+.turn-files-removed {
+  color: var(--danger);
+}

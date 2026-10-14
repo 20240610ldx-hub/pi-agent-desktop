@@ -445,6 +445,8 @@ export const enLocale: LocalePlugin = {
     "chat.collapseProcess": "Collapse process details",
     "chat.expandProcess": "Expand process details",
     "chat.filesWritten": "Files changed",
+    "chat.filesEditedOne": "Edited 1 file",
+    "chat.filesEditedMany": "Edited {count} files",
     "chat.openWrittenFile": "Open {name}",
     "fileMenu.open": "Open",
     "fileMenu.openWith": "Open With",
