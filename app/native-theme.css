@@ -1637,8 +1637,8 @@ pre, code {
    sidebar's top-left; the right-aligned controls row shares that strip, so
    only a small extra inset is needed to keep the rows below clear. The
    controls row is 28px tall, so a 10px top inset puts its centre at 24px:
-   the same line as the 48px top bar's centre and the traffic lights
-   (MAC_TRAFFIC_LIGHT_Y in src-tauri/src/lib.rs). */
+   the same line as the 48px top bar's centre and the traffic lights (see
+   MAC_TRAFFIC_LIGHT_Y in src-tauri/src/lib.rs for how that is measured). */
 .session-sidebar-header--mac-inset {
   padding-top: 10px !important;
 }
@@ -2769,9 +2769,20 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   transform: scale(0.96);
 }
 
-/* Reserve room for the macOS traffic-light controls overlaid by titleBarStyle: Overlay. */
-.app-topbar--mac-inset {
-  padding-left: 72px !important;
+/* Reserve room for the macOS traffic lights overlaid by titleBarStyle: Overlay
+   on whichever 48px row currently owns the window's top-left corner: the top
+   bar while the sidebar is hidden, the file panel's tab strip while it covers
+   the window (full width, or the mobile-width layout). The lights end at
+   14 + 2 x 20 + 12 = 66pt (MAC_TRAFFIC_LIGHT_X in src-tauri/src/lib.rs); the
+   rest is a gap so a filled chip (the active file tab) does not touch them.
+   The sidebar header keeps its own layout: its controls row is right-aligned. */
+:root {
+  --mac-traffic-light-inset: 78px;
+}
+
+.app-topbar--mac-inset,
+.right-panel-tab-strip--mac-inset {
+  padding-left: var(--mac-traffic-light-inset) !important;
 }
 
 /* Custom window chrome for platforms where the native title bar is fully removed. */

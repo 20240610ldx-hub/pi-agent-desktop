@@ -294,6 +294,15 @@ export function AppShell() {
   // and only needs the top bar inset for them; other platforms get the buttons
   // from <WindowControls />, which renders nothing in a browser build.
   const desktopChrome = useDesktopChrome();
+  // The macOS traffic lights float over the window's top-left corner (Overlay
+  // title bar), so whichever 48px row sits there makes room for them. The
+  // sidebar header owns that corner while the sidebar is open; the top bar does
+  // when it is hidden (or on the drawer layout); a file panel that covers the
+  // window (full width, or the mobile layout) covers the top bar too, so its tab
+  // strip takes over — and becomes the window's drag handle, since the top bar
+  // it hides was the only other one.
+  const macLightsOverTopbar = desktopChrome.isMacOS && (!sidebarOpen || isMobile);
+  const macLightsOverPanel = desktopChrome.isMacOS && rightPanelOpen && (rightPanelFullWidth || isMobile);
   const windowDrag = useWindowDrag();
   const sidebarWidthRef = useRef(SIDEBAR_DEFAULT_WIDTH);
   const rightPanelWidthRef = useRef(RIGHT_PANEL_FALLBACK_WIDTH);
@@ -1983,7 +1992,7 @@ export function AppShell() {
         {/* Top bar with sidebar toggle */}
         <div
           ref={topBarRef}
-          className={`app-topbar${desktopChrome.isMacOS && (!sidebarOpen || isMobile) ? " app-topbar--mac-inset" : ""}${!rightPanelOpen ? " app-topbar--panel-closed" : ""}`}
+          className={`app-topbar${macLightsOverTopbar ? " app-topbar--mac-inset" : ""}${!rightPanelOpen ? " app-topbar--panel-closed" : ""}`}
           {...desktopChrome.dragRegionProps}
           {...windowDrag}
           style={{ display: "flex", alignItems: "center", flexShrink: 0, height: "calc(36px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)", background: "var(--bg-panel)" }}
@@ -2824,7 +2833,7 @@ export function AppShell() {
           </button>
         */}
         <div
-          className="right-panel-tab-strip"
+          className={`right-panel-tab-strip${macLightsOverPanel ? " right-panel-tab-strip--mac-inset" : ""}`}
           {...desktopChrome.dragRegionProps}
           {...windowDrag}
         >
