@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from "react";
 import { SyntaxHighlighter, vs, vscDarkPlus } from "@/lib/syntax-highlighting";
 import { useTheme } from "@/hooks/useTheme";
 import { useI18n } from "@/hooks/useI18n";
@@ -18,6 +18,8 @@ interface MermaidBlockProps {
    * wide one shrinks until its text is unreadable.
    */
   fit?: boolean;
+  /** An artifact action shown beside the preview/source toggle. */
+  headerAction?: ReactNode;
 }
 
 // Without a readable viewBox the variable stays unset and the CSS falls back
@@ -54,15 +56,26 @@ type RenderState =
   | { key: string; status: "error" }
   | { key: string; status: "ready"; svg: string };
 
-export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = false }: MermaidBlockProps) {
+export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = false, headerAction }: MermaidBlockProps) {
   const { isDark } = useTheme();
   const { t } = useI18n();
   const [showPreview, setShowPreview] = useState(defaultPreview);
   const [renderState, setRenderState] = useState<RenderState | null>(null);
   const [zoomOpen, setZoomOpen] = useState(false);
   const previewRef = useRef<HTMLButtonElement>(null);
+  const [previewZoom, setPreviewZoom] = useState(1);
   const currentKey = `${isDark ? "dark" : "light"}\n${code}`;
   const previewVisible = showPreview && !isStreaming;
+
+  const updatePreviewZoom = useCallback((delta: number) => {
+    setPreviewZoom((zoom) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom + delta)));
+  }, []);
+
+  const resetPreviewZoom = useCallback(() => setPreviewZoom(1), []);
+
+  useEffect(() => {
+    if (previewVisible) setPreviewZoom(1);
+  }, [previewVisible]);
 
   useEffect(() => {
     if (!previewVisible) return;
@@ -128,10 +141,37 @@ export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = 
             ref={previewRef}
             type="button"
             className={`mermaid-block mermaid-preview-button${fit ? " mermaid-fit" : ""}`}
-            style={fitStyle(fit, renderState.svg)}
+            style={{
+              ...fitStyle(fit, renderState.svg),
+              "--mermaid-preview-zoom": previewZoom,
+            } as CSSProperties}
             title={t("i18n.openMermaidViewer")}
             aria-label={t("i18n.openMermaidViewer")}
             onClick={() => setZoomOpen(true)}
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+              resetPreviewZoom();
+            }}
+            onKeyDown={(event: ReactKeyboardEvent<HTMLButtonElement>) => {
+              if (isImeComposing(event)) return;
+              if (event.key === "+" || event.key === "=") {
+                event.preventDefault();
+                updatePreviewZoom(ZOOM_STEP);
+              }
+              if (event.key === "-" || event.key === "_") {
+                event.preventDefault();
+                updatePreviewZoom(-ZOOM_STEP);
+              }
+              if (event.key === "0") {
+                event.preventDefault();
+                resetPreviewZoom();
+              }
+            }}
+            onWheel={(event: ReactWheelEvent<HTMLButtonElement>) => {
+              if (!event.ctrlKey && !event.metaKey) return;
+              event.preventDefault();
+              updatePreviewZoom(event.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP);
+            }}
             dangerouslySetInnerHTML={{ __html: renderState.svg }}
           />
         )}
@@ -144,6 +184,7 @@ export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = 
       <div className="markdown-code-header">
         <span className="markdown-code-lang">mermaid</span>
         <div className="markdown-code-actions">
+          {headerAction}
           {renderState?.key === currentKey && renderState.status === "ready" && (
             <button
               type="button"

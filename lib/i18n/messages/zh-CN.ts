@@ -1282,6 +1282,8 @@ export const zhCNLocale: LocalePlugin = {
     "i18n.zoomOut": "缩小",
     "i18n.zoomIn": "放大",
     "i18n.fitToWidth": "适应宽度",
+    "artifacts.staged": "产物已生成 · 点击预览",
+    "files.closePanelHint": "按 \\ 隐藏预览面板",
     "models.discoveryFetching": "正在导入模型…",
     "models.discoveryFetch": "导入模型…",
     "models.discoveryFilterPlaceholder": "筛选 {count} 个模型…",

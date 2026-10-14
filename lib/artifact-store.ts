@@ -16,6 +16,11 @@ export interface ArtifactOpenRequest {
   version?: number;
   /** Opened because a streamed artifact just finished, not by a click. */
   auto?: boolean;
+  /**
+   * Bring the panel forward. Automatic completions stage the tab without
+   * stealing focus; user clicks reveal it.
+   */
+  reveal?: boolean;
 }
 
 const MAX_CACHED_SESSIONS = 20;

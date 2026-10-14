@@ -1633,14 +1633,12 @@ pre, code {
   border-bottom: 0 !important;
 }
 
-/* On macOS (titleBarStyle: Overlay) the traffic lights float over the
-   sidebar's top-left; the right-aligned controls row shares that strip, so
-   only a small extra inset is needed to keep the rows below clear. The
-   controls row is 28px tall, so a 10px top inset puts its centre at 24px:
-   the same line as the 48px top bar's centre and the traffic lights (see
-   MAC_TRAFFIC_LIGHT_Y in src-tauri/src/lib.rs for how that is measured). */
+/* On macOS (titleBarStyle: Overlay) the native traffic lights float over the
+   sidebar's top-left. Keep the sidebar's own 48px chrome row flush with the
+   window top: padding it down made the right-hand menu sit below the lights'
+   24px centre line. The rows below already clear the 16px-tall buttons. */
 .session-sidebar-header--mac-inset {
-  padding-top: 10px !important;
+  padding-top: 0 !important;
 }
 
 /* Window-chrome controls row at the sidebar's top-right (theme + collapse). */
@@ -1649,7 +1647,8 @@ pre, code {
   align-items: center;
   justify-content: flex-end;
   gap: 2px;
-  padding: 0 2px 4px;
+  height: 48px;
+  padding: 0 2px;
 }
 
 .sidebar-chrome-button {
@@ -4062,6 +4061,11 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   background: var(--bg-selected);
   color: var(--text);
 }
+.artifact-inline-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 
 .mermaid-block {
   padding: 12px;
@@ -4244,6 +4248,10 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 .artifact-card.is-generating .artifact-card-icon {
   animation: artifact-card-pulse 1.4s var(--ease-native) infinite;
 }
+.artifact-card.artifact-ready {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--separator));
+  box-shadow: var(--shadow-control), 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
 @keyframes artifact-card-pulse {
   50% { opacity: 0.45; }
 }
@@ -4367,6 +4375,8 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   height: auto;
   max-width: calc(var(--mermaid-natural-width, 100%) * 1.75) !important;
   min-width: calc(var(--mermaid-natural-width, 0px) * 0.6) !important;
+  transform: scale(var(--mermaid-preview-zoom, 1));
+  transform-origin: top center;
 }
 /* The panel toolbar already has Source / Copy / Download. */
 .artifact-panel-body > .markdown-code-block > .markdown-code-header {
@@ -5439,7 +5449,7 @@ span.linenumber {
 @media (min-width: 641px) {
   .right-panel-container {
     overflow: hidden;
-    transition: width 0.2s ease, min-width 0.2s ease;
+    transition: none;
     flex-shrink: 0;
   }
   .right-panel-container.right-panel-open {
@@ -6820,39 +6830,24 @@ html.native-desktop :is(
   background: var(--bg-hover);
 }
 
-/* Right panel as an inset card (Claude Desktop style).
-
-   The panel is a full-height column beside the main column (AppShell), not a
-   child of the row under the topbar, so the card runs from the window's top
-   edge to its bottom and the topbar only spans the chat. The container keeps
-   its job as the layout slot that animates width and is itself the card: a
-   gutter on the top/right/bottom, rounded corners, the same --bg fill as the
-   canvas it floats on, a 1px ring plus a soft drop shadow. The ring is a
-   box-shadow, not a border, so the fixed-width children
-   (`--right-panel-width`) still fill it exactly and do not reflow while the
-   width animates. `!important` beats the inline borderLeft/background in
-   AppShell. Inside, the card is one plain surface: no horizontal separators,
-   no tinted rows; only the file tree's vertical divider. Full-width mode and
-   the <=640px sheet stay flat. */
+/* Right panel as a preview card: chat remains the primary workspace and the
+   panel reads as a floating artifact surface, not a permanent split pane. */
 :root {
   --right-panel-gutter: 8px;
   --right-panel-radius: 12px;
   --right-panel-card-shadow: 0 0 0 1px rgba(15, 23, 42, 0.1),
-    0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.06);
+    0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 22px rgba(15, 23, 42, 0.07);
 }
 :root[data-theme="dark"] {
   --right-panel-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09),
-    0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 22px rgba(0, 0, 0, 0.38);
+    0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.38);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --right-panel-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09),
-      0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 22px rgba(0, 0, 0, 0.38);
+      0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.38);
   }
 }
-
-/* The file tree sits on the panel's left, as in Claude Desktop. Only the
-   order changes; the resizer grows rightward to match (AppShell). */
 .right-panel-body > .file-tree-panel {
   order: -2;
   border-left: none;
@@ -6866,8 +6861,8 @@ html.native-desktop :is(
 }
 
 @media (min-width: 641px) {
-  /* The canvas the card floats on is one colour: the chat's topbar carries
-     no tint and no rule of its own, like Claude's title area. */
+  /* The floating card needs one quiet canvas behind it: remove the chat
+     toolbar's own tint and rule while the panel is active. */
   .app-topbar {
     background: var(--bg) !important;
     border-bottom-color: transparent !important;
@@ -6876,17 +6871,14 @@ html.native-desktop :is(
   .right-panel-container:not(.right-panel-full-width) {
     border-left: none !important;
     border-radius: var(--right-panel-radius);
-    /* Same fill as the chat column (--bg): the ring and shadow alone lift the
-       card. A different fill (the old white --surface) made it read as a
-       separate pane instead of a layer over the same window. */
     background: var(--bg) !important;
   }
   .right-panel-container.right-panel-open:not(.right-panel-full-width) {
     box-shadow: var(--right-panel-card-shadow);
   }
 
-  /* Header row: part of the card, no rule under it. Its chips line up with
-     the topbar's controls (topbar 48px, card starts at the gutter). */
+  /* The card starts below a top gutter, so this 40px header row centers its
+     controls on the same 24pt line as the 48px chat topbar and traffic lights. */
   .right-panel-container:not(.right-panel-full-width) .right-panel-tab-strip {
     height: calc(48px - var(--right-panel-gutter));
     min-height: calc(48px - var(--right-panel-gutter));
@@ -6909,28 +6901,25 @@ html.native-desktop :is(
   }
 }
 
-/* Wide split layout: the card takes its width plus the gutter from the row. */
+/* Floating layout: the card ring is the idle edge; the wider hit target only
+   paints an affordance while hovered, focused, or dragged. */
 @media (min-width: 960px) {
-  .right-panel-container {
-    transition: width 0.2s ease, min-width 0.2s ease, margin 0.2s ease;
-  }
   .right-panel-container.right-panel-open:not(.right-panel-full-width) {
     margin: var(--right-panel-gutter) var(--right-panel-gutter) var(--right-panel-gutter) 2px;
+    transition: none;
   }
   .right-panel-container.right-panel-closed {
     margin: 0;
-    box-shadow: none;
   }
-  /* The card's own ring is the only edge between chat and panel, as in
-     Claude Desktop: the resize handle stays an invisible hit strip in the
-     gap (col-resize cursor) and never paints a second line beside the card
-     while hovered or dragged. Keyboard focus still shows it. */
-  .right-panel-resize-handle:not(:focus-visible)::after {
+  .right-panel-resize-handle:not(:hover):not(:focus-visible):not(.is-resizing)::after {
     background: transparent !important;
+  }
+  .right-panel-resize-handle:is(:hover, :focus-visible, .is-resizing)::after {
+    background: color-mix(in srgb, var(--separator) 68%, var(--text-muted)) !important;
   }
 }
 
-/* Compact overlay (641-959px): the same card, floating over the chat. */
+/* Compact overlay (641-959px): the same floating card, over the chat. */
 @media (min-width: 641px) and (max-width: 959px) {
   /* The generic >=641px width rules above would otherwise size this overlay
      (and collapse it to 0 when closed, losing the slide). */
@@ -6948,9 +6937,11 @@ html.native-desktop :is(
     min-width: 0;
   }
   .right-panel-container.right-panel-open:not(.right-panel-full-width) {
+    border-radius: var(--right-panel-radius);
     box-shadow: var(--right-panel-card-shadow), var(--shadow-popover);
   }
   .right-panel-container.right-panel-closed {
+    width: min(560px, calc(100vw - 48px - var(--right-panel-gutter)));
     transform: translateX(calc(100% + 2 * var(--right-panel-gutter)));
     box-shadow: none;
   }

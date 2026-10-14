@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/hooks/useI18n";
 import { isImeComposing } from "@/lib/ime";
 import { downloadUrlAsFile } from "@/lib/desktop-native";
@@ -25,6 +25,8 @@ interface HtmlPreviewBlockProps {
   lang: string;
   kind: HtmlPreviewKind;
   isStreaming?: boolean;
+  /** An artifact action shown beside the preview/source toggle. */
+  headerAction?: ReactNode;
   /** React fences start as source: a snippet should not run until asked. */
   defaultPreview?: boolean;
 }
@@ -59,7 +61,7 @@ const KIND_MIME: Record<HtmlPreviewKind, string> = {
  * Source toggle like MermaidBlock. While the message streams it stays source:
  * re-mounting the frame on every chunk would re-run the page's scripts.
  */
-export function HtmlPreviewBlock({ code, lang, kind, isStreaming, defaultPreview = true }: HtmlPreviewBlockProps) {
+export function HtmlPreviewBlock({ code, lang, kind, isStreaming, defaultPreview = true, headerAction }: HtmlPreviewBlockProps) {
   const { t } = useI18n();
   const [showPreview, setShowPreview] = useState(() => (
     defaultPreview && (Boolean(isStreaming) || !htmlPreviewHasActiveContent(code) || wasStreamedHere(code))
@@ -126,6 +128,7 @@ export function HtmlPreviewBlock({ code, lang, kind, isStreaming, defaultPreview
       <div className="markdown-code-header">
         <span className="markdown-code-lang">{lang || kind}</span>
         <div className="markdown-code-actions">
+          {headerAction}
           <button
             type="button"
             className="markdown-code-action"

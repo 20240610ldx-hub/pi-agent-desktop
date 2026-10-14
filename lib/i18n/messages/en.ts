@@ -1282,6 +1282,8 @@ export const enLocale: LocalePlugin = {
     "i18n.zoomOut": "Zoom out",
     "i18n.zoomIn": "Zoom in",
     "i18n.fitToWidth": "Fit to width",
+    "artifacts.staged": "Artifact ready · select to preview",
+    "files.closePanelHint": "Press \\ to hide the preview panel",
     "models.discoveryFetching": "Importing models…",
     "models.discoveryFetch": "Import models…",
     "models.discoveryFilterPlaceholder": "Filter {count} models…",

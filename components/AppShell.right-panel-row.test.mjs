@@ -21,9 +21,9 @@ const source = readFileSync(new URL("./AppShell.tsx", import.meta.url), "utf8");
  * that follows it, so the topbar starts at the center column and the sidebar
  * runs the full window height (no blank strip above the sidebar).
  *
- * The fourth pins the 2026-10 floating file panel: the panel is a full-height
- * sibling of the main column (outer row: sidebar → main column → panel), so
- * the topbar spans only the chat and the panel card reaches the window top.
+ * The fourth pins the right panel as a full-height floating preview card: it
+ * remains a sibling of the main column, while the card chrome separates it
+ * from the chat.
  */
 test("chat wrapper stays inside the center column (no 50/50 topbar split)", () => {
   // The column must NOT close between the topbar and the chat content block:
@@ -57,7 +57,7 @@ test("topbar sits in the main column after the sidebar (sidebar runs full height
   assert.ok(nesting !== -1, "panel close must be followed by outer row, then shell close");
 });
 
-test("file panel is a full-height sibling of the main column, not under the topbar", () => {
+test("file panel stays a full-height floating preview card", () => {
   const mainColumn = source.indexOf('className="app-main-column"');
   const center = source.indexOf("{/* Center: chat */}");
   const panelIdx = source.indexOf("right-panel-container");
@@ -70,4 +70,12 @@ test("file panel is a full-height sibling of the main column, not under the topb
     /\n      <\/div>\n        <\/div>\n      <\/div>\n\n      \{\/\* Mobile keeps this fixed toggle/,
     "center column, inner row and main column must close before the panel block",
   );
+  assert.match(
+    source,
+    /borderLeft: "var\(--hairline\) solid var\(--separator\)"/,
+    "the floating card must keep a neutral fallback edge for full-width mode",
+  );
+  const css = readFileSync(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  assert.match(css, /--right-panel-card-shadow/);
+  assert.match(css, /--right-panel-radius/);
 });

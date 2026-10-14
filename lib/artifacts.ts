@@ -1,4 +1,4 @@
-// Artifacts: standalone content an assistant message marks for the side panel.
+// Artifacts: standalone content an assistant message marks for a preview.
 //
 //   :::artifact{identifier="tip-calculator" type="html" title="Tip calculator"}
 //   ```html
@@ -14,6 +14,8 @@
 //
 // Versions: every occurrence of an identifier in a session is a new version,
 // in transcript order (see collectArtifacts).
+
+import { htmlPreviewHasActiveContent } from "./html-preview.ts";
 
 export type ArtifactType = "html" | "svg" | "react" | "mermaid" | "markdown" | "code";
 
@@ -290,6 +292,20 @@ export function assistantTexts(messages: readonly MessageLike[]): string[] {
 export function versionIndexOf(entry: ArtifactEntry | undefined, block: Pick<ArtifactBlock, "content" | "title">): number {
   if (!entry) return -1;
   return entry.versions.findIndex((version) => version.content === block.content && version.title === block.title);
+}
+
+/**
+ * Artifacts that read as part of the answer stay in the message. Interactive
+ * or scripted content goes to the panel: it needs space, and a historical page
+ * must not run every time an old conversation opens.
+ */
+export function shouldInlineArtifact(block: Pick<ArtifactBlock, "type" | "content" | "complete">): boolean {
+  if (!block.complete) return false;
+  if (block.type === "mermaid") return block.content.length <= 24_000;
+  if (block.type === "svg") return block.content.length <= 24_000 && !htmlPreviewHasActiveContent(block.content);
+  if (block.type === "markdown") return block.content.length <= 8_000;
+  if (block.type !== "html") return false;
+  return block.content.length <= 12_000 && !htmlPreviewHasActiveContent(block.content);
 }
 
 const CODE_EXTENSIONS: Record<string, string> = {

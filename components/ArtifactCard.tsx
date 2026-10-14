@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/hooks/useI18n";
-import { versionIndexOf, type ArtifactBlock, type ArtifactType } from "@/lib/artifacts";
+import { shouldInlineArtifact, versionIndexOf, type ArtifactBlock, type ArtifactType } from "@/lib/artifacts";
 import { openArtifact, useActiveArtifactSession, useHasArtifactOpener, useSessionArtifact } from "@/lib/artifact-store";
 import { HtmlPreviewBlock } from "./HtmlPreviewBlock";
 import { CodeBlock, MermaidBlock } from "./MermaidBlock";
@@ -45,10 +45,8 @@ export function ArtifactTypeIcon({ type, size = 16 }: { type: ArtifactType; size
 }
 
 /**
- * Stands in for an artifact inside the message: title, type and version,
- * opening the side panel on click. A card that watched its block finish
- * streaming opens the panel once by itself, the way a freshly generated
- * artifact appears next to the chat; history never auto-opens.
+ * An artifact in a message. Simple content stays part of the reply; larger or
+ * runnable content becomes a card that opens the side panel.
  */
 export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isStreaming?: boolean }) {
   const { t } = useI18n();
@@ -57,7 +55,16 @@ export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isS
   const generating = !block.complete && Boolean(isStreaming);
   const versionIndex = generating ? -1 : versionIndexOf(entry, block);
   const sawGeneratingRef = useRef(false);
+  const [readyHighlight, setReadyHighlight] = useState(false);
+  const readyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cardRef = useRef<HTMLButtonElement>(null);
   const hasOpener = useHasArtifactOpener();
+  const handleOpen = useCallback(() => openArtifact({
+    identifier: block.identifier,
+    title: block.title,
+    ...(versionIndex >= 0 ? { version: versionIndex + 1 } : {}),
+    reveal: true,
+  }), [block.identifier, block.title, versionIndex]);
 
   useEffect(() => {
     if (generating) {
@@ -66,17 +73,31 @@ export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isS
     }
     if (!sawGeneratingRef.current || !block.complete) return;
     sawGeneratingRef.current = false;
+    setReadyHighlight(true);
+    if (readyTimerRef.current) clearTimeout(readyTimerRef.current);
+    readyTimerRef.current = setTimeout(() => setReadyHighlight(false), 2600);
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (rect && (rect.bottom < 48 || rect.top > window.innerHeight - 120)) {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
     openArtifact({
       identifier: block.identifier,
       title: block.title,
       ...(versionIndex >= 0 ? { version: versionIndex + 1 } : {}),
       auto: true,
+      reveal: false,
     });
   }, [generating, block.complete, block.identifier, block.title, versionIndex]);
 
-  // Where nothing hosts a panel (a markdown preview outside the chat), show
-  // the content in place instead of a card that cannot open anything.
-  if (!hasOpener) return <InlineArtifact block={block} isStreaming={isStreaming} />;
+  useEffect(() => () => {
+    if (readyTimerRef.current) clearTimeout(readyTimerRef.current);
+  }, []);
+
+  // A markdown preview outside the chat has no panel. In the chat, diagrams
+  // and short documents render in place; apps and scripted pages do not.
+  if (!hasOpener || shouldInlineArtifact(block)) {
+    return <InlineArtifact block={block} isStreaming={isStreaming} onOpen={hasOpener ? handleOpen : undefined} />;
+  }
 
   const versionCount = entry?.versions.length ?? 0;
   const subtitle = generating
@@ -88,14 +109,11 @@ export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isS
 
   return (
     <button
+      ref={cardRef}
       type="button"
-      className={`artifact-card${generating ? " is-generating" : ""}`}
-      onClick={() => openArtifact({
-        identifier: block.identifier,
-        title: block.title,
-        ...(versionIndex >= 0 ? { version: versionIndex + 1 } : {}),
-      })}
-      title={t("artifacts.open")}
+      className={`artifact-card${generating ? " is-generating" : ""}${readyHighlight ? " artifact-ready" : ""}`}
+      onClick={handleOpen}
+      title={generating ? t("artifacts.generating") : t("artifacts.staged")}
     >
       <span className="artifact-card-icon">
         <ArtifactTypeIcon type={block.type} />
@@ -109,13 +127,33 @@ export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isS
   );
 }
 
-function InlineArtifact({ block, isStreaming }: { block: ArtifactBlock; isStreaming?: boolean }) {
+function InlineArtifact({
+  block,
+  isStreaming,
+  onOpen,
+}: {
+  block: ArtifactBlock;
+  isStreaming?: boolean;
+  onOpen?: () => void;
+}) {
+  const { t } = useI18n();
   const streaming = Boolean(isStreaming) && !block.complete;
+  const action: ReactNode = onOpen && !streaming ? (
+    <button
+      type="button"
+      className="markdown-code-action artifact-inline-open"
+      title={block.title}
+      onClick={onOpen}
+    >
+      <ArtifactTypeIcon type={block.type} size={12} />
+      {t("artifacts.open")}
+    </button>
+  ) : undefined;
   if (block.type === "html" || block.type === "svg" || block.type === "react") {
-    return <HtmlPreviewBlock code={block.content} lang={block.lang} kind={block.type} isStreaming={streaming} />;
+    return <HtmlPreviewBlock code={block.content} lang={block.lang} kind={block.type} isStreaming={streaming} headerAction={action} />;
   }
   if (block.type === "mermaid") {
-    return <MermaidBlock code={block.content} isStreaming={streaming} defaultPreview />;
+    return <MermaidBlock code={block.content} isStreaming={streaming} defaultPreview headerAction={action} />;
   }
-  return <CodeBlock code={block.content} lang={block.lang} isStreaming={streaming} />;
+  return <CodeBlock code={block.content} lang={block.lang} isStreaming={streaming} headerAction={action} />;
 }

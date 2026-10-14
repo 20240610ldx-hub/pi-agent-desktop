@@ -171,7 +171,8 @@ export function AppShell() {
   useEffect(() => { scheduledOpenRef.current = scheduledOpen; }, [scheduledOpen]);
   const [explorerUploadBusy, setExplorerUploadBusy] = useState(false);
   const fileExplorerRef = useRef<FileExplorerHandle>(null);
-  const [fileTreeOpen, setFileTreeOpen] = useState(true);
+  // The panel is a preview surface; keep the file index hidden until asked for.
+  const [fileTreeOpen, setFileTreeOpen] = useState(false);
   // Measured width of the panel body; drives the narrow-panel auto-collapse.
   const [panelBodyWidth, setPanelBodyWidth] = useState(0);
   const panelBodyObserverRef = useRef<ResizeObserver | null>(null);
@@ -578,7 +579,19 @@ export function AppShell() {
       setActiveTopPanel(null);
     }
     setTopMoreOpen(false);
-    setRightPanelOpen((open) => !open);
+    setRightPanelOpen((open) => {
+      if (open) setRightPanelExpanded(false);
+      return !open;
+    });
+  }, [isMobile]);
+
+  // The panel is a preview layer; the composer remains the home base. The
+  // overlay and backslash shortcut both use this same exit.
+  const handleRightPanelClose = useCallback(() => {
+    if (isMobile) setActiveTopPanel(null);
+    setTopMoreOpen(false);
+    setRightPanelOpen(false);
+    chatInputRef.current?.focus();
   }, [isMobile]);
 
   const handleRightPanelExpandToggle = useCallback(() => {
@@ -1111,6 +1124,11 @@ export function AppShell() {
   useGlobalKeyboardShortcuts({
     onNewSession: (cwd: string) => handleNewSession(`kb-${Date.now()}`, cwd),
     activeCwd,
+    onCloseRightPanel: () => {
+      setTopMoreOpen(false);
+      setRightPanelOpen(false);
+      chatInputRef.current?.focus();
+    },
   });
 
   // Client-built transient SessionInfo (new session / fork) lacks the
@@ -1410,7 +1428,7 @@ export function AppShell() {
     if (request.auto && isMobile) return;
     setArtifactTabs((tabs) => upsertArtifactTab(tabs, request, Date.now()));
     setActiveFileTabId(artifactTabId(request.sessionId, request.identifier));
-    setRightPanelOpen(true);
+    if (request.reveal !== false) setRightPanelOpen(true);
   }), [isMobile]);
 
   const handleTerminalClosed = (tab: TerminalTab) => {
@@ -2641,9 +2659,8 @@ export function AppShell() {
             </div>
           )}
 
-          {/* Windows/Linux draw their own min/max/close at the window's top-right
-              corner. The open file panel is a full-height column that owns that
-              corner, so the controls move into its header row (below). */}
+          {/* Windows/Linux controls stay in the chat topbar while the floating
+              panel is a separate card; the topbar still owns the visible edge. */}
           {(!rightPanelOpen || isMobile) && <WindowControls />}
         </div>
         <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
@@ -2729,8 +2746,8 @@ export function AppShell() {
                 <div>
                    <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>{translate("workspace.getStarted")}</div>
                   <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8 }}>
-                     <span style={{ color: "var(--text-dim)", marginRight: 6 }}>1.</span>{translate("workspace.selectProject")}<br />
-                     <span style={{ color: "var(--text-dim)", marginRight: 6 }}>2.</span>{translate("workspace.addModels")}
+                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>1.</span>{translate("workspace.selectProject")}<br />
+                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>2.</span>{translate("workspace.addModels")}
                   </div>
                 </div>
               </div>
@@ -2783,7 +2800,7 @@ export function AppShell() {
       <div
         aria-hidden="true"
         className={`right-panel-overlay-backdrop${rightPanelOpen ? " is-open" : ""}`}
-        onClick={() => setRightPanelOpen(false)}
+        onClick={handleRightPanelClose}
       />
       {rightPanelOpen && (
         <div
@@ -2792,7 +2809,7 @@ export function AppShell() {
           aria-controls="file-panel"
           className={`panel-resize-handle right-panel-resize-handle${rightPanelResizer.isResizing ? " is-resizing" : ""}`}
           data-resize-handle="right-panel"
-          title={`${translate("layout.resizeFilePanel")}: ${translate("layout.resizeHint")}`}
+          title={`${translate("layout.resizeFilePanel")}: ${translate("layout.resizeHint")} · ${translate("files.closePanelHint")}`}
         />
       )}
 
@@ -2805,7 +2822,7 @@ export function AppShell() {
           "--right-panel-width": `${rightPanelResizer.width}px`,
           display: "flex",
           flexDirection: "column",
-          borderLeft: "var(--hairline) solid var(--border)",
+          borderLeft: "var(--hairline) solid var(--separator)",
           background: "var(--bg)",
         } as React.CSSProperties}
       >
@@ -2856,8 +2873,6 @@ export function AppShell() {
         */}
         <div
           className={`right-panel-tab-strip${macLightsOverPanel ? " right-panel-tab-strip--mac-inset" : ""}`}
-          {...desktopChrome.dragRegionProps}
-          {...windowDrag}
         >
           <div className="file-tab-bar-slot">
             <TabBar
@@ -2878,7 +2893,9 @@ export function AppShell() {
               aria-pressed={fileTreeShown}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /><path d="M15 7v10" />
+                <circle cx="4.25" cy="5.25" r="1.35" fill="currentColor" stroke="none" /><path d="M7.75 5.25H21" />
+                <circle cx="4.25" cy="12" r="1.35" fill="currentColor" stroke="none" /><path d="M7.75 12H21" />
+                <circle cx="4.25" cy="18.75" r="1.35" fill="currentColor" stroke="none" /><path d="M7.75 18.75H21" />
               </svg>
             </button>
           )}
@@ -2891,25 +2908,10 @@ export function AppShell() {
             title={translate(rightPanelFullWidth ? "files.restorePanelWidth" : "files.expandPanel")}
             aria-label={translate(rightPanelFullWidth ? "files.restorePanelWidth" : "files.expandPanel")}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d={rightPanelFullWidth
-                ? "M9 3v6H3m12-6v6h6M9 21v-6H3m12 6v-6h6M3 3l6 6m12-6-6 6M3 21l6-6m12 6-6-6"
-                : "M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M3 3l6 6m12-6-6 6M3 21l6-6m12 6-6-6"} />
-            </svg>
-          </button>
-          {/* Close from the panel's own header, like Claude Desktop's side
-              panel. The topbar toggle stays as the way back in. */}
-          <button
-            type="button"
-            className="file-workbench-icon-button right-panel-close-button"
-            onClick={() => setRightPanelOpen(false)}
-            aria-controls="file-panel"
-            aria-expanded={rightPanelOpen}
-            title={translate("files.hidePanel")}
-            aria-label={translate("files.hidePanel")}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                ? "M4 9V4h5M20 15v5h-5M4 15v5h5M20 9V4h-5"
+                : "M15 4h5v5M9 20H4v-5M20 15v5h-5M4 9V4h5"} />
             </svg>
           </button>
           {rightPanelOpen && !isMobile && <WindowControls />}
