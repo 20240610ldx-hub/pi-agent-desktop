@@ -445,6 +445,8 @@ export const zhCNLocale: LocalePlugin = {
     "chat.collapseProcess": "收起处理详情",
     "chat.expandProcess": "展开处理详情",
     "chat.filesWritten": "改动的文件",
+    "chat.filesEditedOne": "已编辑 1 个文件",
+    "chat.filesEditedMany": "已编辑 {count} 个文件",
     "chat.openWrittenFile": "打开 {name}",
     "fileMenu.open": "打开",
     "fileMenu.openWith": "打开方式",

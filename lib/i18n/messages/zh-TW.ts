@@ -405,6 +405,8 @@ export const zhTWLocale: LocalePlugin = {
     "chat.collapseProcess": "收起處理詳細資料",
     "chat.expandProcess": "展開處理詳細資料",
     "chat.filesWritten": "已變更的檔案",
+    "chat.filesEditedOne": "已編輯 1 個檔案",
+    "chat.filesEditedMany": "已編輯 {count} 個檔案",
     "chat.openWrittenFile": "開啟 {name}",
     "fileMenu.open": "開啟",
     "fileMenu.openWith": "開啟方式",
