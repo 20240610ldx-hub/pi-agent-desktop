@@ -114,6 +114,7 @@ jobs:
             - **Edited files card** under a reply: every file the turn wrote, with lines added and removed; a row opens the file, right-click offers Open With / Reveal.
             - Mermaid diagrams fit the panel width and zoom with Ctrl / ⌘ + wheel or the + / − / 0 keys.
             - `\` closes the side panel and returns to the composer.
+            - The side panel opens and closes with the same animation as the sidebar, on desktop and on phones.
 
             ### Changed
 
@@ -124,6 +125,7 @@ jobs:
             ### Fixed
 
             - Code blocks keep their background across theme switches.
+            - The side-panel button no longer jumps across the title bar while the app loads.
             - Leaving a narrow window width restores the desktop sidebar state.
             - The macOS traffic-light buttons stay on the top bar's centre line after launch and when the window is shown again.
             - Edited-file line counts no longer count unchanged context lines quoted in an edit.
@@ -147,6 +149,7 @@ jobs:
             - 回复下方新增**已修改文件卡片**：列出本轮写入的每个文件及其增删行数；点击打开文件，右键可选择打开方式或在文件夹中显示（macOS 为访达）。
             - Mermaid 图会适配面板宽度，可用 Ctrl / ⌘ + 滚轮或 + / − / 0 键缩放。
             - 按 `\` 关闭侧边面板并回到输入框。
+            - 侧边面板的展开和收起与左侧栏使用相同的动画，桌面和手机端均适用。
 
             ### 变更
 
@@ -157,6 +160,7 @@ jobs:
             ### 修复
 
             - 切换主题后代码块背景不再丢失。
+            - 应用加载时，侧边面板按钮不再在标题栏中跳动。
             - 从窄窗口恢复宽度后，桌面侧边栏状态正确还原。
             - macOS 红绿灯按钮在启动后及窗口重新显示时保持在顶栏中线上。
             - 已修改文件的行数统计不再计入编辑中引用的未改动上下文行。
