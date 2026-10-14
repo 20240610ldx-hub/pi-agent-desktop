@@ -369,12 +369,12 @@
   width: 12px;
   flex: 0 0 12px;
   color: var(--accent);
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
 }
 .sidebar-project-context-menu-branch-tag {
   margin-left: auto;
   color: var(--text-dim);
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
   font-size: var(--fs-micro);
 }
 .sidebar-project-context-menu-branch-spinner {
@@ -5459,11 +5459,12 @@ span.linenumber {
 }
 
 
-/* Right panel: animate width */
+/* Right panel: animate width (split layout) and slide (compact overlay), with
+   the left sidebar's timing so both sides open and close alike. */
 @media (min-width: 641px) {
   .right-panel-container {
     overflow: hidden;
-    transition: none;
+    transition: width 0.2s ease, min-width 0.2s ease, transform 0.2s ease;
     flex-shrink: 0;
   }
   .right-panel-container.right-panel-open {
@@ -5557,18 +5558,25 @@ span.linenumber {
     height: var(--app-viewport-height, 100dvh) !important;
     z-index: 250;
     overflow: hidden;
-    transition: width 0.2s ease, min-width 0.2s ease;
+    transition: transform 0.25s ease, visibility 0s linear 0s;
     flex-shrink: 0;
   }
   .right-panel-container.right-panel-open {
     width: 100%;
     min-width: 0;
   }
+  /* Slides like the mobile sidebar. `visibility` waits for the slide to end,
+     then takes the closed panel out of hit testing and the accessibility tree. */
   .right-panel-container.right-panel-closed {
-    width: 0 !important;
+    /* Beats upstream's `display: none !important`, which cannot animate. */
+    display: flex !important;
+    width: 100% !important;
     min-width: 0 !important;
     border-left: none !important;
-    display: none !important;
+    transform: translateX(100%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
   }
 
   .context-panel-mode-strip {
@@ -5806,6 +5814,15 @@ span.linenumber {
   color: var(--text-muted);
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease;
+  /* Pinned to the right edge on its own. The actions group that otherwise
+     pushes it there only renders once a chat is shown, so on load the toggle
+     sat after the title and then jumped right. */
+  margin-left: auto;
+}
+/* With the actions group present, its own auto margin does the pushing; a
+   second one here would split the free space and float both mid-bar. */
+.app-topbar-actions ~ .main-file-toggle {
+  margin-left: 0;
 }
 
 .main-file-toggle:hover:not(:disabled),
@@ -6891,9 +6908,6 @@ html.native-desktop :is(
 /* The panel edge is the shell boundary; give its resize target a soft hover
    state without pretending there is a floating card. */
 @media (min-width: 960px) {
-  .right-panel-container.right-panel-open:not(.right-panel-full-width) {
-    transition: none;
-  }
   .right-panel-resize-handle:not(:hover):not(:focus-visible):not(.is-resizing)::after {
     background: transparent !important;
   }
@@ -6910,10 +6924,14 @@ html.native-desktop :is(
   .right-panel-container:not(.right-panel-full-width),
   .right-panel-container.right-panel-open:not(.right-panel-full-width),
   .right-panel-container.right-panel-closed {
-    top: var(--right-panel-gutter);
-    right: calc(env(safe-area-inset-right) + var(--right-panel-gutter));
-    bottom: var(--right-panel-gutter);
-    width: min(560px, calc(100vw - 48px - var(--right-panel-gutter)));
+    /* Flush with the window edge. These once read --right-panel-gutter, which
+       7d3d13e1 removed: an undefined variable made top/right/bottom/width
+       invalid, so the closed drawer peeked over the topbar and the open one
+       shrank into the top-left corner. */
+    top: 0;
+    right: env(safe-area-inset-right);
+    bottom: 0;
+    width: min(560px, calc(100vw - 48px));
     min-width: 300px;
   }
   .right-panel-container:not(.right-panel-full-width) > * {
@@ -7045,4 +7063,11 @@ html.native-desktop :is(
 .right-panel-empty-action:hover {
   background: var(--bg-hover);
   color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .right-panel-container,
+  .right-panel-container.right-panel-closed {
+    transition: none !important;
+  }
 }
