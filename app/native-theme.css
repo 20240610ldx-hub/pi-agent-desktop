@@ -4025,8 +4025,11 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   font-size: var(--fs-small);
 }
 
-/* File workbench */
-@media (min-width: 769px) {
+/* File workbench. Only the wide split layout puts the panel in flow; below
+   960px upstream's compact rules make it a fixed overlay, and a `relative`
+   here pulled it back into the row (closed, it still took 560px and squeezed
+   the composer to a sliver). */
+@media (min-width: 960px) {
   .right-panel-container {
     position: relative;
   }
@@ -6427,4 +6430,137 @@ html.native-desktop :is(
   color: var(--accent) !important;
   border-color: var(--accent);
   background: var(--bg-hover);
+}
+
+/* Right panel as an inset card (Claude Desktop style).
+
+   The panel is a full-height column beside the main column (AppShell), not a
+   child of the row under the topbar, so the card runs from the window's top
+   edge to its bottom and the topbar only spans the chat. The container keeps
+   its job as the layout slot that animates width and is itself the card: a
+   gutter on the top/right/bottom, rounded corners, a white surface on a
+   uniform canvas, a 1px ring plus a soft drop shadow. The ring is a
+   box-shadow, not a border, so the fixed-width children
+   (`--right-panel-width`) still fill it exactly and do not reflow while the
+   width animates. `!important` beats the inline borderLeft/background in
+   AppShell. Inside, the card is one plain surface: no horizontal separators,
+   no tinted rows; only the file tree's vertical divider. Full-width mode and
+   the <=640px sheet stay flat. */
+:root {
+  --right-panel-gutter: 8px;
+  --right-panel-radius: 12px;
+  --right-panel-card-shadow: 0 0 0 1px rgba(15, 23, 42, 0.1),
+    0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+:root[data-theme="dark"] {
+  --right-panel-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09),
+    0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 22px rgba(0, 0, 0, 0.38);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --right-panel-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09),
+      0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 22px rgba(0, 0, 0, 0.38);
+  }
+}
+
+/* The file tree sits on the panel's left, as in Claude Desktop. Only the
+   order changes; the resizer grows rightward to match (AppShell). */
+.right-panel-body > .file-tree-panel {
+  order: -2;
+  border-left: none;
+  border-right: var(--hairline) solid var(--separator);
+}
+.right-panel-body > .file-tree-resize-handle {
+  order: -1;
+}
+.right-panel-tab-strip > .file-tree-toggle {
+  order: -1;
+}
+
+@media (min-width: 641px) {
+  /* The canvas the card floats on is one colour: the chat's topbar carries
+     no tint and no rule of its own, like Claude's title area. */
+  .app-topbar {
+    background: var(--bg) !important;
+    border-bottom-color: transparent !important;
+  }
+
+  .right-panel-container:not(.right-panel-full-width) {
+    border-left: none !important;
+    border-radius: var(--right-panel-radius);
+    background: var(--surface) !important;
+  }
+  .right-panel-container.right-panel-open:not(.right-panel-full-width) {
+    box-shadow: var(--right-panel-card-shadow);
+  }
+
+  /* Header row: part of the card, no rule under it. Its chips line up with
+     the topbar's controls (topbar 48px, card starts at the gutter). */
+  .right-panel-container:not(.right-panel-full-width) .right-panel-tab-strip {
+    height: calc(48px - var(--right-panel-gutter));
+    min-height: calc(48px - var(--right-panel-gutter));
+    flex-basis: calc(48px - var(--right-panel-gutter));
+    padding: 0 8px 4px;
+    background: transparent;
+  }
+  .right-panel-container:not(.right-panel-full-width) .right-panel-tab-strip::after,
+  .right-panel-container:not(.right-panel-full-width) .context-panel-files-toolbar::after {
+    display: none;
+  }
+  .right-panel-container:not(.right-panel-full-width) .context-panel-files-toolbar,
+  .right-panel-container:not(.right-panel-full-width) .file-viewer-toolbar,
+  .right-panel-container:not(.right-panel-full-width) .file-workbench-toolbar {
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+  }
+  .right-panel-container:not(.right-panel-full-width) .file-tree-panel {
+    background: transparent;
+  }
+}
+
+/* Wide split layout: the card takes its width plus the gutter from the row. */
+@media (min-width: 960px) {
+  .right-panel-container {
+    transition: width 0.2s ease, min-width 0.2s ease, margin 0.2s ease;
+  }
+  .right-panel-container.right-panel-open:not(.right-panel-full-width) {
+    margin: var(--right-panel-gutter) var(--right-panel-gutter) var(--right-panel-gutter) 2px;
+  }
+  .right-panel-container.right-panel-closed {
+    margin: 0;
+    box-shadow: none;
+  }
+  /* The card's own ring is the only edge between chat and panel, as in
+     Claude Desktop: the resize handle stays an invisible hit strip in the
+     gap (col-resize cursor) and never paints a second line beside the card
+     while hovered or dragged. Keyboard focus still shows it. */
+  .right-panel-resize-handle:not(:focus-visible)::after {
+    background: transparent !important;
+  }
+}
+
+/* Compact overlay (641-959px): the same card, floating over the chat. */
+@media (min-width: 641px) and (max-width: 959px) {
+  /* The generic >=641px width rules above would otherwise size this overlay
+     (and collapse it to 0 when closed, losing the slide). */
+  .right-panel-container:not(.right-panel-full-width),
+  .right-panel-container.right-panel-open:not(.right-panel-full-width),
+  .right-panel-container.right-panel-closed {
+    top: var(--right-panel-gutter);
+    right: calc(env(safe-area-inset-right) + var(--right-panel-gutter));
+    bottom: var(--right-panel-gutter);
+    width: min(560px, calc(100vw - 48px - var(--right-panel-gutter)));
+    min-width: 300px;
+  }
+  .right-panel-container:not(.right-panel-full-width) > * {
+    width: 100%;
+    min-width: 0;
+  }
+  .right-panel-container.right-panel-open:not(.right-panel-full-width) {
+    box-shadow: var(--right-panel-card-shadow), var(--shadow-popover);
+  }
+  .right-panel-container.right-panel-closed {
+    transform: translateX(calc(100% + 2 * var(--right-panel-gutter)));
+    box-shadow: none;
+  }
 }
