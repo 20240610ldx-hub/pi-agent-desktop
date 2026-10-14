@@ -731,6 +731,13 @@
   border-top: var(--hairline) solid var(--border);
 }
 
+/* The Send key choice does not shrink (its labels are nowrap), so on a phone
+   it ran past the card's right edge. Let it drop under its label instead. */
+.settings-chat-switch-option:has(.settings-send-mode-options) {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
 .settings-theme-options + .settings-option-list {
   margin-top: 8px;
 }
