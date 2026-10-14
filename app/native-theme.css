@@ -1143,6 +1143,29 @@ html.dark .conversation-navigator-preview {
   overflow: hidden;
 }
 
+/* Only the tab area gives way when the row is narrow: the chips after it keep
+   their 28px box. As flex items they default to `flex-shrink: 1`, so the row
+   used to squeeze the folder / expand chips (and their hover plates) instead
+   of scrolling the tabs. */
+.right-panel-tab-strip > :not(.file-tab-bar-slot) {
+  flex-shrink: 0;
+}
+
+/* Edge fades, sized by TabBar's `data-overflow-*` flags. Registered so the
+   fade grows in and out instead of popping when the first tab starts to pass
+   under the chips. */
+@property --file-tab-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --file-tab-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 .file-tab-bar {
   display: flex;
   height: 100%;
@@ -1152,6 +1175,28 @@ html.dark .conversation-navigator-preview {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  --file-tab-fade-start: 0px;
+  --file-tab-fade-end: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--file-tab-fade-start), #000 calc(100% - var(--file-tab-fade-end)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--file-tab-fade-start), #000 calc(100% - var(--file-tab-fade-end)), transparent 100%);
+  transition: --file-tab-fade-start 180ms ease, --file-tab-fade-end 180ms ease;
+}
+
+.file-tab-bar[data-overflow-start] {
+  --file-tab-fade-start: 24px;
+}
+
+.file-tab-bar[data-overflow-end] {
+  --file-tab-fade-end: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file-tab-bar {
+    scroll-behavior: auto;
+    transition: none;
+  }
 }
 
 .file-tab-bar::-webkit-scrollbar {
