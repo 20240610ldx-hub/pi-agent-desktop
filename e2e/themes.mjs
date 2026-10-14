@@ -11,8 +11,7 @@ const labels = ["Light", "Dark", "System"];
 await mkdir(artifacts, { recursive: true });
 const browser = await chromium.launch();
 
-// The fork's surfaces are translucent (rgba / transparent over the window
-// vibrancy), so resolve every token to opaque RGB by compositing it over the
+// The fork's surfaces are translucent (rgba), so resolve every token to opaque RGB by compositing it over the
 // page background before measuring contrast.
 function parseColor(value) {
   const text = value.trim();

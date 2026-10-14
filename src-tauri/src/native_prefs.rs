@@ -7,12 +7,9 @@ use tauri::{AppHandle, Manager, Theme, Url};
 
 use crate::shell::WINDOW_LABEL;
 
-#[cfg(not(target_os = "macos"))]
 use tauri::webview::Color;
 
-#[cfg(not(target_os = "macos"))]
 const LIGHT_WINDOW_BG: Color = Color(247, 247, 245, 255);
-#[cfg(not(target_os = "macos"))]
 const DARK_WINDOW_BG: Color = Color(28, 28, 30, 255);
 
 /// Persist the UI theme outside the webview origin so cold starts keep the
@@ -257,7 +254,6 @@ pub fn write_last_server_port(app: &AppHandle, port: u16) {
     let _ = write_ui_prefs(app, &prefs);
 }
 
-#[cfg(not(target_os = "macos"))]
 pub(crate) fn theme_background_color(theme: &str) -> Color {
     if theme == "dark" {
         DARK_WINDOW_BG
@@ -304,10 +300,11 @@ pub fn apply_window_theme(app: &AppHandle, theme: &str) {
     // Wayland and segfaults the whole process (frameless WebKitGTK window).
     // The page paints its own opaque background via CSS, so the native chrome
     // color is cosmetic only and is safe to skip on Wayland.
-    // On macOS the window is transparent over an NSVisualEffectView, so an
-    // opaque native background would hide the vibrancy.
+    #[cfg(target_os = "macos")]
+    let paint_background = true;
     #[cfg(not(target_os = "macos"))]
-    if !is_wayland() {
+    let paint_background = !is_wayland();
+    if paint_background {
         let _ = window.set_background_color(Some(theme_background_color(theme)));
     }
 }
