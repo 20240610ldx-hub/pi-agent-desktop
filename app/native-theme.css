@@ -4339,6 +4339,12 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   border: 0;
   border-radius: 0;
 }
+/* Upstream caps an inline Mermaid preview at min(600px, 60dvh) so a big
+   diagram cannot fill the chat. The panel scrolls on its own, and the cap cut
+   tall diagrams off with free space below. */
+.artifact-panel-body .mermaid-preview-button {
+  max-height: none;
+}
 /* The panel toolbar already has Source / Copy / Download. */
 .artifact-panel-body > .markdown-code-block > .markdown-code-header {
   display: none;
