@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { SyntaxHighlighter, vs, vscDarkPlus } from "@/lib/syntax-highlighting";
 import { useTheme } from "@/hooks/useTheme";
 import { useI18n } from "@/hooks/useI18n";
@@ -11,6 +11,27 @@ interface MermaidBlockProps {
   code: string;
   isStreaming?: boolean;
   defaultPreview?: boolean;
+  /**
+   * Scale the diagram to the width it is shown in (see `.mermaid-fit` in
+   * native-theme.css). Mermaid sizes its SVG to `width: 100%` capped at the
+   * diagram's natural width, so by default a narrow diagram stays small and a
+   * wide one shrinks until its text is unreadable.
+   */
+  fit?: boolean;
+}
+
+// Without a readable viewBox the variable stays unset and the CSS falls back
+// to the plain width: a 0px natural width would hide the diagram entirely.
+function fitStyle(fit: boolean, svg: string): CSSProperties | undefined {
+  const width = fit ? mermaidNaturalWidth(svg) : null;
+  return width ? ({ "--mermaid-natural-width": `${width}px` } as CSSProperties) : undefined;
+}
+
+/** The natural width of a rendered Mermaid SVG, from its viewBox. */
+export function mermaidNaturalWidth(svg: string): number | null {
+  const match = /<svg\b[^>]*?\sviewBox="\s*-?[\d.]+[\s,]+-?[\d.]+[\s,]+([\d.]+)[\s,]+[\d.]+\s*"/i.exec(svg);
+  const width = match ? Number(match[1]) : NaN;
+  return Number.isFinite(width) && width > 0 ? width : null;
 }
 
 const ZOOM_STEP = 0.25;
@@ -33,7 +54,7 @@ type RenderState =
   | { key: string; status: "error" }
   | { key: string; status: "ready"; svg: string };
 
-export function MermaidBlock({ code, isStreaming, defaultPreview = false }: MermaidBlockProps) {
+export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = false }: MermaidBlockProps) {
   const { isDark } = useTheme();
   const { t } = useI18n();
   const [showPreview, setShowPreview] = useState(defaultPreview);
@@ -106,7 +127,8 @@ export function MermaidBlock({ code, isStreaming, defaultPreview = false }: Merm
           <button
             ref={previewRef}
             type="button"
-            className="mermaid-block mermaid-preview-button"
+            className={`mermaid-block mermaid-preview-button${fit ? " mermaid-fit" : ""}`}
+            style={fitStyle(fit, renderState.svg)}
             title={t("i18n.openMermaidViewer")}
             aria-label={t("i18n.openMermaidViewer")}
             onClick={() => setZoomOpen(true)}

@@ -48,6 +48,7 @@
     "release:manifest": "node scripts/write-component-versions.mjs",
     "release:verify": "node scripts/verify-release-components.mjs",
     "drift": "node scripts/measure-fork-drift.mjs",
+    "preview-runtime": "node scripts/build-preview-runtime.mjs",
     "desktop:verify": "node scripts/verify-packaged-codemode.mjs",
     "test:release-tools": "node --test scripts/*.test.mjs",
     "test": "node --experimental-strip-types --test 'app/**/*.test.mjs' 'lib/**/*.test.mjs' 'scripts/**/*.test.mjs' 'components/**/*.test.mjs' 'hooks/**/*.test.mjs' 'public/**/*.test.mjs'",
@@ -85,6 +86,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@tailwindcss/browser": "4.2.2",
     "@tailwindcss/postcss": "^4.2.2",
     "@tauri-apps/cli": "^2.12.1",
     "@types/js-yaml": "^4.0.9",
@@ -97,6 +99,7 @@
     "@types/semver": "7.8.0",
     "@types/web-push": "^3.6.4",
     "ansi_up": "^6.0.6",
+    "esbuild": "0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "jiti": "^2.7.0",
@@ -112,6 +115,7 @@
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
+    "sucrase": "3.35.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^5"
   },

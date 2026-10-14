@@ -1230,6 +1230,15 @@ fn apply_window_theme(app: &AppHandle, theme: &str) {
     }
 }
 
+/// Documents an iframe renders from inline content (`<iframe srcdoc>`, a blank
+/// frame). WebKit asks the navigation delegate about sub-frame loads too, so
+/// without this the HTML/artifact previews and FileViewer's "Run scripts" mode
+/// were cancelled on macOS. They load nothing from the network and cannot move
+/// the window, so they stay in the app.
+fn is_inline_frame_document(url: &Url) -> bool {
+    url.scheme() == "about" && matches!(url.path(), "srcdoc" | "blank")
+}
+
 fn same_origin(candidate: &Url, app_url: &Url) -> bool {
     candidate.scheme() == app_url.scheme()
         && candidate.host_str() == app_url.host_str()
@@ -1271,7 +1280,7 @@ fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWi
         // Pi Agent already handles browser drag/drop for image attachments.
         .disable_drag_drop_handler()
         .on_navigation(move |url| {
-            if same_origin(url, &navigation_origin) {
+            if same_origin(url, &navigation_origin) || is_inline_frame_document(url) {
                 true
             } else {
                 open_external(url);
@@ -1839,11 +1848,22 @@ fn start_packaged_server(
 #[cfg(all(test, feature = "custom-protocol"))]
 mod tests {
     use super::{
-        child_process_compatible_path, format_utc_millis, response_has_instance_id, PopupMenuEntry,
+        child_process_compatible_path, format_utc_millis, is_inline_frame_document,
+        response_has_instance_id, PopupMenuEntry,
     };
     #[cfg(target_os = "linux")]
     use super::{visible_linux_tray_item, LinuxTray, LINUX_TRAY_QUIT_LABEL, LINUX_TRAY_SHOW_LABEL};
     use std::path::{Path, PathBuf};
+
+    #[test]
+    fn inline_frame_documents_stay_in_the_app() {
+        let parse = |url: &str| tauri::Url::parse(url).unwrap();
+        assert!(is_inline_frame_document(&parse("about:srcdoc")));
+        assert!(is_inline_frame_document(&parse("about:blank")));
+        assert!(!is_inline_frame_document(&parse("about:config")));
+        assert!(!is_inline_frame_document(&parse("https://example.com/srcdoc")));
+        assert!(!is_inline_frame_document(&parse("data:text/html,x")));
+    }
 
     #[test]
     fn log_timestamps_are_utc_iso() {
