@@ -16,16 +16,22 @@ export function useArtifactPublisher(
   streamingMessage: MessageLike | null | undefined,
   send?: (text: string) => void,
 ): void {
+  // The transcript is scanned once per change; while a reply streams only its
+  // own text is parsed again on each chunk.
+  const finished = useMemo(() => collectArtifacts(assistantTexts(messages)), [messages]);
   const entries = useMemo(() => {
-    const last = messages.at(-1);
+    const streamingTexts = streamingMessage ? assistantTexts([streamingMessage]) : [];
+    if (!streamingTexts.length) return finished;
     // The finished reply can be in `messages` while the stream state still
     // holds it; counting both would add a phantom version.
-    const streaming = streamingMessage && streamingMessage !== last
-      && JSON.stringify(streamingMessage.content) !== JSON.stringify(last?.content)
-      ? [streamingMessage]
-      : [];
-    return collectArtifacts(assistantTexts([...messages, ...streaming]));
-  }, [messages, streamingMessage]);
+    const last = messages.at(-1);
+    if (streamingMessage === last) return finished;
+    const lastTexts = last ? assistantTexts([last]) : [];
+    if (lastTexts.length === streamingTexts.length && lastTexts.every((text, index) => text === streamingTexts[index])) {
+      return finished;
+    }
+    return collectArtifacts(streamingTexts, finished);
+  }, [finished, messages, streamingMessage]);
 
   useEffect(() => {
     setActiveArtifactSession(sessionId ?? null);

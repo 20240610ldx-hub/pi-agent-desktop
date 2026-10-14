@@ -916,7 +916,7 @@ export const enLocale: LocalePlugin = {
     "mcp.test.error": "Error:",
     "mcp.test.stderr": "The last lines it wrote to stderr:",
     "mcp.test.serverInfo": "Server: {name} {version}",
-    "mcp.test.resources": "{resources} resource(s) and {templates} resource template(s).",
+    "mcp.test.resources": "Offers resources, listed when a session reads them.",
     "mcp.test.ranIn": "Ran in {path}.",
     "mcp.test.queued": "Waited {seconds} s for another test of a server that runs a shell command.",
     "mcp.test.readOnly": "read-only",

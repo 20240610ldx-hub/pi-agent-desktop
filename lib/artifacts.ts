@@ -248,17 +248,24 @@ export function decodeArtifactFence(raw: string): ArtifactBlock | null {
   }
 }
 
-/** Every artifact in the given assistant texts, versions in order of appearance. */
-export function collectArtifacts(texts: readonly string[]): ArtifactEntry[] {
-  const entries = new Map<string, ArtifactEntry>();
+/**
+ * Every artifact in the given assistant texts, versions in order of
+ * appearance. `base` is an earlier result the texts continue (the finished
+ * transcript, while a reply streams); it is never mutated, so it can be
+ * memoized and only the streaming text re-parsed on each chunk.
+ */
+export function collectArtifacts(texts: readonly string[], base: readonly ArtifactEntry[] = []): ArtifactEntry[] {
+  const entries = new Map<string, ArtifactEntry>(base.map((entry) => [entry.identifier, entry]));
+  const owned = new Set<string>();
   for (const text of texts) {
     for (const segment of splitArtifacts(text)) {
       if (segment.kind !== "artifact") continue;
       const { identifier, ...version } = segment.block;
       let entry = entries.get(identifier);
-      if (!entry) {
-        entry = { identifier, versions: [] };
+      if (!entry || !owned.has(identifier)) {
+        entry = { identifier, versions: entry ? [...entry.versions] : [] };
         entries.set(identifier, entry);
+        owned.add(identifier);
       }
       entry.versions.push(version);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { SyntaxHighlighter, vs, vscDarkPlus } from "@/lib/syntax-highlighting";
 import { useTheme } from "@/hooks/useTheme";
 import { useI18n } from "@/hooks/useI18n";
@@ -76,6 +76,21 @@ export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = 
   useEffect(() => {
     if (previewVisible) setPreviewZoom(1);
   }, [previewVisible]);
+
+  // Ctrl/⌘ + wheel zooms the diagram. React attaches wheel listeners as
+  // passive, where preventDefault is ignored and the whole page zooms too.
+  const previewMounted = previewVisible && !zoomOpen && renderState?.key === currentKey && renderState.status === "ready";
+  useEffect(() => {
+    const preview = previewRef.current;
+    if (!previewMounted || !preview) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      updatePreviewZoom(event.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP);
+    };
+    preview.addEventListener("wheel", onWheel, { passive: false });
+    return () => preview.removeEventListener("wheel", onWheel);
+  }, [previewMounted, updatePreviewZoom]);
 
   useEffect(() => {
     if (!previewVisible) return;
@@ -166,11 +181,6 @@ export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = 
                 event.preventDefault();
                 resetPreviewZoom();
               }
-            }}
-            onWheel={(event: ReactWheelEvent<HTMLButtonElement>) => {
-              if (!event.ctrlKey && !event.metaKey) return;
-              event.preventDefault();
-              updatePreviewZoom(event.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP);
             }}
             dangerouslySetInnerHTML={{ __html: renderState.svg }}
           />

@@ -10,7 +10,6 @@ import { useNativeAppMenu } from "@/hooks/useNativeAppMenu";
 import { selectProjectDirectoryNative } from "./ProjectPicker";
 import { SessionSidebar } from "./SessionSidebar";
 import { ChatWindow } from "./ChatWindow";
-import { ScheduledView } from "./scheduled/ScheduledView";
 import { useScheduledRunNotifications } from "@/hooks/useScheduledRunNotifications";
 import type { ChatScrollPosition } from "@/lib/chat-scroll-position";
 import { clearDraft } from "@/lib/draft-store";
@@ -21,6 +20,9 @@ import { TabBar, type Tab } from "./TabBar";
 // syntax highlighting a second time and only matters once a file tab opens.
 const FileViewer = dynamic(() => import("./FileViewer").then((m) => m.FileViewer), { ssr: false });
 const FileExplorer = dynamic(() => import("./FileExplorer").then((m) => m.FileExplorer), { ssr: false });
+// Only mounted once opened; xterm alone is a large share of the page bundle.
+const TerminalPanel = dynamic(() => import("./TerminalPanel").then((m) => m.TerminalPanel), { ssr: false });
+const ScheduledView = dynamic(() => import("./scheduled/ScheduledView").then((m) => m.ScheduledView), { ssr: false });
 import { openFileTab, saveFileViewerState } from "./file-tab-state";
 import { SETTINGS_SECTION_ITEMS, SettingsPanel, SettingsSectionIcon } from "./SettingsPanel";
 import { ProjectTrustDialog, type ProjectTrustFailure } from "./ProjectTrustDialog";
@@ -50,9 +52,8 @@ import { WindowControls, useDesktopChrome, useWindowDrag } from "./desktop";
 import { SystemPromptPanel } from "./SystemPromptPanel";
 import { ToolDefinitionsPanel } from "./ToolDefinitionsPanel";
 import { AgentSessionPanel } from "./AgentSessionPanel";
-import { TerminalPanel } from "./TerminalPanel";
 import { newTerminalTab, restoreTerminalTabs, TERMINAL_TABS_KEY, type TerminalTab } from "./terminal-tab-state";
-import { artifactPanelTab, artifactTabId, upsertArtifactTab, type ArtifactTab } from "./artifact-tabs";
+import { artifactPanelTab, artifactTabId, artifactTabsForSession, upsertArtifactTab, type ArtifactTab } from "./artifact-tabs";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { setArtifactOpener } from "@/lib/artifact-store";
 import { useAudio } from "@/hooks/useAudio";
@@ -587,11 +588,15 @@ export function AppShell() {
 
   // The panel is a preview layer; the composer remains the home base. The
   // overlay and backslash shortcut both use this same exit.
+  // Also leaves full width, like the toggle: reopening into full width would
+  // cover the topbar toggle again. Mobile skips the focus so closing the
+  // panel does not pop the software keyboard.
   const handleRightPanelClose = useCallback(() => {
     if (isMobile) setActiveTopPanel(null);
     setTopMoreOpen(false);
     setRightPanelOpen(false);
-    chatInputRef.current?.focus();
+    setRightPanelExpanded(false);
+    if (!isMobile) chatInputRef.current?.focus();
   }, [isMobile]);
 
   const handleRightPanelExpandToggle = useCallback(() => {
@@ -1124,11 +1129,8 @@ export function AppShell() {
   useGlobalKeyboardShortcuts({
     onNewSession: (cwd: string) => handleNewSession(`kb-${Date.now()}`, cwd),
     activeCwd,
-    onCloseRightPanel: () => {
-      setTopMoreOpen(false);
-      setRightPanelOpen(false);
-      chatInputRef.current?.focus();
-    },
+    // Only while open: a closed panel must leave \ and focus alone.
+    onCloseRightPanel: rightPanelOpen ? handleRightPanelClose : undefined,
   });
 
   // Client-built transient SessionInfo (new session / fork) lacks the
@@ -1430,6 +1432,21 @@ export function AppShell() {
     setActiveFileTabId(artifactTabId(request.sessionId, request.identifier));
     if (request.reveal !== false) setRightPanelOpen(true);
   }), [isMobile]);
+
+  const selectedSessionId = selectedSession?.id ?? null;
+  // Read by the effect below without re-running it on every tab change.
+  const panelTabsRef = useRef({ fileTabs, terminalTabs });
+  useEffect(() => {
+    panelTabsRef.current = { fileTabs, terminalTabs };
+  });
+  useEffect(() => {
+    setArtifactTabs((tabs) => artifactTabsForSession(tabs, selectedSessionId));
+    setActiveFileTabId((current) => (
+      current?.startsWith("artifact:") && !current.startsWith(`artifact:${selectedSessionId}:`)
+        ? panelTabsRef.current.fileTabs.at(-1)?.id ?? panelTabsRef.current.terminalTabs.at(-1)?.id ?? null
+        : current
+    ));
+  }, [selectedSessionId]);
 
   const handleTerminalClosed = (tab: TerminalTab) => {
     const replacement = tab.closing === "restart" ? newTerminalTab(tab.cwd) : null;
@@ -2873,6 +2890,9 @@ export function AppShell() {
         */}
         <div
           className={`right-panel-tab-strip${macLightsOverPanel ? " right-panel-tab-strip--mac-inset" : ""}`}
+          // The card reaches the window top, so its header row moves the window.
+          {...desktopChrome.dragRegionProps}
+          {...windowDrag}
         >
           <div className="file-tab-bar-slot">
             <TabBar
@@ -2914,6 +2934,21 @@ export function AppShell() {
                 : "M15 4h5v5M9 20H4v-5M20 15v5h-5M4 9V4h5"} />
             </svg>
           </button>
+          {/* The panel's own way out. The topbar toggle is covered whenever the
+              panel spans the chat column (full width, and always on mobile). */}
+          <button
+            type="button"
+            className="file-workbench-icon-button right-panel-close-button"
+            onClick={handleRightPanelClose}
+            aria-controls="file-panel"
+            aria-expanded={rightPanelOpen}
+            title={translate("files.hidePanel")}
+            aria-label={translate("files.hidePanel")}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
           {rightPanelOpen && !isMobile && <WindowControls />}
         </div>
 
@@ -2953,8 +2988,14 @@ export function AppShell() {
               )}
             />
           ) : !terminalTabs.some((tab) => tab.id === activeFileTabId) ? (
-            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: 12 }}>
-               {translate("files.noneOpen")}
+            <div className="right-panel-empty">
+              <span>{translate("files.noneOpen")}</span>
+              {/* The file list starts hidden; offer it where the panel is empty. */}
+              {activeCwd && !fileTreeShown && (
+                <button type="button" className="right-panel-empty-action" onClick={handleFileTreeToggle}>
+                  {translate("contextPanel.showFileList")}
+                </button>
+              )}
             </div>
           ) : null}
           {terminalTabs.map((tab) => (

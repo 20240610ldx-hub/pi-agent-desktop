@@ -34,3 +34,13 @@ export function artifactPanelTab(tab: ArtifactTab): Tab {
   const title = getSessionArtifact(tab.sessionId, tab.identifier)?.versions.at(-1)?.title || tab.title;
   return { id: tab.id, label: title, filePath: title, kind: "artifact" };
 }
+
+/**
+ * Artifact tabs of the conversation now shown. Tabs from another one cannot
+ * ask for fixes, go stale, and vanish once the store forgets that session, so
+ * switching conversations closes them. Returns `tabs` itself when nothing goes.
+ */
+export function artifactTabsForSession(tabs: ArtifactTab[], sessionId: string | null | undefined): ArtifactTab[] {
+  const kept = tabs.filter((tab) => tab.sessionId === sessionId);
+  return kept.length === tabs.length ? tabs : kept;
+}

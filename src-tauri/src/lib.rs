@@ -27,11 +27,16 @@ use native_prefs::{
 };
 #[cfg(feature = "custom-protocol")]
 use native_prefs::{read_last_server_port, write_last_server_port};
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+use shell::build_platform_tray;
 use shell::popup::{show_popup_menu, PopupMenuSelection, POPUP_ID_PREFIX};
+#[cfg(target_os = "linux")]
+use shell::{build_linux_tray, show_main_window};
+#[cfg(target_os = "macos")]
+use shell::{build_macos_app_menu, refresh_traffic_lights};
 use shell::{
-    build_macos_app_menu, build_window, launched_at_login, open_external, quit_app,
-    quit_application, refresh_traffic_lights, set_close_quits, show_main_window_cmd, CloseQuits,
-    DesktopApiToken, DesktopServer, AUTOSTART_ARG, WINDOW_LABEL,
+    build_window, launched_at_login, open_external, quit_app, quit_application, set_close_quits,
+    show_main_window_cmd, CloseQuits, DesktopApiToken, DesktopServer, AUTOSTART_ARG, WINDOW_LABEL,
 };
 
 const DESKTOP_API_TOKEN_ENV: &str = "PI_DESKTOP_API_TOKEN";
@@ -779,21 +784,6 @@ mod tests {
     fn leaves_non_windows_path_unchanged() {
         let path = Path::new("/Applications/Pi Agent.app/Contents/Resources/server");
         assert_eq!(child_process_compatible_path(path), PathBuf::from(path));
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn linux_tray_menu_items_publish_visible_labels() {
-        for label in [LINUX_TRAY_SHOW_LABEL, LINUX_TRAY_QUIT_LABEL] {
-            let item = visible_linux_tray_item(label, |_: &mut LinuxTray| {});
-            let ksni::MenuItem::Standard(item) = item else {
-                panic!("Linux tray command must be a standard menu item");
-            };
-
-            assert_eq!(item.label, label);
-            assert!(item.enabled);
-            assert!(item.visible);
-        }
     }
 
     #[test]

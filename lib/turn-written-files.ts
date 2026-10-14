@@ -25,10 +25,29 @@ interface LineStats {
 }
 
 function countTextLines(text: string): number {
-  if (text.length === 0) return 0;
+  return splitLines(text).length;
+}
+
+function splitLines(text: string): string[] {
+  if (text.length === 0) return [];
   const lines = text.split(/\r?\n/);
   if (lines[lines.length - 1] === "") lines.pop();
-  return lines.length;
+  return lines;
+}
+
+/**
+ * Lines one replacement changed. Models quote surrounding context in oldText
+ * and newText, so counting both whole would report a one-line fix as +10 −10;
+ * lines the two share at the start and end are not changes.
+ */
+export function changedLineCounts(before: string, after: string): LineStats {
+  const a = splitLines(before);
+  const b = splitLines(after);
+  let start = 0;
+  while (start < a.length && start < b.length && a[start] === b[start]) start++;
+  let end = 0;
+  while (end < a.length - start && end < b.length - start && a[a.length - 1 - end] === b[b.length - 1 - end]) end++;
+  return { removed: a.length - start - end, added: b.length - start - end };
 }
 
 function statsFromRows(file: SplitDiffFile): LineStats {
@@ -82,8 +101,9 @@ function readWriteEditStats(toolName: string, input: Record<string, unknown> | u
     const after = newText ?? new_string;
     if (typeof before !== "string" || typeof after !== "string") continue;
     found = true;
-    stats.removed += countTextLines(before);
-    stats.added += countTextLines(after);
+    const changed = changedLineCounts(before, after);
+    stats.removed += changed.removed;
+    stats.added += changed.added;
   }
   return found ? stats : null;
 }

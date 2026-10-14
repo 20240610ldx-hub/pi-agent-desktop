@@ -8,8 +8,6 @@ use std::{
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt as _;
-#[cfg(windows)]
-use std::os::windows::process::CommandExt as _;
 
 pub struct DesktopServer {
     child: Mutex<Option<Child>>,
