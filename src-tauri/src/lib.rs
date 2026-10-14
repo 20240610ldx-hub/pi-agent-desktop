@@ -90,6 +90,8 @@ fn show_main_window(app: &AppHandle) {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+        #[cfg(target_os = "macos")]
+        refresh_traffic_lights(&window);
     }
 }
 
@@ -1235,12 +1237,23 @@ fn same_origin(candidate: &Url, app_url: &Url) -> bool {
 }
 
 /// Inset of the macOS traffic lights from the window's top-left corner, in
-/// logical points. Y places the buttons' vertical centre on the middle of the
-/// 48px top bar (and of the sidebar header's controls row, which shares it).
+/// logical points. The target is a vertical centre 24pt from the top: the
+/// middle of the 48px top bar, of the file panel's tab strip and of the sidebar
+/// header's controls row, which all share that line.
+///
+/// Y is not the centre itself. tao grows the title-bar container to
+/// `button height + y` and leaves each button's own offset inside it alone, so
+/// the centre lands a little below Y. Measured with Accessibility on 0.6.7
+/// (Y = 24): close button top at 19pt, 14pt tall, centre 26pt — 2pt low, so
+/// Y = 22 puts it on 24. Re-measure after a macOS major update:
+/// `osascript -e 'tell application "System Events" to tell process "Pi Agent"
+/// to get {position, size} of buttons of window 1'` against the window's own
+/// position. The horizontal clearance the web content keeps is
+/// `--mac-traffic-light-inset` in native-theme.css.
 #[cfg(target_os = "macos")]
 const MAC_TRAFFIC_LIGHT_X: f64 = 14.0;
 #[cfg(target_os = "macos")]
-const MAC_TRAFFIC_LIGHT_Y: f64 = 24.0;
+const MAC_TRAFFIC_LIGHT_Y: f64 = 22.0;
 
 fn launched_at_login() -> bool {
     env::args().any(|arg| arg == AUTOSTART_ARG)
@@ -1270,6 +1283,9 @@ fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWi
             NewWindowResponse::Deny
         })
         .on_document_title_changed(|window, title| {
+            #[cfg(target_os = "macos")]
+            set_title_keeping_traffic_lights(&window, title);
+            #[cfg(not(target_os = "macos"))]
             let _ = window.set_title(&title);
         });
 
@@ -1306,8 +1322,8 @@ fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWi
             .title_bar_style(tauri::TitleBarStyle::Overlay)
             .hidden_title(true)
             // The default inset centres the lights in a 28px title bar, but
-            // our top bar is 48px tall (native-theme.css `.app-topbar`), so
-            // they sat ~10px high. Keep this in step with MAC_TRAFFIC_LIGHT_*.
+            // our chrome rows are 48px tall (native-theme.css `.app-topbar`),
+            // so they sat ~10px high. See MAC_TRAFFIC_LIGHT_* for the value.
             .traffic_light_position(tauri::LogicalPosition::new(
                 MAC_TRAFFIC_LIGHT_X,
                 MAC_TRAFFIC_LIGHT_Y,
@@ -1327,9 +1343,111 @@ fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<WebviewWi
     let window = builder.build()?;
 
     #[cfg(target_os = "macos")]
-    apply_macos_vibrancy(&window);
+    {
+        apply_macos_vibrancy(&window);
+        refresh_traffic_lights(&window);
+    }
 
     Ok(window)
+}
+
+// Keeping the traffic lights at MAC_TRAFFIC_LIGHT_*.
+//
+// tao applies the inset from its content view's `drawRect:` and re-applies it
+// straight after `setTitle:`, but neither holds here. That view sits under the
+// webview, so nothing redraws it until the user resizes the window. And AppKit
+// re-lays the title bar out *after* tao's re-apply, putting the buttons back
+// at their default spot (centre ~14pt instead of 24pt). The page sets the
+// window title on load and on every session switch, so the lights jumped up
+// on launch and whenever the title changed, until the next resize. Measured
+// with Accessibility: the reset lands exactly on the title change.
+//
+// So the inset is applied here at the two points that move the buttons —
+// after the window is built, and on each title change. A title change is done
+// in one main-thread step: set the title, run the layout AppKit has pending
+// (that is the pass that resets the buttons), then move them. tao keeps
+// applying the same values on its own redraws, so the two never disagree.
+
+#[cfg(target_os = "macos")]
+fn refresh_traffic_lights(window: &WebviewWindow) {
+    let Ok(ns_window) = window.ns_window() else {
+        return;
+    };
+    let ns_window = ns_window as usize;
+    let _ =
+        window.run_on_main_thread(move || unsafe { layout_and_inset_traffic_lights(ns_window) });
+}
+
+#[cfg(target_os = "macos")]
+fn set_title_keeping_traffic_lights(window: &WebviewWindow, title: String) {
+    let Ok(ns_window) = window.ns_window() else {
+        let _ = window.set_title(&title);
+        return;
+    };
+    let ns_window = ns_window as usize;
+    let _ = window.run_on_main_thread(move || unsafe {
+        use objc2::{msg_send, runtime::AnyObject};
+        let window = ns_window as *mut AnyObject;
+        if window.is_null() {
+            return;
+        }
+        let title = objc2_foundation::NSString::from_str(&title);
+        let _: () = msg_send![window, setTitle: &*title];
+        layout_and_inset_traffic_lights(ns_window);
+    });
+}
+
+/// Runs AppKit's pending layout first, so its reset happens before the move
+/// instead of after it.
+#[cfg(target_os = "macos")]
+unsafe fn layout_and_inset_traffic_lights(ns_window: usize) {
+    let window = ns_window as *mut objc2::runtime::AnyObject;
+    if window.is_null() {
+        return;
+    }
+    let _: () = objc2::msg_send![window, layoutIfNeeded];
+    inset_traffic_lights(ns_window);
+}
+
+/// Same steps as tao's `inset_traffic_lights` (platform_impl/macos/view.rs).
+#[cfg(target_os = "macos")]
+unsafe fn inset_traffic_lights(ns_window: usize) {
+    use objc2::{msg_send, runtime::AnyObject};
+    use objc2_foundation::NSRect;
+
+    let ns_window = ns_window as *mut AnyObject;
+    if ns_window.is_null() {
+        return;
+    }
+    // NSWindowCloseButton, NSWindowMiniaturizeButton, NSWindowZoomButton.
+    let buttons: [*mut AnyObject; 3] =
+        [0usize, 1, 2].map(|kind| msg_send![ns_window, standardWindowButton: kind]);
+    if buttons.iter().any(|button| button.is_null()) {
+        return;
+    }
+    let superview: *mut AnyObject = msg_send![buttons[0], superview];
+    if superview.is_null() {
+        return;
+    }
+    let container: *mut AnyObject = msg_send![superview, superview];
+    if container.is_null() {
+        return;
+    }
+    let close_frame: NSRect = msg_send![buttons[0], frame];
+    let miniaturize_frame: NSRect = msg_send![buttons[1], frame];
+    let window_frame: NSRect = msg_send![ns_window, frame];
+
+    let mut bar: NSRect = msg_send![container, frame];
+    bar.size.height = close_frame.size.height + MAC_TRAFFIC_LIGHT_Y;
+    bar.origin.y = window_frame.size.height - bar.size.height;
+    let _: () = msg_send![container, setFrame: bar];
+
+    let spacing = miniaturize_frame.origin.x - close_frame.origin.x;
+    for (index, button) in buttons.into_iter().enumerate() {
+        let mut frame: NSRect = msg_send![button, frame];
+        frame.origin.x = MAC_TRAFFIC_LIGHT_X + index as f64 * spacing;
+        let _: () = msg_send![button, setFrameOrigin: frame.origin];
+    }
 }
 
 const DESKTOP_MARKER_SCRIPT: &str =
@@ -2207,6 +2325,7 @@ pub fn run() {
                 let _ = window.show();
                 let _ = window.unminimize();
                 let _ = window.set_focus();
+                refresh_traffic_lights(&window);
             }
         }
         _ => {}
