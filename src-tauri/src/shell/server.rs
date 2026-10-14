@@ -1,13 +1,14 @@
+use std::{io, process::Child, sync::Mutex};
+
+// Each platform's `stop()` path needs its own imports; the split out of
+// lib.rs lost these, which only a Windows build notices.
+#[cfg(windows)]
+use std::{os::windows::process::CommandExt as _, process::Command};
+#[cfg(unix)]
 use std::{
-    io,
-    process::Child,
-    sync::Mutex,
     thread,
     time::{Duration, Instant},
 };
-
-#[cfg(windows)]
-use std::os::windows::process::CommandExt as _;
 
 pub struct DesktopServer {
     child: Mutex<Option<Child>>,
