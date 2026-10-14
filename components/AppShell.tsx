@@ -52,7 +52,7 @@ import { ToolDefinitionsPanel } from "./ToolDefinitionsPanel";
 import { AgentSessionPanel } from "./AgentSessionPanel";
 import { TerminalPanel } from "./TerminalPanel";
 import { newTerminalTab, restoreTerminalTabs, TERMINAL_TABS_KEY, type TerminalTab } from "./terminal-tab-state";
-import { artifactPanelTab, artifactTabId, upsertArtifactTab, type ArtifactTab } from "./artifact-tabs";
+import { artifactPanelTab, artifactTabId, artifactTabsForSession, upsertArtifactTab, type ArtifactTab } from "./artifact-tabs";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { setArtifactOpener } from "@/lib/artifact-store";
 import { useAudio } from "@/hooks/useAudio";
@@ -1128,7 +1128,8 @@ export function AppShell() {
   useGlobalKeyboardShortcuts({
     onNewSession: (cwd: string) => handleNewSession(`kb-${Date.now()}`, cwd),
     activeCwd,
-    onCloseRightPanel: handleRightPanelClose,
+    // Only while open: a closed panel must leave \ and focus alone.
+    onCloseRightPanel: rightPanelOpen ? handleRightPanelClose : undefined,
   });
 
   // Client-built transient SessionInfo (new session / fork) lacks the
@@ -1430,6 +1431,21 @@ export function AppShell() {
     setActiveFileTabId(artifactTabId(request.sessionId, request.identifier));
     if (request.reveal !== false) setRightPanelOpen(true);
   }), [isMobile]);
+
+  const selectedSessionId = selectedSession?.id ?? null;
+  // Read by the effect below without re-running it on every tab change.
+  const panelTabsRef = useRef({ fileTabs, terminalTabs });
+  useEffect(() => {
+    panelTabsRef.current = { fileTabs, terminalTabs };
+  });
+  useEffect(() => {
+    setArtifactTabs((tabs) => artifactTabsForSession(tabs, selectedSessionId));
+    setActiveFileTabId((current) => (
+      current?.startsWith("artifact:") && !current.startsWith(`artifact:${selectedSessionId}:`)
+        ? panelTabsRef.current.fileTabs.at(-1)?.id ?? panelTabsRef.current.terminalTabs.at(-1)?.id ?? null
+        : current
+    ));
+  }, [selectedSessionId]);
 
   const handleTerminalClosed = (tab: TerminalTab) => {
     const replacement = tab.closing === "restart" ? newTerminalTab(tab.cwd) : null;
@@ -2873,6 +2889,9 @@ export function AppShell() {
         */}
         <div
           className={`right-panel-tab-strip${macLightsOverPanel ? " right-panel-tab-strip--mac-inset" : ""}`}
+          // The card reaches the window top, so its header row moves the window.
+          {...desktopChrome.dragRegionProps}
+          {...windowDrag}
         >
           <div className="file-tab-bar-slot">
             <TabBar
@@ -2968,8 +2987,14 @@ export function AppShell() {
               )}
             />
           ) : !terminalTabs.some((tab) => tab.id === activeFileTabId) ? (
-            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: 12 }}>
-               {translate("files.noneOpen")}
+            <div className="right-panel-empty">
+              <span>{translate("files.noneOpen")}</span>
+              {/* The file list starts hidden; offer it where the panel is empty. */}
+              {activeCwd && !fileTreeShown && (
+                <button type="button" className="right-panel-empty-action" onClick={handleFileTreeToggle}>
+                  {translate("contextPanel.showFileList")}
+                </button>
+              )}
             </div>
           ) : null}
           {terminalTabs.map((tab) => (
