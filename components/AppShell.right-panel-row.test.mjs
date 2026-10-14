@@ -21,9 +21,9 @@ const source = readFileSync(new URL("./AppShell.tsx", import.meta.url), "utf8");
  * that follows it, so the topbar starts at the center column and the sidebar
  * runs the full window height (no blank strip above the sidebar).
  *
- * The fourth pins the right panel as a full-height floating preview card: it
- * remains a sibling of the main column, while the card chrome separates it
- * from the chat.
+ * The fourth pins the right panel as a full-height embedded pane: it remains
+ * a sibling of the main column, while hairline chrome and a shared header
+ * surface tie it back into the shell.
  */
 test("chat wrapper stays inside the center column (no 50/50 topbar split)", () => {
   // The column must NOT close between the topbar and the chat content block:
@@ -57,7 +57,7 @@ test("topbar sits in the main column after the sidebar (sidebar runs full height
   assert.ok(nesting !== -1, "panel close must be followed by outer row, then shell close");
 });
 
-test("file panel stays a full-height floating preview card", () => {
+test("file panel stays a full-height embedded pane", () => {
   const mainColumn = source.indexOf('className="app-main-column"');
   const center = source.indexOf("{/* Center: chat */}");
   const panelIdx = source.indexOf("right-panel-container");
@@ -73,9 +73,9 @@ test("file panel stays a full-height floating preview card", () => {
   assert.match(
     source,
     /borderLeft: "var\(--hairline\) solid var\(--separator\)"/,
-    "the floating card must keep a neutral fallback edge for full-width mode",
+    "the embedded pane must keep a neutral fallback edge for full-width mode",
   );
   const css = readFileSync(new URL("../app/native-theme.css", import.meta.url), "utf8");
-  assert.match(css, /--right-panel-card-shadow/);
-  assert.match(css, /--right-panel-radius/);
+  assert.match(css, /Right panel as an embedded workbench/);
+  assert.match(css, /\.right-panel-container:not\(\.right-panel-full-width\) \{\s*\n\s*border-left: var\(--hairline\) solid var\(--separator\) !important;/);
 });

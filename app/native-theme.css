@@ -1119,7 +1119,7 @@ html.dark .conversation-navigator-preview {
   align-items: center;
   gap: 4px;
   position: relative;
-  background: color-mix(in srgb, var(--bg) 88%, var(--surface));
+  background: var(--surface);
   border-bottom: none;
 }
 
@@ -6830,24 +6830,10 @@ html.native-desktop :is(
   background: var(--bg-hover);
 }
 
-/* Right panel as a preview card: chat remains the primary workspace and the
-   panel reads as a floating artifact surface, not a permanent split pane. */
-:root {
-  --right-panel-gutter: 8px;
-  --right-panel-radius: 12px;
-  --right-panel-card-shadow: 0 0 0 1px rgba(15, 23, 42, 0.1),
-    0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 22px rgba(15, 23, 42, 0.07);
-}
-:root[data-theme="dark"] {
-  --right-panel-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09),
-    0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.38);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --right-panel-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09),
-      0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.38);
-  }
-}
+/* Right panel as an embedded workbench: the panel is part of the shell, with
+   one shared 48px header row above the chat and panel and no floating-card
+   chrome. Content gets a calmer surface than the canvas, with hairline
+   dividers carrying hierarchy. */
 .right-panel-body > .file-tree-panel {
   order: -2;
   border-left: none;
@@ -6861,55 +6847,40 @@ html.native-desktop :is(
 }
 
 @media (min-width: 641px) {
-  /* The floating card needs one quiet canvas behind it: remove the chat
-     toolbar's own tint and rule while the panel is active. */
+  /* One 48px chrome row spans the chat and panel. Keep its background and
+     rule continuous so the shell reads as a split pane instead of two cards. */
   .app-topbar {
-    background: var(--bg) !important;
-    border-bottom-color: transparent !important;
+    background: var(--surface) !important;
   }
 
   .right-panel-container:not(.right-panel-full-width) {
-    border-left: none !important;
-    border-radius: var(--right-panel-radius);
-    background: var(--bg) !important;
-  }
-  .right-panel-container.right-panel-open:not(.right-panel-full-width) {
-    box-shadow: var(--right-panel-card-shadow);
+    border-left: var(--hairline) solid var(--separator) !important;
+    background: color-mix(in srgb, var(--surface) 58%, var(--bg)) !important;
   }
 
-  /* The card starts below a top gutter, so this 40px header row centers its
-     controls on the same 24pt line as the 48px chat topbar and traffic lights. */
   .right-panel-container:not(.right-panel-full-width) .right-panel-tab-strip {
-    height: calc(48px - var(--right-panel-gutter));
-    min-height: calc(48px - var(--right-panel-gutter));
-    flex-basis: calc(48px - var(--right-panel-gutter));
-    padding: 0 8px 4px;
-    background: transparent;
+    background: var(--surface);
   }
   .right-panel-container:not(.right-panel-full-width) .right-panel-tab-strip::after,
   .right-panel-container:not(.right-panel-full-width) .context-panel-files-toolbar::after {
-    display: none;
+    background: var(--separator);
   }
   .right-panel-container:not(.right-panel-full-width) .context-panel-files-toolbar,
   .right-panel-container:not(.right-panel-full-width) .file-viewer-toolbar,
   .right-panel-container:not(.right-panel-full-width) .file-workbench-toolbar {
     background: transparent !important;
-    border-bottom-color: transparent !important;
+    border-bottom-color: var(--separator) !important;
   }
   .right-panel-container:not(.right-panel-full-width) .file-tree-panel {
-    background: transparent;
+    background: color-mix(in srgb, var(--surface) 34%, transparent);
   }
 }
 
-/* Floating layout: the card ring is the idle edge; the wider hit target only
-   paints an affordance while hovered, focused, or dragged. */
+/* The panel edge is the shell boundary; give its resize target a soft hover
+   state without pretending there is a floating card. */
 @media (min-width: 960px) {
   .right-panel-container.right-panel-open:not(.right-panel-full-width) {
-    margin: var(--right-panel-gutter) var(--right-panel-gutter) var(--right-panel-gutter) 2px;
     transition: none;
-  }
-  .right-panel-container.right-panel-closed {
-    margin: 0;
   }
   .right-panel-resize-handle:not(:hover):not(:focus-visible):not(.is-resizing)::after {
     background: transparent !important;
@@ -6919,7 +6890,8 @@ html.native-desktop :is(
   }
 }
 
-/* Compact overlay (641-959px): the same floating card, over the chat. */
+/* Compact overlay (641-959px): a plain drawer that stays anchored to the
+   window edge; no card gutters, radius, or extra shadow. */
 @media (min-width: 641px) and (max-width: 959px) {
   /* The generic >=641px width rules above would otherwise size this overlay
      (and collapse it to 0 when closed, losing the slide). */
@@ -6937,12 +6909,12 @@ html.native-desktop :is(
     min-width: 0;
   }
   .right-panel-container.right-panel-open:not(.right-panel-full-width) {
-    border-radius: var(--right-panel-radius);
-    box-shadow: var(--right-panel-card-shadow), var(--shadow-popover);
+    background: color-mix(in srgb, var(--surface) 58%, var(--bg)) !important;
+    box-shadow: var(--shadow-popover);
   }
   .right-panel-container.right-panel-closed {
-    width: min(560px, calc(100vw - 48px - var(--right-panel-gutter)));
-    transform: translateX(calc(100% + 2 * var(--right-panel-gutter)));
+    width: min(560px, calc(100vw - 48px));
+    transform: translateX(100%);
     box-shadow: none;
   }
 }
