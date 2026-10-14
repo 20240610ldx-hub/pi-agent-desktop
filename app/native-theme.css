@@ -4345,6 +4345,18 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 .artifact-panel-body .mermaid-preview-button {
   max-height: none;
 }
+/* Fit the diagram to the panel width (MermaidBlock `fit`). Mermaid's inline
+   `max-width: <natural>px` is what keeps narrow diagrams small; !important
+   beats it. Grow at most 1.75x so a two-node diagram is not blown up, and
+   shrink at most to 0.6x so a wide one stays legible: past that the button
+   scrolls sideways, and a click opens the zoomable viewer. The factors apply
+   to the natural width, which MermaidBlock passes as --mermaid-natural-width. */
+.mermaid-fit svg {
+  width: 100%;
+  height: auto;
+  max-width: calc(var(--mermaid-natural-width, 100%) * 1.75) !important;
+  min-width: calc(var(--mermaid-natural-width, 0px) * 0.6) !important;
+}
 /* The panel toolbar already has Source / Copy / Download. */
 .artifact-panel-body > .markdown-code-block > .markdown-code-header {
   display: none;

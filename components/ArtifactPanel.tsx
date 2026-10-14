@@ -233,7 +233,7 @@ export function ArtifactPanel({ sessionId, identifier, title, versionRequest }: 
             {runtimeState.status === "error" ? null : t("preview.loadingComponent")}
           </div>
         ) : version.type === "mermaid" ? (
-          <MermaidBlock key={`${identifier}:${index}`} code={version.content} defaultPreview />
+          <MermaidBlock key={`${identifier}:${index}`} code={version.content} defaultPreview fit />
         ) : (
           <MarkdownBody className="artifact-panel-markdown">{version.content}</MarkdownBody>
         )}
