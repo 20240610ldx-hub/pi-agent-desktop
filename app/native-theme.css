@@ -834,13 +834,17 @@
 
   /* Native-inspired semantic colors. Keep the canvas warm and reserve pure
      white for controls and elevated content. */
-  --bg: #f7f7f5;
-  --bg-panel: rgba(241, 241, 239, 0.92);
+  --bg: #f6f6f7;
+  --bg-panel: rgba(242, 242, 244, 0.92);
   --bg-hover: rgba(29, 29, 31, 0.055);
   --bg-selected: rgba(29, 29, 31, 0.08);
   --border: rgba(60, 60, 67, 0.16);
   --separator: rgba(60, 60, 67, 0.12);
   --surface: #ffffff;
+  /* The reading surface shared by the topbar, chat and right panel. Light: the
+     white content canvas next to the recessed sidebar. Dark: the deepest tone,
+     with the sidebar and floating surfaces a step lighter (Apple's order). */
+  --workbench-bg: #ffffff;
   --surface-muted: rgba(255, 255, 255, 0.64);
   --surface-elevated: #ffffff;
   --text: #1d1d1f;
@@ -906,6 +910,7 @@ html.dark {
   --border: rgba(235, 235, 245, 0.15);
   --separator: rgba(235, 235, 245, 0.1);
   --surface: #252527;
+  --workbench-bg: #1c1c1e;
   --surface-muted: rgba(44, 44, 46, 0.72);
   --surface-elevated: #2c2c2e;
   --text: #f5f5f7;
@@ -2665,6 +2670,15 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   color: var(--text-dim) !important;
   font-size: var(--fs-caption) !important;
   letter-spacing: 0.06em !important;
+}
+
+/* Title bar, chat and right panel are one reading surface (--workbench-bg).
+   Inside the main column --bg is re-pointed at it, so the chat canvas,
+   composer fade and status shelf follow and no two shades meet at the
+   topbar's lower edge. Only the sidebar keeps its own recessed tone. */
+.app-main-column {
+  --bg: var(--workbench-bg);
+  background: var(--bg);
 }
 
 .app-topbar {
@@ -5575,7 +5589,7 @@ span.linenumber {
 /* Final workbench pass: keep these rules after the responsive shell rules. */
 
 .right-panel-container {
-  background: var(--bg) !important;
+  background: var(--workbench-bg) !important;
 }
 
 
@@ -6686,9 +6700,7 @@ html.native-vibrancy .app-shell {
 }
 
 html.native-vibrancy .app-main-column {
-  background:
-    radial-gradient(circle at 55% -30%, color-mix(in srgb, var(--accent) 4%, transparent), transparent 46%),
-    var(--bg);
+  background: var(--bg);
 }
 
 html.native-vibrancy .app-sidebar {
@@ -6850,16 +6862,16 @@ html.native-desktop :is(
   /* One 48px chrome row spans the chat and panel. Keep its background and
      rule continuous so the shell reads as a split pane instead of two cards. */
   .app-topbar {
-    background: var(--surface) !important;
+    background: var(--workbench-bg) !important;
   }
 
   .right-panel-container:not(.right-panel-full-width) {
     border-left: var(--hairline) solid var(--separator) !important;
-    background: color-mix(in srgb, var(--surface) 58%, var(--bg)) !important;
+    background: var(--workbench-bg) !important;
   }
 
   .right-panel-container:not(.right-panel-full-width) .right-panel-tab-strip {
-    background: var(--surface);
+    background: var(--workbench-bg);
   }
   .right-panel-container:not(.right-panel-full-width) .right-panel-tab-strip::after,
   .right-panel-container:not(.right-panel-full-width) .context-panel-files-toolbar::after {
@@ -6872,7 +6884,7 @@ html.native-desktop :is(
     border-bottom-color: var(--separator) !important;
   }
   .right-panel-container:not(.right-panel-full-width) .file-tree-panel {
-    background: color-mix(in srgb, var(--surface) 34%, transparent);
+    background: transparent;
   }
 }
 
@@ -6909,7 +6921,7 @@ html.native-desktop :is(
     min-width: 0;
   }
   .right-panel-container.right-panel-open:not(.right-panel-full-width) {
-    background: color-mix(in srgb, var(--surface) 58%, var(--bg)) !important;
+    background: var(--workbench-bg) !important;
     box-shadow: var(--shadow-popover);
   }
   .right-panel-container.right-panel-closed {
