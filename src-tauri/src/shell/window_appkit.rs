@@ -4,6 +4,30 @@ use tauri::WebviewWindow;
 #[cfg(target_os = "macos")]
 use super::window::{MAC_TRAFFIC_LIGHT_X, MAC_TRAFFIC_LIGHT_Y};
 
+/// Marks <html> so native-theme.css can make the sidebar translucent. Removed
+/// again by `apply_macos_vibrancy` if the effect view could not be attached.
+#[cfg(target_os = "macos")]
+pub(crate) const VIBRANCY_MARKER_SCRIPT: &str =
+    r#"(function(){try{document.documentElement.classList.add("native-vibrancy");}catch(e){}})();"#;
+
+/// Puts the system sidebar material behind the transparent webview. The
+/// material follows the window theme set via `set_theme`.
+#[cfg(target_os = "macos")]
+pub(crate) fn apply_macos_vibrancy(window: &WebviewWindow) {
+    use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
+
+    if apply_vibrancy(
+        window,
+        NSVisualEffectMaterial::Sidebar,
+        Some(NSVisualEffectState::Active),
+        None,
+    )
+    .is_err()
+    {
+        let _ = window.eval(r#"document.documentElement.classList.remove("native-vibrancy");"#);
+    }
+}
+
 // Keeping the traffic lights at MAC_TRAFFIC_LIGHT_*.
 //
 // tao applies the inset from its content view's `drawRect:` and re-applies it

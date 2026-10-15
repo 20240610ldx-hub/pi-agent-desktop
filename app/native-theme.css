@@ -6699,6 +6699,43 @@ html.native-desktop :is(.app-sidebar, .app-topbar) :is(input, textarea, [content
 }
 
 /* -------------------------------------------------------------------------- */
+/* macOS vibrancy                                                             */
+/* -------------------------------------------------------------------------- */
+
+/* The Tauri shell makes the window transparent and puts an NSVisualEffectView
+   (sidebar material) behind the webview, then adds `native-vibrancy` to <html>.
+   Everything that is not the sidebar must therefore paint its own opaque
+   background; the sidebar and the shell around it go transparent so the
+   system material shows through. The material follows the window theme. */
+html.native-vibrancy,
+html.native-vibrancy body {
+  background: transparent;
+}
+
+html.native-vibrancy .app-shell {
+  background: transparent !important;
+}
+
+html.native-vibrancy .app-main-column {
+  background: var(--bg);
+}
+
+html.native-vibrancy .app-sidebar {
+  background: transparent !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Below the overlay breakpoint the sidebar floats over the chat, so it needs
+   a real surface again. */
+@media (max-width: 640px) {
+  html.native-vibrancy .app-sidebar {
+    background: var(--bg-panel) !important;
+  }
+}
+
+
+/* -------------------------------------------------------------------------- */
 /* Desktop motion                                                             */
 /* -------------------------------------------------------------------------- */
 

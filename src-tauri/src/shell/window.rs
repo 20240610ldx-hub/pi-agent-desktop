@@ -5,13 +5,12 @@ use tauri::{
 };
 
 #[cfg(target_os = "macos")]
-use super::window_appkit::{refresh_traffic_lights, set_title_keeping_traffic_lights};
+use super::window_appkit::{self, set_title_keeping_traffic_lights};
 use crate::native_prefs::{
-    is_inline_frame_document, read_stored_theme, same_origin, theme_background_color,
-    theme_bootstrap_script,
+    is_inline_frame_document, read_stored_theme, same_origin, theme_bootstrap_script,
 };
 #[cfg(not(target_os = "macos"))]
-use crate::native_prefs::is_wayland;
+use crate::native_prefs::{is_wayland, theme_background_color};
 use crate::shell::{open_external, WINDOW_LABEL};
 
 /// Inset of the macOS traffic lights from the window's top-left corner, in
@@ -86,11 +85,8 @@ pub fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<Webvi
             .initialization_script(theme_bootstrap_script(theme));
         // Skip the native background color on Wayland: it can NULL-deref the
         // GdkSurface during window creation and crash the process.
-        #[cfg(target_os = "macos")]
-        let paint_background = true;
         #[cfg(not(target_os = "macos"))]
-        let paint_background = !is_wayland();
-        if paint_background {
+        if !is_wayland() {
             builder = builder.background_color(theme_background_color(theme));
         }
     }
@@ -113,14 +109,12 @@ pub fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<Webvi
             .traffic_light_position(tauri::LogicalPosition::new(
                 MAC_TRAFFIC_LIGHT_X,
                 MAC_TRAFFIC_LIGHT_Y,
-            ));
-        // Deliberately not `.transparent(true)`. A transparent window (it was
-        // there for an NSVisualEffectView sidebar) makes WebKit and
-        // WindowServer alpha-composite the whole window on every frame
-        // (tauri#15471), and while the window is dragged or live-resized the
-        // strips WebKit has not repainted yet show whatever sits behind the
-        // webview, so the window flickered on every move and resize. Opaque,
-        // the not-yet-painted area is the theme background color set above.
+            ))
+            // Transparent webview over an NSVisualEffectView (see below). The
+            // `native-vibrancy` class tells native-theme.css to let the sidebar
+            // show through; without it the page paints opaque as before.
+            .transparent(true)
+            .initialization_script(window_appkit::VIBRANCY_MARKER_SCRIPT);
     }
 
     #[cfg(not(target_os = "macos"))]
@@ -131,7 +125,10 @@ pub fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<Webvi
     let window = builder.build()?;
 
     #[cfg(target_os = "macos")]
-    refresh_traffic_lights(&window);
+    {
+        window_appkit::apply_macos_vibrancy(&window);
+        window_appkit::refresh_traffic_lights(&window);
+    }
 
     Ok(window)
 }
