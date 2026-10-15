@@ -38,6 +38,7 @@ import {
 } from "@/lib/chat-lazy-load";
 import { sessionVisibleCounts } from "@/lib/scroll-memory";
 import { isImeComposing } from "@/lib/ime";
+import { assignMessageKeys, createMessageKeyTracker } from "@/lib/message-keys";
 
 interface Props {
   session: SessionInfo | null;
@@ -944,6 +945,21 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
 
   const hasStreamingContent = Boolean(streamState.streamingMessage?.content.length);
   const messageCwd = session?.cwd ?? newSessionCwd ?? undefined;
+  // Keys that do not change when a sent or streamed message gets its entry id
+  // on the post-run reload; keying by the id remounted the sent bubble.
+  const messageKeyTrackerRef = useRef<{ sessionId: string | null; tracker: ReturnType<typeof createMessageKeyTracker> } | null>(null);
+  const messageKeySessionId = session?.id ?? sessionIdRef.current ?? null;
+  const messageKeys = useMemo(() => {
+    let current = messageKeyTrackerRef.current;
+    // A new session's id appears only after its first send; keep the tracker
+    // across that null -> id step so the first bubble survives it too.
+    if (!current || (current.sessionId !== null && current.sessionId !== messageKeySessionId)) {
+      current = { sessionId: messageKeySessionId, tracker: createMessageKeyTracker() };
+      messageKeyTrackerRef.current = current;
+    }
+    current.sessionId = messageKeySessionId;
+    return assignMessageKeys(current.tracker, messages, entryIds);
+  }, [messageKeySessionId, messages, entryIds]);
   const promptAnchorSpacerRef = useRef<HTMLDivElement | null>(null);
   const promptAnchorSpacerHeightRef = useRef(0);
   const promptAnchorMeasureFrameRef = useRef<number | null>(null);
@@ -1302,7 +1318,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                 const isVisible = isMessageGroupAnchor(msg) || msg.role === "assistant";
                 const currentRefIdx = visibleRefIndexByMessage.get(idx);
                 const keyPrefix = options.keyPrefix ?? "message";
-                const messageKey = entryIds[idx] ?? idx;
+                const messageKey = messageKeys[idx] ?? idx;
                 let showTimestamp = false;
                 if (msg.role === "assistant") {
                   showTimestamp = true;
@@ -1422,7 +1438,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                 if (processViews.length > 0) {
                   rendered.push(
                     <div
-                      key={`process-group-${entryIds[groupStartIdx] ?? groupStartIdx}`}
+                      key={`process-group-${messageKeys[groupStartIdx] ?? groupStartIdx}`}
                       ref={processRefIdx === undefined ? undefined : (el) => { messageRefs.current[processRefIdx] = el; }}
                     >
                       {/* Re-key on answer availability: useState reads defaultExpanded only
