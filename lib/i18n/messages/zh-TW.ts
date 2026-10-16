@@ -1497,6 +1497,7 @@ export const zhTWLocale: LocalePlugin = {
     "chat.dropProjectSuccess": "已新增 {count} 個檔案到專案",
     "chat.dropProjectPartialFailure": "部分檔案未能新增：{detail}",
     "chat.conversationNavigator": "對話定位",
+    "chat.conversationNavigatorJump": "跳轉到這一輪對話",
     "chat.ctxUsage": "上下文用量",
     "common.retry": "重試",
     "common.confirmDelete": "確認刪除？",

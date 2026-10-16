@@ -548,6 +548,7 @@ export const enLocale: LocalePlugin = {
     "chat.moreControls": "More controls",
     "chat.collapseControls": "Collapse controls",
     "chat.conversationNavigator": "Conversation navigation",
+    "chat.conversationNavigatorJump": "Jump to this turn",
     "chat.shell": "Shell",
     "chat.currentProject": "Current project: {path}",
     "chat.switchProject": "Switch project",
