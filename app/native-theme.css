@@ -7071,3 +7071,98 @@ html.native-desktop :is(
     transition: none !important;
   }
 }
+
+/* ---- Settings › Models › modelOverrides (#131) ------------------------------
+   pi applies a provider's modelOverrides last, so the panel shows them as the
+   values in effect: read-only on the provider, as hints under the model's spec
+   fields. Empty spec fields say "not set" instead of a number that reads as
+   a limit, and edits that are not saved yet are marked as such. */
+.models-spec-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-size: var(--fs-caption);
+  line-height: 1.4;
+}
+.models-spec-hint[data-source="override"] { color: var(--accent); }
+.models-spec-unsaved,
+.models-sidebar-override-badge {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 15px;
+}
+.models-spec-unsaved {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+  color: var(--warning);
+}
+.models-sidebar-override-badge {
+  background: var(--accent-soft);
+  color: var(--text-muted);
+}
+.models-override-notice {
+  margin-top: 8px;
+  padding: 6px 9px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--text-muted);
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.models-override-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.models-override-help {
+  color: var(--text-dim);
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+}
+.models-override-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--hairline) solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.models-override-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  padding: 6px 10px;
+}
+.models-override-row + .models-override-row { border-top: var(--hairline) solid var(--border); }
+.models-override-id {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.models-override-target {
+  color: var(--text-dim);
+  font-size: var(--fs-caption);
+}
+.models-override-fields {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+}
+.models-override-value {
+  margin-left: 5px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
