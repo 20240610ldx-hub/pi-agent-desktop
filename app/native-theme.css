@@ -2786,7 +2786,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
    on whichever 48px row currently owns the window's top-left corner: the top
    bar while the sidebar is hidden, the file panel's tab strip while it covers
    the window (full width, or the mobile-width layout). The lights end at
-   14 + 2 x 20 + 12 = 66pt (MAC_TRAFFIC_LIGHT_X in src-tauri/src/lib.rs); the
+   14 + 2 x 20 + 12 = 66pt (MAC_TRAFFIC_LIGHT_X in src-tauri/src/shell/window.rs); the
    rest is a gap so a filled chip (the active file tab) does not touch them.
    The sidebar header keeps its own layout: its controls row is right-aligned. */
 :root {
