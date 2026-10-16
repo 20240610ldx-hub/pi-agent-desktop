@@ -1306,6 +1306,7 @@ export const zhTWLocale: LocalePlugin = {
     "models.deepSeekThinkingCompat": "DeepSeek 思考相容性",
     "models.developerRole": "使用 developer role 傳遞系統提示詞",
     "models.thinkingLevelMap": "思考層級對應",
+    "models.thinkingLevelMapHelp": "xhigh 和 max 預設不會出現在推理強度選項中：設為「自訂」並填寫服務商接受的值（如 xhigh）後才會出現。",
     "models.clearAll": "全部清除",
     "models.enabledSection": "可用模型",
     "models.enabledCount": "已啟用 {enabled}/{total}",
