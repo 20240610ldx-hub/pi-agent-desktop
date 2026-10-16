@@ -48,6 +48,9 @@ interface Props {
   onSessionReloaded: () => void;
   quoteSelectionEnabled: boolean;
   onQuoteSelectionChange: (enabled: boolean) => void;
+  /** The completion chime; it used to be a speaker button in the composer row. */
+  soundEnabled: boolean;
+  onSoundToggle: () => void;
   /** The page's trust status for `cwd`; Settings › MCP reloads when it changes, as after trusting. */
   projectTrust?: ProjectTrustStatus | null;
   /** Opens the page's trust dialog for `cwd`, above Settings; Settings › MCP's trust notice offers it. */
@@ -84,8 +87,10 @@ function GeneralSettings({
   onSessionReloaded,
   quoteSelectionEnabled,
   onQuoteSelectionChange,
+  soundEnabled,
+  onSoundToggle,
   onBusyChange,
-}: Pick<Props, "sessionId" | "onSessionReloaded" | "quoteSelectionEnabled" | "onQuoteSelectionChange"> & {
+}: Pick<Props, "sessionId" | "onSessionReloaded" | "quoteSelectionEnabled" | "onQuoteSelectionChange" | "soundEnabled" | "onSoundToggle"> & {
   onBusyChange: (busy: boolean) => void;
 }) {
   const { locale, setLocale, supportedLocales, t } = useI18n();
@@ -296,6 +301,14 @@ function GeneralSettings({
                   onChange={onQuoteSelectionChange}
                 />
               </div>
+              <div className="settings-chat-option settings-chat-switch-option">
+                <span>{t("settings.completionSound")}</span>
+                <ConfigSwitch
+                  checked={soundEnabled}
+                  label={t("settings.completionSound")}
+                  onChange={(enabled) => { if (enabled !== soundEnabled) onSoundToggle(); }}
+                />
+              </div>
               <ArtifactsSettingRow />
               <div className="settings-chat-option settings-chat-switch-option" role="radiogroup" aria-label={t("settings.enterSendMode")}>
                 <span>{t("settings.enterSendMode")}</span>
@@ -451,6 +464,8 @@ export function SettingsPanel({
   onSessionReloaded,
   quoteSelectionEnabled,
   onQuoteSelectionChange,
+  soundEnabled,
+  onSoundToggle,
   projectTrust,
   onOpenTrustDialog,
   onProjectTrustChanged,
@@ -560,7 +575,7 @@ export function SettingsPanel({
         </div>
 
         <main className="settings-dialog-main">
-          {sectionHost("general", <GeneralSettings sessionId={sessionId} onSessionReloaded={onSessionReloaded} quoteSelectionEnabled={quoteSelectionEnabled} onQuoteSelectionChange={onQuoteSelectionChange} onBusyChange={setBusy} />)}
+          {sectionHost("general", <GeneralSettings sessionId={sessionId} onSessionReloaded={onSessionReloaded} quoteSelectionEnabled={quoteSelectionEnabled} onQuoteSelectionChange={onQuoteSelectionChange} soundEnabled={soundEnabled} onSoundToggle={onSoundToggle} onBusyChange={setBusy} />)}
           {sectionHost("models", <ModelsConfig embedded cwd={cwd} onClose={onClose} onOpenMcp={() => activateSection("mcp")} />)}
           {/* Visited sections stay mounted, so the ones whose answer depends on trust take the page's
               status and load again in place when trusting from Settings › MCP changes it. */}

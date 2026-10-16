@@ -867,6 +867,8 @@
   --danger: #d92d20;
   --success: #248a3d;
   --warning: #b87503;
+  /* Follow-up (queued after the run): Apple systemIndigo. */
+  --info: #5856d6;
   --user-bg: rgba(29, 29, 31, 0.06);
   --assistant-bg: transparent;
   --tool-bg: rgba(118, 118, 128, 0.08);
@@ -928,6 +930,7 @@ html.dark {
   --danger: #ff6961;
   --success: #30d158;
   --warning: #ffd60a;
+  --info: #7d7aff;
   --user-bg: rgba(255, 255, 255, 0.09);
   --assistant-bg: transparent;
   --tool-bg: rgba(255, 255, 255, 0.055);
@@ -3529,9 +3532,28 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   box-shadow: none !important;
 }
 
+/* Focus only lifts the hairline a step; the caret already says where typing
+   goes, and the accent border read as a bright form-field ring in dark mode. */
 .chat-composer:focus-within {
-  border-color: var(--accent-border) !important;
+  border-color: color-mix(in srgb, var(--text) 22%, transparent) !important;
   box-shadow: var(--shadow-composer) !important;
+}
+
+/* Mode cues on the card itself (the editor's own border is zeroed above, so a
+   state painted there never shows). Declared after :focus-within so the cue
+   stays while typing. */
+.chat-composer[data-state="steer"] {
+  border-color: color-mix(in srgb, var(--warning) 48%, transparent) !important;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--warning) 10%, transparent),
+    var(--shadow-composer) !important;
+}
+
+.chat-composer[data-state="bash"] {
+  border-color: color-mix(in srgb, var(--success) 48%, transparent) !important;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--success) 10%, transparent),
+    var(--shadow-composer) !important;
 }
 
 .chat-composer textarea {
@@ -3542,6 +3564,15 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 @media (max-width: 640px) {
   .chat-composer textarea {
     font-size: max(16px, var(--chat-content-font-size, 14px)) !important;
+    /* 16px x 1.55 = 24.8px overflowed the 24px one-row box by a pixel, which
+       drew a stray scrollbar beside Send; 1.5 lands exactly on 24px. */
+    line-height: 1.5 !important;
+  }
+
+  /* The explicit placeholder line box (#64) must shrink with it, or the
+     placeholder alone (16px x 1.6) still overflows the row. */
+  .chat-composer .chat-input-textarea::placeholder {
+    line-height: 1.5;
   }
 }
 
@@ -3605,11 +3636,185 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   border-radius: 7px;
 }
 
-.composer-send-button {
-  min-width: 72px;
+/* Steer / Follow-up while a run is active. One shape, two theme hues; the
+   label mixes the hue toward --text so it holds contrast in both themes
+   (pure --warning on white or on the dark card is too faint to read). */
+.composer-queue-button {
+  --queue-hue: var(--warning);
+  display: flex;
+  align-items: center;
+  gap: 5px;
   height: 32px;
+  padding: 0 12px;
+  border: var(--hairline) solid color-mix(in srgb, var(--queue-hue) 38%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--queue-hue) 12%, transparent);
+  color: color-mix(in srgb, var(--queue-hue) 72%, var(--text));
+  font-size: var(--fs-small);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background 120ms ease, transform 140ms var(--ease-native);
+}
+
+.composer-queue-button[data-kind="followup"] {
+  --queue-hue: var(--info);
+}
+
+.composer-queue-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--queue-hue) 20%, transparent);
+}
+
+.composer-queue-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.composer-queue-button:disabled {
+  background: none;
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+/* Section headings and plain rows inside the composer's run-settings and
+   session menus (the reasoning rows are SelectorRow and style themselves). */
+.composer-menu-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 9px 4px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.composer-menu-heading[data-separated] {
+  margin-top: 5px;
+  padding-top: 10px;
+  border-top: var(--hairline) solid var(--separator);
+}
+
+.composer-menu-heading-note {
+  margin-left: auto;
+  font-weight: 400;
+}
+
+.composer-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.composer-menu-row:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.composer-menu-row[data-active] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.composer-menu-row:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Attach sits at the card's leading edge, the mirror of Send: same 32px
+   circle, quiet until hovered; tinted while images are attached. */
+.composer-attach-button {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  border-radius: 9px !important;
+  width: 32px;
+  height: 32px;
+  margin-left: -4px;
+  padding: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+}
+
+.composer-attach-button[data-active] {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+@media (max-width: 640px) {
+  .composer-attach-button {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+.composer-trigger-hint {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--text-dim);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.chat-composer:focus-within .composer-trigger-hint {
+  opacity: 1;
+}
+
+/* Round, icon-only send. The fill is the state: a quiet tinted disc while the
+   draft is empty, the solid accent once there is something to send. */
+.composer-send-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 24%, transparent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    transform 140ms var(--ease-native);
+}
+
+.composer-send-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.composer-send-button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.composer-send-button:disabled {
+  background: var(--bg-hover);
+  box-shadow: none;
+  color: var(--text-dim);
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .composer-send-button {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .chat-input-shell {
