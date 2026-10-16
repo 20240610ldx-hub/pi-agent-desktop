@@ -1048,8 +1048,21 @@ html.dark {
   transform: translateY(-50%);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  pointer-events: none;
+  /* A button: clicking the card jumps to its turn (#130). It overlaps the
+     track by 2px, so the pointer reaches it without leaving the navigator. */
+  display: block;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
   animation: conversation-navigator-preview-in 140ms var(--ease-native);
+  transition: border-color 120ms ease;
+}
+
+.conversation-navigator-preview:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--separator));
 }
 
 html.dark .conversation-navigator-preview {
@@ -1633,15 +1646,19 @@ pre, code {
   backdrop-filter: saturate(130%) blur(24px);
 }
 
+/* No top padding: the header opens with the 48px .sidebar-controls-row, which
+   must share the 48px topbar's centre line. An 8px pad here pushed the theme
+   and collapse buttons below the topbar's chips on Windows/Linux (#129). */
 .session-sidebar-header {
-  padding: 8px 6px 4px !important;
+  padding: 0 6px 4px !important;
   border-bottom: 0 !important;
 }
 
 /* On macOS (titleBarStyle: Overlay) the native traffic lights float over the
    sidebar's top-left. Keep the sidebar's own 48px chrome row flush with the
    window top: padding it down made the right-hand menu sit below the lights'
-   24px centre line. The rows below already clear the 16px-tall buttons. */
+   24px centre line. The rows below already clear the 16px-tall buttons.
+   (Now also the base rule's value; kept so the macOS intent stays explicit.) */
 .session-sidebar-header--mac-inset {
   padding-top: 0 !important;
 }
@@ -5822,6 +5839,13 @@ span.linenumber {
 /* With the actions group present, its own auto margin does the pushing; a
    second one here would split the free space and float both mid-bar. */
 .app-topbar-actions ~ .main-file-toggle {
+  margin-left: 0;
+}
+/* Same for the Windows/Linux window controls that follow them: their own
+   auto margin split the free space with the group's, leaving the toggle
+   mid-bar with a wide gap before the controls (#129). */
+.app-topbar-actions ~ .window-controls,
+.main-file-toggle ~ .window-controls {
   margin-left: 0;
 }
 

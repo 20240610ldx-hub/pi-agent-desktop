@@ -548,6 +548,7 @@ export const zhCNLocale: LocalePlugin = {
     "chat.moreControls": "更多控件",
     "chat.collapseControls": "收起控件",
     "chat.conversationNavigator": "对话定位",
+    "chat.conversationNavigatorJump": "跳转到这一轮对话",
     "chat.shell": "Shell",
     "chat.currentProject": "当前项目: {path}",
     "chat.switchProject": "切换项目",
