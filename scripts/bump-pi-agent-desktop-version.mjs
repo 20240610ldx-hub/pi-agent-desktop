@@ -8,25 +8,35 @@ import {
   rootDir,
 } from "./release-components.mjs";
 
-const packagePath = join(rootDir, "src-tauri", "pi-agent-desktop-package.json");
+const packagePath = join(rootDir, "src-tauri", "pilaude-package.json");
 const cargoPath = join(rootDir, "src-tauri", "Cargo.toml");
 const lockPath = join(rootDir, "src-tauri", "Cargo.lock");
 const desktopPackage = JSON.parse(await readFile(packagePath, "utf8"));
+const [cargo, lock] = await Promise.all([
+  readFile(cargoPath, "utf8"),
+  readFile(lockPath, "utf8"),
+]);
+const cargoVersionPattern = /^(version\s*=\s*")[^"]+("[ \t]*\r?)$/m;
+const lockVersionPattern = /(name = "pi-agent-desktop"\r?\nversion = ")[^"]+(")/;
+if (!cargoVersionPattern.test(cargo) || !lockVersionPattern.test(lock)) {
+  throw new Error("Cannot locate the Pilaude Cargo package; no versions were changed.");
+}
 const current = normalizeVersion(desktopPackage.version);
-const latest = await fetchLatestRelease("abcwyc/pi-agent-desktop", { allowMissing: true });
-const next = latest && compareVersions(latest.version, current) >= 0
-  ? nextPatchVersion(latest.version)
-  : current;
+const latest = await fetchLatestRelease(desktopPackage.repository, {
+  allowMissing: true,
+  includePrereleases: true,
+});
+const next = nextPatchVersion(
+  latest && compareVersions(latest.version, current) > 0 ? latest.version : current,
+);
 
 desktopPackage.version = next;
 await writeFile(packagePath, `${JSON.stringify(desktopPackage, null, 2)}\n`);
 
-const cargo = await readFile(cargoPath, "utf8");
-await writeFile(cargoPath, cargo.replace(/^(version\s*=\s*")[^"]+("\s*)$/m, `$1${next}$2`));
+await writeFile(cargoPath, cargo.replace(cargoVersionPattern, `$1${next}$2`));
 
-const lock = await readFile(lockPath, "utf8");
 await writeFile(
   lockPath,
-  lock.replace(/(name = "pi-agent-desktop"\nversion = ")[^"]+("\n)/, `$1${next}$2`),
+  lock.replace(lockVersionPattern, `$1${next}$2`),
 );
-console.log(`pi-agent-desktop ${current} -> ${next}`);
+console.log(`Pilaude ${current} -> ${next}`);

@@ -68,7 +68,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          base="$(node -p "require('./src-tauri/pi-agent-desktop-package.json').version")"
+          base="$(node -p "require('./src-tauri/pilaude-package.json').version")"
           echo "value=${base}-${{ inputs.label }}" >> "$GITHUB_OUTPUT"
 
       - name: Prepare packaged Next.js server
@@ -91,7 +91,7 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: pi-agent-${{ steps.version.outputs.value }}-${{ matrix.target }}
+          name: pilaude-${{ steps.version.outputs.value }}-${{ matrix.target }}
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb

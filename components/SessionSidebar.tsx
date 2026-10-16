@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import type { SessionInfo } from "@/lib/types";
+import { PRODUCT_NAME } from "@/lib/branding";
 import { listSessionFamilies } from "@/lib/session-family";
 import { dispatchSessionRowContextMenu } from "@/lib/session-row-context-menu";
 import { skillExpansionToCommand } from "@/lib/slash-display";
@@ -545,7 +546,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       };
       for (const id of completedWithNotifications) {
         void notifyDesktop({
-          title: "Pi Agent",
+          title: PRODUCT_NAME,
           body: `Finished: ${sessionName(id)}`,
         });
       }

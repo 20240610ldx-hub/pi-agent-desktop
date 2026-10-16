@@ -31,14 +31,14 @@ const expectedParentPid = Number.parseInt(process.env.PI_WEB_PARENT_PID ?? "", 1
 // or is force-terminated by macOS.
 const parentWatchdog = setInterval(() => {
   if (!Number.isInteger(expectedParentPid) || process.ppid === 1) {
-    console.error("[Pi Agent] desktop shell is gone (orphaned); server exiting");
+    console.error("[Pilaude] desktop shell is gone (orphaned); server exiting");
     process.exit(0);
   }
 
   try {
     process.kill(expectedParentPid, 0);
   } catch {
-    console.error(`[Pi Agent] desktop shell (pid ${expectedParentPid}) is gone; server exiting`);
+    console.error(`[Pilaude] desktop shell (pid ${expectedParentPid}) is gone; server exiting`);
     process.exit(0);
   }
 }, 1_000);
@@ -46,10 +46,10 @@ parentWatchdog.unref();
 
 // Observation only: neither listener changes how the process dies.
 process.on("uncaughtExceptionMonitor", (error, origin) => {
-  console.error(`[Pi Agent] ${origin}:`, error);
+  console.error(`[Pilaude] ${origin}:`, error);
 });
 process.on("exit", (code) => {
-  console.error(`[Pi Agent] server process exit (code ${code})`);
+  console.error(`[Pilaude] server process exit (code ${code})`);
 });
 
 // ABI-mismatch tourniquet: wrap process.dlopen so a native module compiled
@@ -78,7 +78,7 @@ if (typeof process.dlopen === "function") {
         const compiledAbi = match[1];
         const runtimeAbi = secondMatch ? secondMatch[1] : String(process.versions.modules);
         const enhanced = new Error(
-          `[Pi Agent] Native module ABI mismatch: ${filename}\n` +
+          `[Pilaude] Native module ABI mismatch: ${filename}\n` +
             `  compiled for NODE_MODULE_VERSION ${compiledAbi}, runtime is NODE_MODULE_VERSION ${runtimeAbi} (Node ${process.version}).\n` +
             `  The desktop bundles Node ${process.version} but ~/.pi/agent/npm is shared with the CLI, which may\n` +
             `  have compiled this .node under a different Node major.\n` +
@@ -115,14 +115,14 @@ try {
       if (!entry.isDirectory()) continue;
       fs.rmSync(path.join(nestedScopeDir, entry.name), { recursive: true, force: true });
       console.error(
-        `[Pi Agent] removed stale ${pkg.name}/node_modules/@earendil-works/${entry.name} ` +
+        `[Pilaude] removed stale ${pkg.name}/node_modules/@earendil-works/${entry.name} ` +
           `left behind by an overwrite install (see issue #72)`,
       );
     }
   }
 } catch (cleanupError) {
   // Cleanup must never keep the server from starting.
-  console.error("[Pi Agent] stale-dependency cleanup failed:", cleanupError);
+  console.error("[Pilaude] stale-dependency cleanup failed:", cleanupError);
 }
 
 // The standalone Next.js entrypoint is CommonJS.

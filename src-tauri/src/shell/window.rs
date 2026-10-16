@@ -24,7 +24,7 @@ use crate::shell::{open_external, WINDOW_LABEL};
 /// offset (Y = 22 centred them at 24pt). macOS 27's 16pt native buttons use a
 /// 10pt offset, so Y = 26 is required for the same 24pt centre. Re-measure
 /// after a macOS major update:
-/// `osascript -e 'tell application "System Events" to tell process "Pi Agent"
+/// `osascript -e 'tell application "System Events" to tell process "Pilaude"
 /// to get {position, size} of buttons of window 1'` against the window's own
 /// position. The horizontal clearance the web content keeps is
 /// `--mac-traffic-light-inset` in native-theme.css.
@@ -46,11 +46,11 @@ pub fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<Webvi
     let stored_theme = read_stored_theme(app);
 
     let mut builder = WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::External(app_url))
-        .title("Pi Agent")
+        .title("Pilaude")
         .inner_size(1440.0, 900.0)
         .min_inner_size(900.0, 600.0)
         .resizable(true)
-        // Pi Agent already handles browser drag/drop for image attachments.
+        // Pilaude already handles browser drag/drop for image attachments.
         .disable_drag_drop_handler()
         .on_navigation(move |url| {
             if same_origin(url, &navigation_origin) || is_inline_frame_document(url) {

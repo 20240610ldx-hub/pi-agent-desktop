@@ -340,7 +340,7 @@ fn login_shell_path() -> Option<String> {
 
 #[cfg(all(feature = "custom-protocol", target_os = "macos"))]
 fn bundled_node_path(resource_dir: &Path) -> PathBuf {
-    resource_dir.join("resources/Pi Agent Server.app/Contents/MacOS/node")
+    resource_dir.join("resources/Pilaude Server.app/Contents/MacOS/node")
 }
 
 #[cfg(all(feature = "custom-protocol", target_os = "windows"))]
@@ -552,7 +552,7 @@ fn wait_for_server(
     while Instant::now() < deadline {
         if let Some(status) = child.try_wait()? {
             return Err(io::Error::other(format!(
-                "Pi Agent server exited early with {status}; see {}",
+                "Pilaude server exited early with {status}; see {}",
                 log_path.display()
             )));
         }
@@ -561,7 +561,7 @@ fn wait_for_server(
             // EADDRINUSE while another process is answering on the same port.
             if let Some(status) = child.try_wait()? {
                 return Err(io::Error::other(format!(
-                    "Pi Agent server exited during startup with {status}; see {}",
+                    "Pilaude server exited during startup with {status}; see {}",
                     log_path.display()
                 )));
             }
@@ -573,7 +573,7 @@ fn wait_for_server(
     Err(io::Error::new(
         io::ErrorKind::TimedOut,
         format!(
-            "Pi Agent server did not start within {} seconds; see {}",
+            "Pilaude server did not start within {} seconds; see {}",
             SERVER_START_TIMEOUT.as_secs(),
             log_path.display()
         ),
@@ -768,13 +768,13 @@ mod tests {
     #[test]
     fn simplifies_verbatim_windows_path_before_launching_node() {
         let path = Path::new(
-            r"\\?\C:\Users\毕良霞\AppData\Local\Pi Agent\resources\server\desktop-server.cjs",
+            r"\\?\C:\Users\毕良霞\AppData\Local\Pilaude\resources\server\desktop-server.cjs",
         );
 
         assert_eq!(
             child_process_compatible_path(path),
             PathBuf::from(
-                r"C:\Users\毕良霞\AppData\Local\Pi Agent\resources\server\desktop-server.cjs"
+                r"C:\Users\毕良霞\AppData\Local\Pilaude\resources\server\desktop-server.cjs"
             )
         );
     }
@@ -782,7 +782,7 @@ mod tests {
     #[cfg(not(windows))]
     #[test]
     fn leaves_non_windows_path_unchanged() {
-        let path = Path::new("/Applications/Pi Agent.app/Contents/Resources/server");
+        let path = Path::new("/Applications/Pilaude.app/Contents/Resources/server");
         assert_eq!(child_process_compatible_path(path), PathBuf::from(path));
     }
 
@@ -840,7 +840,7 @@ fn instance_lock_path() -> Option<PathBuf> {
                 .filter(|value| !value.is_empty())
                 .map(|value| PathBuf::from(value).join(".config"))
         });
-    base.map(|value| value.join("com.abcwyc.pi-agent").join("pi-agent.lock"))
+    base.map(|value| value.join("io.github.20240610ldx-hub.pilaude").join("pilaude.lock"))
 }
 
 #[cfg(target_os = "linux")]
@@ -848,7 +848,7 @@ fn process_is_our_app(pid: i32) -> bool {
     fs::read_to_string(format!("/proc/{pid}/cmdline"))
         .map(|content| {
             let lowered = content.to_lowercase();
-            lowered.contains("pi-agent") || lowered.contains("pi agent")
+            lowered.contains("pilaude")
         })
         .unwrap_or(false)
 }
@@ -1033,7 +1033,7 @@ pub fn run() {
             };
             let Some(action) = action else { return };
             if let Err(error) = app.emit("pi-agent-menu-action", action) {
-                eprintln!("Pi Agent menu action failed: {error}");
+                eprintln!("Pilaude menu action failed: {error}");
             }
         })
         .manage(CloseQuits(Mutex::new(false)))
@@ -1067,7 +1067,7 @@ pub fn run() {
             // The updater public key is embedded at compile time by the release
             // workflow. Local development builds intentionally omit it, which
             // keeps unsigned builds from accepting production updates.
-            if let Some(public_key) = option_env!("PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY")
+            if let Some(public_key) = option_env!("PILAUDE_UPDATER_PUBLIC_KEY")
                 .map(str::trim)
                 .filter(|key| !key.is_empty())
             {
@@ -1140,7 +1140,7 @@ pub fn run() {
             }
         })
         .build(tauri::generate_context!())
-        .expect("failed to build Pi Agent desktop app");
+        .expect("failed to build Pilaude desktop app");
 
     app.run(|app_handle, event| match event {
         RunEvent::Exit => {

@@ -34,12 +34,17 @@ test("only accepts explicit pins for the exact bundled component version", () =>
 
 test("writes an auditable three-component manifest", () => {
   assert.deepEqual(
-    createComponentManifest({ "pi-agent-desktop": "0.1.0", pi: "0.81.1", "pi-web": "0.7.17" }),
+    createComponentManifest({ "pi-agent-desktop": "0.7.1", pi: "0.81.1", "pi-web": "0.7.17" }),
     {
       schemaVersion: 1,
       appVersion: "0.1.0",
+      distribution: {
+        name: "pilaude",
+        repository: "20240610ldx-hub/pi-agent-desktop",
+        version: "0.1.0",
+      },
       components: [
-        { id: "pi-agent-desktop", repository: "abcwyc/pi-agent-desktop", version: "0.1.0" },
+        { id: "pi-agent-desktop", repository: "abcwyc/pi-agent-desktop", version: "0.7.1" },
         { id: "pi", repository: "earendil-works/pi", version: "0.81.1" },
         { id: "pi-web", repository: "agegr/pi-web", version: "0.7.17" },
       ],

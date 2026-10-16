@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import pilaudePackage from "../src-tauri/pilaude-package.json" with { type: "json" };
 
 export const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -85,8 +86,8 @@ export async function readLocalComponentVersions() {
     pi: normalizeVersion(piPackage.version),
     "pi-web": normalizeVersion(appPackage.version),
   };
-  if (cargoVersion !== versions["pi-agent-desktop"]) {
-    throw new Error(`Cargo version ${cargoVersion ?? "missing"} does not match pi-agent-desktop ${versions["pi-agent-desktop"]}.`);
+  if (cargoVersion !== normalizeVersion(pilaudePackage.version)) {
+    throw new Error(`Cargo version ${cargoVersion ?? "missing"} does not match Pilaude ${pilaudePackage.version}.`);
   }
   return versions;
 }
@@ -98,13 +99,33 @@ export async function fetchLatestRelease(repository, options = {}) {
     "User-Agent": "pi-agent-desktop-release-automation",
   };
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const resource = options.includePrereleases ? "releases?per_page=100" : "releases/latest";
   const response = await (options.fetcher ?? fetch)(
-    `https://api.github.com/repos/${repository}/releases/latest`,
+    `https://api.github.com/repos/${repository}/${resource}`,
     { headers },
   );
   if (response.status === 404 && options.allowMissing) return null;
   if (!response.ok) throw new Error(`${repository} release request failed with HTTP ${response.status}.`);
-  const release = await response.json();
+  let release = await response.json();
+  if (options.includePrereleases) {
+    if (!Array.isArray(release)) throw new Error(`${repository} returned an invalid release list.`);
+    let latest = null;
+    for (const candidate of release) {
+      if (candidate.draft === true) continue;
+      if (typeof candidate.tag_name !== "string" || typeof candidate.html_url !== "string") {
+        throw new Error(`${repository} returned an invalid release payload.`);
+      }
+      const version = normalizeVersion(candidate.tag_name);
+      if (!latest || compareVersions(version, latest.version) > 0) {
+        latest = { ...candidate, version };
+      }
+    }
+    if (!latest) {
+      if (options.allowMissing) return null;
+      throw new Error(`${repository} has no published releases.`);
+    }
+    release = latest;
+  }
   if (typeof release.tag_name !== "string" || typeof release.html_url !== "string") {
     throw new Error(`${repository} returned an invalid release payload.`);
   }
@@ -127,7 +148,12 @@ export async function readRemoteComponentVersions() {
 export function createComponentManifest(versions) {
   return {
     schemaVersion: 1,
-    appVersion: versions["pi-agent-desktop"],
+    appVersion: normalizeVersion(pilaudePackage.version),
+    distribution: {
+      name: pilaudePackage.name,
+      repository: pilaudePackage.repository,
+      version: normalizeVersion(pilaudePackage.version),
+    },
     components: ["pi-agent-desktop", "pi", "pi-web"].map((id) => ({
       id,
       repository: componentRepositories[id],

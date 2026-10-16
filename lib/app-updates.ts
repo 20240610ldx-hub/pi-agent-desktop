@@ -3,7 +3,7 @@ import type {
   AppUpdateInfo,
   AppUpdateProjectId,
 } from "@/lib/app-update-types";
-import { APP_DISTRIBUTION_NAME, APP_VERSION } from "./branding";
+import { APP_DISTRIBUTION_NAME, APP_REPOSITORY, APP_VERSION } from "./branding";
 
 export const APP_UPDATE_CHECK_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 export const APP_UPDATE_RETRY_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -34,7 +34,7 @@ export const APP_UPDATE_PROJECTS: readonly AppUpdateProject[] = [
   {
     id: "pi-agent-desktop",
     name: APP_DISTRIBUTION_NAME,
-    repository: "abcwyc/pi-agent-desktop",
+    repository: APP_REPOSITORY,
     currentVersion: APP_VERSION,
   },
 ];
@@ -140,7 +140,14 @@ function parseRelease(project: AppUpdateProject, raw: GitHubRelease): AppCompone
   if (!latest || !current) throw new Error("GitHub returned an invalid release version.");
 
   const releaseUrl = new URL(raw.html_url);
-  if (releaseUrl.protocol !== "https:" || releaseUrl.hostname !== "github.com") {
+  if (
+    releaseUrl.protocol !== "https:"
+    || releaseUrl.hostname !== "github.com"
+    || releaseUrl.port
+    || releaseUrl.username
+    || releaseUrl.password
+    || !releaseUrl.pathname.toLowerCase().startsWith(`/${project.repository.toLowerCase()}/releases/tag/`)
+  ) {
     throw new Error("GitHub returned an invalid release URL.");
   }
 
@@ -169,7 +176,7 @@ export async function getLatestAppRelease(
       headers: {
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": `pi-agent-desktop/${APP_VERSION}`,
+        "User-Agent": `${APP_DISTRIBUTION_NAME}/${APP_VERSION}`,
       },
       signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
     },
