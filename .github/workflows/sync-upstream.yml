@@ -1,0 +1,38 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: '27 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/sync-upstream.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-main
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == '20240610ldx-hub/pi-agent-desktop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Merge the original author's main branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_REPOSITORY: abcwyc/pi-agent-desktop
+        run: |
+          set -euo pipefail
+          parent="$(gh api "repos/$GITHUB_REPOSITORY" --jq .parent.full_name)"
+          test "$parent" = "$UPSTREAM_REPOSITORY"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/merge-upstream" \
+            -f branch=main | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Report a failed sync
+        if: failure()
+        run: |
+          echo 'Upstream sync failed. Review the run log for merge conflicts or permission errors before retrying.' >> "$GITHUB_STEP_SUMMARY"
