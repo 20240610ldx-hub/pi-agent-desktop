@@ -1358,6 +1358,7 @@ export const enLocale: LocalePlugin = {
     "models.deepSeekThinkingCompat": "DeepSeek thinking compatibility",
     "models.developerRole": "Use the developer role for the system prompt",
     "models.thinkingLevelMap": "Thinking level map",
+    "models.thinkingLevelMapHelp": "xhigh and max stay out of the reasoning selector by default: set them to Custom with the value the provider expects (e.g. xhigh) to offer them.",
     "models.clearAll": "Clear all",
     "models.enabledSection": "Available models",
     "models.enabledCount": "{enabled}/{total} enabled",

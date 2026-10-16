@@ -1294,6 +1294,11 @@ function ModelDetail({
                       </button>
                     )}
                   </div>
+                  {/* pi's getSupportedThinkingLevels() offers xhigh/max only for an
+                      explicit map entry, so without one the selector stops at high (#76). */}
+                  <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 8 }}>
+                    {t("models.thinkingLevelMapHelp")}
+                  </div>
                   <ThinkingLevelMapEditor
                     value={model.thinkingLevelMap}
                     onChange={(v) => set("thinkingLevelMap", v)}
