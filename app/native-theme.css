@@ -1607,6 +1607,8 @@ a:focus-visible {
 }
 
 :root {
+  /* Compatibility token read by upstream globals.css; use installed fonts. */
+  --font-noto-mono: "Cascadia Code", Consolas, monospace;
   --font-mono: ui-monospace, "SFMono-Regular",
     "Cascadia Code", "JetBrains Mono", "Fira Code", Consolas, monospace;
 }
@@ -7113,3 +7115,11 @@ html.native-desktop :is(
 @media (prefers-reduced-motion: reduce) {
   .pilaude-welcome, .cds-button, .chat-composer, .animated-native-popover { animation: none !important; transition: none !important; }
 }
+
+.pilaude-data-section { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.pilaude-data-section p { margin: 0; line-height: 1.5; }
+.pilaude-data-section code { overflow-wrap: anywhere; font-size: 12px; }
+.pilaude-data-preview { margin-top: 12px; }
+.pilaude-data-preview > ul { max-height: 160px; overflow: auto; padding-left: 20px; }
+.pilaude-data-preview details { margin: 12px 0; }
+.pilaude-data-preview summary { cursor: pointer; }

@@ -1,4 +1,4 @@
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { createPilaudeModelRuntime } from "./pilaude-model-runtime";
 import type { ProviderUsageId } from "./provider-usage-ids";
 
 export { PROVIDER_USAGE_IDS, isProviderUsageId, type ProviderUsageId } from "./provider-usage-ids";
@@ -75,7 +75,7 @@ const CURRENCY: Record<"moonshotai" | "moonshotai-cn" | "minimax" | "minimax-cn"
 };
 
 export async function queryProviderUsage(providerId: ProviderUsageId): Promise<ProviderUsageResult> {
-  const runtime = await ModelRuntime.create({ refreshOnCreate: false });
+  const runtime = await createPilaudeModelRuntime({ refreshOnCreate: false });
   const provider = runtime.getProvider(providerId);
   // Catalog providers such as opencode-go carry their base URL per model rather than on the
   // provider, so fall back to the first model before rejecting a non-official origin.

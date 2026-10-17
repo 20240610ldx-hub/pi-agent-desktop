@@ -4,6 +4,7 @@ import {
   ModelRuntime,
 } from "@earendil-works/pi-coding-agent";
 import { join } from "node:path";
+import { createPilaudeModelRuntime } from "./pilaude-model-runtime";
 
 /**
  * ModelRuntime that also includes providers registered by extensions (an
@@ -20,8 +21,7 @@ export async function createModelRuntimeWithExtensions(
   modelRuntime?: ModelRuntime,
 ): Promise<ModelRuntime> {
   const agentDir = getAgentDir();
-  const runtime = modelRuntime ?? await ModelRuntime.create({
-    authPath: join(agentDir, "auth.json"),
+  const runtime = modelRuntime ?? await createPilaudeModelRuntime({
     modelsPath: join(agentDir, "models.json"),
     allowModelNetwork: false,
     refreshOnCreate: false,

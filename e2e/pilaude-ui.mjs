@@ -25,6 +25,9 @@ export async function checkPilaudeUi(browser, { url, project, artifacts }) {
       console.log(`UI case ${width}/${scale}/${theme}/${locale}`);
       const errors = [];
       page.on("pageerror", (error) => errors.push(error.message));
+      page.on("console", (message) => {
+        if (message.type() === "error" && !message.text().includes("503 (Service Unavailable)") && !message.text().includes("Pilaude E2E: model temporarily unavailable")) errors.push(message.text());
+      });
       let prompts = 0;
       const emptySessions = async (route) => route.fulfill({ status: 200, contentType: "application/json",
         body: JSON.stringify({ sessions: [], sessionListVersion: 0 }) });
@@ -63,7 +66,8 @@ export async function checkPilaudeUi(browser, { url, project, artifacts }) {
       assert.ok((await input.inputValue()).includes("\n"));
       await input.fill("Pilaude draft survives rejected send");
       await input.press("Enter");
-      await page.getByText("Pilaude E2E: model temporarily unavailable", { exact: false }).first().waitFor();
+      // Development route compilation is outside the packaged-app performance gate.
+      await page.getByText("Pilaude E2E: model temporarily unavailable", { exact: false }).first().waitFor({ timeout: 45000 });
       try {
         await page.waitForFunction(() => document.querySelector("textarea.chat-input-textarea")?.value === "Pilaude draft survives rejected send", null, { timeout: 15000 });
       } catch (error) {

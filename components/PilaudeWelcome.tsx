@@ -13,8 +13,8 @@ export function PilaudeWelcome({ onOpenProject, onOpenModels }: {
   const reducedMotion = useReducedMotion();
   return (
     <motion.section className="pilaude-welcome" aria-labelledby="pilaude-welcome-title"
-      initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }} transition={SPRING_SNAPPY}>
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }} transition={reducedMotion ? { duration: 0 } : SPRING_SNAPPY}>
       <div className="pilaude-welcome-wordmark">Pilaude</div>
       <h1 id="pilaude-welcome-title">{t("welcome.title")}</h1>
       <p className="pilaude-welcome-description">{t("welcome.description")}</p>

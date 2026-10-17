@@ -5,6 +5,8 @@ export async function register(): Promise<void> {
   // NEXT_RUNTIME branch. An early `return` instead of this `if` would leave the
   // Node calls in the Edge module.
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { initializePilaudeData } = await import("./lib/pilaude-data");
+    initializePilaudeData();
     const { registerNodeInstrumentation } = await import("./instrumentation-node");
     registerNodeInstrumentation();
   }

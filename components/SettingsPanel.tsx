@@ -35,6 +35,7 @@ import { SkillsConfig } from "./SkillsConfig";
 import { AgentsConfig } from "./AgentsConfig";
 import { PluginsConfig } from "./PluginsConfig";
 import { AppUpdatesSection } from "./AppUpdatesSection";
+import { PilaudeDataSection } from "./PilaudeDataSection";
 import { DesktopAppSection } from "./desktop";
 import { McpConfig } from "./McpConfig";
 import { ConfigButton, ConfigSwitch } from "./SettingsUi";
@@ -192,6 +193,7 @@ function GeneralSettings({
       <div className="settings-general-columns">
         <div className="settings-general-col">
           <AppUpdatesSection onBusyChange={onBusyChange} />
+          <PilaudeDataSection onBusyChange={onBusyChange} />
 
           <section className="settings-general-section">
             <h3 className="settings-general-heading">{t("common.language")}</h3>

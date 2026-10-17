@@ -1,5 +1,6 @@
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import { createAgentSessionFromServices, createAgentSessionServices, getAgentDir, initTheme, SessionManager, SettingsManager, Theme } from "@earendil-works/pi-coding-agent";
+import { createPilaudeModelRuntime } from "./pilaude-model-runtime";
 import { KeybindingsManager as TuiKeybindingsManager, TUI_KEYBINDINGS } from "@earendil-works/pi-tui";
 import { randomUUID } from "crypto";
 import { existsSync, realpathSync, writeFileSync } from "fs";
@@ -2672,6 +2673,7 @@ export async function startRpcSession(
       ? undefined
       : await createPiWebBuiltinExtensions({ agentDir });
     const services = await createAgentSessionServices({
+      modelRuntime: await createPilaudeModelRuntime(),
       cwd: sessionCwd,
       agentDir,
       settingsManager,

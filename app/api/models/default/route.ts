@@ -12,6 +12,7 @@ import { getAllowedFileRoots, isExistingFilePathAllowed } from "@/lib/file-acces
 import { resolveVisibleModels } from "@/lib/model-scope";
 import { invalidateModelsCache } from "@/lib/models-cache";
 import { projectTrustReloadOptions } from "@/lib/project-trust";
+import { createPilaudeModelRuntime } from "@/lib/pilaude-model-runtime";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ export async function PUT(req: Request) {
     const services = await createAgentSessionServices({
       cwd,
       agentDir,
+      modelRuntime: await createPilaudeModelRuntime(),
       ...(trustReloadOptions ? { resourceLoaderReloadOptions: trustReloadOptions } : {}),
     });
     const { settingsManager } = services;

@@ -1,16 +1,15 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import type { Credential } from "@earendil-works/pi-ai";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import lockfile from "proper-lockfile";
 import type { ProviderCredentialType } from "@/lib/provider-listing";
+import { createPilaudeCredentialStore } from "./credential-store";
+import type { CredentialRemovalResult } from "./credential-store";
 
 const AUTH_FILE_WRITE_OPTIONS = { encoding: "utf-8" as const, mode: 0o600 };
 
-export type CredentialRemovalResult =
-  | { status: "removed" }
-  | { status: "not_found" }
-  | { status: "type_mismatch"; storedType: string };
+export type { CredentialRemovalResult } from "./credential-store";
 
 function ensureAuthFile(authPath: string): void {
   const parent = dirname(authPath);
@@ -76,8 +75,9 @@ async function updateStoredCredentials<T>(
 export function storeProviderCredential(
   providerId: string,
   credential: Credential,
-  authPath = join(getAgentDir(), "auth.json"),
+  authPath?: string,
 ): Promise<void> {
+  if (authPath === undefined) return createPilaudeCredentialStore(getAgentDir()).modify(providerId, async () => credential).then(() => undefined);
   return updateStoredCredentials(authPath, (credentials) => {
     credentials[providerId] = credential;
     return { result: undefined, changed: true };
@@ -93,8 +93,9 @@ export function storeProviderCredential(
 export async function removeStoredCredentialIfType(
   providerId: string,
   expectedType: ProviderCredentialType,
-  authPath = join(getAgentDir(), "auth.json"),
+  authPath?: string,
 ): Promise<CredentialRemovalResult> {
+  if (authPath === undefined) return createPilaudeCredentialStore(getAgentDir()).removeIfType(providerId, expectedType);
   return updateStoredCredentials<CredentialRemovalResult>(authPath, (credentials) => {
     if (!Object.hasOwn(credentials, providerId)) {
       return { result: { status: "not_found" }, changed: false };

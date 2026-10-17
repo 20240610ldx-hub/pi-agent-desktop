@@ -19,7 +19,7 @@ function filesUnder(dir, extensions) {
 }
 
 test("every CSS variable read without a fallback is defined somewhere", () => {
-  const css = filesUnder("app", [".css"]).map((file) => readFileSync(file, "utf8")).join("\n");
+  const css = ["app", "vendor/open-claude-ui"].flatMap((dir) => filesUnder(dir, [".css"])).map((file) => readFileSync(file, "utf8")).join("\n");
   // Variables can also be set from components (inline styles, setProperty).
   const source = ["components", "hooks", "lib", "app"]
     .flatMap((dir) => filesUnder(dir, [".tsx", ".ts"]))

@@ -640,6 +640,12 @@ fn start_packaged_server(
     if let Some(path) = server_process_path(&node_path) {
         command.env("PATH", path);
     }
+    if std::env::var_os("PI_CODING_AGENT_DIR").is_none() {
+        command.env(
+            "PI_CODING_AGENT_DIR",
+            app.path().data_dir()?.join("Pilaude").join("agent"),
+        );
+    }
 
     #[cfg(unix)]
     command.process_group(0);

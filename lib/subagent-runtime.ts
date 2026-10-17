@@ -9,6 +9,7 @@ import {
   type ModelRuntime,
 } from "@earendil-works/pi-coding-agent";
 import type { AgentSessionLike } from "./pi-types";
+import { createPilaudeModelRuntime } from "./pilaude-model-runtime";
 import {
   subagentNotificationText,
   subagentToolDetails,
@@ -242,7 +243,7 @@ export function createSubagentController(
       const services = await createAgentSessionServices({
         cwd: childCwd,
         agentDir,
-        modelRuntime: parentModelRuntime,
+        modelRuntime: parentModelRuntime ?? await createPilaudeModelRuntime(),
         settingsManager,
         resourceLoaderOptions: {
           noExtensions: !profile.loadExtensions,

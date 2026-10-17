@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, type FormEvent, useCallback, useEffect, useState } from "react";
+import { type CSSProperties, type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "@/hooks/useI18n";
 import { isImeComposing } from "@/lib/ime";
@@ -130,12 +130,15 @@ export function DirectoryPicker({ onCancel, onSelect, initialPath, busy = false,
   const [directoryName, setDirectoryName] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const navigationRequestRef = useRef(0);
 
   const navigateTo = useCallback(async (directory?: string) => {
+    const requestId = ++navigationRequestRef.current;
     setLoading(true);
     setLoadError(null);
     try {
       const data = await loadDirectories(directory);
+      if (requestId !== navigationRequestRef.current) return;
       const nextPath = data.path ?? directory ?? "/";
       setCurrentPath(nextPath);
       setParentDirectory(data.parentPath ?? null);
@@ -143,9 +146,9 @@ export function DirectoryPicker({ onCancel, onSelect, initialPath, busy = false,
       setDirectories(data.directories ?? []);
       setDrives(data.drives ?? null);
     } catch (cause) {
-      setLoadError(cause instanceof Error ? cause.message : String(cause));
+      if (requestId === navigationRequestRef.current) setLoadError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      setLoading(false);
+      if (requestId === navigationRequestRef.current) setLoading(false);
     }
   }, []);
 

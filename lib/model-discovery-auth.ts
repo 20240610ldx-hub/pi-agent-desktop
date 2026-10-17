@@ -1,7 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { withTransientModelRuntime } from "./transient-model-runtime";
 
 export interface ModelDiscoveryAuth {
   apiKey?: string;
@@ -30,21 +27,15 @@ export async function resolveModelDiscoveryAuth(
   providerName: string,
   provider: Record<string, unknown>,
 ): Promise<ModelDiscoveryAuth> {
-  let tempDir: string | undefined;
-  try {
-    tempDir = mkdtempSync(join(tmpdir(), "pi-web-model-discovery-"));
-    const modelsPath = join(tempDir, "models.json");
-    const discoveryModelId = "__pi_web_model_discovery__";
-    writeFileSync(modelsPath, JSON.stringify({
-      providers: {
-        [providerName]: {
-          ...provider,
-          models: [{ id: discoveryModelId }],
-        },
+  const discoveryModelId = "__pi_web_model_discovery__";
+  return withTransientModelRuntime({
+    providers: {
+      [providerName]: {
+        ...provider,
+        models: [{ id: discoveryModelId }],
       },
-    }, null, 2), "utf8");
-
-    const modelRuntime = await ModelRuntime.create({ modelsPath });
+    },
+  }, async (modelRuntime) => {
     const loadError = modelRuntime.getError();
     if (loadError) throw new Error(loadError);
     const model = modelRuntime.getModel(providerName, discoveryModelId);
@@ -73,7 +64,5 @@ export async function resolveModelDiscoveryAuth(
       baseUrl,
       api,
     };
-  } finally {
-    if (tempDir) rmSync(tempDir, { recursive: true, force: true });
-  }
+  });
 }

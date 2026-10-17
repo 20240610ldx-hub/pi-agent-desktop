@@ -24,6 +24,74 @@
     "note": "Risk levels that force the sync to open a reviewed PR instead of pushing straight to main and triggering a signed release. Most upstream releases will land here, because the remaining drift is accepted by decision rather than pending cleanup \u2014 see `dispositions` and `decisionLog`. Narrow this list only if the drift itself actually goes away."
   },
   "driftedUpstreamFiles": {
+    "instrumentation.ts": {
+      "risk": "low", "drift": 2, "structuralDrift": 2, "disposition": "accepted",
+      "reason": "Initialize the independent Pilaude agent directory before importing any SDK-backed instrumentation or creating background services."
+    },
+    "instrumentation-node.ts": {
+      "risk": "low", "drift": 14, "structuralDrift": 14, "disposition": "accepted",
+      "reason": "Server shutdown stream listeners are replaced by their owned Symbol during hot reload rather than accumulating one listener per registration."
+    },
+    "components/SettingsPanel.tsx": {
+      "risk": "high", "drift": 524, "structuralDrift": 420, "disposition": "accepted",
+      "reason": "Pilaude mounts its app-owned data import section beside the existing desktop update section. Preserve this mount and existing settings behavior when merging upstream."
+    },
+    "components/ModelsConfig.tsx": {
+      "risk": "medium", "drift": 75, "structuralDrift": 30, "disposition": "accepted",
+      "reason": "Encrypted custom-provider credentials are stored rather than models-json credentials, so managed providers must be filtered from the generic account list to avoid duplicate rows."
+    },
+    "components/DirectoryPicker.tsx": {
+      "risk": "low", "drift": 36, "structuralDrift": 18, "disposition": "accepted",
+      "reason": "Directory navigation ignores obsolete async responses and blocks selection during loading. An upstream merge must retain these protections against selecting a stale folder."
+    },
+    "lib/model-runtime.ts": {
+      "risk": "low", "drift": 20, "structuralDrift": 20, "disposition": "accepted",
+      "reason": "Runtime construction delegates to the Pilaude encrypted credential adapter while keeping Pi's extension provider setup and network options."
+    },
+    "lib/model-discovery-auth.ts": {
+      "risk": "medium", "drift": 30, "structuralDrift": 30, "disposition": "accepted",
+      "reason": "Provider discovery composes its draft through the Pilaude transient runtime so literal API keys and request headers are never written to temporary models configuration."
+    },
+    "lib/provider-credential-store.ts": {
+      "risk": "low", "drift": 15, "structuralDrift": 15, "disposition": "accepted",
+      "reason": "Production provider save/delete calls use encrypted Pilaude storage; the explicit legacy authPath adapter remains available to upstream tests and CLI consumers."
+    },
+    "lib/provider-usage.ts": {
+      "risk": "low", "drift": 4, "structuralDrift": 4, "disposition": "accepted",
+      "reason": "Provider usage requests construct the same encrypted-credential model runtime as normal agent requests, avoiding a fallback to the SDK plaintext auth store."
+    },
+    "lib/subagent-runtime.ts": {
+      "risk": "low", "drift": 3, "structuralDrift": 3, "disposition": "accepted",
+      "reason": "Subagent fallback runtime construction uses Pilaude credentials. Keep this adapter when updating upstream subagent lifecycle or runtime sharing."
+    },
+    "app/api/models/route.ts": {
+      "risk": "low", "drift": 2, "structuralDrift": 2, "disposition": "accepted",
+      "reason": "The models listing supplies the Pilaude encrypted runtime factory to Pi's session services; removing it silently restores plaintext SDK authentication."
+    },
+    "app/api/models/default/route.ts": {
+      "risk": "low", "drift": 2, "structuralDrift": 2, "disposition": "accepted",
+      "reason": "Saving a default model must use the same encrypted credential runtime as the model list so DPAPI-backed providers remain available to the selector star."
+    },
+    "app/api/models-config/route.ts": {
+      "risk": "low", "drift": 19, "structuralDrift": 19, "disposition": "accepted",
+      "reason": "Saving custom provider settings moves literal API keys into DPAPI credentials and writes sanitized models.json under the paired credential writer lock."
+    },
+    "app/api/models-config/test/route.ts": {
+      "risk": "medium", "drift": 100, "structuralDrift": 98, "disposition": "accepted",
+      "reason": "The model test callback uses the transient Pilaude runtime; its temporary configuration omits API keys and headers while the SDK resolves in-memory draft authentication."
+    },
+    "lib/i18n/messages/en.ts": {
+      "risk": "high", "drift": 500, "structuralDrift": 500, "disposition": "accepted",
+      "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
+    },
+    "lib/i18n/messages/zh-CN.ts": {
+      "risk": "high", "drift": 504, "structuralDrift": 504, "disposition": "accepted",
+      "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
+    },
+    "lib/i18n/messages/zh-TW.ts": {
+      "risk": "high", "drift": 492, "structuralDrift": 492, "disposition": "accepted",
+      "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
+    },
     "components/SessionSidebar.tsx": {
       "risk": "high",
       "drift": 2585,
@@ -115,9 +183,9 @@
     },
     "lib/rpc-manager.ts": {
       "risk": "high",
-      "drift": 109,
-      "reason": "Small fork edit in a file upstream changes often; watch it despite the low drift count.",
-      "structuralDrift": 595,
+      "drift": 424,
+      "reason": "Pilaude session services must retain the encrypted-credential runtime factory together with the fork's event and session lifecycle behavior during upstream merges.",
+      "structuralDrift": 424,
       "disposition": "accepted"
     },
     "components/BranchNavigator.tsx": {
@@ -194,6 +262,21 @@
     }
   },
   "forkOwnedPaths": [
+    "app/api/data/",
+    "components/PilaudeDataSection.tsx",
+    "lib/credential-store.ts",
+    "lib/credential-store.test.mjs",
+    "lib/pilaude-data.ts",
+    "lib/pilaude-data.test.mjs",
+    "lib/pilaude-import.ts",
+    "lib/pilaude-import.test.mjs",
+    "lib/pilaude-model-runtime.ts",
+    "lib/pilaude-model-settings.ts",
+    "lib/transient-model-runtime.ts",
+    "lib/transient-model-runtime.test.mjs",
+    "lib/instrumentation-node.test.mjs",
+    "e2e/pilaude-agent-api.mjs",
+    "e2e/pilaude-data.mjs",
     "vendor/open-claude-ui/",
     "components/PilaudeWelcome.tsx",
     "components/PilaudeWelcome.test.mjs",

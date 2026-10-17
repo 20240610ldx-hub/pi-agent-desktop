@@ -99,11 +99,12 @@ test("risk follows the declared structural-drift thresholds", () => {
   }
 });
 
-test("files fully adopted from upstream leave the manifest", () => {
-  // ModelsConfig was the historical style-only example (146 total / 13
-  // structural). After the v0.9.1 sync it tracks upstream exactly, so it
-  // must no longer be registered as drifted.
-  assert.equal(manifest.driftedUpstreamFiles["components/ModelsConfig.tsx"], undefined);
+test("the encrypted provider editor requires upstream merge review", () => {
+  // Pilaude's stored credentials change the editor's account membership logic.
+  // An unattended upstream sync must not silently restore duplicate providers.
+  const result = classifyIncomingChanges(["components/ModelsConfig.tsx"], manifest);
+  assert.equal(result.reviewRequired, true);
+  assert.equal(result.overlaps[0].path, "components/ModelsConfig.tsx");
 });
 
 test("high and medium overlaps require review; low-only does not", () => {
@@ -135,7 +136,8 @@ test("untouched and ignored files never trigger review", () => {
 
 test("the real v0.8.0 -> v0.8.1 changeset would have demanded review", () => {
   // Regression anchor: this is what upstream actually shipped in one patch
-  // release. Eight of these files carry fork drift, so the previous
+  // release. Ten of these files now carry fork drift, including the models
+  // listing's credential factory and the directory navigation race fix. The previous
   // push-straight-to-signed-release path was applying them unattended.
   // lib/directory-browser.ts is in both lists for a reason — v0.8.1 introduced
   // it, and its homedir() usage is what broke the Windows build.
@@ -160,7 +162,7 @@ test("the real v0.8.0 -> v0.8.1 changeset would have demanded review", () => {
 
   assert.equal(result.reviewRequired, true);
   assert.equal(result.highestRisk, "high");
-  assert.equal(result.overlaps.length, 8);
+  assert.equal(result.overlaps.length, 10);
   assert.equal(result.overlaps[0].risk, "high", "the riskiest overlap must be reported first");
   assert.match(formatReport(result), /silent semantic conflicts/);
 });

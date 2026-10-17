@@ -2077,7 +2077,8 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null, onOpenMcp 
     return label ? <span className="models-sidebar-badge">{label}</span> : null;
   };
   const activeOAuth = oauthProviders.filter((p) => p.loggedIn);
-  const activeApiKey = apiKeyProviders.filter((p) => p.configured);
+  const managedApiKeyProviders = apiKeyProviders.filter((p) => !Object.hasOwn(config.providers ?? {}, p.id));
+  const activeApiKey = managedApiKeyProviders.filter((p) => p.configured);
 
   // Resolve current detail
   const detailContent = (() => {
@@ -2128,7 +2129,7 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null, onOpenMcp 
 
   return (
     <>
-    <ConfigPanelShell embedded={embedded} title={t("common.models")} subtitle="~/.pi/agent/models.json" closeLabel={t("i18n.close")} onClose={onClose}>
+    <ConfigPanelShell embedded={embedded} title={t("common.models")} subtitle="Pilaude/agent/models.json" closeLabel={t("i18n.close")} onClose={onClose}>
 
         <EnabledModelsBanner controller={enabledModels} />
 
@@ -2288,7 +2289,7 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null, onOpenMcp 
     {pickerOpen && (
       <AddProviderPicker
         oauthProviders={oauthProviders}
-        apiKeyProviders={apiKeyProviders}
+          apiKeyProviders={managedApiKeyProviders}
         onSelectOAuth={(id) => setSelection({ type: "oauth", providerId: id })}
         onSelectApiKey={(id) => setSelection({ type: "apikey", providerId: id })}
         onAddCustom={addCustomProvider}

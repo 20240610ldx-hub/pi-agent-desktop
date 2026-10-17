@@ -11,6 +11,7 @@ import {
 import { resolveVisibleModels, selectInitialModelScope } from "@/lib/model-scope";
 import { getAllowedFileRoots, isExistingFilePathAllowed } from "@/lib/file-access";
 import { projectTrustReloadOptions } from "@/lib/project-trust";
+import { createPilaudeModelRuntime } from "@/lib/pilaude-model-runtime";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ async function loadModels(cwd: string): Promise<ModelsData> {
   // too (see lib/project-trust.ts, #236).
   const trustReloadOptions = projectTrustReloadOptions(cwd, agentDir);
   const services = await createAgentSessionServices({
+    modelRuntime: await createPilaudeModelRuntime(),
     cwd,
     agentDir,
     ...(trustReloadOptions ? { resourceLoaderReloadOptions: trustReloadOptions } : {}),

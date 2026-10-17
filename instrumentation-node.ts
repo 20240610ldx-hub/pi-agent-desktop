@@ -2,6 +2,9 @@ import { configureHttpDispatcher } from "@/lib/http-dispatcher";
 import { closeAllAgentEventStreams } from "@/lib/agent-event-stream";
 import { startScheduler } from "@/lib/scheduled-tasks";
 
+const shutdownKey = Symbol.for("pilaude:node-shutdown-streams");
+const lifecycle = globalThis as typeof globalThis & { [shutdownKey]?: () => void };
+
 export function registerNodeInstrumentation(): void {
   configureHttpDispatcher();
 
@@ -13,6 +16,12 @@ export function registerNodeInstrumentation(): void {
   // for every connection to end, without a timeout. SSE streams only end when
   // the client disconnects, so close them here or the process never exits.
   const shutdownStreams = () => closeAllAgentEventStreams();
+  const previousShutdown = lifecycle[shutdownKey];
+  if (previousShutdown) {
+    process.off("SIGINT", previousShutdown);
+    process.off("SIGTERM", previousShutdown);
+  }
+  lifecycle[shutdownKey] = shutdownStreams;
   process.on("SIGINT", shutdownStreams);
   process.on("SIGTERM", shutdownStreams);
 }
