@@ -218,6 +218,7 @@
     "components/SettingsEntryMenu.tsx",
     "components/ProjectContextMenu.tsx",
     "components/WorktreeBranchList.tsx",
+    "lib/session-replacement.ts",
     "components/fork-extractions.test.mjs",
     "lib/branding.ts",
     "lib/branding.test.mjs",

@@ -210,6 +210,21 @@ const EXTRACTIONS = [
     ],
     requiredInOrigin: ["<ProjectContextMenu", "<WorktreeBranchList", "showNativeProjectBranchMenu("],
   },
+  {
+    name: "rpc-manager session replacement",
+    origin: "lib/rpc-manager.ts",
+    // Forking a session file and an extension command's ctx.newSession / fork /
+    // switchSession are fork features; AgentSessionWrapper only wires them in.
+    movedTo: ["lib/session-replacement.ts"],
+    movedDefinitions: ["UNSAVED_SESSION_FORK_ERROR", "createSessionReplacementActions"],
+    absentFromOrigin: [
+      "cancelledBySessionReplacementHook",
+      "moveToReplacementSession",
+      "session_before_fork",
+      "Session file not found: ",
+    ],
+    requiredInOrigin: ["createSessionReplacementActions(", "writeForkedSession(this.inner"],
+  },
 ];
 
 const FORK_FEATURES = [
