@@ -195,6 +195,21 @@ const EXTRACTIONS = [
       "<SettingsEntryMenu",
     ],
   },
+  {
+    name: "SessionSidebar project menu and branch list",
+    origin: "components/SessionSidebar.tsx",
+    // The project row's "…" menu (DOM and native) and the worktree dropdown's
+    // branch list are fork features; the sidebar keeps their state and actions.
+    // Reveal-in-file-manager stays in the origin: it is upstream's (#907).
+    movedTo: ["components/ProjectContextMenu.tsx", "components/WorktreeBranchList.tsx"],
+    movedDefinitions: ["fetchProjectBranchMenu", "showNativeProjectBranchMenu"],
+    absentFromOrigin: [
+      "sidebar-project-context-menu",
+      "sidebar.fetchBranchesTitle",
+      "sidebar.branchInWorktreeTitle",
+    ],
+    requiredInOrigin: ["<ProjectContextMenu", "<WorktreeBranchList", "showNativeProjectBranchMenu("],
+  },
 ];
 
 const FORK_FEATURES = [

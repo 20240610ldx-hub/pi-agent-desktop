@@ -216,6 +216,8 @@
     "hooks/useDesktopWorkspaceTabs.ts",
     "hooks/useWorkspaceAvailability.ts",
     "components/SettingsEntryMenu.tsx",
+    "components/ProjectContextMenu.tsx",
+    "components/WorktreeBranchList.tsx",
     "components/fork-extractions.test.mjs",
     "lib/branding.ts",
     "lib/branding.test.mjs",

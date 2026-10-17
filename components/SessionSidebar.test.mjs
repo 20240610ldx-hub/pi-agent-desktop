@@ -125,7 +125,7 @@ test("hides subagent rows and aggregates their state into the main session row",
   assert.doesNotMatch(source, /function SessionTreeItem/);
 });
 
-test("the project context menu reveals the project in the OS file manager", () => {
+test("the project context menu reveals the project in the OS file manager", async () => {
   // Upstream's open-in-file-manager (#907) reaches the fork through the
   // project context menu: the desktop shell reveals natively and the browser
   // goes through /api/open-in-explorer, which the menu only offers after the
@@ -135,7 +135,9 @@ test("the project context menu reveals the project in the OS file manager", () =
   assert.match(source, /revealItemInDirNative\(root\)/);
   assert.match(source, /fetch\("\/api\/open-in-explorer", \{\s*method: "POST"/);
   assert.match(source, /FILE_MANAGER_ERROR_KEYS\[data\.error \?\? ""\]/);
-  assert.match(source, /\{projectRevealError && \(/);
+  // The menu itself is fork-owned (components/ProjectContextMenu.tsx).
+  const menuSource = await readFile(new URL("./ProjectContextMenu.tsx", import.meta.url), "utf8");
+  assert.match(menuSource, /\{projectRevealError && \(/);
   // The platform-adaptive label (Finder / Explorer / generic).
   assert.match(source, /"sidebar\.openInFinder"/);
   assert.match(source, /"sidebar\.openInExplorer"/);
