@@ -41,7 +41,8 @@ test("re-adding a removed project clears only its sidebar marker", () => {
   assert.match(source, /const activateProject = useCallback\(\(cwd: string\) =>/);
   assert.match(source, /if \(!previous\.has\(projectRoot\)\) return previous;/);
   assert.match(source, /next\.delete\(projectRoot\);/);
-  assert.match(source, /onSelectCwd=\{activateProject\}/);
+  // The add-project dialog is the only picker left in the sidebar.
+  assert.match(source, /onSelectCwd=\{\(cwd\) => \{\s+activateProject\(cwd\);/);
 });
 
 test("exposes the polled running-session set to the shell", () => {

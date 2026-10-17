@@ -196,19 +196,34 @@ const EXTRACTIONS = [
     ],
   },
   {
-    name: "SessionSidebar project menu and branch list",
+    name: "SessionSidebar project menu",
     origin: "components/SessionSidebar.tsx",
-    // The project row's "…" menu (DOM and native) and the worktree dropdown's
-    // branch list are fork features; the sidebar keeps their state and actions.
+    // The project row's "…" menu (DOM and native) — branches with fetch, and
+    // the worktree pages that replaced the hidden header dropdown — is a fork
+    // feature; the sidebar keeps the menu state and wires the actions in.
     // Reveal-in-file-manager stays in the origin: it is upstream's (#907).
-    movedTo: ["components/ProjectContextMenu.tsx", "components/WorktreeBranchList.tsx"],
-    movedDefinitions: ["fetchProjectBranchMenu", "showNativeProjectBranchMenu"],
+    movedTo: ["components/ProjectContextMenu.tsx", "hooks/useProjectWorktreeActions.ts"],
+    movedDefinitions: [
+      "fetchProjectBranchMenu",
+      "showNativeProjectBranchMenu",
+      "showNativeProjectWorktreeMenu",
+      "createProjectWorktree",
+      "removeProjectWorktree",
+      "fetchRemoteBranches",
+    ],
     absentFromOrigin: [
       "sidebar-project-context-menu",
       "sidebar.fetchBranchesTitle",
       "sidebar.branchInWorktreeTitle",
+      "sidebar.confirmRemoveWorktree",
+      "/api/worktrees/fetch",
     ],
-    requiredInOrigin: ["<ProjectContextMenu", "<WorktreeBranchList", "showNativeProjectBranchMenu("],
+    requiredInOrigin: [
+      "<ProjectContextMenu",
+      "showNativeProjectBranchMenu(",
+      "showNativeProjectWorktreeMenu(",
+      "useProjectWorktreeActions(",
+    ],
   },
   {
     name: "rpc-manager session replacement",
