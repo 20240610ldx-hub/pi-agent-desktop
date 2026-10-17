@@ -122,6 +122,9 @@
     "typescript": "^5"
   },
   "overrides": {
-    "katex": "$katex"
+    "katex": "$katex",
+    "mammoth": {
+      "argparse": "^2.0.1"
+    }
   }
 }
