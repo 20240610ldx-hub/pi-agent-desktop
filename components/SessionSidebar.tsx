@@ -25,6 +25,8 @@ import { useProjectWorktreeActions } from "@/hooks/useProjectWorktreeActions";
 import { getRecentProjects } from "./path-ui";
 import { APP_PREF_KEYS, getPrefJson, removePref, setPrefJson } from "@/lib/app-prefs";
 import { groupByProject } from "@/lib/project-group";
+import { getProjectDisplayName, getProjectDisplayNames } from "@/lib/project-display";
+import { getRecallSessions, hasRecallSessionsToday } from "@/lib/recent-sessions";
 import { notifyDesktop } from "@/lib/desktop-notify";
 import { revealItemInDirNative } from "@/lib/desktop-native";
 import { isTauriDesktop } from "@/lib/desktop-updater";
@@ -232,7 +234,12 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       ? new Set(stored.filter((root): root is string => typeof root === "string"))
       : new Set();
   });
-  const [expandedProjectSessions, setExpandedProjectSessions] = useState<Set<string>>(() => new Set());
+  const [expandedProjectSessions, setExpandedProjectSessions] = useState<Set<string>>(() => {
+    const stored = getPrefJson<unknown>(APP_PREF_KEYS.expandedProjects);
+    return Array.isArray(stored)
+      ? new Set(stored.filter((root): root is string => typeof root === "string"))
+      : new Set();
+  });
   const [archivedProjectRoots, setArchivedProjectRoots] = useState<Set<string>>(() => {
     const stored = getPrefJson<unknown>(APP_PREF_KEYS.archivedProjects);
     return Array.isArray(stored)
@@ -410,6 +417,11 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     if (collapsedProjects.size === 0) removePref(APP_PREF_KEYS.collapsedProjects);
     else setPrefJson(APP_PREF_KEYS.collapsedProjects, [...collapsedProjects]);
   }, [collapsedProjects]);
+
+  useEffect(() => {
+    if (expandedProjectSessions.size === 0) removePref(APP_PREF_KEYS.expandedProjects);
+    else setPrefJson(APP_PREF_KEYS.expandedProjects, [...expandedProjectSessions]);
+  }, [expandedProjectSessions]);
 
   useEffect(() => {
     // Live running status via SSE — no polling. The server pushes the current
@@ -990,6 +1002,11 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const sessionFamilies = listSessionFamilies(filteredSessions);
   const allProjects = groupByProject(filteredSessions, { runningIds: runningSessionIds, unreadIds: unreadSessionIds });
   const activeProjects = allProjects.filter((group) => !archivedProjectRoots.has(group.projectRoot));
+  const projectDisplayNames = getProjectDisplayNames(activeProjects.map((group) => group.projectRoot));
+  const hasTodaySessions = !trimmedSessionQuery && hasRecallSessionsToday(treeSessions);
+  const recentSessions = !trimmedSessionQuery
+    ? getRecallSessions(treeSessions)
+    : [];
   useEffect(() => {
     const projectRoots = activeProjects.map((group) => group.projectRoot);
     onProjectsChange?.(projectRoots);
@@ -1061,7 +1078,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 )}
               </svg>
             </span>
-            <span className="sidebar-project-tree-name">{group.displayName}</span>
+            <span className="sidebar-project-tree-name">
+              {projectDisplayNames.get(group.projectRoot) ?? group.displayName}
+            </span>
             {/* A folded project hides its rows, so the count (and any running
                 or unread chips) must stay readable on the header itself. */}
             {isCollapsed && (
@@ -1149,7 +1168,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                   return next;
                 })}
               >
-                {isSessionOverflowExpanded ? t("sidebar.showLessSessions") : t("sidebar.showMoreSessions")}
+                {isSessionOverflowExpanded
+                  ? t("sidebar.showLessSessions")
+                  : t("sidebar.showMoreSessions", { count: groupTree.length - visibleGroupTree.length })}
               </button>
             )}
           </div>
@@ -1303,6 +1324,31 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           onSelectSession={handleSelectSessionFromList}
         >
         <div ref={listScrollRef} className="sidebar-project-tree" onScroll={handleListScroll}>
+          {recentSessions.length > 0 && (
+            <section className="sidebar-recent-section" aria-label={t(hasTodaySessions ? "sidebar.today" : "sidebar.recent")}>
+              <div className="sidebar-project-tree-header sidebar-recent-header">
+                <span className="sidebar-project-tree-title">{t(hasTodaySessions ? "sidebar.today" : "sidebar.recent")}</span>
+              </div>
+              <div className="sidebar-recent-items">
+                {recentSessions.map((session) => {
+                  const projectRoot = session.projectRoot ?? session.cwd;
+                  const projectName = projectDisplayNames.get(projectRoot)
+                    ?? getProjectDisplayName(projectRoot, activeProjects.map((group) => group.projectRoot));
+                  return (
+                    <SessionItem
+                      key={`recent-${session.id}`}
+                      session={session}
+                      isSelected={session.id === selectedSessionId}
+                      isRunning={runningSessionIds.has(session.id)}
+                      isUnread={unreadSessionIds.has(session.id)}
+                      onClick={() => handleSelectSessionFromList(session)}
+                      subtitle={projectName}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          )}
           <div className="sidebar-project-tree-header">
             <span className="sidebar-project-tree-title">{t("sidebar.projects")}</span>
             <div className="sidebar-project-tree-tools">
@@ -1597,6 +1643,7 @@ function SessionItem({
   collapsed = false,
   onToggleCollapse,
   isSubagentChild = false,
+  subtitle,
 }: {
   session: SessionInfo;
   isSelected: boolean;
@@ -1609,6 +1656,8 @@ function SessionItem({
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   isSubagentChild?: boolean;
+  /** Cross-project context; omitted inside the project tree where the group already names it. */
+  subtitle?: string;
 }) {
   const { locale, t } = useI18n();
   const [hovered, setHovered] = useState(false);
@@ -1924,7 +1973,7 @@ function SessionItem({
           )}
           <span
             className="session-item-title"
-            title={title}
+            title={subtitle ? `${title} · ${subtitle}` : title}
             style={{
               flex: 1,
               minWidth: 0,
@@ -1939,6 +1988,11 @@ function SessionItem({
           >
             {title}
           </span>
+          {subtitle && (
+            <span className="session-item-project" title={subtitle}>
+              {subtitle}
+            </span>
+          )}
 
           {/* Collapse toggle — always visible when has children */}
           {hasChildren && (

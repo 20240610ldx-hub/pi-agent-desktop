@@ -190,13 +190,12 @@ function GeneralSettings({
     <div className="settings-general">
       <h2 className="settings-general-title">{t("settings.general")}</h2>
 
-      <div className="settings-general-intro">
-        <p className="settings-general-tagline">{t("appSettings.tagline", { product: PRODUCT_NAME })}</p>
-        <p className="settings-general-tagline">{t("appSettings.taglineDetails")}</p>
-      </div>
-
       <div className="settings-general-columns">
         <div className="settings-general-col">
+          <section className="settings-general-section settings-general-intro settings-general-overview">
+            <p className="settings-general-tagline">{t("appSettings.tagline", { product: PRODUCT_NAME })}</p>
+            <p className="settings-general-tagline">{t("appSettings.taglineDetails")}</p>
+          </section>
           <AppUpdatesSection onBusyChange={onBusyChange} />
 
           <section className="settings-general-section">
@@ -544,7 +543,7 @@ export function SettingsPanel({
         <div className="settings-dialog-header">
           <strong className="settings-dialog-title">{t("settings.title")}</strong>
           <select
-            aria-label={t("settings.title")}
+            aria-label={t("settings.sectionPicker")}
             value={section}
             onChange={(event) => activateSection(event.target.value as SettingsSection)}
             className="settings-mobile-section-picker"

@@ -713,6 +713,14 @@
   color: var(--text);
 }
 
+/* A quiet overview card keeps the product summary from reading as an
+   unlabeled twin of the Version & Updates section below it. */
+.settings-general-overview {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-panel);
+}
+
 /* Version card: current and latest release side by side with the update
    action, replacing the old version / repository link chips. */
 .settings-update-card {
@@ -2044,6 +2052,38 @@ html.dark .sidebar-view-switcher-thumb {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.sidebar-recent-section {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  padding-bottom: 6px;
+}
+
+.sidebar-recent-header {
+  border-bottom: var(--hairline) solid var(--separator);
+  margin-bottom: 2px;
+}
+
+.sidebar-recent-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-recent-items .session-item {
+  height: 32px !important;
+}
+
+.session-item-project {
+  max-width: 28%;
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: var(--fs-small);
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-project-tree-header {
@@ -6848,6 +6888,30 @@ span.linenumber {
 }
 
 .scheduled-warning p { margin: 0; }
+
+.scheduled-owner-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.scheduled-owner-notice .scheduled-mono {
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+.scheduled-owner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scheduled-owner-actions .scheduled-button {
+  height: 30px;
+  padding: 0 10px;
+  font-size: var(--fs-small);
+}
 
 /* Buttons and inputs */
 .scheduled-button {

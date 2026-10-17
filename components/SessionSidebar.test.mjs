@@ -181,6 +181,23 @@ test("folded projects persist across reloads", () => {
   assert.match(source, /allProjects\.some\(\(g\) => !collapsedProjects\.has\(g\.projectRoot\)\)/);
 });
 
+test("expanded session previews persist and reveal how many rows are hidden", () => {
+  assert.match(source, /getPrefJson<unknown>\(APP_PREF_KEYS\.expandedProjects\)/);
+  assert.match(source, /setPrefJson\(APP_PREF_KEYS\.expandedProjects, \[\.\.\.expandedProjectSessions\]\)/);
+  assert.match(
+    source,
+    /t\("sidebar\.showMoreSessions", \{ count: groupTree\.length - visibleGroupTree\.length \}\)/,
+  );
+});
+
+test("shows a cross-project recent section above the project tree", () => {
+  assert.match(source, /import \{ getRecallSessions, hasRecallSessionsToday \} from "@\/lib\/recent-sessions"/);
+  assert.match(source, /const recentSessions = !trimmedSessionQuery/);
+  assert.match(source, /<section className="sidebar-recent-section" aria-label=\{t\(hasTodaySessions \? "sidebar\.today" : "sidebar\.recent"\)\}>/);
+  assert.match(source, /t\(hasTodaySessions \? "sidebar\.today" : "sidebar\.recent"\)/);
+  assert.match(source, /subtitle=\{projectName\}/);
+});
+
 test("the row menu shows the compaction count only when the session was compacted", () => {
   assert.match(
     sessionItemSource,

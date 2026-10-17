@@ -35,6 +35,7 @@ test("the search row confirms content search with Enter, not a mode button", () 
   // Discoverability for the hidden gesture: the input itself carries the hint.
   assert.match(source, /title=\{t\("sidebar\.searchAllHint"\)\}/);
   assert.match(englishMessages["sidebar.searchAllHint"], /Enter/);
+  assert.match(englishMessages["sidebar.searchSessions"], /Enter/);
 });
 
 test("selecting a result carries the entry id so the chat can jump to the match", () => {

@@ -167,9 +167,10 @@ export function AppShell() {
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
   // The Scheduled page covers the chat area without unmounting it, so the open session keeps its state.
   const [scheduledOpen, setScheduledOpen] = useState(() => searchParams?.get("view") === "scheduled");
-  // Read by handleSelectSession, whose identity must not change when the page opens.
+  // Read by restoreWorkspaceContext and handleSelectSession; those identities
+  // must not change when the page opens.
   const scheduledOpenRef = useRef(scheduledOpen);
-  useEffect(() => { scheduledOpenRef.current = scheduledOpen; }, [scheduledOpen]);
+  scheduledOpenRef.current = scheduledOpen;
   const [explorerUploadBusy, setExplorerUploadBusy] = useState(false);
   const fileExplorerRef = useRef<FileExplorerHandle>(null);
   // The panel is a preview surface; keep the file index hidden until asked for.
@@ -266,6 +267,7 @@ export function AppShell() {
     if (!rightPanelOpen || isMobile) setRightPanelExpanded(false);
   }, [rightPanelOpen, isMobile]);
   const [mobileSidebarReady, setMobileSidebarReady] = useState(false);
+  const viewportCompactInitializedRef = useRef(false);
   // The desktop window has no native title bar. macOS keeps its traffic lights
   // and only needs the top bar inset for them; other platforms get the buttons
   // from <WindowControls />, which renders nothing in a browser build.
@@ -372,19 +374,27 @@ export function AppShell() {
   useEffect(() => {
     setSidebarOpen(isMobile ? false : desktopSidebarOpenRef.current);
   }, [isMobile]);
-  // Close right panel when viewport is too narrow for split-panel layout.
-  // Uses matchMedia's change event (not just the rightPanelOpen dependency)
-  // so it also fires when an already-open panel's viewport is resized narrow,
-  // not only when the panel itself is opened.
+  // Close an already-open panel when the viewport becomes too narrow for the
+  // split layout. The initial check only records the starting layout: compact
+  // reloads restore terminal state but intentionally start with the overlay
+  // hidden, while later crossings close it rather than trapping the chat.
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
-    const mql = window.matchMedia(`(max-width: ${SPLIT_PANEL_MIN_WIDTH - 1}px)`);
+    const compactQuery = window.matchMedia(`(max-width: ${SPLIT_PANEL_MIN_WIDTH - 1}px)`);
+    const desktopQuery = window.matchMedia(`(min-width: ${SPLIT_PANEL_MIN_WIDTH}px)`);
     const checkWidth = () => {
-      if (mql.matches) setRightPanelOpen(false);
+      // A load starts with the panel closed. On desktop, this marks the
+      // compact listeners initialized and leaves later resize events active.
+      if (compactQuery.matches && viewportCompactInitializedRef.current) setRightPanelOpen(false);
+      viewportCompactInitializedRef.current = compactQuery.matches;
     };
     checkWidth();
-    mql.addEventListener("change", checkWidth);
-    return () => mql.removeEventListener("change", checkWidth);
+    compactQuery.addEventListener("change", checkWidth);
+    desktopQuery.addEventListener("change", checkWidth);
+    return () => {
+      compactQuery.removeEventListener("change", checkWidth);
+      desktopQuery.removeEventListener("change", checkWidth);
+    };
   }, []);
   useEffect(() => {
     setMobileSidebarReady(true);
@@ -545,18 +555,6 @@ export function AppShell() {
     });
   }, [isMobile]);
 
-  const handleRightPanelToggle = useCallback(() => {
-    if (isMobile) {
-      setSidebarOpen(false);
-      setActiveTopPanel(null);
-    }
-    setTopMoreOpen(false);
-    setRightPanelOpen((open) => {
-      if (open) setRightPanelExpanded(false);
-      return !open;
-    });
-  }, [isMobile]);
-
   // The panel is a preview layer; the composer remains the home base. The
   // overlay and backslash shortcut both use this same exit.
   // Also leaves full width, like the toggle: reopening into full width would
@@ -668,14 +666,28 @@ export function AppShell() {
   const [artifactTabs, setArtifactTabs] = useState<ArtifactTab[]>([]);
   // artifactPanelTab reads each tab's newest title; this re-renders when one changes.
   useArtifactTitles(artifactTabs);
-  const panelTabs: Tab[] = [...fileTabs, ...terminalTabs.map((tab) => ({
+  const panelTabs: Tab[] = useMemo(() => [...fileTabs, ...terminalTabs.map((tab) => ({
     id: tab.id,
     label: getFileName(tab.cwd) || tab.cwd,
     filePath: tab.cwd,
     kind: "terminal" as const,
     closing: Boolean(tab.closing),
-  })), ...artifactTabs.map(artifactPanelTab)];
+  })), ...artifactTabs.map(artifactPanelTab)], [fileTabs, terminalTabs, artifactTabs]);
   const activeArtifactTab = artifactTabs.find((tab) => tab.id === activeFileTabId) ?? null;
+  const handleRightPanelToggle = useCallback(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+      setActiveTopPanel(null);
+    }
+    setTopMoreOpen(false);
+    setRightPanelOpen((open) => {
+      // A manual open with no tab lands on the project file tree, not a mostly
+      // empty "No file open" state.
+      if (!open && panelTabs.length === 0) setFileTreeOpen(true);
+      if (open) setRightPanelExpanded(false);
+      return !open;
+    });
+  }, [isMobile, panelTabs]);
 
   useEffect(() => {
     try {
@@ -854,8 +866,12 @@ export function AppShell() {
       // the restored session's messages.
       setSelectedSession(s);
       setSessionKey((k) => k + 1);
-      if (new URLSearchParams(window.location.search).get("session") !== s.id) {
-        router.replace(`?session=${encodeURIComponent(s.id)}`, { scroll: false });
+      // A direct Scheduled URL can restore its hidden workspace while sessions
+      // load. That fills the chat but must not switch the visible page.
+      if (!scheduledOpenRef.current) {
+        if (new URLSearchParams(window.location.search).get("session") !== s.id) {
+          router.replace(`?session=${encodeURIComponent(s.id)}`, { scroll: false });
+        }
       }
     };
     // Fast path: the sidebar already delivered the catalogue — restore
@@ -953,7 +969,12 @@ export function AppShell() {
       // the default welcome page when none is remembered.
       restoreWorkspaceContext(newProject, cwd);
     }
-    router.replace(typeof window !== "undefined" ? window.location.pathname : "/", { scroll: false });
+    // This callback also runs when the sidebar picks its default project on a
+    // direct Scheduled URL. There is no explicit navigation away from that
+    // page yet, so retain the URL that made it visible.
+    if (!scheduledOpenRef.current) {
+      router.replace(typeof window !== "undefined" ? window.location.pathname : "/", { scroll: false });
+    }
   }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, newSessionCwd, router, selectedSession, restoreWorkspaceContext]);
 
   const handleSelectSession = useCallback((session: SessionInfo, isRestore = false, entryId?: string, blockIndex?: number) => {
@@ -1728,9 +1749,9 @@ export function AppShell() {
   };
 
 
-  // The file panel shows a project's files, which the Scheduled page has none of, so its
-  // toggle is hidden there. An already open panel keeps it: on desktop it is the only way to close it.
-  const showFilePanelToggle = !scheduledOpen || rightPanelOpen;
+  // The workspace can still show a terminal or artifact while Scheduled is open,
+  // and the overlay always needs its own visible way back to the page.
+  const showFilePanelToggle = isMobile || !scheduledOpen || rightPanelOpen;
 
   const renderMainFileToggle = () => {
     return (
@@ -1740,8 +1761,8 @@ export function AppShell() {
         onClick={handleRightPanelToggle}
         aria-controls="file-panel"
         aria-expanded={rightPanelOpen}
-        title={rightPanelOpen ? translate("files.hidePanel") : translate("files.showPanel")}
-        aria-label={rightPanelOpen ? translate("files.hidePanel") : translate("files.showPanel")}
+        title={rightPanelOpen ? translate("workspace.hidePanel") : translate("workspace.showPanel")}
+        aria-label={rightPanelOpen ? translate("workspace.hidePanel") : translate("workspace.showPanel")}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="15" y1="3" x2="15" y2="21" />
@@ -2651,7 +2672,8 @@ export function AppShell() {
 
       {/* Mobile keeps this fixed toggle (the desktop topbar renders its own);
           rendering both on desktop stacks two overlapping icons whose clicks
-          intercept each other. */}
+          intercept each other. Scheduled keeps it available because closing
+          that page must not strand an open mobile overlay. */}
       {isMobile && showFilePanelToggle && (
         <button
           type="button"
@@ -2659,8 +2681,8 @@ export function AppShell() {
           onClick={handleRightPanelToggle}
           aria-controls="file-panel"
           aria-expanded={rightPanelOpen}
-          title={rightPanelOpen ? translate("files.hidePanel") : translate("files.showPanel")}
-          aria-label={rightPanelOpen ? translate("files.hidePanel") : translate("files.showPanel")}
+          title={rightPanelOpen ? translate("workspace.hidePanel") : translate("workspace.showPanel")}
+          aria-label={rightPanelOpen ? translate("workspace.hidePanel") : translate("workspace.showPanel")}
           aria-pressed={rightPanelOpen}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -2798,8 +2820,8 @@ export function AppShell() {
             onClick={handleRightPanelClose}
             aria-controls="file-panel"
             aria-expanded={rightPanelOpen}
-            title={translate("files.hidePanel")}
-            aria-label={translate("files.hidePanel")}
+            title={translate("workspace.hidePanel")}
+            aria-label={translate("workspace.hidePanel")}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -2921,6 +2943,7 @@ export function AppShell() {
                   onClick={() => fileExplorerRef.current?.openUploadPicker()}
                   disabled={explorerUploadBusy}
                   title={translate("sidebar.uploadFilesTitle")}
+                  aria-label={translate("sidebar.uploadFilesTitle")}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 26, height: 26, padding: 0,
