@@ -18,6 +18,10 @@ settings without installing anything.
 - **Models**: a signed-in ChatGPT Plus/Pro (Codex) account, a DeepSeek API key
   and a custom "Claude Gateway" provider from `models.json`, with Codex, Claude
   and DeepSeek models in the picker.
+- **Scheduled and MCP**: two scheduled tasks with a run history (create, edit,
+  pause and delete work in memory; "Run now" explains the demo), and three MCP
+  servers in Settings › MCP whose switches, exposure, Test and sign-out work.
+  Settings › Models also lists pi's classifier and image models.
 - **Interaction**: sending a message streams a canned reply (with a real `read`
   or `ls` tool call when it fits), and `!command`, the terminal panel, forks,
   branches, renames and titles all work in memory. Anything that needs a real
@@ -30,6 +34,8 @@ app/DemoRoot.tsx        imports mock/install.ts, then renders Pi Web's AppShell
 mock/install.ts         replaces window.fetch (for /api/*) and EventSource
 mock/router.ts          the API routes: sessions, agent, files, git, models, …
 mock/agent.ts           streams replies with pi's SSE event sequence
+mock/scheduled.ts       Scheduled page: example tasks and runs, in-memory edits
+mock/mcp.ts             Settings › MCP: example servers, switches, Test
 mock/sessions/          tutorial scripts, expanded into pi session entries
 mock/captured/          responses recorded from a real Pi Web + pi SDK setup
 scripts/prepare-demo-files.mjs
@@ -81,9 +87,10 @@ After a sync run `npm run typecheck`, `npm run lint` and `npm run build` in
 `demo/`. CI's `demo-drift` job runs `--check` on every push and pull request
 and posts the report as a warning, without failing the build.
 
-The mock in `mock/router.ts` answers the routes the demo's scripted sessions
-need. Fork-only pages whose routes it does not know (Scheduled, Settings ›
-MCP, …) show the UI's own "Not found" error.
+The mock in `mock/router.ts` answers every route the UI calls. When a sync
+brings in a page that calls a new route, the page shows the UI's own "Not
+found" error until the mock learns it; grep the copies for `"/api/` to list
+the routes they use.
 
 ## Isolation from Pi Web
 
