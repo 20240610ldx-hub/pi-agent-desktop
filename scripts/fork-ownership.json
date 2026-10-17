@@ -217,7 +217,7 @@
     "hooks/useWorkspaceAvailability.ts",
     "components/SettingsEntryMenu.tsx",
     "components/ProjectContextMenu.tsx",
-    "components/WorktreeBranchList.tsx",
+    "hooks/useProjectWorktreeActions.ts",
     "lib/session-replacement.ts",
     "components/fork-extractions.test.mjs",
     "lib/branding.ts",
