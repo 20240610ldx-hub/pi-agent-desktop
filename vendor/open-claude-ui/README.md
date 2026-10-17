@@ -4,6 +4,8 @@ Source: [Caho1/open-claude-ui](https://github.com/Caho1/open-claude-ui), commit 
 
 The files are copied from `code-examples/`. This directory is a deliberate versioned integration boundary: upstream sync updates the reference checkout, and changes here are reviewed with Pilaude's runtime tests before adoption.
 
+Latest checkout audit (2026-10-17): fork `cfc0efedf53e5b9e49502d31b20991b55ee61574` contains author main `ddf3aea1711db62fd6d24343bbab500a5ae69f64`. The actual copies below still come from the older source SHA above. The incoming theme and Button changes have been identified but are not yet adopted; changing only this SHA would misrepresent the code. The library's macOS 2.37337.1 evidence does not establish parity with the selected Windows stable 2.42304.0. See the [component inventory, missing assets, and parity gates](../../docs/pilaude-ui-parity.md). Every existing integration remains visually unverified against that Windows baseline.
+
 | Source | Use in Pilaude | Adaptation |
 | --- | --- | --- |
 | `cds-theme.css` | Imported before the existing native theme; supplies CDS light/dark surfaces, clay, dual-ring shadows, radii and keyframes | Trailing whitespace / LF normalization only |
