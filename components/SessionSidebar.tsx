@@ -10,6 +10,8 @@ import { useI18n } from "@/hooks/useI18n";
 import { formatCompactRelativeTime, formatRelativeTime } from "@/lib/i18n/format";
 import { createPortal } from "react-dom";
 import { ProjectPicker, selectProjectDirectoryNative } from "./ProjectPicker";
+import { WorktreeBranchList } from "./WorktreeBranchList";
+import { ProjectContextMenu, fetchProjectBranchMenu, showNativeProjectBranchMenu, type ProjectBranchMenuState, type WorktreeEntry } from "./ProjectContextMenu";
 import { AnimatedDropdown, PathLabel, displayCwd, getRecentProjects } from "./path-ui";
 import { APP_PREF_KEYS, getPrefJson, removePref, setPrefJson } from "@/lib/app-prefs";
 import { groupByProject } from "@/lib/project-group";
@@ -58,12 +60,6 @@ interface Props {
   scheduledOpen?: boolean;
 }
 
-interface WorktreeEntry {
-  path: string;
-  branch: string | null;
-  isMain: boolean;
-}
-
 interface WorktreeState {
   /** The cwd this data was fetched for — guards against stale responses */
   forCwd: string;
@@ -79,13 +75,6 @@ interface WorktreeState {
   worktrees: WorktreeEntry[];
 }
 
-interface ProjectBranchMenuState {
-  root: string;
-  branches: string[];
-  remoteBranches: string[];
-  worktrees: WorktreeEntry[];
-  loaded: boolean;
-}
 interface ProjectSelection {
   root: string;
   key: string;
@@ -818,25 +807,8 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     setProjectBranchMenu({ root: projectRoot, branches: [], remoteBranches: [], worktrees: [], loaded: false });
     setProjectBranchLoading(true);
     try {
-      const res = await fetch(`/api/worktrees?cwd=${encodeURIComponent(projectRoot)}&branches=1`);
-      const data = await res.json().catch(() => ({})) as {
-        projectRoot?: string;
-        branches?: string[];
-        remoteBranches?: string[];
-        worktrees?: WorktreeEntry[];
-      };
-      if (!res.ok || data.projectRoot !== projectRoot) throw new Error(`HTTP ${res.status}`);
-      setProjectBranchMenu((prev) => prev?.root === projectRoot ? {
-        root: projectRoot,
-        branches: Array.isArray(data.branches) ? data.branches : [],
-        remoteBranches: Array.isArray(data.remoteBranches) ? data.remoteBranches : [],
-        worktrees: Array.isArray(data.worktrees) ? data.worktrees : [],
-        loaded: true,
-      } : prev);
-    } catch {
-      setProjectBranchMenu((prev) => prev?.root === projectRoot ? {
-        root: projectRoot, branches: [], remoteBranches: [], worktrees: [], loaded: true,
-      } : prev);
+      const data = await fetchProjectBranchMenu(projectRoot);
+      setProjectBranchMenu((prev) => prev?.root === projectRoot ? data : prev);
     } finally {
       setProjectBranchLoading(false);
     }
@@ -1056,48 +1028,14 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   // Desktop shell: native popup versions of the project menu and its branch
   // list. `projectMenu` stays set while one is up (it keeps the row's "…"
   // visible) but `projectMenuPos` stays null, so the DOM menu never renders.
-  const showNativeBranchMenu = useCallback(async (projectRoot: string, at: NativeMenuPoint) => {
-    let data: ProjectBranchMenuState;
-    try {
-      const res = await fetch(`/api/worktrees?cwd=${encodeURIComponent(projectRoot)}&branches=1`);
-      const body = await res.json().catch(() => ({})) as {
-        projectRoot?: string;
-        branches?: string[];
-        remoteBranches?: string[];
-        worktrees?: WorktreeEntry[];
-      };
-      if (!res.ok || body.projectRoot !== projectRoot) throw new Error(`HTTP ${res.status}`);
-      data = {
-        root: projectRoot,
-        branches: Array.isArray(body.branches) ? body.branches : [],
-        remoteBranches: Array.isArray(body.remoteBranches) ? body.remoteBranches : [],
-        worktrees: Array.isArray(body.worktrees) ? body.worktrees : [],
-        loaded: true,
-      };
-    } catch {
-      data = { root: projectRoot, branches: [], remoteBranches: [], worktrees: [], loaded: true };
-    }
-    const checkout = data.worktrees.find((w) => w.path === selectedCwd) ?? data.worktrees.find((w) => w.isMain);
-    const names = [
-      ...data.branches.map((name) => ({ name, remote: false })),
-      ...data.remoteBranches.map((name) => ({ name, remote: true })),
-    ];
-    await showNativeMenu(
-      names.length === 0
-        ? [{ label: t("sidebar.noOtherBranches"), disabled: true }]
-        : names.map(({ name, remote }) => {
-            const holder = data.worktrees.find((w) => w.branch === name && w.path !== checkout?.path);
-            const tag = holder ? "worktree" : remote ? t("sidebar.remoteBranchTag") : "";
-            return {
-              label: tag ? `${name}  ·  ${tag}` : name,
-              checked: checkout?.branch === name,
-              disabled: wtSwitchingBranch !== null,
-              onSelect: () => void handleSwitchProjectBranch(projectRoot, name, data),
-            };
-          }),
-      at,
-    );
-  }, [handleSwitchProjectBranch, selectedCwd, t, wtSwitchingBranch]);
+  const showNativeBranchMenu = useCallback((projectRoot: string, at: NativeMenuPoint) => showNativeProjectBranchMenu({
+    projectRoot,
+    at,
+    selectedCwd,
+    switchingBranch: wtSwitchingBranch,
+    t,
+    onSwitch: (root, branch, loaded) => void handleSwitchProjectBranch(root, branch, loaded),
+  }), [handleSwitchProjectBranch, selectedCwd, t, wtSwitchingBranch]);
 
   const showNativeProjectMenu = useCallback(async (projectRoot: string, at: NativeMenuPoint): Promise<boolean> => {
     setProjectMenu({ root: projectRoot });
@@ -1614,97 +1552,20 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                   {/* Branches of the current checkout — switch in place without
                       creating a worktree. Hidden while the new-worktree form is
                       open so the dropdown stays focused on one task. */}
-                  {!wtNewOpen && (() => {
-                    const currentBranch = currentWt?.branch ?? null;
-                    const branchRows = [
-                      ...wtBranches.map((name) => ({ name, remote: false })),
-                      ...wtRemoteBranches.map((name) => ({ name, remote: true })),
-                    ];
-                    return (
-                      <div style={{ borderTop: "var(--hairline) solid var(--border)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 8px 3px" }}>
-                          <span style={{ flex: 1, fontSize: 10, fontWeight: 600, letterSpacing: "0.03em", color: "var(--text-dim)" }}>{t("sidebar.switchBranch")}</span>
-                          <button
-                            type="button"
-                            onClick={() => { void handleFetchBranches(); }}
-                            disabled={wtFetching}
-                            title={t("sidebar.fetchBranchesTitle")}
-                            style={{
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              width: 22, height: 20, padding: 0,
-                              background: "none", border: "none",
-                              color: wtFetching ? "var(--accent)" : "var(--text-dim)",
-                              cursor: "pointer", borderRadius: 4, flexShrink: 0,
-                            }}
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={wtFetching ? { animation: "spin 0.9s linear infinite" } : undefined}>
-                              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-                              <polyline points="21 3 21 9 15 9" />
-                            </svg>
-                          </button>
-                        </div>
-                        <div style={{ maxHeight: "min(28vh, 200px)", overflowY: "auto" }}>
-                          {wtBranchesLoaded && branchRows.length === 0 && (
-                            <div style={{ padding: "3px 10px 8px", fontSize: 11, color: "var(--text-dim)" }}>{t("sidebar.noOtherBranches")}</div>
-                          )}
-                          {branchRows.map(({ name, remote }) => {
-                            const isCurrent = name === currentBranch;
-                            const holder = worktreeState.worktrees.find((w) => w.branch === name && w.path !== selectedCwd);
-                            const switching = wtSwitchingBranch === name;
-                            return (
-                              <button
-                                key={name}
-                                onClick={() => { void handleSwitchBranch(name); }}
-                                disabled={wtSwitchingBranch !== null}
-                                title={
-                                  holder ? t("sidebar.branchInWorktreeTitle", { branch: name })
-                                    : remote ? t("sidebar.branchRemoteTitle")
-                                      : t("sidebar.switchBranchTitle", { branch: name })
-                                }
-                                style={{
-                                  display: "flex", alignItems: "center", gap: 7,
-                                  width: "100%", padding: "6px 10px",
-                                  background: isCurrent ? "var(--bg-hover)" : "none",
-                                  border: "none",
-                                  color: isCurrent ? "var(--text)" : "var(--text-muted)",
-                                  cursor: "pointer", textAlign: "left",
-                                  fontSize: 11, fontFamily: "var(--font-mono)",
-                                  opacity: switching ? 0.55 : 1,
-                                }}
-                              >
-                                {isCurrent ? (
-                                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                                    <polyline points="1.5 5 4 7.5 8.5 2.5" />
-                                  </svg>
-                                ) : (
-                                  <span style={{ width: 10, flexShrink: 0 }} />
-                                )}
-                                <PathLabel text={name} style={{ flex: 1 }} />
-                                {holder && (
-                                  <span title={holder.path} style={{ flexShrink: 0, display: "flex", alignItems: "center", color: "var(--text-dim)" }}>
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <line x1="6" y1="3" x2="6" y2="15" />
-                                      <circle cx="18" cy="6" r="3" />
-                                      <circle cx="6" cy="18" r="3" />
-                                      <path d="M18 9a9 9 0 0 1-9 9" />
-                                    </svg>
-                                  </span>
-                                )}
-                                {remote && !holder && (
-                                  <span style={{ flexShrink: 0, color: "var(--text-dim)", fontSize: 10 }}>{t("sidebar.remoteBranchTag")}</span>
-                                )}
-                                {switching && (
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, animation: "spin 0.8s linear infinite" }}>
-                                    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-                                  </svg>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  {!wtNewOpen && (
+                    <WorktreeBranchList
+                      currentBranch={currentWt?.branch ?? null}
+                      branches={wtBranches}
+                      remoteBranches={wtRemoteBranches}
+                      loaded={wtBranchesLoaded}
+                      worktrees={worktreeState.worktrees}
+                      selectedCwd={selectedCwd}
+                      switchingBranch={wtSwitchingBranch}
+                      fetching={wtFetching}
+                      onFetch={() => { void handleFetchBranches(); }}
+                      onSwitch={(name) => { void handleSwitchBranch(name); }}
+                    />
+                  )}
 
                   {!wtNewOpen ? (
                     <button
@@ -2019,111 +1880,30 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         </div>
         </SessionSearch>
       )}
-      {projectMenu && projectMenuPos && createPortal(
-        <div
-          ref={projectMenuRef}
-          className="sidebar-project-context-menu native-popover"
-          style={{ top: projectMenuPos.top, left: projectMenuPos.left, maxHeight: "min(70vh, 420px)", overflowY: "auto" }}
-          role="menu"
-        >
-          {!projectBranchMenu ? (
-            <>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => void openProjectBranchMenu(projectMenu.root)}
-              >
-                {t("sidebar.switchBranch")}
-              </button>
-              {onOpenTerminal && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    const cwd = projectMenu.root;
-                    setProjectMenu(null);
-                    onOpenTerminal(cwd);
-                  }}
-                >
-                  {t("sidebar.openTerminalHere")}
-                </button>
-              )}
-              {(isTauriDesktop() || fileManagerAvailability?.supported) && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => void revealProjectInFileManager(projectMenu.root)}
-                >
-                  {revealProjectLabel}
-                </button>
-              )}
-              {projectRevealError && (
-                <div className="sidebar-project-context-menu-hint" role="alert">{projectRevealError}</div>
-              )}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => archiveProject(projectMenu.root)}
-              >
-                {t("sidebar.archiveProject")}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                role="menuitem"
-                className="sidebar-project-context-menu-back"
-                onClick={() => setProjectBranchMenu(null)}
-              >
-                <span aria-hidden="true">‹</span> {t("sidebar.moreActions")}
-              </button>
-              <div className="sidebar-project-context-menu-heading">{t("sidebar.switchBranch")}</div>
-              {projectBranchLoading && projectBranchMenu.root === projectMenu.root && (
-                <div className="sidebar-project-context-menu-hint">…</div>
-              )}
-              {projectBranchMenu.loaded && projectBranchMenu.root === projectMenu.root && (
-                <>
-                  {[...projectBranchMenu.branches.map((name) => ({ name, remote: false })),
-                    ...projectBranchMenu.remoteBranches.map((name) => ({ name, remote: true }))]
-                    .map(({ name, remote }) => {
-                      const checkout = projectBranchMenu.worktrees.find((w) => w.path === selectedCwd)
-                        ?? projectBranchMenu.worktrees.find((w) => w.isMain);
-                      const isCurrent = checkout?.branch === name;
-                      const holder = projectBranchMenu.worktrees.find((w) => w.branch === name && w.path !== checkout?.path);
-                      const switching = wtSwitchingBranch === name;
-                      return (
-                        <button
-                          key={`${remote ? "remote:" : "local:"}${name}`}
-                          type="button"
-                          role="menuitem"
-                          disabled={wtSwitchingBranch !== null}
-                          onClick={() => void handleSwitchProjectBranch(projectMenu.root, name)}
-                          title={holder
-                            ? t("sidebar.branchInWorktreeTitle", { branch: name })
-                            : remote
-                              ? t("sidebar.branchRemoteTitle")
-                              : t("sidebar.switchBranchTitle", { branch: name })}
-                        >
-                          <span className="sidebar-project-context-menu-branch-mark" aria-hidden="true">
-                            {isCurrent ? "✓" : ""}
-                          </span>
-                          <span>{name}</span>
-                          {holder && <span className="sidebar-project-context-menu-branch-tag">worktree</span>}
-                          {remote && !holder && <span className="sidebar-project-context-menu-branch-tag">{t("sidebar.remoteBranchTag")}</span>}
-                          {switching && <span className="sidebar-project-context-menu-branch-spinner" aria-hidden="true">↻</span>}
-                        </button>
-                      );
-                    })}
-                  {projectBranchMenu.branches.length === 0 && projectBranchMenu.remoteBranches.length === 0 && (
-                    <div className="sidebar-project-context-menu-hint">{t("sidebar.noOtherBranches")}</div>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </div>,
-        document.body,
+      {projectMenu && projectMenuPos && (
+        <ProjectContextMenu
+          menuRef={projectMenuRef}
+          projectRoot={projectMenu.root}
+          pos={projectMenuPos}
+          branchMenu={projectBranchMenu}
+          branchLoading={projectBranchLoading}
+          selectedCwd={selectedCwd}
+          switchingBranch={wtSwitchingBranch}
+          canReveal={isTauriDesktop() || fileManagerAvailability?.supported === true}
+          revealLabel={revealProjectLabel}
+          projectRevealError={projectRevealError}
+          t={t}
+          onShowBranches={() => void openProjectBranchMenu(projectMenu.root)}
+          onBackToActions={() => setProjectBranchMenu(null)}
+          onOpenTerminal={onOpenTerminal ? () => {
+            const cwd = projectMenu.root;
+            setProjectMenu(null);
+            onOpenTerminal(cwd);
+          } : undefined}
+          onReveal={() => void revealProjectInFileManager(projectMenu.root)}
+          onArchive={() => archiveProject(projectMenu.root)}
+          onSwitchBranch={(branch) => void handleSwitchProjectBranch(projectMenu.root, branch)}
+        />
       )}
       {projectPickerOpen && (
         <div className="project-picker-modal-overlay" role="dialog" aria-modal="true" onClick={() => setProjectPickerOpen(false)}>

@@ -91,6 +91,140 @@ const EXTRACTIONS = [
     absentFromOrigin: ["/api/updates", "installLatestDesktopRelease", "closeQuits", "quitAppNative"],
     requiredInOrigin: ["AppUpdatesSection", "DesktopAppSection"],
   },
+  {
+    name: "useAgentSession fork layers",
+    origin: "hooks/useAgentSession.ts",
+    // useAgentSession is upstream's and the fork's biggest hook. The features the
+    // fork added on top (summarized branch switches, the 0.86 automation switches,
+    // compaction no-op notices, dismissible scope warnings, the extra SDK events)
+    // live in fork-owned hooks it calls; upstream's own code — the event-stream
+    // lifecycle, running-state reconciliation, the guards AGENTS.md lists — stays
+    // in the origin so upstream edits to it still merge in place.
+    movedTo: [
+      "hooks/useBranchSummary.ts",
+      "hooks/useSessionAutomation.ts",
+      "hooks/useCompactNotice.ts",
+      "hooks/useScopeWarningDismissal.ts",
+      "hooks/useForkAgentEvents.ts",
+    ],
+    movedDefinitions: [
+      "branchSummaryHolds",
+      "summarizeAndNavigate",
+      "handleAbortBranchSummary",
+      "handleSetAutomation",
+      "handleAbortRetry",
+      "compactNoopMessage",
+      "reportCompactFailure",
+      "dismissModelScopeWarnings",
+      "visibleModelScopeWarnings",
+      "PENDING_BASH_OUTPUT_CAP",
+      "externalAppendRefreshAtRef",
+    ],
+    absentFromOrigin: [
+      "abort_branch_summary",
+      "abort_retry",
+      "set_steering_mode",
+      "set_follow_up_mode",
+      'case "summarization_retry_scheduled"',
+      'case "bash_execution_update"',
+      'case "entry_appended"',
+      'case "session_replaced"',
+      "setDismissedScopeWarningKeys",
+    ],
+    requiredInOrigin: [
+      "useBranchSummary(",
+      "useSessionAutomation(",
+      "useSessionAutomationActions<",
+      "useCompactNotice(",
+      "useScopeWarningDismissal(",
+      "useForkAgentEvents(",
+      "handleForkAgentEvent(event)",
+    ],
+  },
+  {
+    name: "ChatInput fork layers",
+    origin: "components/ChatInput.tsx",
+    // The composer is upstream's. The fork's `#` session mentions, session (gear)
+    // menu and project chip live in fork-owned files; ChatInput keeps their state
+    // where its shared keyboard and outside-click handlers need it, and mounts them.
+    movedTo: [
+      "hooks/useSessionMentionPalette.ts",
+      "components/SessionMentionMenu.tsx",
+      "components/SessionAutomationMenu.tsx",
+      "components/ComposerProjectChip.tsx",
+    ],
+    movedDefinitions: ["getProjectLabel", "applyHashCompletion", "updateHashQuery", "hashMatches"],
+    absentFromOrigin: [
+      "sessionIndexFetchingRef",
+      "chat.noMatchingSessions",
+      "chat.autoCompaction",
+      "chat.steeringMode",
+      "chat-project-context",
+      "chat.switchProject",
+    ],
+    requiredInOrigin: [
+      "useSessionMentionPalette(",
+      "<SessionMentionMenu",
+      "<SessionAutomationMenu",
+      "<ComposerProjectChip",
+    ],
+  },
+  {
+    name: "AppShell fork layers",
+    origin: "components/AppShell.tsx",
+    // Desktop cold-start tab restore, the missing-workspace probe and the sidebar
+    // settings-entry menu are fork features; AppShell keeps the settings button
+    // (pinned by "sidebar header controls") and calls the hooks.
+    movedTo: [
+      "hooks/useDesktopWorkspaceTabs.ts",
+      "hooks/useWorkspaceAvailability.ts",
+      "components/SettingsEntryMenu.tsx",
+    ],
+    movedDefinitions: ["workspaceStatusRef", "toggleSettingsMenu", "openDomMenu"],
+    absentFromOrigin: [
+      "workspaceFileTabsMatchContext",
+      "setWorkspaceHydrated",
+      "/api/cwd/status",
+      "SETTINGS_SECTION_ITEMS",
+      "settings-entry-menu",
+    ],
+    requiredInOrigin: [
+      "useDesktopWorkspaceTabs(",
+      "useWorkspaceAvailability(",
+      "useSettingsEntryMenu(",
+      "<SettingsEntryMenu",
+    ],
+  },
+  {
+    name: "SessionSidebar project menu and branch list",
+    origin: "components/SessionSidebar.tsx",
+    // The project row's "…" menu (DOM and native) and the worktree dropdown's
+    // branch list are fork features; the sidebar keeps their state and actions.
+    // Reveal-in-file-manager stays in the origin: it is upstream's (#907).
+    movedTo: ["components/ProjectContextMenu.tsx", "components/WorktreeBranchList.tsx"],
+    movedDefinitions: ["fetchProjectBranchMenu", "showNativeProjectBranchMenu"],
+    absentFromOrigin: [
+      "sidebar-project-context-menu",
+      "sidebar.fetchBranchesTitle",
+      "sidebar.branchInWorktreeTitle",
+    ],
+    requiredInOrigin: ["<ProjectContextMenu", "<WorktreeBranchList", "showNativeProjectBranchMenu("],
+  },
+  {
+    name: "rpc-manager session replacement",
+    origin: "lib/rpc-manager.ts",
+    // Forking a session file and an extension command's ctx.newSession / fork /
+    // switchSession are fork features; AgentSessionWrapper only wires them in.
+    movedTo: ["lib/session-replacement.ts"],
+    movedDefinitions: ["UNSAVED_SESSION_FORK_ERROR", "createSessionReplacementActions"],
+    absentFromOrigin: [
+      "cancelledBySessionReplacementHook",
+      "moveToReplacementSession",
+      "session_before_fork",
+      "Session file not found: ",
+    ],
+    requiredInOrigin: ["createSessionReplacementActions(", "writeForkedSession(this.inner"],
+  },
 ];
 
 const FORK_FEATURES = [
