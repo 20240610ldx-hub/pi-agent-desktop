@@ -27,6 +27,28 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm test
 
+  # demo/ keeps copies of components/, hooks/ and lib/ and is only built by the
+  # manual Demo workflow, so report when those copies fall behind. Never fails:
+  # the fix is a sync (demo/README.md), not a blocker for the change itself.
+  demo-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The sync merges demo patches against the commit in demo/sync-base.json.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+      - name: Report demo drift
+        run: |
+          if ! node demo/scripts/sync-from-app.mjs --check > demo-drift.txt; then
+            echo "::warning title=Demo copies drifted::demo/ is behind the main tree. Run node demo/scripts/sync-from-app.mjs (see demo/README.md)."
+          fi
+          cat demo-drift.txt
+          { echo '### demo/ drift'; echo '```'; cat demo-drift.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
   # The desktop shell (src-tauri) is otherwise only compiled by the release
   # workflow, so a Rust error would surface at publish time.
   desktop-shell:

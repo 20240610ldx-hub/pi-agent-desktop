@@ -1,110 +1,35 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import type { SessionInfo } from "@/lib/types";
 import { listSessionFamilies } from "@/lib/session-family";
-import { loadExplorerOpen, saveExplorerOpen } from "@/lib/file-explorer-state";
 import { dispatchSessionRowContextMenu } from "@/lib/session-row-context-menu";
 import { skillExpansionToCommand } from "@/lib/slash-display";
-import { getProjectActivity, getRecentProjects, sessionsForProject } from "@/lib/project-groups";
 import { workspaceKeyOf } from "@/lib/workspace-memory";
-import { formatRelativeTime } from "@/lib/i18n/format";
 import { useI18n } from "@/hooks/useI18n";
-import { useResizablePanel } from "@/hooks/useResizablePanel";
-import { useScrollbarVisibility } from "@/hooks/useScrollbarVisibility";
-import { DirectoryPicker } from "./DirectoryPicker";
-import { FileExplorer, type FileExplorerHandle } from "./FileExplorer";
+import { formatCompactRelativeTime, formatRelativeTime } from "@/lib/i18n/format";
+import { createPortal } from "react-dom";
+import { ProjectPicker, selectProjectDirectoryNative } from "./ProjectPicker";
+import { AnimatedDropdown, PathLabel, displayCwd, getRecentProjects } from "./path-ui";
+import { APP_PREF_KEYS, getPrefJson, removePref, setPrefJson } from "@/lib/app-prefs";
+import { groupByProject } from "@/lib/project-group";
+import { notifyDesktop } from "@/lib/desktop-notify";
+import { revealItemInDirNative } from "@/lib/desktop-native";
+import { isTauriDesktop } from "@/lib/desktop-updater";
+import { canUseNativeMenu, menuPointBelow, showNativeMenu, type NativeMenuPoint } from "@/lib/desktop-menu";
+import { getDesktopPlatform, type DesktopPlatform } from "@/lib/desktop-window";
+import { useWindowDrag } from "./desktop";
 import { SessionSearch } from "./SessionSearch";
-
-// Fixed row height for the session list. SessionItem renders at exactly this
-// height, so the list can be windowed (only the visible slice is mounted).
-const SESSION_LIST_ITEM_HEIGHT = 54;
-
-export function getSessionListIndices(count: number, scrollTop: number, viewportHeight: number, focusedIndex = -1): number[] {
-  const overscan = 8;
-  const visibleCount = Math.ceil((viewportHeight || 600) / SESSION_LIST_ITEM_HEIGHT) + overscan * 2;
-  const start = Math.max(0, Math.min(Math.floor(scrollTop / SESSION_LIST_ITEM_HEIGHT) - overscan, count - visibleCount));
-  const end = Math.min(count, start + visibleCount);
-  const indices = Array.from({ length: end - start }, (_, offset) => start + offset);
-  // Keep a focused row mounted so scrolling cannot discard an inline rename.
-  if (focusedIndex >= 0 && focusedIndex < start) indices.unshift(focusedIndex);
-  if (focusedIndex >= end && focusedIndex < count) indices.push(focusedIndex);
-  return indices;
-}
-
-declare global {
-  interface Window {
-    piDesktop?: {
-      selectDirectory: () => Promise<string | null>;
-    };
-  }
-}
-
-function ToolbarIconButton({
-  onClick,
-  title,
-  disabled,
-  skipHover,
-  color,
-  background = "none",
-  marginRight,
-  ariaPressed,
-  children,
-}: {
-  onClick: () => void;
-  title: string;
-  disabled?: boolean;
-  skipHover?: boolean;
-  color: string;
-  background?: string;
-  marginRight?: number;
-  ariaPressed?: boolean;
-  children: ReactNode;
-}) {
-  const enter = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (disabled || skipHover) return;
-    e.currentTarget.style.color = "var(--text-muted)";
-    e.currentTarget.style.background = "var(--bg-hover)";
-  };
-  const leave = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (disabled || skipHover) return;
-    e.currentTarget.style.color = color;
-    e.currentTarget.style.background = background;
-  };
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-label={title}
-      aria-pressed={ariaPressed}
-      style={{
-        position: "relative",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        width: 26, height: 26, padding: 0, marginRight,
-        background,
-        border: "none",
-        color,
-        cursor: disabled ? "default" : "pointer",
-        borderRadius: 5,
-        flexShrink: 0,
-        opacity: disabled ? 0.6 : 1,
-        transition: "color 0.3s, background 0.3s",
-      }}
-      onMouseEnter={enter}
-      onMouseLeave={leave}
-    >
-      {children}
-    </button>
-  );
-}
+import { ScheduledSidebarRow } from "./scheduled/ScheduledSidebarRow";
+import { isScheduledRunSession } from "@/hooks/useScheduledTasks";
+import { prefetchSessionData } from "@/lib/session-data-cache";
+import { isImeComposing } from "@/lib/ime";
 
 function sessionListUrl(summary: boolean, force: boolean): string {
   if (summary) return "/api/sessions?summary=1";
   if (force) return "/api/sessions?force=1";
   return "/api/sessions";
 }
-
 interface Props {
   selectedSessionId: string | null;
   onSelectSession: (session: SessionInfo, isRestore?: boolean, entryId?: string, blockIndex?: number) => void;
@@ -120,17 +45,17 @@ interface Props {
     projectRoot?: string | null,
     projectKey?: string | null,
   ) => void;
-  onOpenFile?: (filePath: string, fileName: string, options?: { sourceSessionId?: string | null; modeHint?: "diff" }) => void;
   onOpenTerminal?: (cwd: string) => void;
-  explorerRefreshKey?: number;
-  onExplorerRefresh?: () => void;
-  onAtMention?: (relativePath: string, isDir: boolean) => void;
-  onAtMentions?: (relativePaths: string[]) => void;
   /** Fired when a session that is not currently selected finishes running.
    *  Lets the app play a cross-workspace completion tone. */
   onBackgroundTaskDone?: () => void;
   onRunningSessionIdsChange?: (ids: Set<string>) => void;
   onSessionsChange?: (sessions: SessionInfo[]) => void;
+  onProjectsChange?: (projectRoots: string[]) => void;
+  headerControls?: ReactNode;
+  /** Opens the Scheduled page; the row under New Session is absent without it. */
+  onOpenScheduled?: () => void;
+  scheduledOpen?: boolean;
 }
 
 interface WorktreeEntry {
@@ -154,235 +79,100 @@ interface WorktreeState {
   worktrees: WorktreeEntry[];
 }
 
+interface ProjectBranchMenuState {
+  root: string;
+  branches: string[];
+  remoteBranches: string[];
+  worktrees: WorktreeEntry[];
+  loaded: boolean;
+}
 interface ProjectSelection {
   root: string;
   key: string;
 }
 
-interface ValidatedProject {
-  cwd: string;
-  root: string;
-  key: string;
-}
+// Server error codes with a translation; any other code is shown verbatim.
+const FILE_MANAGER_ERROR_KEYS: Record<string, string> = {
+  remote: "sidebar.openInExplorerRemoteOnly",
+  "unsupported-platform": "sidebar.openInExplorerUnsupported",
+};
 
-const UNREAD_SESSIONS_STORAGE_KEY = "pi-web:unread-session-ids";
-const LAST_CUSTOM_CWD_STORAGE_KEY = "pi-web:last-custom-cwd";
-const RUNNING_SESSIONS_POLL_MS = 2500;
 const SESSION_DETAILS_HYDRATION_DELAY_MS = 750;
-const SESSION_PANE_DEFAULT_HEIGHT = 320;
-const SESSION_PANE_MIN_HEIGHT = 80;
-const EXPLORER_PANE_MIN_HEIGHT = 120;
-const SESSION_PANE_MAX_HEIGHT = 1600;
-
-function loadLastCustomCwd(): string {
-  if (typeof window === "undefined") return "";
-  try {
-    return window.localStorage.getItem(LAST_CUSTOM_CWD_STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function saveLastCustomCwd(cwd: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(LAST_CUSTOM_CWD_STORAGE_KEY, cwd);
-  } catch {
-    // Persistence is best-effort.
-  }
-}
 
 function loadUnreadSessionIds(): Set<string> {
   if (typeof window === "undefined") return new Set();
-  try {
-    const raw = window.localStorage.getItem(UNREAD_SESSIONS_STORAGE_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) return new Set(parsed.filter((id): id is string => typeof id === "string"));
-    return new Set();
-  } catch {
-    return new Set();
-  }
+  const parsed = getPrefJson<unknown>(APP_PREF_KEYS.unreadSessionIds);
+  if (Array.isArray(parsed)) return new Set(parsed.filter((id): id is string => typeof id === "string"));
+  return new Set();
 }
 
 function saveUnreadSessionIds(ids: Set<string>): void {
   if (typeof window === "undefined") return;
-  try {
-    if (ids.size === 0) window.localStorage.removeItem(UNREAD_SESSIONS_STORAGE_KEY);
-    else window.localStorage.setItem(UNREAD_SESSIONS_STORAGE_KEY, JSON.stringify([...ids]));
-  } catch {
-    // ignore storage quota / privacy-mode errors
+  if (ids.size === 0) removePref(APP_PREF_KEYS.unreadSessionIds);
+  else setPrefJson(APP_PREF_KEYS.unreadSessionIds, [...ids]);
+}
+
+
+
+
+interface SessionTreeNode {
+  session: SessionInfo;
+  children: SessionTreeNode[];
+}
+
+const MAX_VISIBLE_PROJECT_SESSIONS = 5;
+
+const SESSION_LIST_ITEM_HEIGHT = 54;
+
+function treeContainsSession(node: SessionTreeNode, sessionId: string): boolean {
+  return node.session.id === sessionId || node.children.some((child) => treeContainsSession(child, sessionId));
+}
+
+function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
+  const byId = new Map<string, SessionTreeNode>();
+  for (const s of sessions) {
+    byId.set(s.id, { session: s, children: [] });
   }
-}
 
-/** Substitute the home dir prefix with ~ (no path truncation — see PathLabel) */
-function displayCwd(cwd: string, homeDir?: string): string {
-  return (homeDir && cwd.startsWith(homeDir)) ? "~" + cwd.slice(homeDir.length) : cwd;
-}
+  // Build a map of parentSessionId chains so we can resolve missing ancestors
+  const parentOf = new Map<string, string>();
+  for (const s of sessions) {
+    if (s.parentSessionId) parentOf.set(s.id, s.parentSessionId);
+  }
 
-/**
- * Path label that ellipsizes on the LEFT, keeping the (most relevant) trailing
- * segments visible: "…orkspace/pi-web". Shows as much of the path as fits
- * instead of a fixed number of segments. The rtl container moves the ellipsis
- * to the left edge; the inner plaintext bidi isolation keeps the path itself
- * rendered strictly left-to-right (no punctuation reordering).
- */
-function PathLabel({ text, style }: { text: string; style?: CSSProperties }) {
-  return (
-    <span
-      style={{
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        display: "block",
-        minWidth: 0,
-        lineHeight: 1.35,
-        direction: "rtl",
-        textAlign: "left",
-        ...style,
-      }}
-    >
-      <span style={{ unicodeBidi: "plaintext" }}>{text}</span>
-    </span>
-  );
-}
+  // Walk up the parentSessionId chain to find the nearest ancestor that exists in byId
+  function resolveAncestor(id: string): string | null {
+    let cur = parentOf.get(id);
+    const visited = new Set<string>();
+    while (cur) {
+      if (visited.has(cur)) return null; // cycle guard
+      visited.add(cur);
+      if (byId.has(cur)) return cur;
+      cur = parentOf.get(cur);
+    }
+    return null;
+  }
 
-const DROPDOWN_ANIMATION_MS = 140;
-
-function AnimatedDropdown({ open, children, style }: { open: boolean; children: ReactNode; style: CSSProperties }) {
-  const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(open);
-
-  useEffect(() => {
-    let frame: number | undefined;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-
-    if (open) {
-      setMounted(true);
-      setVisible(false);
-      frame = window.requestAnimationFrame(() => {
-        frame = window.requestAnimationFrame(() => setVisible(true));
-      });
+  const roots: SessionTreeNode[] = [];
+  for (const node of byId.values()) {
+    const ancestor = resolveAncestor(node.session.id);
+    if (ancestor) {
+      byId.get(ancestor)!.children.push(node);
     } else {
-      setVisible(false);
-      timeout = setTimeout(() => setMounted(false), DROPDOWN_ANIMATION_MS);
+      roots.push(node);
     }
+  }
 
-    return () => {
-      if (frame !== undefined) window.cancelAnimationFrame(frame);
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [open]);
-
-  if (!mounted) return null;
-
-  return (
-    <div
-      style={{
-        ...style,
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0) scale(1)" : "translateY(-8px) scale(0.96)",
-        transformOrigin: "top center",
-        transition: `opacity ${DROPDOWN_ANIMATION_MS}ms ease, transform ${DROPDOWN_ANIMATION_MS}ms ease`,
-        pointerEvents: open ? "auto" : "none",
-      }}
-    >
-      {children}
-    </div>
-  );
+  // Sort each level by modified desc
+  const sort = (nodes: SessionTreeNode[]) => {
+    nodes.sort((a, b) => b.session.modified.localeCompare(a.session.modified));
+    nodes.forEach((n) => sort(n.children));
+  };
+  sort(roots);
+  return roots;
 }
 
-
-
-const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-
-function useScramble(target: string, running: boolean): string {
-  const [display, setDisplay] = useState(target);
-  const frameRef = useRef<number | null>(null);
-  const iterRef = useRef(0);
-
-  useEffect(() => {
-    if (!running) {
-      setDisplay(target);
-      return;
-    }
-    iterRef.current = 0;
-    const totalFrames = target.length * 4;
-
-    const step = () => {
-      iterRef.current += 1;
-      const progress = iterRef.current / totalFrames;
-      const resolved = Math.floor(progress * target.length);
-
-      setDisplay(
-        target
-          .split("")
-          .map((char, i) => {
-            if (char === " ") return " ";
-            if (i < resolved) return char;
-            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-          })
-          .join("")
-      );
-
-      if (iterRef.current < totalFrames) {
-        frameRef.current = requestAnimationFrame(step);
-      } else {
-        setDisplay(target);
-      }
-    };
-
-    frameRef.current = requestAnimationFrame(step);
-    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
-  }, [target, running]);
-
-  return display;
-}
-
-function PiWebTitle() {
-  const [showVersion, setShowVersion] = useState(false);
-  const [scrambling, setScrambling] = useState(false);
-  const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const target = showVersion ? `${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0"}p${process.env.NEXT_PUBLIC_PI_VERSION ?? "0.0.0"}` : "Pi Web";
-  const display = useScramble(target, scrambling);
-
-  const triggerScramble = useCallback((toVersion: boolean) => {
-    setShowVersion(toVersion);
-    setScrambling(true);
-    setTimeout(() => setScrambling(false), (toVersion ? 6 : 8) * 4 * (1000 / 60) + 100);
-  }, []);
-
-  const handleClick = useCallback(() => {
-    if (revertTimerRef.current) clearTimeout(revertTimerRef.current);
-
-    const next = !showVersion;
-    triggerScramble(next);
-
-    if (next) {
-      revertTimerRef.current = setTimeout(() => triggerScramble(false), 3000);
-    }
-  }, [showVersion, triggerScramble]);
-
-  useEffect(() => () => { if (revertTimerRef.current) clearTimeout(revertTimerRef.current); }, []);
-
-  return (
-    <button
-      onClick={handleClick}
-      style={{
-        background: "none", border: "none", padding: 0, cursor: "default",
-        fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em",
-        color: showVersion ? "var(--accent)" : "var(--text)",
-        fontFamily: "var(--font-mono)",
-        minWidth: "6ch",
-      }}
-    >
-      {display}
-    </button>
-  );
-}
-
-export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onOpenFile, onOpenTerminal, explorerRefreshKey, onExplorerRefresh, onAtMention, onAtMentions, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange }: Props) {
+export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, scheduledOpen = false }: Props) {
   const { t } = useI18n();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
   // Tracked in a ref only: the version is compared against the polled value to
@@ -393,109 +183,161 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const [error, setError] = useState<string | null>(null);
   const [selectedCwd, setSelectedCwd] = useState<string | null>(null);
   const [homeDir, setHomeDir] = useState<string>("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [projectFilter, setProjectFilter] = useState("");
+  // On macOS the native traffic lights float over this header. The mac-inset
+  // class keeps its control row 48px tall so it shares the lights' centre line.
+  const [desktopPlatform, setDesktopPlatform] = useState<DesktopPlatform>(null);
+  useEffect(() => {
+    if (isTauriDesktop()) setDesktopPlatform(getDesktopPlatform());
+  }, []);
+  const windowDrag = useWindowDrag();
   const [wtFilter, setWtFilter] = useState("");
-  const [customPathOpen, setCustomPathOpen] = useState(false);
-  const [customPathValue, setCustomPathValue] = useState(loadLastCustomCwd);
-  const [customPathError, setCustomPathError] = useState<string | null>(null);
-  const [customPathValidating, setCustomPathValidating] = useState(false);
-  const [validatedProject, setValidatedProject] = useState<ValidatedProject | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [sessionQuery, setSessionQuery] = useState("");
+  // Content search (server-side, across every session) vs. the default title
+  // filter over the loaded project tree. Enter engages it; clearing the box
+  // (Escape or the clear button) drops back to the title filter.
+  const [contentSearch, setContentSearch] = useState(false);
   // Worktree switcher state
   const [worktreeState, setWorktreeState] = useState<WorktreeState | null>(null);
+  const lastNotifiedProjectRef = useRef<{ cwd: string | null; key: string | null } | null>(null);
+
+  // The checked-out worktree for the current selection (falls back to the
+  // project's main worktree when the selection is not itself a worktree).
+  const currentWorktree = worktreeState
+    ? worktreeState.worktrees.find((worktree) => worktree.path === selectedCwd)
+      ?? (worktreeState.forCwd === selectedCwd && worktreeState.currentWorktreePath
+        ? worktreeState.worktrees.find((worktree) => worktree.path === worktreeState.currentWorktreePath)
+        : undefined)
+      ?? worktreeState.worktrees.find((worktree) => worktree.isMain)
+    : undefined;
+  const currentWorktreePath = currentWorktree?.path ?? null;
+
+  /** Resolve the project root for a cwd from the freshest data available */
+  const projectRootFor = useCallback((cwd: string | null): string | null => {
+    if (!cwd) return null;
+    if (worktreeState && worktreeState.forCwd === cwd) return worktreeState.projectRoot;
+    // Any path in the loaded worktree list belongs to that project — covers
+    // worktrees without sessions, so switching to them keeps the row mounted.
+    if (worktreeState?.worktrees.some((w) => w.path === cwd)) return worktreeState.projectRoot;
+    const match = allSessions.find((s) => s.cwd === cwd);
+    return match?.projectRoot ?? cwd;
+  }, [worktreeState, allSessions]);
   const [wtDropdownOpen, setWtDropdownOpen] = useState(false);
   const [wtNewOpen, setWtNewOpen] = useState(false);
   const [wtNewBranch, setWtNewBranch] = useState("");
+  const [wtBranches, setWtBranches] = useState<string[]>([]);
+  // Remote-only branch names (prefix stripped) for the switcher's branch list
+  const [wtRemoteBranches, setWtRemoteBranches] = useState<string[]>([]);
+  // False until the first branch-list response lands, so the "no other
+  // branches" hint is not flashed while the list is still loading.
+  const [wtBranchesLoaded, setWtBranchesLoaded] = useState(false);
   const [wtError, setWtError] = useState<string | null>(null);
   const [wtBusy, setWtBusy] = useState(false);
-  const [wtConfirmRemove, setWtConfirmRemove] = useState<string | null>(null);
+  // Branch currently being checked out (name shown dimmed with a spinner)
+  const [wtSwitchingBranch, setWtSwitchingBranch] = useState<string | null>(null);
+  const [wtFetching, setWtFetching] = useState(false);
+  const [wtConfirmRemove, setWtConfirmRemove] = useState<{ path: string; force: boolean } | null>(null);
   const [worktreeLoadingCwd, setWorktreeLoadingCwd] = useState<string | null>(null);
+  // Ticked by the poll/focus effect below so the worktree row reflects
+  // branches checked out outside pi (terminal, IDE) without a manual reload.
+  const [wtPollTick, setWtPollTick] = useState(0);
   const wtDropdownRef = useRef<HTMLDivElement>(null);
   const wtNewInputRef = useRef<HTMLInputElement>(null);
-  const [explorerOpen, setExplorerOpen] = useState(true);
-  const [explorerKey, setExplorerKey] = useState(0);
-  const [explorerUploadBusy, setExplorerUploadBusy] = useState(false);
-  const [fileSearchOpen, setFileSearchOpen] = useState(false);
-  const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
-  const [sessionSearchQuery, setSessionSearchQuery] = useState("");
-  const sessionSearchActive = sessionSearchOpen && Boolean(sessionSearchQuery.trim());
-  const [changesCount, setChangesCount] = useState(0);
-  const [changesCollapsed, setChangesCollapsed] = useState(true);
-  const [explorerRefreshDone, setExplorerRefreshDone] = useState(false);
+  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(() => {
+    const stored = getPrefJson<unknown>(APP_PREF_KEYS.collapsedProjects);
+    return Array.isArray(stored)
+      ? new Set(stored.filter((root): root is string => typeof root === "string"))
+      : new Set();
+  });
+  const [expandedProjectSessions, setExpandedProjectSessions] = useState<Set<string>>(() => new Set());
+  const [archivedProjectRoots, setArchivedProjectRoots] = useState<Set<string>>(() => {
+    const stored = getPrefJson<unknown>(APP_PREF_KEYS.archivedProjects);
+    return Array.isArray(stored)
+      ? new Set(stored.filter((root): root is string => typeof root === "string"))
+      : new Set();
+  });
+  const [projectMenu, setProjectMenu] = useState<{ root: string } | null>(null);
+  const [projectMenuPos, setProjectMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [projectBranchMenu, setProjectBranchMenu] = useState<ProjectBranchMenuState | null>(null);
+  const [projectBranchLoading, setProjectBranchLoading] = useState(false);
+  // "Open in file manager" on a project row. Only the server can raise a
+  // file-manager window, and only when the browser runs on that same machine,
+  // so the browser asks once and the menu shows the entry only where it works;
+  // the desktop shell reveals natively through revealItemInDirNative instead.
+  const [fileManagerAvailability, setFileManagerAvailability] = useState<{ supported: boolean; reason: string | null; platform: string } | null>(null);
+  const [projectRevealError, setProjectRevealError] = useState<string | null>(null);
+  useEffect(() => {
+    if (isTauriDesktop()) return;
+    let cancelled = false;
+    fetch("/api/open-in-explorer")
+      .then((res) => res.ok ? res.json() as Promise<{ supported: boolean; reason: string | null; platform: string }> : null)
+      .then((data) => { if (!cancelled && data) setFileManagerAvailability(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const revealProjectInFileManager = useCallback(async (root: string) => {
+    setProjectRevealError(null);
+    if (isTauriDesktop()) {
+      try {
+        await revealItemInDirNative(root);
+        setProjectMenu(null);
+      } catch (e) {
+        setProjectRevealError(e instanceof Error ? e.message : String(e));
+      }
+      return;
+    }
+    try {
+      const res = await fetch("/api/open-in-explorer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cwd: root }),
+      });
+      if (res.ok) {
+        setProjectMenu(null);
+        return;
+      }
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      const key = FILE_MANAGER_ERROR_KEYS[data.error ?? ""];
+      setProjectRevealError(key ? t(key) : (data.error ?? `HTTP ${res.status}`));
+    } catch (e) {
+      setProjectRevealError(e instanceof Error ? e.message : String(e));
+    }
+  }, [t]);
+  const fileManagerPlatform = isTauriDesktop()
+    ? (desktopPlatform === "macos" ? "darwin" : desktopPlatform === "windows" ? "win32" : "linux")
+    : fileManagerAvailability?.platform;
+  const revealProjectLabel = t(
+    fileManagerPlatform === "darwin"
+      ? "sidebar.openInFinder"
+      : fileManagerPlatform === "win32"
+        ? "sidebar.openInExplorer"
+        : "sidebar.openInFileManager",
+  );
+  const projectMenuRef = useRef<HTMLDivElement>(null);
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
   const [runningSessionIds, setRunningSessionIds] = useState<Set<string>>(() => new Set());
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => loadUnreadSessionIds());
   const previousRunningSessionIdsRef = useRef<Set<string>>(new Set());
-  const currentSuppressedCompletionSessionIdsRef = useRef<Set<string>>(new Set());
   const previousSuppressedCompletionSessionIdsRef = useRef<Set<string>>(new Set());
   // Once polling has delivered a snapshot it is the source of truth for
   // running state; late /api/sessions responses must not overwrite it.
-  const runningPollAuthoritativeRef = useRef(false);
+  const sseAuthoritativeRef = useRef(false);
   const detailsHydrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const explorerRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fileExplorerRef = useRef<FileExplorerHandle>(null);
 
-  // Virtualized session list: only the visible window of rows is mounted.
+  // Overlay-style scrollbar: `is-scrolling` shows the thumb only while the
+  // project tree is actually scrolling.
+  const listScrollHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
-  const explorerScrollRef = useRef<HTMLDivElement>(null);
-  useScrollbarVisibility(listScrollRef);
-  useScrollbarVisibility(explorerScrollRef, explorerOpen && Boolean(selectedCwdProp || selectedCwd));
-  const sessionPaneRef = useRef<HTMLDivElement>(null);
-  const explorerSectionRef = useRef<HTMLDivElement>(null);
-  const sessionPaneHeightRef = useRef(SESSION_PANE_DEFAULT_HEIGHT);
-  const getDefaultSessionPaneHeight = useCallback(() => {
-    if (!explorerOpen) return SESSION_PANE_DEFAULT_HEIGHT;
-    const paneHeight = sessionPaneRef.current?.getBoundingClientRect().height;
-    const explorerHeight = explorerSectionRef.current?.getBoundingClientRect().height;
-    return paneHeight && explorerHeight
-      ? Math.round((paneHeight + explorerHeight) / 2)
-      : SESSION_PANE_DEFAULT_HEIGHT;
-  }, [explorerOpen]);
-  const getMaxSessionPaneHeight = useCallback(() => {
-    if (!explorerOpen || !(selectedCwdProp || selectedCwd)) return SESSION_PANE_MAX_HEIGHT;
-    const paneHeight = sessionPaneRef.current?.getBoundingClientRect().height ?? SESSION_PANE_DEFAULT_HEIGHT;
-    const explorerHeight = explorerSectionRef.current?.getBoundingClientRect().height ?? EXPLORER_PANE_MIN_HEIGHT;
-    return Math.max(
-      SESSION_PANE_MIN_HEIGHT,
-      paneHeight + explorerHeight - EXPLORER_PANE_MIN_HEIGHT,
-    );
-  }, [explorerOpen, selectedCwd, selectedCwdProp]);
-  const sessionPaneResizer = useResizablePanel({
-    ariaLabel: t("layout.resizeSidebarSections"),
-    axis: "vertical",
-    cssVariable: "--sidebar-session-pane-height",
-    defaultWidth: SESSION_PANE_DEFAULT_HEIGHT,
-    getDefaultWidth: getDefaultSessionPaneHeight,
-    getMaxWidth: getMaxSessionPaneHeight,
-    growthDirection: "down",
-    maxWidth: SESSION_PANE_MAX_HEIGHT,
-    minWidth: SESSION_PANE_MIN_HEIGHT,
-    storageKey: "pi-web:sidebar-session-pane-height",
-    widthRef: sessionPaneHeightRef,
-  });
-  const [listViewportH, setListViewportH] = useState(0);
-  const [listScrollTop, setListScrollTop] = useState(0);
-  const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
-  const listScrollRafRef = useRef<number | null>(null);
   const handleListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const top = e.currentTarget.scrollTop;
-    if (listScrollRafRef.current != null) return;
-    listScrollRafRef.current = requestAnimationFrame(() => {
-      listScrollRafRef.current = null;
-      setListScrollTop(top);
-    });
+    e.currentTarget.classList.add("is-scrolling");
+    if (listScrollHideTimerRef.current) clearTimeout(listScrollHideTimerRef.current);
+    listScrollHideTimerRef.current = setTimeout(() => {
+      listScrollRef.current?.classList.remove("is-scrolling");
+      listScrollHideTimerRef.current = null;
+    }, 800);
   }, []);
-  useLayoutEffect(() => {
-    const el = listScrollRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) setListViewportH(entry.contentRect.height);
-    });
-    ro.observe(el);
-    setListViewportH(el.clientHeight);
-    setListScrollTop(el.scrollTop);
-    return () => ro.disconnect();
-  }, [sessionSearchActive]);
+  useEffect(() => () => {
+    if (listScrollHideTimerRef.current) clearTimeout(listScrollHideTimerRef.current);
+  }, []);
 
   const loadSessions = useCallback(async (showLoading = false, force = false, summary = false) => {
     const loadId = ++sessionLoadIdRef.current;
@@ -515,11 +357,8 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       sessionListVersionRef.current = data.sessionListVersion;
       setAllSessions(data.sessions);
       // Treat the fetched running set as an initial fallback only. Once the
-      // lightweight poll is live, a slow session-list fetch cannot overwrite it.
-      if (!runningPollAuthoritativeRef.current) {
-        currentSuppressedCompletionSessionIdsRef.current = new Set(
-          data.completionNotificationSuppressedSessionIds ?? [],
-        );
+      // live SSE stream is connected, a slow session-list fetch cannot overwrite it.
+      if (!sseAuthoritativeRef.current) {
         setRunningSessionIds(new Set(data.runningSessionIds ?? []));
       }
       // Drop markers for deleted sessions and for subagents, whose completion
@@ -572,12 +411,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     };
   }, [loadSessions, refreshKey]);
 
-  // Browser storage is unavailable during server rendering. Restore the panel
-  // preference after hydration so a collapsed explorer stays collapsed on reload.
-  useEffect(() => {
-    setExplorerOpen(loadExplorerOpen());
-  }, []);
-
   // Persist unread markers so they survive a browser refresh before the user
   // has actually opened the completed session.
   useEffect(() => {
@@ -585,74 +418,80 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   }, [unreadSessionIds]);
 
   useEffect(() => {
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let controller: AbortController | null = null;
+    setPrefJson(APP_PREF_KEYS.archivedProjects, [...archivedProjectRoots]);
+  }, [archivedProjectRoots]);
 
-    const clearTimer = () => {
-      if (timer) clearTimeout(timer);
-      timer = null;
-    };
+  useEffect(() => {
+    if (collapsedProjects.size === 0) removePref(APP_PREF_KEYS.collapsedProjects);
+    else setPrefJson(APP_PREF_KEYS.collapsedProjects, [...collapsedProjects]);
+  }, [collapsedProjects]);
 
-    const schedule = () => {
-      clearTimer();
-      if (stopped || document.visibilityState !== "visible") return;
-      timer = setTimeout(() => void poll(), RUNNING_SESSIONS_POLL_MS);
-    };
+  useEffect(() => {
+    // Live running status via SSE — no polling. The server pushes the current
+    // set of running session ids whenever any session starts/stops working.
+    let source: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let closed = false;
 
-    const poll = async () => {
-      if (stopped || document.visibilityState !== "visible") return;
-      const current = new AbortController();
-      controller?.abort();
-      controller = current;
-      try {
-        const res = await fetch("/api/agent/running", {
-          cache: "no-store",
-          signal: current.signal,
-        });
-        if (!res.ok) return;
-        const data = await res.json() as {
-          sessionListVersion: number;
-          runningSessionIds?: string[];
-          completionNotificationSuppressedSessionIds?: string[];
-        };
-        if (stopped || controller !== current) return;
-        runningPollAuthoritativeRef.current = true;
-        currentSuppressedCompletionSessionIdsRef.current = new Set(
-          data.completionNotificationSuppressedSessionIds ?? [],
-        );
-        setRunningSessionIds(new Set(data.runningSessionIds ?? []));
-        if (data.sessionListVersion !== sessionListVersionRef.current) {
-          // Reuse the invalidated cache; forcing a scan would change the version again.
-          await loadSessions();
+    const connect = () => {
+      if (closed) return;
+      source?.close();
+      source = new EventSource("/api/agent/running/events");
+      source.onmessage = async (e) => {
+        try {
+          const data = JSON.parse(e.data) as { type?: string; runningSessionIds?: string[]; sessionListVersion?: number };
+          if (data.type === "running") {
+            sseAuthoritativeRef.current = true;
+            setRunningSessionIds(new Set(data.runningSessionIds ?? []));
+          }
+          if (typeof data.sessionListVersion === "number"
+            && data.sessionListVersion !== sessionListVersionRef.current) {
+            // Another window/process changed the list; reuse the invalidated
+            // server cache instead of forcing a fresh scan.
+            await loadSessions();
+          }
+        } catch {
+          // ignore malformed frames
         }
-      } catch {
-        // Keep the last known state; the next visible-tab poll retries.
-      } finally {
-        if (controller === current) controller = null;
-        schedule();
-      }
+      };
+      source.onerror = () => {
+        // Force a fresh connection after prolonged failures; EventSource alone
+        // can stall after local server restarts in the desktop shell.
+        if (source?.readyState === EventSource.CLOSED) {
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(connect, 1_500);
+        }
+      };
     };
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        void poll();
-        return;
-      }
-      clearTimer();
-      controller?.abort();
-      controller = null;
+    connect();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") connect();
     };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", connect);
 
-    void poll();
-    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
-      stopped = true;
-      clearTimer();
-      controller?.abort();
-      document.removeEventListener("visibilitychange", onVisibilityChange);
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", connect);
+      source?.close();
     };
   }, [loadSessions]);
+
+  useEffect(() => {
+    if (!projectMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (projectMenuRef.current && !projectMenuRef.current.contains(e.target as Node)) {
+        setProjectMenu(null);
+        setProjectMenuPos(null);
+        setProjectBranchMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [projectMenu]);
 
   useEffect(() => {
     onRunningSessionIdsChange?.(runningSessionIds);
@@ -670,8 +509,17 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         .filter((session) => session.relation?.kind === "subagent")
         .map((session) => session.id),
     );
+    // A scheduled run says how it ended (and what failed) through its own notification.
+    const knownScheduledIds = new Set(
+      allSessions
+        .filter((session) => session.relation?.kind === "scheduled")
+        .map((session) => session.id),
+    );
     const completedWithNotifications = completedInBackground.filter(
-      (id) => !previousSuppressedCompletionSessionIdsRef.current.has(id) && !knownSubagentIds.has(id),
+      (id) => !previousSuppressedCompletionSessionIdsRef.current.has(id)
+        && !knownSubagentIds.has(id)
+        && !knownScheduledIds.has(id)
+        && !isScheduledRunSession(id),
     );
     const newlyRunning = [...runningSessionIds].filter((id) => !previous.has(id));
 
@@ -691,15 +539,35 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     }
     if (completedWithNotifications.length > 0) {
       onBackgroundTaskDone?.();
+      const sessionName = (id: string) => {
+        const session = allSessions.find((item) => item.id === id);
+        return session?.name || session?.firstMessage || id.slice(0, 8);
+      };
+      for (const id of completedWithNotifications) {
+        void notifyDesktop({
+          title: "Pi Agent",
+          body: `Finished: ${sessionName(id)}`,
+        });
+      }
     }
 
     previousRunningSessionIdsRef.current = runningSessionIds;
-    previousSuppressedCompletionSessionIdsRef.current = new Set(
-      [...runningSessionIds].filter(
-        (id) => currentSuppressedCompletionSessionIdsRef.current.has(id) || knownSubagentIds.has(id),
-      ),
+  }, [runningSessionIds, selectedSessionId, loadSessions, allSessions, onBackgroundTaskDone]);
+
+  // A session that just started running has no row yet: pi had not flushed it
+  // to disk when the list was last fetched. /api/sessions merges live runs, so
+  // one refetch per unknown id is enough to make it appear mid-stream instead
+  // of only when the turn ends.
+  const refetchedRunningIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const known = new Set(allSessions.map((s) => s.id));
+    const missing = [...runningSessionIds].filter(
+      (id) => !known.has(id) && !refetchedRunningIdsRef.current.has(id),
     );
-  }, [runningSessionIds, selectedSessionId, allSessions, loadSessions, onBackgroundTaskDone]);
+    if (missing.length === 0) return;
+    missing.forEach((id) => refetchedRunningIdsRef.current.add(id));
+    void loadSessions(false);
+  }, [runningSessionIds, allSessions, loadSessions]);
 
   useEffect(() => {
     if (!selectedSessionId) return;
@@ -710,10 +578,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       return next;
     });
   }, [selectedSessionId]);
-
-  useEffect(() => {
-    if (explorerRefreshKey !== undefined) setExplorerKey((k) => k + 1);
-  }, [explorerRefreshKey]);
 
   useEffect(() => {
     fetch("/api/home").then((r) => r.json()).then((d: { home?: string }) => {
@@ -731,11 +595,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   /** Resolve both display root and stable identity from server-provided data. */
   const projectFor = useCallback((cwd: string | null): ProjectSelection | null => {
     if (!cwd) return null;
-    // /api/cwd/validate resolves identity before a custom path becomes active,
-    // preventing one render with a raw path key from looking like a switch.
-    if (validatedProject?.cwd === cwd) {
-      return projectSelection(validatedProject.root, validatedProject.key);
-    }
+    // Custom-path identity validation lives in ProjectPicker (the extraction
+    // boundary this file's sentinel test guards); identity here resolves from
+    // server-provided worktree and session data only.
     if (worktreeState && worktreeState.forCwd === cwd) {
       return projectSelection(worktreeState.projectRoot, worktreeState.projectKey);
     }
@@ -750,12 +612,24 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     return match
       ? projectSelection(match.projectRoot ?? match.cwd, workspaceKeyOf(match))
       : projectSelection(cwd, cwd);
-  }, [validatedProject, worktreeState, allSessions, projectSelection]);
+  }, [worktreeState, allSessions, projectSelection]);
 
-  // A worktree/session refresh can hydrate the stable key without changing
-  // cwd, so notify when either changes. The parent treats same-cwd key changes
-  // as identity hydration rather than a workspace switch.
-  const lastNotifiedProjectRef = useRef<{ cwd: string | null; key: string | null } | null>(null);
+  // Selecting a directory is also the explicit "add project" action. If the
+  // project was previously removed from the sidebar, make it visible again
+  // without touching any of the session files discovered for that directory.
+  const activateProject = useCallback((cwd: string) => {
+    const projectRoot = projectRootFor(cwd) ?? cwd;
+    setArchivedProjectRoots((previous) => {
+      if (!previous.has(projectRoot)) return previous;
+      const next = new Set(previous);
+      next.delete(projectRoot);
+      return next;
+    });
+    setSelectedCwd(cwd);
+  }, [projectRootFor]);
+
+  // Notify parent only when the effective cwd actually changes (not when
+  // projectRootFor identity changes due to session/worktree refreshes).
   useEffect(() => {
     const project = projectFor(selectedCwd);
     const previous = lastNotifiedProjectRef.current;
@@ -782,6 +656,10 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
 
   // Load worktrees for the current effective cwd
   const [wtRefreshKey, setWtRefreshKey] = useState(0);
+  // Cwds already resolved once: background refetches (e.g. refreshKey bump on
+  // agent end) stay silent for them, so the transient "checking worktrees"
+  // header row doesn't flash and shove the session list down and back up.
+  const checkedWorktreeCwdsRef = useRef<Set<string>>(new Set());
   useLayoutEffect(() => {
     if (!selectedCwd) {
       setWorktreeState(null);
@@ -789,11 +667,14 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       return;
     }
     let cancelled = false;
-    setWorktreeLoadingCwd(selectedCwd);
+    if (!checkedWorktreeCwdsRef.current.has(selectedCwd)) {
+      setWorktreeLoadingCwd(selectedCwd);
+    }
     fetch(`/api/worktrees?cwd=${encodeURIComponent(selectedCwd)}`)
       .then((r) => r.json())
       .then((d: { projectRoot?: string; projectKey?: string; isGit?: boolean; isTopLevel?: boolean; currentWorktreePath?: string | null; worktrees?: WorktreeEntry[]; error?: string }) => {
         if (cancelled) return;
+        checkedWorktreeCwdsRef.current.add(selectedCwd);
         setWorktreeLoadingCwd(null);
         if (d.error || !d.projectRoot) {
           setWorktreeState(null);
@@ -816,8 +697,29 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         }
       });
     return () => { cancelled = true; };
-  }, [selectedCwd, wtRefreshKey, refreshKey]);
+  }, [selectedCwd, wtRefreshKey, refreshKey, wtPollTick]);
 
+  // Keep the worktree/branch display honest when branches are switched outside
+  // pi (terminal, IDE, another client): poll while the tab is visible and
+  // refresh on window focus. `git worktree list` is a cheap local op.
+  useEffect(() => {
+    const bump = () => setWtPollTick((t) => t + 1);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") bump();
+    };
+    const id = setInterval(onVisible, 10_000);
+    window.addEventListener("focus", bump);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", bump);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
+  // Most-recent projects, deduped by projectRoot, used to pick the default
+  // cwd when no session is selected yet.
+  const recentProjects = getRecentProjects(allSessions);
   // Auto-select cwd and restore session from URL on first load
   useEffect(() => {
     if (allSessions.length === 0 || skipInitialProjectSelection) return;
@@ -835,81 +737,182 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         // Session not found — notify parent so it can show the placeholder
         onInitialRestoreDone?.();
       }
-      const projects = getRecentProjects(allSessions);
-      if (projects.length > 0) setSelectedCwd(projects[0].root);
+      const projects = recentProjects;
+      if (projects.length > 0) setSelectedCwd(projects[0]);
     }
-  }, [allSessions, selectedCwd, initialSessionId, skipInitialProjectSelection, onSelectSession, onInitialRestoreDone]);
+  }, [allSessions, selectedCwd, initialSessionId, skipInitialProjectSelection, onSelectSession, onInitialRestoreDone, recentProjects]);
 
-  // Prefer an exact UI selection while a refetch is in flight. Once the
-  // response catches up, the server-resolved path handles Windows case and
-  // separator differences without teaching the browser OS path semantics.
-  const currentWorktree = worktreeState
-    ? worktreeState.worktrees.find((worktree) => worktree.path === selectedCwd)
-      ?? (worktreeState.forCwd === selectedCwd && worktreeState.currentWorktreePath
-        ? worktreeState.worktrees.find((worktree) => worktree.path === worktreeState.currentWorktreePath)
-        : undefined)
-      ?? worktreeState.worktrees.find((worktree) => worktree.isMain)
-    : undefined;
-  const currentWorktreePath = currentWorktree?.path ?? null;
-
-  const commitCustomPath = useCallback(async (candidate?: string) => {
-    const path = (candidate ?? customPathValue).trim();
-    if (!path || customPathValidating) return;
-
-    setCustomPathValidating(true);
-    setCustomPathError(null);
-    try {
-      const res = await fetch("/api/cwd/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cwd: path }),
+  // Branch list for the switcher section (and the new-worktree datalist).
+  // Loaded while the dropdown is open and on every poll tick, so branches
+  // created or fetched elsewhere show up on the next open.
+  const wtProjectRoot = worktreeState?.projectRoot ?? null;
+  useEffect(() => {
+    if (!wtDropdownOpen || !wtProjectRoot) return;
+    let cancelled = false;
+    fetch(`/api/worktrees?cwd=${encodeURIComponent(wtProjectRoot)}&branches=1`)
+      .then((r) => r.json())
+      .then((d: { branches?: string[]; remoteBranches?: string[] }) => {
+        if (cancelled) return;
+        setWtBranchesLoaded(true);
+        setWtBranches(Array.isArray(d.branches) ? d.branches : []);
+        setWtRemoteBranches(Array.isArray(d.remoteBranches) ? d.remoteBranches : []);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWtBranches([]);
+          setWtRemoteBranches([]);
+        }
       });
-      const data = await res.json().catch(() => ({})) as {
-        cwd?: string;
-        projectRoot?: string;
-        projectKey?: string;
-        error?: string;
-      };
-      if (!res.ok || data.error || !data.cwd || !data.projectRoot || !data.projectKey) {
-        setCustomPathError(data.error ?? `HTTP ${res.status}`);
+    return () => { cancelled = true; };
+  }, [wtDropdownOpen, wtProjectRoot, wtPollTick]);
+
+  // The worktree matching selectedCwd, falling back to the main worktree when
+  // worktreeState hasn't caught up to selectedCwd yet (e.g. right after
+  // creating/switching to a worktree, before the next refresh lands) — same
+  // fallback the switcher dropdown itself uses to stay correct through that
+  // race, instead of comparing raw paths that may not (yet) match anything.
+  const currentWt = worktreeState?.worktrees.find((w) => w.path === selectedCwd)
+    ?? worktreeState?.worktrees.find((w) => w.isMain)
+    ?? null;
+
+  const handleSwitchBranch = useCallback(async (branch: string) => {
+    if (!worktreeState || wtBusy || wtSwitchingBranch) return;
+    // git refuses to check out a branch that another worktree already holds —
+    // jump to that worktree instead; that is what the user means anyway.
+    const holder = worktreeState.worktrees.find((w) => w.branch === branch && w.path !== currentWt?.path);
+    if (holder) {
+      setSelectedCwd(holder.path);
+      setWtDropdownOpen(false);
+      setWtError(null);
+      setWtFilter("");
+      return;
+    }
+    if (currentWt?.branch === branch) return;
+    const cwd = currentWt?.path ?? selectedCwd ?? worktreeState.projectRoot;
+    setWtSwitchingBranch(branch);
+    setWtError(null);
+    try {
+      const res = await fetch("/api/worktrees", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cwd, branch }),
+      });
+      const data = await res.json().catch(() => ({})) as { branch?: string; error?: string };
+      if (!res.ok || data.error || !data.branch) {
+        setWtError(data.error ?? `HTTP ${res.status}`);
         return;
       }
-      setValidatedProject({
-        cwd: data.cwd,
-        root: data.projectRoot,
-        key: data.projectKey,
-      });
-      saveLastCustomCwd(data.cwd);
-      setCustomPathValue(data.cwd);
-      setSelectedCwd(data.cwd);
-      setCustomPathOpen(false);
-      setDropdownOpen(false);
+      setWtDropdownOpen(false);
+      setWtRefreshKey((k) => k + 1);
+      // The checkout's contents just changed wholesale — refresh the
+      // session rows (worktreeBranch subtitles) alongside the header.
+      void loadSessions(false);
     } catch (e) {
-      setCustomPathError(e instanceof Error ? e.message : String(e));
+      setWtError(e instanceof Error ? e.message : String(e));
     } finally {
-      setCustomPathValidating(false);
+      setWtSwitchingBranch(null);
     }
-  }, [customPathValue, customPathValidating]);
+  }, [worktreeState, wtBusy, wtSwitchingBranch, currentWt, selectedCwd, loadSessions]);
 
-  const handleCustomPathClick = useCallback(() => {
-    setCustomPathOpen(true);
-    setCustomPathError(null);
-    setDropdownOpen(false);
-  }, []);
-  const handleDefaultCwd = useCallback(async () => {
+  const openProjectBranchMenu = useCallback(async (projectRoot: string) => {
+    setProjectBranchMenu({ root: projectRoot, branches: [], remoteBranches: [], worktrees: [], loaded: false });
+    setProjectBranchLoading(true);
     try {
-      const res = await fetch("/api/default-cwd", { method: "POST" });
-      const data = await res.json() as { cwd?: string; error?: string };
-      if (data.cwd) {
-        setSelectedCwd(data.cwd);
-        setCustomPathOpen(false);
-        setCustomPathError(null);
-        setDropdownOpen(false);
-      }
+      const res = await fetch(`/api/worktrees?cwd=${encodeURIComponent(projectRoot)}&branches=1`);
+      const data = await res.json().catch(() => ({})) as {
+        projectRoot?: string;
+        branches?: string[];
+        remoteBranches?: string[];
+        worktrees?: WorktreeEntry[];
+      };
+      if (!res.ok || data.projectRoot !== projectRoot) throw new Error(`HTTP ${res.status}`);
+      setProjectBranchMenu((prev) => prev?.root === projectRoot ? {
+        root: projectRoot,
+        branches: Array.isArray(data.branches) ? data.branches : [],
+        remoteBranches: Array.isArray(data.remoteBranches) ? data.remoteBranches : [],
+        worktrees: Array.isArray(data.worktrees) ? data.worktrees : [],
+        loaded: true,
+      } : prev);
     } catch {
-      // ignore
+      setProjectBranchMenu((prev) => prev?.root === projectRoot ? {
+        root: projectRoot, branches: [], remoteBranches: [], worktrees: [], loaded: true,
+      } : prev);
+    } finally {
+      setProjectBranchLoading(false);
     }
   }, []);
+
+  const handleSwitchProjectBranch = useCallback(async (projectRoot: string, branch: string, loaded?: ProjectBranchMenuState) => {
+    if (wtSwitchingBranch) return;
+    const branchData = loaded ?? (projectBranchMenu?.root === projectRoot ? projectBranchMenu : null);
+    const checkout = branchData?.worktrees.find((w) => w.path === selectedCwd)
+      ?? branchData?.worktrees.find((w) => w.isMain)
+      ?? null;
+    const holder = branchData?.worktrees.find((w) => w.branch === branch && w.path !== checkout?.path);
+    if (holder) {
+      setSelectedCwd(holder.path);
+      setProjectMenu(null);
+      setProjectMenuPos(null);
+      setProjectBranchMenu(null);
+      return;
+    }
+    if (checkout?.branch === branch) {
+      setSelectedCwd(checkout.path);
+      setProjectMenu(null);
+      setProjectMenuPos(null);
+      setProjectBranchMenu(null);
+      return;
+    }
+
+    const cwd = checkout?.path ?? projectRoot;
+    setWtSwitchingBranch(branch);
+    try {
+      const res = await fetch("/api/worktrees", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cwd, branch }),
+      });
+      const data = await res.json().catch(() => ({})) as { branch?: string; error?: string };
+      if (!res.ok || data.error || !data.branch) {
+        setWtError(data.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      setSelectedCwd(cwd);
+      setProjectMenu(null);
+      setProjectMenuPos(null);
+      setProjectBranchMenu(null);
+      setWtRefreshKey((k) => k + 1);
+      void loadSessions(false);
+    } catch (e) {
+      setWtError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWtSwitchingBranch(null);
+    }
+  }, [projectBranchMenu, selectedCwd, wtSwitchingBranch, loadSessions]);
+
+  const handleFetchBranches = useCallback(async () => {
+    if (!worktreeState || wtFetching) return;
+    setWtFetching(true);
+    setWtError(null);
+    try {
+      const res = await fetch("/api/worktrees/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cwd: worktreeState.projectRoot }),
+      });
+      const data = await res.json().catch(() => ({})) as { branches?: string[]; remoteBranches?: string[]; error?: string };
+      if (!res.ok || data.error) {
+        setWtError(data.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      setWtBranches(Array.isArray(data.branches) ? data.branches : []);
+      setWtRemoteBranches(Array.isArray(data.remoteBranches) ? data.remoteBranches : []);
+    } catch (e) {
+      setWtError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWtFetching(false);
+    }
+  }, [worktreeState, wtFetching]);
 
   const handleCreateWorktree = useCallback(async () => {
     const branch = wtNewBranch.trim();
@@ -961,8 +964,8 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       const data = await res.json().catch(() => ({})) as { error?: string; dirty?: boolean };
       if (!res.ok) {
         if (data.dirty && !force) {
-          // Dirty worktree — ask the user to confirm a force removal
-          setWtConfirmRemove(path);
+          // Dirty worktree — escalate the confirm row to a force removal
+          setWtConfirmRemove({ path, force: true });
           return;
         }
         setWtError(data.error ?? `HTTP ${res.status}`);
@@ -978,13 +981,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     }
   }, [worktreeState, wtBusy, currentWorktreePath]);
 
-  // Close dropdowns on outside click
+  // Close the worktree dropdown on outside click (the project picker owns its own)
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-        setProjectFilter("");
-      }
       if (wtDropdownRef.current && !wtDropdownRef.current.contains(e.target as Node)) {
         setWtDropdownOpen(false);
         setWtNewOpen(false);
@@ -1008,64 +1007,180 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     onSelectSession(s, false, entryId, blockIndex);
   }, [onSelectSession]);
 
-  const handleNewSession = useCallback(() => {
-    if (!selectedCwd) return;
+  const handleNewSession = useCallback((cwdOverride?: string) => {
+    const cwd = cwdOverride ?? selectedCwd;
+    if (!cwd) return;
+    // Creating a session is also the activation gesture for an archived
+    // project. This keeps the archive list useful without a second step.
+    const projectRoot = projectRootFor(cwd) ?? cwd;
+    if (archivedProjectRoots.has(projectRoot)) {
+      setArchivedProjectRoots((prev) => {
+        const next = new Set(prev);
+        next.delete(projectRoot);
+        return next;
+      });
+    }
+    if (cwd !== selectedCwd) setSelectedCwd(cwd);
     // Generate a temporary UUID client-side — no backend call needed.
     // Pi will be spawned lazily when the user sends the first message.
     const tempId = typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
-    onNewSession?.(tempId, selectedCwd);
-  }, [selectedCwd, onNewSession]);
+    onNewSession?.(tempId, cwd);
+  }, [selectedCwd, archivedProjectRoots, onNewSession, projectRootFor]);
 
-  const recentProjects = getRecentProjects(allSessions);
-  const showProjectFilter = recentProjects.length > 8;
-  const visibleProjects = projectFilter.trim()
-    ? recentProjects.filter((project) => project.root.toLowerCase().includes(projectFilter.trim().toLowerCase()))
-    : recentProjects;
+  const handleAddProject = useCallback(async () => {
+    if (!isTauriDesktop()) {
+      setProjectPickerOpen(true);
+      return;
+    }
 
+    try {
+      const cwd = await selectProjectDirectoryNative(selectedCwd, homeDir);
+      if (cwd) activateProject(cwd);
+    } catch (error) {
+      console.error("Failed to select project folder:", error);
+    }
+  }, [selectedCwd, homeDir, activateProject]);
+
+  const archiveProject = useCallback((projectRoot: string) => {
+    setArchivedProjectRoots((prev) => {
+      const next = new Set(prev);
+      next.add(projectRoot);
+      return next;
+    });
+    setProjectMenu(null);
+    setProjectMenuPos(null);
+  }, []);
+
+  // Desktop shell: native popup versions of the project menu and its branch
+  // list. `projectMenu` stays set while one is up (it keeps the row's "…"
+  // visible) but `projectMenuPos` stays null, so the DOM menu never renders.
+  const showNativeBranchMenu = useCallback(async (projectRoot: string, at: NativeMenuPoint) => {
+    let data: ProjectBranchMenuState;
+    try {
+      const res = await fetch(`/api/worktrees?cwd=${encodeURIComponent(projectRoot)}&branches=1`);
+      const body = await res.json().catch(() => ({})) as {
+        projectRoot?: string;
+        branches?: string[];
+        remoteBranches?: string[];
+        worktrees?: WorktreeEntry[];
+      };
+      if (!res.ok || body.projectRoot !== projectRoot) throw new Error(`HTTP ${res.status}`);
+      data = {
+        root: projectRoot,
+        branches: Array.isArray(body.branches) ? body.branches : [],
+        remoteBranches: Array.isArray(body.remoteBranches) ? body.remoteBranches : [],
+        worktrees: Array.isArray(body.worktrees) ? body.worktrees : [],
+        loaded: true,
+      };
+    } catch {
+      data = { root: projectRoot, branches: [], remoteBranches: [], worktrees: [], loaded: true };
+    }
+    const checkout = data.worktrees.find((w) => w.path === selectedCwd) ?? data.worktrees.find((w) => w.isMain);
+    const names = [
+      ...data.branches.map((name) => ({ name, remote: false })),
+      ...data.remoteBranches.map((name) => ({ name, remote: true })),
+    ];
+    await showNativeMenu(
+      names.length === 0
+        ? [{ label: t("sidebar.noOtherBranches"), disabled: true }]
+        : names.map(({ name, remote }) => {
+            const holder = data.worktrees.find((w) => w.branch === name && w.path !== checkout?.path);
+            const tag = holder ? "worktree" : remote ? t("sidebar.remoteBranchTag") : "";
+            return {
+              label: tag ? `${name}  ·  ${tag}` : name,
+              checked: checkout?.branch === name,
+              disabled: wtSwitchingBranch !== null,
+              onSelect: () => void handleSwitchProjectBranch(projectRoot, name, data),
+            };
+          }),
+      at,
+    );
+  }, [handleSwitchProjectBranch, selectedCwd, t, wtSwitchingBranch]);
+
+  const showNativeProjectMenu = useCallback(async (projectRoot: string, at: NativeMenuPoint): Promise<boolean> => {
+    setProjectMenu({ root: projectRoot });
+    setProjectMenuPos(null);
+    setProjectBranchMenu(null);
+    setProjectRevealError(null);
+    const shown = await showNativeMenu([
+      { label: `${t("sidebar.switchBranch")}…`, onSelect: () => void showNativeBranchMenu(projectRoot, at) },
+      ...(onOpenTerminal
+        ? [{ label: t("sidebar.openTerminalHere"), onSelect: () => onOpenTerminal(projectRoot) }]
+        : []),
+      { label: revealProjectLabel, onSelect: () => void revealProjectInFileManager(projectRoot) },
+      { kind: "separator" as const },
+      { label: t("sidebar.archiveProject"), onSelect: () => archiveProject(projectRoot) },
+    ], at);
+    setProjectMenu((current) => (current?.root === projectRoot ? null : current));
+    return shown;
+  }, [archiveProject, onOpenTerminal, revealProjectInFileManager, revealProjectLabel, showNativeBranchMenu, t]);
+
+  const openProjectMenu = useCallback((e: React.MouseEvent<HTMLButtonElement>, projectRoot: string) => {
+    e.stopPropagation();
+    if (canUseNativeMenu()) {
+      void showNativeProjectMenu(projectRoot, menuPointBelow(e.currentTarget));
+      return;
+    }
+    if (projectMenu?.root === projectRoot) {
+      setProjectMenu(null);
+      setProjectMenuPos(null);
+      setProjectBranchMenu(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 168;
+    const menuHeight = 42;
+    const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
+    const top = rect.bottom + menuHeight > window.innerHeight - 8
+      ? rect.top - menuHeight - 4
+      : rect.bottom + 4;
+    setProjectMenu({ root: projectRoot });
+    setProjectMenuPos({ top, left });
+    setProjectBranchMenu(null);
+    setProjectRevealError(null);
+  }, [projectMenu, showNativeProjectMenu]);
+
+  // Phase A: project tree — groups sessions by project root. Sorting is
+  const trimmedSessionQuery = sessionQuery.trim().toLowerCase();
+  // Runs of scheduled tasks live under Scheduled, not in the project tree: an
+  // hourly task would otherwise bury the sessions the user started themselves.
+  const treeSessions = allSessions.filter((session) => session.relation?.kind !== "scheduled");
+  const filteredSessions = trimmedSessionQuery
+    ? treeSessions.filter((session) =>
+        (session.name ?? "").toLowerCase().includes(trimmedSessionQuery)
+        || session.firstMessage.toLowerCase().includes(trimmedSessionQuery))
+    : treeSessions;
+  const sessionFamilies = listSessionFamilies(filteredSessions);
+  const allProjects = groupByProject(filteredSessions, { runningIds: runningSessionIds, unreadIds: unreadSessionIds });
+  const activeProjects = allProjects.filter((group) => !archivedProjectRoots.has(group.projectRoot));
+  useEffect(() => {
+    const projectRoots = activeProjects.map((group) => group.projectRoot);
+    onProjectsChange?.(projectRoots);
+  }, [activeProjects, onProjectsChange]);
   // Sessions of every worktree in the selected project are shown together
-  const selectedProject = projectFor(selectedCwd);
-
-  // Per-project activity counts (running / unread) for the workspace selector.
-  // Uses the same stable server key as the project list and filtering.
-  const projectActivity = useMemo(
-    () => getProjectActivity(allSessions, runningSessionIds, unreadSessionIds),
-    [allSessions, runningSessionIds, unreadSessionIds],
-  );
-
-  // Any activity in a project other than the one currently selected — shown as
-  // a dot on the (collapsed) selector button so it is visible without opening
-  // the dropdown.
-  const hasOtherWorkspaceActivity = useMemo(
-    () => [...projectActivity.entries()].some(
-      ([key, { running, unread }]) => key !== selectedProject?.key && (running > 0 || unread > 0),
-    ),
-    [projectActivity, selectedProject],
-  );
-
-  const filteredSessions = selectedProject
-    ? sessionsForProject(allSessions, selectedProject.key)
-    : allSessions;
+  const selectedProjectObject = projectFor(selectedCwd);
   const showWorktreeSwitcher = Boolean(
     worktreeState?.isGit
     && worktreeState.isTopLevel
     && selectedCwd
-    && selectedProject?.key === worktreeState.projectKey
+    && selectedProjectObject?.key === worktreeState.projectKey
   );
+  // Only show a guide row when worktrees are actually reachable (a git repo,
+  // just not checked out at its top level) — a non-git directory has no
+  // worktree feature to point at, so stay silent instead of showing an inert
+  // "not available" placeholder.
   const worktreeGuide = selectedCwd
     && worktreeState
-    && selectedProject?.key === worktreeState.projectKey
+    && selectedProjectObject?.key === worktreeState.projectKey
     && !showWorktreeSwitcher
-    ? (worktreeState.isGit
-        ? {
-             label: t("sidebar.openRepoRoot"),
-             title: t("sidebar.openRepoRootTitle"),
-          }
-        : {
-             label: t("sidebar.gitRepoRootOnly"),
-             title: t("sidebar.gitRepoRootOnlyTitle"),
-          })
+    && worktreeState.isGit
+    ? {
+        label: t("sidebar.openRepoRoot"),
+        title: t("sidebar.openRepoRootTitle"),
+        onClick: () => setSelectedCwd(worktreeState.projectRoot),
+      }
     : null;
   const worktreeLoading = Boolean(selectedCwd && worktreeLoadingCwd === selectedCwd);
   const inactiveWorktreeSelector = worktreeGuide
@@ -1073,333 +1188,227 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       ? {
            label: t("sidebar.worktrees"),
            title: t("sidebar.checkingWorktrees"),
+           onClick: undefined,
         }
       : null);
+  // The selected project and its branch are represented by the project tree
+  // below. Keep the old header rows mounted only as an implementation
+  // fallback, but do not show the duplicated directory/worktree summary.
+  const showLegacyHeaderProjectRows = false;
 
-  const sessionFamilies = listSessionFamilies(filteredSessions);
+  const renderProjectGroup = (group: ReturnType<typeof groupByProject>[number]) => {
+    const isCollapsed = !trimmedSessionQuery && collapsedProjects.has(group.projectRoot);
+    const isActive = group.projectRoot === projectRootFor(selectedCwd);
+    const runningCount = group.runningIds.size;
+    const unreadCount = group.unreadIds.size;
+    const groupTree = buildSessionTree(group.sessions);
+    const showSessionOverflow = groupTree.length > MAX_VISIBLE_PROJECT_SESSIONS;
+    const isSessionOverflowExpanded = Boolean(trimmedSessionQuery) || expandedProjectSessions.has(group.projectRoot);
+    let visibleGroupTree = isSessionOverflowExpanded
+      ? groupTree
+      : groupTree.slice(0, MAX_VISIBLE_PROJECT_SESSIONS);
+    // Keep the selected session reachable even when it is older than the
+    // collapsed preview window.
+    if (!isSessionOverflowExpanded && selectedSessionId) {
+      const selectedRoot = groupTree.find((node) => treeContainsSession(node, selectedSessionId));
+      if (selectedRoot && !visibleGroupTree.includes(selectedRoot)) {
+        visibleGroupTree = [...visibleGroupTree.slice(0, -1), selectedRoot];
+      }
+    }
+    const branchSubtitle = isActive && currentWt?.branch
+      ? currentWt.branch
+      : group.branches.length === 1
+        ? group.branches[0]
+        : group.branches.length > 1
+          ? `${group.branches[0]} +${group.branches.length - 1}`
+          : null;
+    const toggleCollapse = () => {
+      setCollapsedProjects((prev) => {
+        const next = new Set(prev);
+        if (next.has(group.projectRoot)) next.delete(group.projectRoot);
+        else next.add(group.projectRoot);
+        return next;
+      });
+      if (!isActive) setSelectedCwd(group.projectRoot);
+    };
 
-  const virtualIndices = getSessionListIndices(
-    sessionFamilies.length,
-    listScrollTop,
-    listViewportH,
-    sessionFamilies.findIndex((family) => family.root.id === focusedSessionId),
-  );
+    const isMenuOpen = projectMenu?.root === group.projectRoot;
+    const rowTitle = branchSubtitle ? `${group.projectRoot} · ${branchSubtitle}` : group.projectRoot;
 
-  return (
-    <div
-      ref={sessionPaneResizer.panelRef}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        overflow: "hidden",
-        "--sidebar-session-pane-height": `${sessionPaneResizer.width}px`,
-      } as CSSProperties}
-    >
-      {customPathOpen && (
-        <DirectoryPicker
-          initialPath={customPathValue}
-          busy={customPathValidating}
-          error={customPathError}
-          onCancel={() => {
-            setCustomPathOpen(false);
-            setCustomPathError(null);
-          }}
-          onSelect={(path) => void commitCustomPath(path)}
-        />
-      )}
-      {/* Header */}
-      <div
-        style={{
-          padding: "12px 10px 10px",
-          borderBottom: "1px solid var(--border)",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <PiWebTitle />
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              onClick={handleNewSession}
-              disabled={!selectedCwd}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-                color: selectedCwd ? "var(--text-muted)" : "var(--text-dim)",
-                cursor: selectedCwd ? "pointer" : "not-allowed",
-                height: 32,
-                paddingLeft: 10,
-                paddingRight: 12,
-                borderRadius: 7,
-                fontSize: 12,
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
-                flexShrink: 0,
-                transition: "background 0.12s, color 0.12s, border-color 0.12s",
-              }}
-             title={selectedCwd ? t("sidebar.newSessionTitle", { path: selectedCwd }) : t("sidebar.selectProject")}
-              onMouseEnter={(e) => {
-                if (!selectedCwd) return;
-                e.currentTarget.style.background = "var(--bg-selected)";
-                e.currentTarget.style.color = "var(--accent)";
-                e.currentTarget.style.borderColor = "rgba(37,99,235,0.35)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "var(--bg-hover)";
-                e.currentTarget.style.color = selectedCwd ? "var(--text-muted)" : "var(--text-dim)";
-                e.currentTarget.style.borderColor = "var(--border)";
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <line x1="6" y1="1" x2="6" y2="11" />
-                <line x1="1" y1="6" x2="11" y2="6" />
+    return (
+      <div key={group.projectRoot} className={`sidebar-project-tree-group${isCollapsed ? " is-collapsed" : ""}${isActive ? " is-active" : ""}`}>
+        <div className={`sidebar-project-tree-row${isMenuOpen ? " is-menu-open" : ""}`}>
+          <button
+            type="button"
+            className="sidebar-project-tree-row-main"
+            onClick={toggleCollapse}
+            aria-expanded={!isCollapsed}
+            title={rowTitle}
+          >
+            <span className="sidebar-project-tree-folder" aria-hidden="true">
+              {/* Closed folder vs. folder with its flap lifted; the closed one
+                  carries a faint fill so the pair reads as shut / open. */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                {isCollapsed ? (
+                  <path
+                    d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+                    fill="currentColor"
+                    fillOpacity="0.1"
+                  />
+                ) : (
+                  <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+                )}
               </svg>
-              {t("sidebar.new")}
+            </span>
+            <span className="sidebar-project-tree-name">{group.displayName}</span>
+            {/* A folded project hides its rows, so the count (and any running
+                or unread chips) must stay readable on the header itself. */}
+            {isCollapsed && (
+              <span className="sidebar-project-tree-count" title={t("sidebar.sessionCount", { count: groupTree.length })}>
+                ({groupTree.length})
+              </span>
+            )}
+            {isCollapsed && (
+              <span className="sidebar-project-tree-meta">
+                {runningCount > 0 && (
+                  <span className="sidebar-project-tree-chip is-running" title={t("sidebar.runningCount", { count: runningCount })}>
+                    {runningCount}
+                  </span>
+                )}
+                {unreadCount > 0 && (
+                  <span className="sidebar-project-tree-chip is-unread" title={t("sidebar.unreadCount", { count: unreadCount })}>
+                    {unreadCount}
+                  </span>
+                )}
+              </span>
+            )}
+          </button>
+          {/* Hover-only overlay at the row's trailing edge: it covers the tail of a
+              long name instead of reserving width the rest of the time. */}
+          <div className="sidebar-project-tree-row-actions" data-no-drag>
+            <button
+              type="button"
+              className="sidebar-project-tree-action"
+              onClick={() => handleNewSession(group.projectRoot)}
+              title={t("sidebar.newSessionTitle", { path: group.projectRoot })}
+              aria-label={t("sidebar.newSessionTitle", { path: group.projectRoot })}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
             </button>
             <button
               type="button"
-              onClick={() => {
-                setSessionSearchOpen((open) => !open);
-                setWtDropdownOpen(false);
-              }}
-              title={t("sidebar.toggleSessionSearch")}
-              aria-label={t("sidebar.toggleSessionSearch")}
-              aria-expanded={sessionSearchOpen}
-              aria-controls="session-search-input"
-              className={`flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-[7px] border border-border hover:bg-bg-selected focus-visible:outline-2 focus-visible:outline-accent ${sessionSearchOpen ? "bg-bg-selected text-accent" : "bg-bg-hover text-text-muted"}`}
+              className="sidebar-project-tree-action sidebar-project-tree-more"
+              onClick={(e) => openProjectMenu(e, group.projectRoot)}
+              title={t("sidebar.moreActions")}
+              aria-label={t("sidebar.moreActions")}
+              aria-expanded={isMenuOpen}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.6" />
+                <circle cx="12" cy="12" r="1.6" />
+                <circle cx="19" cy="12" r="1.6" />
               </svg>
             </button>
           </div>
         </div>
-
-        {/* CWD picker */}
-        <div ref={dropdownRef} style={{ position: "relative" }}>
-          <button
-            onClick={() => setDropdownOpen((v) => !v)}
-            title={selectedProject?.root ?? selectedCwd ?? ""}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              padding: "6px 10px",
-              background: selectedCwd ? "var(--bg-hover)" : "rgba(37,99,235,0.06)",
-              border: selectedCwd ? "1px solid var(--border)" : "1px solid rgba(37,99,235,0.4)",
-              borderRadius: 7,
-              cursor: "pointer",
-              fontSize: 12,
-              color: "var(--text)",
-              textAlign: "left",
-              transition: "border-color 0.15s, background 0.15s",
-            }}
-          >
-            {selectedCwd ? (
-              <PathLabel
-                text={displayCwd(selectedProject?.root ?? selectedCwd, homeDir)}
-                style={{
-                  flex: 1,
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  color: "var(--text)",
+        {!isCollapsed && (
+          <div className="sidebar-project-tree-children">
+            {visibleGroupTree.map((node) => {
+              const nodeFamily = sessionFamilies.find(
+                (family) => family.root.id === node.session.id,
+              );
+              return (
+              <SessionFamilyItem
+                key={node.session.id}
+                node={node}
+                familySessions={nodeFamily ? [nodeFamily.root, ...nodeFamily.subagents] : undefined}
+                selectedSessionId={selectedSessionId}
+                runningSessionIds={runningSessionIds}
+                unreadSessionIds={unreadSessionIds}
+                onSelectSession={handleSelectSessionFromList}
+                onRenamed={loadSessions}
+                onSessionDeleted={(id) => {
+                  onSessionDeleted?.(id);
+                  loadSessions();
                 }}
               />
-            ) : (
-              <span
-                style={{
-                  flex: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  color: "var(--text-dim)",
-                }}
-              >
-                 {initialSessionId && !restoredRef.current ? "" : t("sidebar.selectProject")}
-              </span>
-            )}
-            {hasOtherWorkspaceActivity && (
-              <span
-                title={t("sidebar.newActivity")}
-                aria-label={t("sidebar.newActivity")}
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  flexShrink: 0,
-                  marginLeft: 6,
-                  background: "var(--accent)",
-                }}
-              />
-            )}
-          </button>
-
-          <AnimatedDropdown
-            open={dropdownOpen}
-            style={{
-              position: "absolute",
-              top: "calc(100% + 4px)",
-              left: 0,
-              right: 0,
-              zIndex: 100,
-              background: "var(--bg)",
-              border: "1px solid var(--border)",
-              borderRadius: 8,
-              boxShadow: "0 6px 20px rgba(0,0,0,0.10)",
-              overflow: "hidden",
-            }}
-          >
-              {showProjectFilter && (
-                <div style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>
-                  <input
-                    value={projectFilter}
-                    onChange={(e) => setProjectFilter(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        setProjectFilter("");
-                        setDropdownOpen(false);
-                      }
-                    }}
-                     placeholder={t("sidebar.filterProjects")}
-                    autoFocus
-                    style={{
-                      width: "100%",
-                      fontSize: 11,
-                      fontFamily: "var(--font-mono)",
-                      padding: "5px 8px",
-                      border: "1px solid var(--border)",
-                      borderRadius: 5,
-                      outline: "none",
-                      background: "var(--bg)",
-                      color: "var(--text)",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-              )}
-              <div style={{ maxHeight: "min(50vh, 380px)", overflowY: "auto" }}>
-                {visibleProjects.map((project) => (
-                  <button
-                    key={project.key}
-                    onClick={() => {
-                      setSelectedCwd(project.root);
-                      setProjectFilter("");
-                      setCustomPathOpen(false);
-                      setCustomPathError(null);
-                      setDropdownOpen(false);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      width: "100%",
-                      padding: "8px 10px",
-                      background: "var(--bg)",
-                      border: "none",
-                      borderBottom: "1px solid var(--border)",
-                      color: project.key === selectedProject?.key ? "var(--text)" : "var(--text-muted)",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      fontSize: 11,
-                      fontFamily: "var(--font-mono)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={project.root}
-                  >
-                    {project.key === selectedProject?.key && (
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                        <polyline points="1.5 5 4 7.5 8.5 2.5" />
-                      </svg>
-                    )}
-                    {project.key !== selectedProject?.key && <span style={{ width: 10, flexShrink: 0 }} />}
-                    <PathLabel text={displayCwd(project.root, homeDir)} style={{ flex: 1 }} />
-                    {showProjectActivity(projectActivity.get(project.key), t)}
-                  </button>
-                ))}
-                {visibleProjects.length === 0 && projectFilter.trim() && (
-                   <div style={{ padding: "8px 10px", fontSize: 11, color: "var(--text-dim)" }}>{t("sidebar.noMatchingProjects")}</div>
-                )}
-              </div>
-
-              {/* Default cwd shortcut */}
-              {!customPathOpen && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDefaultCwd(); }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 7,
-                    width: "100%",
-                    padding: "8px 10px",
-                    background: "none",
-                    border: "none",
-                    borderTop: visibleProjects.length > 0 ? "1px solid var(--border)" : "none",
-                    color: "var(--text-muted)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    fontSize: 11,
-                  }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <path d="M1 3A1 1 0 0 1 2 2H4L5 3.5H8.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7A.5.5 0 0 1 1 8V3Z" />
-                  </svg>
-                   <span>{t("sidebar.useDefaultDirectory")}</span>
-                </button>
-              )}
-
-              {/* Custom path directory picker */}
+              );
+            })}
+            {showSessionOverflow && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCustomPathClick();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 7,
-                  width: "100%",
-                  padding: "8px 10px",
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  fontSize: 11,
-                }}
+                type="button"
+                className="sidebar-project-tree-show-more"
+                onClick={() => setExpandedProjectSessions((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(group.projectRoot)) next.delete(group.projectRoot);
+                  else next.add(group.projectRoot);
+                  return next;
+                })}
               >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" style={{ flexShrink: 0 }}>
-                  <line x1="5" y1="1" x2="5" y2="9" />
-                  <line x1="1" y1="5" x2="9" y2="5" />
-                </svg>
-                <span>{t("sidebar.customPath")}</span>
+                {isSessionOverflowExpanded ? t("sidebar.showLessSessions") : t("sidebar.showMoreSessions")}
               </button>
-          </AnimatedDropdown>
-        </div>
-
-        {sessionSearchOpen && (
-          <input
-            id="session-search-input"
-            type="search"
-            autoFocus
-            value={sessionSearchQuery}
-            maxLength={200}
-            aria-label={t("sidebar.searchSessions")}
-            placeholder={t("sidebar.searchSessions")}
-            onChange={(event) => setSessionSearchQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.stopPropagation();
-                setSessionSearchQuery("");
-              }
-            }}
-            className="mt-[6px] block h-[29px] w-full min-w-0 rounded-[7px] border border-border bg-bg px-[10px] text-xs text-text focus:outline-2 focus:outline-accent"
-          />
+            )}
+          </div>
         )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="session-sidebar" style={{ display: "flex", flexDirection: "column", flex: "1 1 0%", minHeight: 0, height: "100%", overflow: "hidden" }}>
+      {/* Header */}
+      <div
+        className={`session-sidebar-header${desktopPlatform === "macos" ? " session-sidebar-header--mac-inset" : ""}`}
+        data-tauri-drag-region={desktopPlatform ? true : undefined}
+        {...windowDrag}
+        style={{
+          padding: "12px 10px 10px",
+          borderBottom: "var(--hairline) solid var(--border)",
+          flexShrink: 0,
+        }}
+      >
+        {/* Window-chrome controls row: right-aligned (theme + collapse). On
+            macOS the native traffic lights share the row's 48px centre line. */}
+        {headerControls && (
+          <div className="sidebar-controls-row">
+            {headerControls}
+          </div>
+        )}
+
+        {/* Row 1: New Session — full-width flat row, Claude Desktop style */}
+        <button
+          className="sidebar-header-row sidebar-new-row"
+          onClick={() => handleNewSession()}
+          disabled={!selectedCwd}
+          title={selectedCwd ? `${t("sidebar.newSessionTitle", { path: selectedCwd })} (⌘/Ctrl+N)` : t("sidebar.selectProject")}
+        >
+          <span className="sidebar-new-plus" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="6" y1="1.5" x2="6" y2="10.5" />
+              <line x1="1.5" y1="6" x2="10.5" y2="6" />
+            </svg>
+          </span>
+          {t("sidebar.newChat")}
+        </button>
+
+        {onOpenScheduled && <ScheduledSidebarRow active={scheduledOpen} onOpen={onOpenScheduled} />}
+
+        {/* Row 2: current folder — flat row */}
+        <div className="sidebar-folder-row" data-no-drag style={{ display: showLegacyHeaderProjectRows ? "flex" : "none", alignItems: "center", gap: 2 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <ProjectPicker
+              recentProjects={recentProjects}
+              selectedCwd={selectedCwd}
+              selectedProject={selectedProjectObject?.root ?? null}
+              homeDir={homeDir}
+              onSelectCwd={activateProject}
+              variant="block"
+            />
+          </div>
+        </div>
 
         {/* Worktree switcher — shown only for git projects at a checkout top
             level (repo subdirs keep their own project identity, so switching
@@ -1408,7 +1417,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
             switching between worktrees of one project keeps the row mounted
             instead of flickering while data refetches: all worktrees of a
             project share the same list anyway. */}
-        {!sessionSearchOpen && showWorktreeSwitcher && (() => {
+        {showLegacyHeaderProjectRows && showWorktreeSwitcher && (() => {
           if (!worktreeState) return null;
           const showWtFilter = worktreeState.worktrees.length >= 8;
           const visibleWorktrees = showWtFilter && wtFilter.trim()
@@ -1416,37 +1425,27 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 (w.branch ?? displayCwd(w.path, homeDir)).toLowerCase().includes(wtFilter.trim().toLowerCase()))
             : worktreeState.worktrees;
           return (
-            <div ref={wtDropdownRef} style={{ position: "relative", marginTop: 6 }}>
+            <div ref={wtDropdownRef} data-no-drag style={{ position: "relative" }}>
               <button
-                onClick={() => setWtDropdownOpen((v) => !v)}
-                 title={currentWorktree ? t("sidebar.switchWorktreeTitle", { path: currentWorktree.path }) : t("sidebar.switchWorktree")}
-                style={{
-                  width: "100%",
-                  height: 29,
-                  boxSizing: "border-box",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "0 10px",
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 7,
-                  cursor: "pointer",
-                  fontSize: 11,
-                  lineHeight: 1.35,
-                  color: "var(--text-muted)",
-                  textAlign: "left",
+                className="sidebar-header-row"
+                onClick={() => {
+                  setWtDropdownOpen((v) => !v);
+                  // Opening should show the branch state as of now, not as of
+                  // the last poll — the branch may have been switched outside pi.
+                  if (!wtDropdownOpen) setWtRefreshKey((k) => k + 1);
                 }}
+                 title={currentWt ? t("sidebar.switchWorktreeTitle", { path: currentWt.path }) : t("sidebar.switchWorktree")}
+                style={{ background: wtDropdownOpen ? "var(--bg-hover)" : undefined }}
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: currentWorktree && !currentWorktree.isMain ? "var(--accent)" : "var(--text-dim)" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: currentWt && !currentWt.isMain ? "var(--accent)" : "var(--text-muted)" }}>
                   <line x1="6" y1="3" x2="6" y2="15" />
                   <circle cx="18" cy="6" r="3" />
                   <circle cx="6" cy="18" r="3" />
                   <path d="M18 9a9 9 0 0 1-9 9" />
                 </svg>
                 <PathLabel
-                  text={currentWorktree ? (currentWorktree.branch ?? displayCwd(currentWorktree.path, homeDir)) : "…"}
-                  style={{ flex: 1, fontFamily: "var(--font-mono)", color: "var(--text)" }}
+                  text={currentWt ? (currentWt.branch ?? displayCwd(currentWt.path, homeDir)) : "…"}
+                  style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text)" }}
                 />
                 {currentWorktree?.isMain && (
                    <span style={{ flexShrink: 0, color: "var(--text-dim)", fontSize: 10 }}>{t("sidebar.main")}</span>
@@ -1456,12 +1455,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                     {worktreeState.worktrees.length}
                   </span>
                 )}
-                <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="var(--text-dim)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <polyline points="2 3.5 5 6.5 8 3.5" />
                 </svg>
               </button>
 
               <AnimatedDropdown
+                className="native-popover"
                 open={wtDropdownOpen}
                 style={{
                   position: "absolute",
@@ -1470,19 +1470,19 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                   right: 0,
                   zIndex: 100,
                   background: "var(--bg)",
-                  border: "1px solid var(--border)",
+                  border: "var(--hairline) solid var(--border)",
                   borderRadius: 8,
                   boxShadow: "0 6px 20px rgba(0,0,0,0.10)",
                   overflow: "hidden",
                 }}
               >
                   {showWtFilter && (
-                    <div style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>
+                    <div style={{ padding: "6px 8px", borderBottom: "var(--hairline) solid var(--border)" }}>
                       <input
                         value={wtFilter}
                         onChange={(e) => setWtFilter(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === "Escape") {
+                          if (e.key === "Escape" && !isImeComposing(e)) {
                             setWtFilter("");
                             setWtDropdownOpen(false);
                           }
@@ -1494,7 +1494,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                           fontSize: 11,
                           fontFamily: "var(--font-mono)",
                           padding: "5px 8px",
-                          border: "1px solid var(--border)",
+                          border: "var(--hairline) solid var(--border)",
                           borderRadius: 5,
                           outline: "none",
                           background: "var(--bg)",
@@ -1506,23 +1506,24 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                   )}
                   <div style={{ maxHeight: "min(40vh, 300px)", overflowY: "auto" }}>
                     {visibleWorktrees.map((wt) => {
-                      const isCurrent = wt.path === currentWorktreePath;
-                      if (wtConfirmRemove === wt.path) {
+                      const isCurrent = wt.path === currentWorktreePath || (wt.isMain && !worktreeState.worktrees.some((w) => w.path === selectedCwd));
+                      if (wtConfirmRemove?.path === wt.path) {
+                        const isForce = wtConfirmRemove.force;
                         return (
-                          <div key={wt.path} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", borderBottom: "1px solid var(--border)", background: "rgba(239,68,68,0.06)" }}>
+                          <div key={wt.path} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", borderBottom: "var(--hairline) solid var(--border)", background: "color-mix(in srgb, var(--danger) 6%, transparent)" }}>
                             <span style={{ flex: 1, fontSize: 11, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {t("sidebar.forceRemoveCheckout")}
+                              {isForce ? t("sidebar.forceRemoveCheckout") : t("sidebar.confirmRemoveWorktree")}
                             </span>
                             <button
-                              onClick={() => void handleRemoveWorktree(wt.path, true)}
+                              onClick={() => void handleRemoveWorktree(wt.path, isForce)}
                               disabled={wtBusy}
-                              style={{ padding: "3px 9px", background: "#ef4444", border: "none", borderRadius: 5, color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+                              style={{ padding: "3px 9px", background: "var(--danger)", border: "none", borderRadius: 5, color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
                             >
-                              {t("sidebar.force")}
+                              {isForce ? t("sidebar.force") : t("i18n.remove")}
                             </button>
                             <button
                               onClick={() => setWtConfirmRemove(null)}
-                              style={{ padding: "3px 9px", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text-muted)", fontSize: 11, cursor: "pointer", flexShrink: 0 }}
+                              style={{ padding: "3px 9px", background: "var(--bg-hover)", border: "var(--hairline) solid var(--border)", borderRadius: 5, color: "var(--text-muted)", fontSize: 11, cursor: "pointer", flexShrink: 0 }}
                             >
                               {t("sidebar.cancel")}
                             </button>
@@ -1533,7 +1534,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                         <div
                           key={wt.path}
                           className="wt-row"
-                          style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)" }}
+                          style={{ display: "flex", alignItems: "center", borderBottom: "var(--hairline) solid var(--border)" }}
                         >
                           <button
                             onClick={() => {
@@ -1569,21 +1570,30 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                             <PathLabel text={wt.branch ?? displayCwd(wt.path, homeDir)} style={{ flex: 1 }} />
                             {wt.isMain && <span style={{ flexShrink: 0, color: "var(--text-dim)", fontSize: 10 }}>{t("sidebar.main")}</span>}
                           </button>
-                          {!wt.isMain && (
+                          {isTauriDesktop() && (
                             <button
-                              onClick={() => void handleRemoveWorktree(wt.path, false)}
-                              disabled={wtBusy}
-                               title={t("sidebar.removeWorktreeTitle", { path: wt.path })}
+                              type="button"
+                              onClick={() => { void revealItemInDirNative(wt.path); }}
+                              title={t("sidebar.revealWorktree")}
                               style={{
                                 display: "flex", alignItems: "center", justifyContent: "center",
-                                width: 34, height: 28, padding: 0, marginRight: 4,
+                                width: 28, height: 28, padding: 0, marginRight: 2,
                                 background: "none", border: "none",
                                 color: "var(--text-dim)", cursor: "pointer",
                                 borderRadius: 5, flexShrink: 0,
-                                transition: "color 0.12s, background 0.12s",
                               }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+                              </svg>
+                            </button>
+                          )}
+                          {!wt.isMain && (
+                            <button
+                              onClick={() => { setWtError(null); setWtConfirmRemove({ path: wt.path, force: false }); }}
+                              disabled={wtBusy}
+                               title={t("sidebar.removeWorktreeTitle", { path: wt.path })}
+                              className="worktree-remove-button"
                             >
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="3 6 5 6 21 6" />
@@ -1600,6 +1610,101 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                       <div style={{ padding: "8px 10px", fontSize: 11, color: "var(--text-dim)" }}>{t("sidebar.noMatchingWorktrees")}</div>
                     )}
                   </div>
+
+                  {/* Branches of the current checkout — switch in place without
+                      creating a worktree. Hidden while the new-worktree form is
+                      open so the dropdown stays focused on one task. */}
+                  {!wtNewOpen && (() => {
+                    const currentBranch = currentWt?.branch ?? null;
+                    const branchRows = [
+                      ...wtBranches.map((name) => ({ name, remote: false })),
+                      ...wtRemoteBranches.map((name) => ({ name, remote: true })),
+                    ];
+                    return (
+                      <div style={{ borderTop: "var(--hairline) solid var(--border)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 8px 3px" }}>
+                          <span style={{ flex: 1, fontSize: 10, fontWeight: 600, letterSpacing: "0.03em", color: "var(--text-dim)" }}>{t("sidebar.switchBranch")}</span>
+                          <button
+                            type="button"
+                            onClick={() => { void handleFetchBranches(); }}
+                            disabled={wtFetching}
+                            title={t("sidebar.fetchBranchesTitle")}
+                            style={{
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              width: 22, height: 20, padding: 0,
+                              background: "none", border: "none",
+                              color: wtFetching ? "var(--accent)" : "var(--text-dim)",
+                              cursor: "pointer", borderRadius: 4, flexShrink: 0,
+                            }}
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={wtFetching ? { animation: "spin 0.9s linear infinite" } : undefined}>
+                              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                              <polyline points="21 3 21 9 15 9" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div style={{ maxHeight: "min(28vh, 200px)", overflowY: "auto" }}>
+                          {wtBranchesLoaded && branchRows.length === 0 && (
+                            <div style={{ padding: "3px 10px 8px", fontSize: 11, color: "var(--text-dim)" }}>{t("sidebar.noOtherBranches")}</div>
+                          )}
+                          {branchRows.map(({ name, remote }) => {
+                            const isCurrent = name === currentBranch;
+                            const holder = worktreeState.worktrees.find((w) => w.branch === name && w.path !== selectedCwd);
+                            const switching = wtSwitchingBranch === name;
+                            return (
+                              <button
+                                key={name}
+                                onClick={() => { void handleSwitchBranch(name); }}
+                                disabled={wtSwitchingBranch !== null}
+                                title={
+                                  holder ? t("sidebar.branchInWorktreeTitle", { branch: name })
+                                    : remote ? t("sidebar.branchRemoteTitle")
+                                      : t("sidebar.switchBranchTitle", { branch: name })
+                                }
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 7,
+                                  width: "100%", padding: "6px 10px",
+                                  background: isCurrent ? "var(--bg-hover)" : "none",
+                                  border: "none",
+                                  color: isCurrent ? "var(--text)" : "var(--text-muted)",
+                                  cursor: "pointer", textAlign: "left",
+                                  fontSize: 11, fontFamily: "var(--font-mono)",
+                                  opacity: switching ? 0.55 : 1,
+                                }}
+                              >
+                                {isCurrent ? (
+                                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                    <polyline points="1.5 5 4 7.5 8.5 2.5" />
+                                  </svg>
+                                ) : (
+                                  <span style={{ width: 10, flexShrink: 0 }} />
+                                )}
+                                <PathLabel text={name} style={{ flex: 1 }} />
+                                {holder && (
+                                  <span title={holder.path} style={{ flexShrink: 0, display: "flex", alignItems: "center", color: "var(--text-dim)" }}>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <line x1="6" y1="3" x2="6" y2="15" />
+                                      <circle cx="18" cy="6" r="3" />
+                                      <circle cx="6" cy="18" r="3" />
+                                      <path d="M18 9a9 9 0 0 1-9 9" />
+                                    </svg>
+                                  </span>
+                                )}
+                                {remote && !holder && (
+                                  <span style={{ flexShrink: 0, color: "var(--text-dim)", fontSize: 10 }}>{t("sidebar.remoteBranchTag")}</span>
+                                )}
+                                {switching && (
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, animation: "spin 0.8s linear infinite" }}>
+                                    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {!wtNewOpen ? (
                     <button
@@ -1635,11 +1740,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                       <input
                         ref={wtNewInputRef}
                         value={wtNewBranch}
+                        list="pi-worktree-branches"
                         onChange={(e) => {
                           setWtNewBranch(e.target.value);
                           setWtError(null);
                         }}
                         onKeyDown={(e) => {
+                          if (isImeComposing(e)) return;
                           if (e.key === "Enter") {
                             e.preventDefault();
                             void handleCreateWorktree();
@@ -1656,7 +1763,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                           fontSize: 11,
                           fontFamily: "var(--font-mono)",
                           padding: "5px 8px",
-                          border: "1px solid var(--accent)",
+                          border: "var(--hairline) solid var(--accent)",
                           borderRadius: 5,
                           outline: "none",
                           background: "var(--bg)",
@@ -1664,6 +1771,35 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                           boxSizing: "border-box",
                         }}
                       />
+                      <datalist id="pi-worktree-branches">
+                        {wtBranches.map((branch) => (
+                          <option key={branch} value={branch} />
+                        ))}
+                      </datalist>
+                      {wtBranches.length > 0 && (
+                        <div style={{ marginTop: 5, maxHeight: 96, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+                          {wtBranches.slice(0, 8).map((branch) => (
+                            <button
+                              key={branch}
+                              type="button"
+                              onClick={() => setWtNewBranch(branch)}
+                              style={{
+                                textAlign: "left",
+                                padding: "3px 6px",
+                                border: "none",
+                                borderRadius: 4,
+                                background: branch === wtNewBranch ? "var(--bg-selected)" : "transparent",
+                                color: "var(--text-muted)",
+                                fontFamily: "var(--font-mono)",
+                                fontSize: 10,
+                                cursor: "pointer",
+                              }}
+                            >
+                              {branch}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div style={{ display: "flex", gap: 5, marginTop: 5 }}>
                         <button
                           onClick={() => void handleCreateWorktree()}
@@ -1689,7 +1825,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                             flex: 1,
                             padding: "4px 0",
                             background: "var(--bg-hover)",
-                            border: "1px solid var(--border)",
+                            border: "var(--hairline) solid var(--border)",
                             borderRadius: 5,
                             color: "var(--text-muted)",
                             fontSize: 11,
@@ -1716,289 +1852,365 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
             </div>
           );
         })()}
-        {!sessionSearchOpen && inactiveWorktreeSelector && (
+        {showLegacyHeaderProjectRows && inactiveWorktreeSelector && (
           <button
             type="button"
-            aria-disabled="true"
-            tabIndex={-1}
+            className="sidebar-header-row"
+            aria-disabled={inactiveWorktreeSelector.onClick ? undefined : "true"}
+            tabIndex={inactiveWorktreeSelector.onClick ? undefined : -1}
+            onClick={inactiveWorktreeSelector.onClick}
             title={inactiveWorktreeSelector.title}
-            style={{
-              width: "100%",
-              height: 29,
-              boxSizing: "border-box",
-              marginTop: 6,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "0 10px",
-              border: "1px solid var(--border)",
-              borderRadius: 7,
-              background: "var(--bg-hover)",
-              color: "var(--text-dim)",
-              fontSize: 11,
-              lineHeight: 1.35,
-              whiteSpace: "nowrap",
-              textAlign: "left",
-              cursor: "default",
-              opacity: 0.82,
-            }}
+            style={inactiveWorktreeSelector.onClick
+              ? { color: "var(--text-muted)" }
+              : { color: "var(--text-dim)", cursor: "default", opacity: 0.82 }}
           >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <line x1="6" y1="3" x2="6" y2="15" />
               <circle cx="18" cy="6" r="3" />
               <circle cx="6" cy="18" r="3" />
               <path d="M18 9a9 9 0 0 1-9 9" />
             </svg>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{inactiveWorktreeSelector.label}</span>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12 }}>{inactiveWorktreeSelector.label}</span>
           </button>
         )}
       </div>
-
-      {/* Session list */}
-      <div
-        ref={sessionPaneRef}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: explorerOpen && (selectedCwdProp || selectedCwd)
-            ? "0 1 var(--sidebar-session-pane-height, 320px)"
-            : "1 1 auto",
-          minHeight: SESSION_PANE_MIN_HEIGHT,
-          overflow: "hidden",
-        }}
-      >
-        <SessionSearch open={sessionSearchOpen} query={sessionSearchQuery} selectedSessionId={selectedSessionId} onSelectSession={handleSelectSessionFromList}>
-        <div
-          ref={listScrollRef}
-          onScroll={handleListScroll}
-          className="scrollbar-subtle"
-          style={{
-            flex: "1 1 auto",
-            minHeight: 0,
-            overflowY: "auto",
-            padding: "0",
+{/* Session search — keeps the original sidebar search styling and
+          narrows the project tree to matching titles / first messages. Enter is
+          the confirmation for the server-side content search across every
+          session; there is no mode button, so Escape (or the clear button) is
+          the way back to the title filter. */}
+      <div className="sidebar-search-wrap" data-no-drag>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sidebar-search-icon">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="search"
+          className="sidebar-search-input"
+          value={sessionQuery}
+          onChange={(e) => setSessionQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              // Committing an IME candidate must not fire the search.
+              if (isImeComposing(e) || !sessionQuery.trim()) return;
+              e.preventDefault();
+              setContentSearch(true);
+              return;
+            }
+            if (e.key === "Escape" && !isImeComposing(e)) {
+              e.stopPropagation();
+              // Content results first, then the query, then the field itself.
+              if (contentSearch) setContentSearch(false);
+              else if (sessionQuery) setSessionQuery("");
+              else e.currentTarget.blur();
+            }
           }}
-        >
-        {loading && (
-          <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>
-            {t("sidebar.loading")}
-          </div>
-        )}
-        {error && (
-          <div style={{ padding: "12px 14px", color: "#f87171", fontSize: 12 }}>
-            {error}
-          </div>
-        )}
-        {!loading && !error && sessionFamilies.length === 0 && (
-          <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>
-            {t("sidebar.noSessions")}
-          </div>
-        )}
-        {sessionFamilies.length > 0 && (
-          <div
-            style={{
-              position: "relative",
-              height: sessionFamilies.length * SESSION_LIST_ITEM_HEIGHT,
+          title={t("sidebar.searchAllHint")}
+          placeholder={t("sidebar.searchSessions")}
+          aria-label={t("sidebar.searchSessions")}
+        />
+        {sessionQuery && (
+          <button
+            type="button"
+            className="sidebar-search-clear"
+            onClick={() => {
+              setSessionQuery("");
+              setContentSearch(false);
             }}
+            title={t("sidebar.clearSearch")}
+            aria-label={t("sidebar.clearSearch")}
           >
-            {virtualIndices.map((index) => {
-              const family = sessionFamilies[index];
-              const familySessions = [family.root, ...family.subagents];
-              const displaySession = family.latestModified === family.root.modified
-                ? family.root
-                : { ...family.root, modified: family.latestModified };
-              // Bubble blur after the input's save handler before unpinning the row.
-              return (
-                <div
-                  key={family.root.id}
-                  onFocus={() => setFocusedSessionId(family.root.id)}
-                  onBlur={() => setFocusedSessionId(null)}
-                  style={{ position: "absolute", top: index * SESSION_LIST_ITEM_HEIGHT, left: 0, right: 0 }}
-                >
-                  <SessionItem
-                    session={displaySession}
-                    isSelected={familySessions.some((session) => session.id === selectedSessionId)}
-                    isRunning={familySessions.some((session) => runningSessionIds.has(session.id))}
-                    isUnread={familySessions.some((session) => unreadSessionIds.has(session.id))}
-                    onClick={() => handleSelectSessionFromList(family.root)}
-                    onRenamed={loadSessions}
-                    onDeleted={(id) => {
-                      onSessionDeleted?.(id);
-                      loadSessions();
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+              <line x1="2" y1="2" x2="8" y2="8" />
+              <line x1="8" y1="2" x2="2" y2="8" />
+            </svg>
+          </button>
         )}
+      </div>
+      {/* Project tree (Codex-style) — replaces the old CHATS/FILES tabs. Every
+          project is rendered as a flat row whose chats nest directly beneath.
+          Clicking a project header toggles collapse; the ⋯ menu offers sort
+          and collapse/expand-all; the + button opens the project picker to
+          add a new project. The FileExplorer has moved to the right panel. */}
+      {allProjects.length === 0 ? (
+        <div className="sidebar-project-tree-empty">
+          {loading
+            ? t("sidebar.loading")
+            : error
+              ? (
+                // A failed list load must not read as "no projects": that
+                // offers "Add project" as if the user's sessions were gone.
+                <div className="sidebar-empty-action" role="alert">
+                  <span className="sidebar-empty-text" title={error}>{t("sidebar.loadFailed")}</span>
+                  <button
+                    type="button"
+                    className="sidebar-empty-add"
+                    onClick={() => void loadSessions(true, true)}
+                  >
+                    <span>{t("common.retry")}</span>
+                  </button>
+                </div>
+              )
+            : trimmedSessionQuery
+              ? t("sidebar.noMatchingSessions")
+              : (
+                <div className="sidebar-empty-action">
+                  <span className="sidebar-empty-text">{t("sidebar.noProjects")}</span>
+                  <button
+                    type="button"
+                    className="sidebar-empty-add"
+                    onClick={() => void handleAddProject()}
+                    title={t("sidebar.addProject")}
+                    aria-label={t("sidebar.addProject")}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span>{t("sidebar.addProject")}</span>
+                  </button>
+                </div>
+              )}
+        </div>
+      ) : (
+        <SessionSearch
+          open={contentSearch}
+          query={sessionQuery}
+          selectedSessionId={selectedSessionId}
+          onSelectSession={handleSelectSessionFromList}
+        >
+        <div ref={listScrollRef} className="sidebar-project-tree" onScroll={handleListScroll}>
+          <div className="sidebar-project-tree-header">
+            <span className="sidebar-project-tree-title">{t("sidebar.projects")}</span>
+            <div className="sidebar-project-tree-tools">
+              <button
+                className="sidebar-project-tree-menu"
+                title={t("sidebar.moreActions")}
+                aria-label={t("sidebar.moreActions")}
+                onClick={() => {
+                  if (allProjects.some((g) => !collapsedProjects.has(g.projectRoot))) {
+                    setCollapsedProjects(new Set(allProjects.map((g) => g.projectRoot)));
+                  } else {
+                    setCollapsedProjects(new Set());
+                  }
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <circle cx="5" cy="12" r="1.6" />
+                  <circle cx="12" cy="12" r="1.6" />
+                  <circle cx="19" cy="12" r="1.6" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="sidebar-project-tree-add"
+                onClick={() => void handleAddProject()}
+                title={t("sidebar.addProject")}
+                aria-label={t("sidebar.addProject")}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          {activeProjects.map((group) => renderProjectGroup(group))}
         </div>
         </SessionSearch>
-      </div>
-
-      {explorerOpen && (selectedCwdProp || selectedCwd) && (
-        <div
-          className={`sidebar-section-resize-handle${sessionPaneResizer.isResizing ? " is-resizing" : ""}`}
-          data-resize-handle="sidebar-sections"
-          title={`${t("layout.resizeSidebarSections")}: ${t("layout.resizeHeightHint")}`}
-          style={{
-            position: "relative",
-            zIndex: 20,
-            width: "100%",
-            height: 12,
-            margin: "-6px 0",
-            flex: "0 0 12px",
-            cursor: "row-resize",
-            touchAction: "none",
-          }}
-          {...sessionPaneResizer.separatorProps}
-        />
       )}
-
-      {/* File Explorer section */}
-      {(selectedCwdProp || selectedCwd) && (
+      {projectMenu && projectMenuPos && createPortal(
         <div
-          ref={explorerSectionRef}
-          style={{
-            borderTop: "1px solid var(--border)",
-            display: "flex",
-            flexDirection: "column",
-            flex: explorerOpen ? "1 1 0" : "0 0 auto",
-            minHeight: explorerOpen ? EXPLORER_PANE_MIN_HEIGHT : 0,
-            overflow: "hidden",
-          }}
+          ref={projectMenuRef}
+          className="sidebar-project-context-menu native-popover"
+          style={{ top: projectMenuPos.top, left: projectMenuPos.left, maxHeight: "min(70vh, 420px)", overflowY: "auto" }}
+          role="menu"
         >
-          <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-            <button
-              onClick={() => setExplorerOpen((open) => {
-                const next = !open;
-                saveExplorerOpen(next);
-                return next;
-              })}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                flex: 1,
-                padding: "6px 10px",
-                background: "none",
-                border: "none",
-                color: "var(--text-muted)",
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                textAlign: "left",
-              }}
-            >
-              <svg
-                width="9" height="9" viewBox="0 0 10 10" fill="none"
-                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-                style={{ transform: explorerOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}
+          {!projectBranchMenu ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => void openProjectBranchMenu(projectMenu.root)}
               >
-                <polyline points="3 2 7 5 3 8" />
-              </svg>
-              {t("files.explorer")}
-            </button>
-            {onOpenTerminal && (
-              <ToolbarIconButton
-                onClick={() => onOpenTerminal(selectedCwd ?? selectedCwdProp!)}
-                title={t("terminal.open")}
-                color="var(--text-dim)"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
-                </svg>
-              </ToolbarIconButton>
-            )}
-            {explorerOpen && changesCount > 0 && (
-              <ToolbarIconButton
-                onClick={() => setChangesCollapsed((v) => !v)}
-                title={t("sidebar.changedFiles", { count: changesCount })}
-                ariaPressed={!changesCollapsed}
-                color={changesCollapsed ? "var(--text-dim)" : "var(--accent)"}
-                background={changesCollapsed ? "none" : "var(--bg-selected)"}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M3 12h6" />
-                  <path d="M15 12h6" />
-                </svg>
-              </ToolbarIconButton>
-            )}
-            {explorerOpen && (
-              <ToolbarIconButton
-                onClick={() => {
-                  setFileSearchOpen((open) => !open);
-                }}
-                title={t("sidebar.searchFiles")}
-                ariaPressed={fileSearchOpen}
-                color={fileSearchOpen ? "var(--accent)" : "var(--text-dim)"}
-                background={fileSearchOpen ? "var(--bg-selected)" : "none"}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" />
-                </svg>
-              </ToolbarIconButton>
-            )}
-            {explorerOpen && (
-              <ToolbarIconButton
-                onClick={() => fileExplorerRef.current?.openUploadPicker()}
-                disabled={explorerUploadBusy}
-                title={t("sidebar.uploadFilesTitle")}
-                color="var(--text-dim)"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <path d="m17 8-5-5-5 5" />
-                  <path d="M12 3v12" />
-                </svg>
-              </ToolbarIconButton>
-            )}
-            <ToolbarIconButton
-              onClick={() => {
-                if (onExplorerRefresh) onExplorerRefresh();
-                else setExplorerKey((k) => k + 1);
-                setExplorerRefreshDone(true);
-                if (explorerRefreshTimerRef.current) clearTimeout(explorerRefreshTimerRef.current);
-                explorerRefreshTimerRef.current = setTimeout(() => setExplorerRefreshDone(false), 2000);
-              }}
-              title={t("sidebar.refreshExplorer")}
-              skipHover={explorerRefreshDone}
-              color={explorerRefreshDone ? "#4ade80" : "var(--text-dim)"}
-              background={explorerRefreshDone ? "rgba(74,222,128,0.18)" : "none"}
-              marginRight={6}
-            >
-              {explorerRefreshDone ? (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              ) : (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                </svg>
+                {t("sidebar.switchBranch")}
+              </button>
+              {onOpenTerminal && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    const cwd = projectMenu.root;
+                    setProjectMenu(null);
+                    onOpenTerminal(cwd);
+                  }}
+                >
+                  {t("sidebar.openTerminalHere")}
+                </button>
               )}
-            </ToolbarIconButton>
-          </div>
-          {explorerOpen && (
-            <div ref={explorerScrollRef} className="scrollbar-subtle" style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-              <FileExplorer
-                ref={fileExplorerRef}
-                cwd={selectedCwd ?? selectedCwdProp!}
-                onOpenFile={onOpenFile ?? (() => {})}
-                refreshKey={explorerKey}
-                onAtMention={onAtMention}
-                onAtMentions={onAtMentions}
-                onUploadBusyChange={setExplorerUploadBusy}
-                changesCollapsed={changesCollapsed}
-                onChangesCountChange={setChangesCount}
-                fileSearchOpen={fileSearchOpen}
-                onFileSearchOpenChange={setFileSearchOpen}
-              />
-            </div>
+              {(isTauriDesktop() || fileManagerAvailability?.supported) && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => void revealProjectInFileManager(projectMenu.root)}
+                >
+                  {revealProjectLabel}
+                </button>
+              )}
+              {projectRevealError && (
+                <div className="sidebar-project-context-menu-hint" role="alert">{projectRevealError}</div>
+              )}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => archiveProject(projectMenu.root)}
+              >
+                {t("sidebar.archiveProject")}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="sidebar-project-context-menu-back"
+                onClick={() => setProjectBranchMenu(null)}
+              >
+                <span aria-hidden="true">‹</span> {t("sidebar.moreActions")}
+              </button>
+              <div className="sidebar-project-context-menu-heading">{t("sidebar.switchBranch")}</div>
+              {projectBranchLoading && projectBranchMenu.root === projectMenu.root && (
+                <div className="sidebar-project-context-menu-hint">…</div>
+              )}
+              {projectBranchMenu.loaded && projectBranchMenu.root === projectMenu.root && (
+                <>
+                  {[...projectBranchMenu.branches.map((name) => ({ name, remote: false })),
+                    ...projectBranchMenu.remoteBranches.map((name) => ({ name, remote: true }))]
+                    .map(({ name, remote }) => {
+                      const checkout = projectBranchMenu.worktrees.find((w) => w.path === selectedCwd)
+                        ?? projectBranchMenu.worktrees.find((w) => w.isMain);
+                      const isCurrent = checkout?.branch === name;
+                      const holder = projectBranchMenu.worktrees.find((w) => w.branch === name && w.path !== checkout?.path);
+                      const switching = wtSwitchingBranch === name;
+                      return (
+                        <button
+                          key={`${remote ? "remote:" : "local:"}${name}`}
+                          type="button"
+                          role="menuitem"
+                          disabled={wtSwitchingBranch !== null}
+                          onClick={() => void handleSwitchProjectBranch(projectMenu.root, name)}
+                          title={holder
+                            ? t("sidebar.branchInWorktreeTitle", { branch: name })
+                            : remote
+                              ? t("sidebar.branchRemoteTitle")
+                              : t("sidebar.switchBranchTitle", { branch: name })}
+                        >
+                          <span className="sidebar-project-context-menu-branch-mark" aria-hidden="true">
+                            {isCurrent ? "✓" : ""}
+                          </span>
+                          <span>{name}</span>
+                          {holder && <span className="sidebar-project-context-menu-branch-tag">worktree</span>}
+                          {remote && !holder && <span className="sidebar-project-context-menu-branch-tag">{t("sidebar.remoteBranchTag")}</span>}
+                          {switching && <span className="sidebar-project-context-menu-branch-spinner" aria-hidden="true">↻</span>}
+                        </button>
+                      );
+                    })}
+                  {projectBranchMenu.branches.length === 0 && projectBranchMenu.remoteBranches.length === 0 && (
+                    <div className="sidebar-project-context-menu-hint">{t("sidebar.noOtherBranches")}</div>
+                  )}
+                </>
+              )}
+            </>
           )}
+        </div>,
+        document.body,
+      )}
+      {projectPickerOpen && (
+        <div className="project-picker-modal-overlay" role="dialog" aria-modal="true" onClick={() => setProjectPickerOpen(false)}>
+          <div className="project-picker-modal-shell" onClick={(e) => e.stopPropagation()}>
+            <ProjectPicker
+              recentProjects={recentProjects}
+              selectedCwd={selectedCwdProp ?? null}
+              selectedProject={selectedProjectObject?.root ?? null}
+              homeDir={homeDir}
+              onSelectCwd={(cwd) => {
+                activateProject(cwd);
+                setProjectPickerOpen(false);
+              }}
+              variant="block"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SessionFamilyItem({
+  node,
+  depth = 0,
+  selectedSessionId,
+  runningSessionIds,
+  unreadSessionIds,
+  onSelectSession,
+  onRenamed,
+  onSessionDeleted,
+  familySessions,
+}: {
+  node: SessionTreeNode;
+  familySessions?: SessionInfo[];
+  depth?: number;
+  selectedSessionId: string | null;
+  runningSessionIds: Set<string>;
+  unreadSessionIds: Set<string>;
+  onSelectSession: (s: SessionInfo) => void;
+  onRenamed?: () => void;
+  onSessionDeleted?: (id: string) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const hasChildren = node.children.length > 0;
+
+  return (
+    <div
+      className="session-tree-item"
+      data-session-depth={depth}
+      aria-level={depth + 1}
+      style={depth > 0 ? { marginLeft: depth * 14 } : undefined}
+    >
+      <div style={{ position: "relative" }}>
+        <SessionItem
+          session={node.session}
+          isSubagentChild={Boolean(node.session.relation?.kind === "subagent")}
+          isSelected={familySessions
+            ? familySessions.some((session) => session.id === selectedSessionId)
+            : node.session.id === selectedSessionId}
+          isRunning={familySessions
+            ? familySessions.some((session) => runningSessionIds.has(session.id))
+            : runningSessionIds.has(node.session.id)}
+          isUnread={unreadSessionIds.has(node.session.id)}
+          onClick={() => onSelectSession(node.session)}
+          onRenamed={onRenamed}
+          onDeleted={(id) => onSessionDeleted?.(id)}
+          hasChildren={hasChildren}
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((v) => !v)}
+        />
+      </div>
+      {hasChildren && !collapsed && (
+        <div>
+          {node.children.map((child) => (
+            <SessionFamilyItem
+              key={child.session.id}
+              node={child}
+              depth={depth + 1}
+              selectedSessionId={selectedSessionId}
+              runningSessionIds={runningSessionIds}
+              unreadSessionIds={unreadSessionIds}
+              onSelectSession={onSelectSession}
+              onRenamed={onRenamed}
+              onSessionDeleted={onSessionDeleted}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -2076,6 +2288,7 @@ function UnreadSessionIndicator() {
  * when the project has no activity. Counts share the accent / unread colors of
  * the per-session indicators so the two stay visually consistent.
  */
+/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 function showProjectActivity(
   activity: { running: number; unread: number } | undefined,
   t: (key: string) => string,
@@ -2120,10 +2333,10 @@ function SessionItem({
   onClick,
   onRenamed,
   onDeleted,
-  depth = 0,
   hasChildren = false,
   collapsed = false,
   onToggleCollapse,
+  isSubagentChild = false,
 }: {
   session: SessionInfo;
   isSelected: boolean;
@@ -2132,18 +2345,28 @@ function SessionItem({
   onClick: () => void;
   onRenamed?: () => void;
   onDeleted?: (id: string) => void;
-  depth?: number;
   hasChildren?: boolean;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  isSubagentChild?: boolean;
 }) {
   const { locale, t } = useI18n();
   const [hovered, setHovered] = useState(false);
+  // Coarse pointers have no hover: the "…" action menu must be permanently
+  // visible there, otherwise rename/delete are unreachable on touch.
+  const [touchMode, setTouchMode] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Downstream hook (extensions/desktop) may claim the row's context menu;
+  // when it handles the event the built-in menu never opens.
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Select the whole name once the rename input is mounted (startRename's
   // immediate setTimeout can fire before the input exists).
@@ -2154,18 +2377,26 @@ function SessionItem({
     }
   }, [renaming]);
 
+  useEffect(() => {
+    setTouchMode(window.matchMedia?.("(hover: none)").matches ?? false);
+  }, []);
+
   // A stored first message may be an SDK-expanded <skill> block; collapse it
   // back to the compact /skill:name args command the user typed before using
   // it as the auto-name fallback, mirroring MessageView's rendering.
   const displayFirstMessage = skillExpansionToCommand(session.firstMessage) ?? session.firstMessage;
   const title = session.name || displayFirstMessage.slice(0, 50) || session.id.slice(0, 12);
 
-  const startRename = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const startRename = useCallback(() => {
     if (session.transient) return;
-    setRenameValue(session.name || displayFirstMessage.slice(0, 50) || session.id.slice(0, 12));
+    setRenameValue(session.name ?? "");
     setRenaming(true);
-  }, [session.name, session.transient, displayFirstMessage, session.id]);
+  }, [session.name, session.transient]);
+
+  const reportActionError = useCallback((message: string) => {
+    setActionError(message);
+    window.setTimeout(() => setActionError((current) => current === message ? null : current), 3500);
+  }, []);
 
   const commitRename = useCallback(async () => {
     const name = renameValue.trim();
@@ -2176,47 +2407,62 @@ function SessionItem({
     // a skill-invoked session stays a no-op instead of persisting raw XML.)
     if (renameValue === title || name === (session.name ?? "")) return;
     try {
-      await fetch(`/api/sessions/${encodeURIComponent(session.id)}`, {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(session.id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? `HTTP ${res.status}`);
+      }
       onRenamed?.();
-    } catch {
-      // ignore
+    } catch (e) {
+      reportActionError(t("sidebar.renameFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
-  }, [renameValue, session.id, session.name, onRenamed, title]);
+  }, [renameValue, session.id, session.name, onRenamed, reportActionError, t, title]);
 
   const performDelete = useCallback(async () => {
     if (session.transient) return;
     setConfirmDelete(false);
     setDeleting(true);
     try {
-      await fetch(`/api/sessions/${encodeURIComponent(session.id)}`, { method: "DELETE" });
+      const res = await fetch(`/api/sessions/${encodeURIComponent(session.id)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? `HTTP ${res.status}`);
+      }
       onDeleted?.(session.id);
-    } catch {
+    } catch (e) {
       setDeleting(false);
+      reportActionError(t("sidebar.deleteFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
-  }, [session.id, session.transient, onDeleted]);
+  }, [session.id, session.transient, onDeleted, reportActionError, t]);
 
-  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (e.shiftKey) {
-      void performDelete();
-    } else {
-      setConfirmDelete(true);
-    }
-  }, [performDelete]);
-
-  const handleDeleteConfirm = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    void performDelete();
-  }, [performDelete]);
-
-  const handleDeleteCancel = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setConfirmDelete(false);
-  }, []);
+  // "…" menu: fixed-position portal so the sidebar's overflow/backdrop-filter can't clip it
+  const MENU_WIDTH = 190;
+  // Desktop shell: the same actions as the DOM menu below, as a native popup.
+  // `menuOpen` stays true while it is up so the trailing "…" button does not
+  // swap back to the timestamp; `menuPos` stays null, so no DOM menu renders.
+  const showNativeSessionMenu = useCallback(async (at: NativeMenuPoint): Promise<boolean> => {
+    if (session.transient || !canUseNativeMenu()) return false;
+    setMenuOpen(true);
+    const shown = await showNativeMenu([
+      { label: t("sidebar.rename"), onSelect: startRename },
+      { label: t("sidebar.delete"), onSelect: () => setConfirmDelete(true) },
+      { kind: "separator" },
+      {
+        label: `${formatRelativeTime(session.modified, locale)} · ${t("sidebar.messagesCount", { count: session.messageCount })}`,
+        disabled: true,
+      },
+      ...((session.compactionCount ?? 0) > 0
+        ? [{ label: t("sidebar.compactionCount", { count: session.compactionCount ?? 0 }), disabled: true }]
+        : []),
+      ...(session.worktreeBranch ? [{ label: session.worktreeBranch, disabled: true }] : []),
+    ], at);
+    setMenuOpen(false);
+    return shown;
+  }, [locale, session.compactionCount, session.messageCount, session.modified, session.transient, session.worktreeBranch, startRename, t]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const handled = dispatchSessionRowContextMenu({
@@ -2228,30 +2474,101 @@ function SessionItem({
       clientY: e.clientY,
       refresh: () => { onRenamed?.(); },
     });
-    if (!handled) return;
-    e.preventDefault();
+    if (handled) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    // Replace the webview's own context menu (Reload / Inspect) with the row's actions.
+    if (isTauriDesktop() && !session.transient) {
+      // Suppresses the webview menu (Reload / Inspect); the row actions open
+      // natively only while native popups are on, otherwise via the "…" button.
+      e.preventDefault();
+      e.stopPropagation();
+      void showNativeSessionMenu({ x: e.clientX, y: e.clientY });
+    }
+  }, [onRenamed, session.cwd, session.id, session.name, session.path, session.transient, showNativeSessionMenu]);
+
+  const toggleMenu = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-  }, [onRenamed, session.cwd, session.id, session.name, session.path]);
+    if (menuOpen) { setMenuOpen(false); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const openDomMenu = () => {
+      const estHeight = 124;
+      const left = Math.max(8, Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8));
+      let top = rect.bottom + 4;
+      if (top + estHeight > window.innerHeight - 8) top = rect.top - estHeight - 4;
+      setMenuPos({ top, left });
+      setMenuOpen(true);
+    };
+    if (canUseNativeMenu()) {
+      void showNativeSessionMenu(menuPointBelow(e.currentTarget)).then((shown) => {
+        if (!shown) openDomMenu();
+      });
+      return;
+    }
+    openDomMenu();
+  }, [menuOpen, showNativeSessionMenu]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (ev: MouseEvent) => {
+      const target = ev.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (menuButtonRef.current?.contains(target)) return;
+      setMenuOpen(false);
+    };
+    const onKeyDown = (ev: KeyboardEvent) => { if (ev.key === "Escape" && !isImeComposing(ev)) setMenuOpen(false); };
+    const onScrollOrResize = () => setMenuOpen(false);
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [menuOpen]);
+
+  const handleDeleteConfirm = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    void performDelete();
+  }, [performDelete]);
+
+  const handleDeleteCancel = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmDelete(false);
+  }, []);
+
 
   // Fixed-height outer wrapper — content swaps in place so the list never reflows
   return (
     <div
+      className={`session-item${isSelected ? " is-selected" : ""}${isRunning ? " is-running" : ""}${isUnread ? " is-unread" : ""}`}
       onClick={confirmDelete || renaming ? undefined : onClick}
       onContextMenu={confirmDelete || renaming ? undefined : handleContextMenu}
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => {
+        setHovered(true);
+        if (!isRunning && !isSelected) prefetchSessionData(session.id);
+      }}
+      onPointerDown={() => {
+        if (!isRunning && !isSelected) prefetchSessionData(session.id);
+      }}
       onMouseLeave={() => { setHovered(false); }}
       style={{
         height: SESSION_LIST_ITEM_HEIGHT,
         display: "flex",
         alignItems: "center",
-        paddingLeft: depth > 0 ? depth * 12 + 14 : 14,
+        paddingLeft: 11,
         paddingRight: 8,
         cursor: confirmDelete || renaming ? "default" : "pointer",
         background: confirmDelete
-          ? "rgba(239,68,68,0.06)"
-          : isSelected ? "var(--bg-selected)" : hovered ? "var(--bg-hover)" : "transparent",
+          ? "color-mix(in srgb, var(--danger) 6%, transparent)"
+          : isSelected ? "var(--bg-selected)" : (hovered || menuOpen) ? "var(--bg-hover)" : "transparent",
         borderLeft: confirmDelete
-          ? "2px solid #ef4444"
+          ? "2px solid var(--danger)"
           : isSelected ? "2px solid var(--accent)" : "2px solid transparent",
         transition: "background 0.1s",
         opacity: deleting ? 0.5 : 1,
@@ -2270,8 +2587,8 @@ function SessionItem({
               onClick={handleDeleteConfirm}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                height: 30, padding: "0 11px",
-                background: "#ef4444", border: "none",
+                height: 26, padding: "0 9px",
+                background: "var(--danger)", border: "none",
                 borderRadius: 6, color: "#fff",
                 cursor: "pointer", fontSize: 12, fontWeight: 600,
                 whiteSpace: "nowrap",
@@ -2289,8 +2606,8 @@ function SessionItem({
               onClick={handleDeleteCancel}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
-                height: 30, padding: "0 11px",
-                background: "var(--bg)", border: "1px solid var(--border)",
+                height: 26, padding: "0 9px",
+                background: "var(--bg)", border: "var(--hairline) solid var(--border)",
                 borderRadius: 6, color: "var(--text-muted)",
                 cursor: "pointer", fontSize: 12, fontWeight: 500,
                 whiteSpace: "nowrap",
@@ -2308,6 +2625,7 @@ function SessionItem({
           onChange={(e) => setRenameValue(e.target.value)}
           onBlur={commitRename}
           onKeyDown={(e) => {
+            if (isImeComposing(e)) return;
             if (e.key === "Enter") commitRename();
             if (e.key === "Escape") setRenaming(false);
           }}
@@ -2315,70 +2633,52 @@ function SessionItem({
           style={{
             flex: 1,
             fontSize: 12,
-            padding: "5px 8px",
-            border: "1px solid var(--accent)",
+            padding: "3px 8px",
+            border: "var(--hairline) solid var(--accent)",
             borderRadius: 5,
             outline: "none",
             background: "var(--bg)",
             color: "var(--text)",
-            height: 30,
+            height: 26,
           }}
         />
       ) : (
-        /* ── Normal view ── */
+        /* ── Normal view: single line — leading icon + title + "…" menu ── */
         <>
-          {/* Subagent indicator for child sessions */}
-          {depth > 0 && (
+          {/* Leading icon: running / unread, falling back to the standard
+              chat-bubble glyph for every session. Subagent child rows carry
+              the robot glyph instead of the chat bubble. */}
+          {isRunning ? (
+            <RunningSessionIndicator />
+          ) : isUnread ? (
+            <UnreadSessionIndicator />
+          ) : isSubagentChild ? (
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <rect x="5" y="7" width="14" height="11" rx="2" />
               <path d="M9 11h.01M15 11h.01M9 15h6M12 7V4M10 4h4" />
             </svg>
+          ) : (
+            <svg className="session-item-glyph" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            </svg>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                minWidth: 0,
-                fontSize: 12,
-                fontWeight: isSelected ? 500 : 400,
-                lineHeight: 1.4,
-                color: "var(--text)",
-              }}
-              title={title}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
-                {title}
-              </span>
-            </div>
-            <div style={{ marginTop: 2, display: "flex", alignItems: "center", gap: 8, color: "var(--text-dim)", fontSize: 11, minWidth: 0 }}>
-              {isRunning ? (
-                <RunningSessionIndicator />
-              ) : isUnread ? (
-                <UnreadSessionIndicator />
-              ) : (
-                <span title={session.modified}>{formatRelativeTime(session.modified, locale)}</span>
-              )}
-              <span>
-                {session.detailsPending ? "…" : t("sidebar.messagesCount", { count: session.messageCount })}
-              </span>
-              {session.isWorktree && session.branch && (
-                <span
-                  title={`Worktree: ${session.cwd}`}
-                  style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--accent)", minWidth: 0, overflow: "hidden" }}
-                >
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <line x1="6" y1="3" x2="6" y2="15" />
-                    <circle cx="18" cy="6" r="3" />
-                    <circle cx="6" cy="18" r="3" />
-                    <path d="M18 9a9 9 0 0 1-9 9" />
-                  </svg>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session.branch}</span>
-                </span>
-              )}
-            </div>
-          </div>
+          <span
+            className="session-item-title"
+            title={title}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              fontSize: 13,
+              fontWeight: 400,
+              lineHeight: 1.4,
+              color: "var(--text)",
+            }}
+          >
+            {title}
+          </span>
 
           {/* Collapse toggle — always visible when has children */}
           {hasChildren && (
@@ -2400,65 +2700,146 @@ function SessionItem({
             </button>
           )}
 
-          {/* Action buttons — shown on hover */}
-          {hovered && !session.transient && (
-            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          {/* Trailing slot: the row's last-activity time at rest, swapped in
+              place for the "…" action button on hover (always the button on
+              touch devices, which have no hover, and while its menu is open,
+              since the pointer then sits on the portal). Transient runtime
+              rows expose no disk-backed actions and have no reliable time.
+              The slot keeps one fixed width so the title never reflows. */}
+          {!session.transient && (
+            <div
+              className="session-item-trailing"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "flex-end",
+                width: 28, height: 24, flexShrink: 0,
+              }}
+            >
+              {hovered || touchMode || menuOpen ? (
+                <button
+                  ref={menuButtonRef}
+                  onClick={toggleMenu}
+                  title={t("sidebar.moreActions")}
+                  aria-label={t("sidebar.moreActions")}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  className={`session-item-more${menuOpen ? " is-open" : ""}`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="5" cy="12" r="1.7" />
+                    <circle cx="12" cy="12" r="1.7" />
+                    <circle cx="19" cy="12" r="1.7" />
+                  </svg>
+                </button>
+              ) : (
+                <span
+                  className="session-item-time"
+                  title={formatRelativeTime(session.modified, locale)}
+                  style={{
+                    fontSize: 11, lineHeight: 1, color: "var(--text-dim)",
+                    whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums",
+                    paddingRight: 2,
+                  }}
+                >
+                  {formatCompactRelativeTime(session.modified, locale)}
+                </span>
+              )}
+            </div>
+          )}
+
+          {menuOpen && menuPos && createPortal(
+            <div
+              ref={menuRef}
+              className="native-popover session-item-menu"
+              role="menu"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "fixed", top: menuPos.top, left: menuPos.left,
+                width: MENU_WIDTH, zIndex: 800, padding: 5,
+                display: "flex", flexDirection: "column", gap: 1,
+              }}
+            >
               <button
-                onClick={startRename}
-                title={t("sidebar.rename")}
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); startRename(); }}
                 style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 32, height: 32, padding: 0,
-                  background: "var(--bg-hover)", border: "1px solid var(--border)",
-                  borderRadius: 7, color: "var(--text-muted)",
-                  cursor: "pointer", flexShrink: 0,
-                  transition: "background 0.12s, color 0.12s, border-color 0.12s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--bg-selected)";
-                  e.currentTarget.style.color = "var(--accent)";
-                  e.currentTarget.style.borderColor = "rgba(37,99,235,0.35)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--bg-hover)";
-                  e.currentTarget.style.color = "var(--text-muted)";
-                  e.currentTarget.style.borderColor = "var(--border)";
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", height: 30, padding: "0 8px",
+                  background: "transparent", border: 0, borderRadius: 7,
+                  color: "var(--text)", cursor: "pointer",
+                  fontSize: 13, textAlign: "left",
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                 </svg>
+                {t("sidebar.rename")}
               </button>
               <button
-                onClick={handleDeleteClick}
+                role="menuitem"
+                className="is-danger"
                 title={t("sidebar.deleteWithShiftClick")}
+                onClick={(e) => {
+                  setMenuOpen(false);
+                  if (e.shiftKey) void performDelete();
+                  else setConfirmDelete(true);
+                }}
                 style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 32, height: 32, padding: 0,
-                  background: "var(--bg-hover)", border: "1px solid var(--border)",
-                  borderRadius: 7, color: "var(--text-muted)",
-                  cursor: "pointer", flexShrink: 0,
-                  transition: "background 0.12s, color 0.12s, border-color 0.12s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(239,68,68,0.08)";
-                  e.currentTarget.style.color = "#ef4444";
-                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.35)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--bg-hover)";
-                  e.currentTarget.style.color = "var(--text-muted)";
-                  e.currentTarget.style.borderColor = "var(--border)";
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", height: 30, padding: "0 8px",
+                  background: "transparent", border: 0, borderRadius: 7,
+                  color: "var(--danger)", cursor: "pointer",
+                  fontSize: 13, textAlign: "left",
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                   <path d="M10 11v6M14 11v6" />
                   <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                 </svg>
+                {t("sidebar.delete")}
               </button>
-            </div>
+              <div style={{ height: 1, margin: "4px 3px", background: "var(--border)" }} />
+              <div style={{ padding: "3px 8px 5px", color: "var(--text-dim)", fontSize: 11, lineHeight: 1.6 }}>
+                <div title={session.created}>
+                  {formatRelativeTime(session.modified, locale)} · {t("sidebar.messagesCount", { count: session.messageCount })}
+                </div>
+                {(session.compactionCount ?? 0) > 0 && (
+                  <div>{t("sidebar.compactionCount", { count: session.compactionCount ?? 0 })}</div>
+                )}
+                {session.worktreeBranch && (
+                  <div title={`Worktree: ${session.cwd}`} style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--accent)", minWidth: 0 }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <line x1="6" y1="3" x2="6" y2="15" />
+                      <circle cx="18" cy="6" r="3" />
+                      <circle cx="6" cy="18" r="3" />
+                      <path d="M18 9a9 9 0 0 1-9 9" />
+                    </svg>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session.worktreeBranch}</span>
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body,
+          )}
+
+          {actionError && createPortal(
+            <div
+              role="alert"
+              style={{
+                position: "fixed", bottom: 26, left: "50%", transform: "translateX(-50%)",
+                zIndex: 1000, maxWidth: "80vw",
+                background: "color-mix(in srgb, var(--bg-panel) 94%, #000)",
+                color: "var(--danger)",
+                border: "var(--hairline) solid color-mix(in srgb, var(--danger) 35%, transparent)",
+                padding: "8px 14px", borderRadius: 8, fontSize: 12,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {actionError}
+            </div>,
+            document.body,
           )}
         </>
       )}
