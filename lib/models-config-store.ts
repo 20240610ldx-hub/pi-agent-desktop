@@ -87,9 +87,9 @@ export function readModelsConfig(
     const content = readFileSync(modelsPath, "utf8").replace(/^\uFEFF/, "");
     if (!content.trim()) return { providers: {} };
     parsed = JSON.parse(stripJsonComments(content));
-  } catch (error) {
+  } catch {
     throw new ModelsConfigReadError(
-      `Failed to read ${modelsPath}: ${error instanceof Error ? error.message : String(error)}`,
+      `Failed to read ${modelsPath}: invalid JSON or unreadable file. The original file was preserved.`,
     );
   }
   if (!isRecord(parsed)) {

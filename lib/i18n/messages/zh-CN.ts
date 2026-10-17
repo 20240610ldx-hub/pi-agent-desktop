@@ -1391,6 +1391,7 @@ export const zhCNLocale: LocalePlugin = {
     "models.thinkingSummary": "思考等级：{count}",
     "models.apiOverride": "API 覆盖",
     "models.headers": "Headers",
+    "models.headerSaved": "已安全保存，输入新值可替换",
     "models.headersHelp": "仅添加到该模型的请求中，并覆盖 Provider 的同名 Header。",
     "models.compatibility": "兼容性",
     "models.deepSeekThinkingCompat": "DeepSeek 思考兼容",

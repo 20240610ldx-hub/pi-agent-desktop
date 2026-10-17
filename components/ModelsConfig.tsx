@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useId, useRef } from "react";
 import { useI18n } from "@/hooks/useI18n";
 import type { ModelCatalogPreset, ModelCatalogRecommendation } from "@/lib/model-catalog";
 import type { DiscoveredModel } from "@/lib/model-discovery";
+import { isModelHeaderReference } from "@/lib/model-header-references";
 import {
   getLastSettingsSelection,
   setLastSettingsSelection,
@@ -768,6 +769,7 @@ function HeaderListEditor({ headers, onChange }: {
   headers: Record<string, string> | undefined;
   onChange: (h: Record<string, string> | undefined) => void;
 }) {
+  const { t } = useI18n();
   const [rows, setRows] = useState<HeaderRow[]>(() => Object.entries(headers ?? {}).map(
     ([name, value], id) => ({ id, name, value }),
   ));
@@ -799,8 +801,10 @@ function HeaderListEditor({ headers, onChange }: {
         <div key={row.id} style={{ display: "flex", gap: 6 }}>
           <input value={row.name} onChange={(e) => setEntry(row.id, { name: e.target.value })}
             placeholder="Header-Name" style={{ ...inputStyle, fontFamily: "var(--font-mono)", flex: 1 }} />
-          <input value={row.value} onChange={(e) => setEntry(row.id, { value: e.target.value })}
-            placeholder="value" style={{ ...inputStyle, fontFamily: "var(--font-mono)", flex: 1 }} />
+          <SecretTextInput value={isModelHeaderReference(row.value) ? "" : row.value}
+            onChange={(value) => setEntry(row.id, { value })}
+            placeholder={isModelHeaderReference(row.value) ? t("models.headerSaved") : "value"}
+            mono autoComplete="off" spellCheck={false} style={{ flex: 1, minWidth: 0 }} />
           <button onClick={() => removeEntry(row.id)} style={rowBtnStyle}>✕</button>
         </div>
       ))}

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { resolveModelDiscoveryAuth } from "@/lib/model-discovery-auth";
 import { buildModelsListUrl, nextModelsPageUrl, parseDiscoveredModels } from "@/lib/model-discovery";
+import { hasJsonContentType, isApiRequestAllowed } from "@/lib/request-security";
+import { createModelRequestRedactor, modelConfigSecretValues } from "@/lib/model-request-redaction";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +34,16 @@ function buildHeaders(api: string, apiKey: string | undefined, configured: Recor
 }
 
 export async function POST(req: Request) {
+  if (!isApiRequestAllowed(req)) return NextResponse.json({ error: "Untrusted API request" }, { status: 403 });
+  if (!hasJsonContentType(req)) return NextResponse.json({ error: "Content-Type must be application/json" }, { status: 415 });
+  let redact: (text: string) => string = () => "Provider discovery failed. Check provider settings.";
   try {
     const body = await req.json() as { providerName?: unknown; provider?: unknown };
     const providerName = typeof body.providerName === "string" ? body.providerName.trim() : "";
     if (!providerName) return NextResponse.json({ error: "providerName is required" }, { status: 400 });
     if (!isRecord(body.provider)) return NextResponse.json({ error: "provider is required" }, { status: 400 });
+    const draftSecrets = modelConfigSecretValues({ providers: { [providerName]: body.provider } });
+    redact = createModelRequestRedactor(draftSecrets);
 
     const configuredBaseUrl = typeof body.provider.baseUrl === "string" ? body.provider.baseUrl.trim() : "";
     const configuredApi = typeof body.provider.api === "string" && body.provider.api ? body.provider.api : "";
@@ -50,6 +57,7 @@ export async function POST(req: Request) {
       if (!configuredBaseUrl) return NextResponse.json({ error: "Base URL is required" }, { status: 400 });
       throw error;
     }
+    redact = createModelRequestRedactor([...draftSecrets, auth.apiKey, ...Object.values(auth.headers)]);
     if (typeof body.provider.apiKey === "string" && body.provider.apiKey.trim() && !auth.apiKey) {
       return NextResponse.json({ error: `No API key found for "${providerName}"` }, { status: 400 });
     }
@@ -80,7 +88,7 @@ export async function POST(req: Request) {
       const responseText = await response.text();
       if (!response.ok) {
         return NextResponse.json({
-          error: responseText.slice(0, 500) || `Upstream returned HTTP ${response.status}`,
+          error: redact(responseText).slice(0, 500) || `Upstream returned HTTP ${response.status}`,
           status: response.status,
         }, { status: 502 });
       }
@@ -105,6 +113,6 @@ export async function POST(req: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = error instanceof DOMException && error.name === "TimeoutError" ? 504 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: redact(message) }, { status });
   }
 }

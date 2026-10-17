@@ -6,6 +6,7 @@ import type { Credential, CredentialStore } from "@earendil-works/pi-ai";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { createPilaudeCredentialStore } from "./credential-store";
 import { createPilaudeModelRuntime } from "./pilaude-model-runtime";
+import { resolveModelHeaderValues } from "./model-header-secrets";
 
 type ProviderDraft = Record<string, unknown> & {
   apiKey?: string;
@@ -19,6 +20,7 @@ export async function withTransientModelRuntime<T>(
   config: { providers: Record<string, ProviderDraft> },
   run: (runtime: ModelRuntime) => Promise<T>,
 ): Promise<T> {
+  config = await resolveModelHeaderValues(config) as typeof config;
   const sanitized = structuredClone(config);
   for (const provider of Object.values(sanitized.providers)) {
     delete provider.apiKey;

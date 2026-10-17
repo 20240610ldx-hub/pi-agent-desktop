@@ -1391,6 +1391,7 @@ export const enLocale: LocalePlugin = {
     "models.thinkingSummary": "Thinking levels: {count}",
     "models.apiOverride": "API override",
     "models.headers": "Headers",
+    "models.headerSaved": "Saved securely — enter to replace",
     "models.headersHelp": "Added to this model's requests and overrides provider headers.",
     "models.compatibility": "Compatibility",
     "models.deepSeekThinkingCompat": "DeepSeek thinking compatibility",

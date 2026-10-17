@@ -1,3 +1,5 @@
+import { isModelHeaderReference, legacyModelHeaderReference, mapModelHeaderValues } from "./model-header-references";
+
 /**
  * Redaction and merge helpers for ~/.pi/agent/models.json access.
  *
@@ -13,7 +15,8 @@ export function isSecretReference(value: unknown): boolean {
 
 /** Drop literal apiKey values from a models.json payload; keep !/$ references. */
 export function redactModelsJson(data: Record<string, unknown>): Record<string, unknown> {
-  const providers = (data.providers ?? {}) as Record<string, Record<string, unknown>>;
+  const safe = mapModelHeaderValues(data, (value, path) => !value || isModelHeaderReference(value) ? value : legacyModelHeaderReference(path));
+  const providers = (safe.providers ?? {}) as Record<string, Record<string, unknown>>;
   const redactedProviders: Record<string, Record<string, unknown>> = {};
   for (const [name, provider] of Object.entries(providers)) {
     const copy = { ...provider };
@@ -22,7 +25,7 @@ export function redactModelsJson(data: Record<string, unknown>): Record<string, 
     }
     redactedProviders[name] = copy;
   }
-  return { ...data, providers: redactedProviders };
+  return { ...safe, providers: redactedProviders };
 }
 
 /**

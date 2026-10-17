@@ -2,6 +2,7 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { createPilaudeCredentialStore, type EncryptedCredentialStore } from "./credential-store";
 import { isSecretReference } from "./models-config-redaction";
 import { writeModelsConfig } from "./models-config-store";
+import { saveModelHeaderValues } from "./model-header-secrets";
 
 /** Literal keys belong to DPAPI; env/command references remain configuration. */
 export async function savePilaudeModelSettings(
@@ -22,6 +23,8 @@ export async function savePilaudeModelSettings(
     keys.set(name, provider.apiKey.trim());
     delete provider.apiKey;
   }
-  if (keys.size) await credentials.saveApiKeys(keys, () => write(sanitized));
-  else write(sanitized);
+  await saveModelHeaderValues(sanitized, async config => {
+    if (keys.size) await credentials.saveApiKeys(keys, () => write(config));
+    else await write(config);
+  });
 }

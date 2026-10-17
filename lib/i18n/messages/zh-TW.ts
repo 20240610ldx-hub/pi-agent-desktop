@@ -1338,6 +1338,7 @@ export const zhTWLocale: LocalePlugin = {
     "models.thinkingSummary": "思考等級：{count}",
     "models.apiOverride": "API 覆寫",
     "models.headers": "Headers",
+    "models.headerSaved": "已安全儲存，輸入新值可取代",
     "models.headersHelp": "加入此模型的請求，並覆寫 Provider 的同名 Header。",
     "models.compatibility": "相容性",
     "models.deepSeekThinkingCompat": "DeepSeek 思考相容性",

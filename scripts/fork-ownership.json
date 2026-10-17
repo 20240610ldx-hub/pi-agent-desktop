@@ -53,8 +53,8 @@
       "reason": "Pilaude mounts its app-owned data import section beside the existing desktop update section. Preserve this mount and existing settings behavior when merging upstream."
     },
     "components/ModelsConfig.tsx": {
-      "risk": "medium", "drift": 173, "structuralDrift": 114, "disposition": "accepted",
-      "reason": "Encrypted custom-provider credentials are stored rather than models-json credentials, so managed providers must be filtered from the generic account list to avoid duplicate rows."
+      "risk": "medium", "drift": 181, "structuralDrift": 120, "disposition": "accepted",
+      "reason": "Encrypted custom-provider credentials stay outside models.json and the generic account list. Saved request headers render empty masked inputs with opaque references; upstream changes must preserve both account membership and secret editing semantics."
     },
     "components/DirectoryPicker.tsx": {
       "risk": "low", "drift": 36, "structuralDrift": 18, "disposition": "accepted",
@@ -89,23 +89,35 @@
       "reason": "Saving a default model must use the same encrypted credential runtime as the model list so DPAPI-backed providers remain available to the selector star."
     },
     "app/api/models-config/route.ts": {
-      "risk": "low", "drift": 19, "structuralDrift": 19, "disposition": "accepted",
-      "reason": "Saving custom provider settings moves literal API keys into DPAPI credentials and writes sanitized models.json under the paired credential writer lock."
+      "risk": "low", "drift": 29, "structuralDrift": 29, "disposition": "accepted",
+      "reason": "Saving custom providers moves literal keys and all nonempty request headers to DPAPI stores, checks request origin and publishes sanitized models.json under paired writer locks. Errors must not reflect secret input."
     },
     "app/api/models-config/test/route.ts": {
-      "risk": "medium", "drift": 100, "structuralDrift": 98, "disposition": "accepted",
-      "reason": "The model test callback uses the transient Pilaude runtime; its temporary configuration omits API keys and headers while the SDK resolves in-memory draft authentication."
+      "risk": "medium", "drift": 107, "structuralDrift": 105, "disposition": "accepted",
+      "reason": "Model probes use transient Pilaude authentication without secret temporary files. Resolved keys and headers must be redacted from both diagnostic responses and errors before truncation."
+    },
+    "app/api/models-config/discover/route.ts": {
+      "risk": "medium", "drift": 56, "structuralDrift": 56, "disposition": "accepted",
+      "reason": "Discovery validates origin and JSON before network access, resolves encrypted request headers and redacts upstream failures with the actual request credentials. Upstream changes must retain these boundaries."
+    },
+    "lib/models-config-store.ts": {
+      "risk": "low", "drift": 4, "structuralDrift": 4, "disposition": "accepted",
+      "reason": "Invalid model configuration errors preserve the source file and omit parser excerpts, which can contain literal request credentials from older configuration."
+    },
+    "lib/models-config-redaction.ts": {
+      "risk": "low", "drift": 7, "structuralDrift": 7, "disposition": "accepted",
+      "reason": "This post-baseline upstream helper now replaces request headers with scoped legacy or encrypted references before API responses. Preserve literal API key masking and hidden-header round trips together. Drift is measured against origin/main because the file did not exist at the pi-web baseline."
     },
     "lib/i18n/messages/en.ts": {
-      "risk": "high", "drift": 526, "structuralDrift": 526, "disposition": "accepted",
+      "risk": "high", "drift": 527, "structuralDrift": 527, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "lib/i18n/messages/zh-CN.ts": {
-      "risk": "high", "drift": 530, "structuralDrift": 530, "disposition": "accepted",
+      "risk": "high", "drift": 531, "structuralDrift": 531, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "lib/i18n/messages/zh-TW.ts": {
-      "risk": "high", "drift": 520, "structuralDrift": 520, "disposition": "accepted",
+      "risk": "high", "drift": 521, "structuralDrift": 521, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "components/SessionSidebar.tsx": {
@@ -278,6 +290,11 @@
     }
   },
   "forkOwnedPaths": [
+    "lib/model-header-references.ts",
+    "lib/model-header-secrets.ts",
+    "lib/model-header-secrets.test.mjs",
+    "lib/model-request-redaction.ts",
+    "app/api/models-config/discover/route.test.mjs",
     "lib/ui-platform.ts",
     "lib/ui-platform.test.mjs",
     "lib/encrypted-mcp-auth.ts",
@@ -333,6 +350,7 @@
     "reduce": "Drift that can be removed without losing anything \u2014 desktop-only code that belongs in components/desktop/, or fork additions sitting in an upstream file that can move to a fork-owned one. Act on these."
   },
   "decisionLog": [
+    "2026-10-17 — Pilaude request headers: accept the masked editor, encrypted configuration references, origin checks and error redaction as merge review points. Refresh ModelsConfig, probe routes and locales against 6fcd7d4; record the post-baseline redaction helper against origin/main. Keep existing risk thresholds and CSS ownership unchanged.",
     "2026-07-26 \u2014 lib/api-types.ts: fork update types moved to lib/app-update-types.ts; file now matches upstream and left the manifest.",
     "2026-07-26 \u2014 components/AppShell.tsx: desktop window chrome moved to components/desktop/ (-53 structural). The remaining 376 lines are the top-bar redesign; accepted.",
     "2026-07-26 \u2014 TabBar, FileExplorer, useTheme, FileViewer: assessed as generic improvements with zero desktop coupling. Upstreaming was declined, so accepted rather than reverted \u2014 reverting would delete working features to save CI review time.",

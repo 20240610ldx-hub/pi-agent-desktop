@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { completeSimple, type AssistantMessage } from "@earendil-works/pi-ai/compat";
 import { withTransientModelRuntime } from "@/lib/transient-model-runtime";
 import { hasJsonContentType, isApiRequestAllowed } from "@/lib/request-security";
+import { createModelRequestRedactor, modelConfigSecretValues } from "@/lib/model-request-redaction";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +34,15 @@ export async function POST(req: Request) {
     );
   }
 
+  let redact: (text: string) => string = () => "Provider test failed. Check provider settings.";
   try {
     const body = await req.json() as { providerName?: unknown; provider?: unknown; model?: unknown };
     const providerName = typeof body.providerName === "string" ? body.providerName.trim() : "";
     if (!providerName) return NextResponse.json({ ok: false, error: "providerName is required" }, { status: 400 });
     if (!isRecord(body.provider)) return NextResponse.json({ ok: false, error: "provider is required" }, { status: 400 });
     if (!isRecord(body.model)) return NextResponse.json({ ok: false, error: "model is required" }, { status: 400 });
+    const draftSecrets = modelConfigSecretValues({ providers: { [providerName]: { ...body.provider, models: [body.model] } } });
+    redact = createModelRequestRedactor(draftSecrets);
 
     const modelId = typeof body.model.id === "string" ? body.model.id.trim() : "";
     if (!modelId) return NextResponse.json({ ok: false, error: "Model ID is required" }, { status: 400 });
@@ -52,7 +56,7 @@ export async function POST(req: Request) {
       },
     }, async (modelRuntime) => {
       const loadError = modelRuntime.getError();
-      if (loadError) return NextResponse.json({ ok: false, error: loadError });
+      if (loadError) return NextResponse.json({ ok: false, error: redact(loadError) });
 
       const model = modelRuntime.getModel(providerName, modelId);
       if (!model) return NextResponse.json({ ok: false, error: `Model not found: ${providerName}/${modelId}` });
@@ -61,6 +65,7 @@ export async function POST(req: Request) {
       if (!resolved?.auth.apiKey) {
         return NextResponse.json({ ok: false, error: `No API key found for "${providerName}"` });
       }
+      redact = createModelRequestRedactor([...draftSecrets, resolved.auth.apiKey, ...Object.values(resolved.auth.headers ?? {})]);
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TEST_TIMEOUT_MS);
@@ -89,7 +94,7 @@ export async function POST(req: Request) {
         if (message.stopReason === "error" || message.stopReason === "aborted") {
           return NextResponse.json({
             ok: false,
-            error: message.errorMessage ?? (controller.signal.aborted ? "Test timed out" : "Model returned an error"),
+            error: redact(message.errorMessage ?? (controller.signal.aborted ? "Test timed out" : "Model returned an error")),
             latencyMs,
             status,
           });
@@ -99,13 +104,13 @@ export async function POST(req: Request) {
           ok: true,
           latencyMs,
           status,
-          responseText: getAssistantText(message).slice(0, 300),
+          responseText: redact(getAssistantText(message)).slice(0, 300),
         });
       } finally {
         clearTimeout(timeout);
       }
     });
   } catch (error) {
-    return NextResponse.json({ ok: false, error: errorMessage(error) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: redact(errorMessage(error)) }, { status: 500 });
   }
 }

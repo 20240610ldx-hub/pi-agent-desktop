@@ -85,8 +85,11 @@ export class EncryptedCredentialStore implements CredentialStore {
     catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return new Map(); throw error; }
     if (raw === "{}") return new Map();
     if (this.decoded?.raw !== raw) {
-      const envelope = JSON.parse(raw) as { format?: string; ciphertext?: string };
-      if (envelope.format !== FORMAT || typeof envelope.ciphertext !== "string") throw new Error("Invalid Pilaude credential store. The original file was preserved.");
+      let envelope: { format?: string; ciphertext?: string };
+      try {
+        envelope = JSON.parse(raw);
+        if (envelope.format !== FORMAT || typeof envelope.ciphertext !== "string") throw new Error();
+      } catch { throw new Error("Invalid Pilaude credential store. The original file was preserved."); }
       const data = this.cipher.unprotect(envelope.ciphertext, signal).then(parseCredentials);
       this.decoded = { raw, data };
       data.catch(() => { if (this.decoded?.data === data) this.decoded = undefined; });
@@ -96,7 +99,7 @@ export class EncryptedCredentialStore implements CredentialStore {
     return data;
   }
 
-  private async update<T>(fn: (data: Map<string, Credential>) => Promise<{ result: T; changed: boolean; commit?: () => void }>, options?: AuthOperationOptions): Promise<T> {
+  private async update<T>(fn: (data: Map<string, Credential>) => Promise<{ result: T; changed: boolean; commit?: () => void | Promise<void> }>, options?: AuthOperationOptions): Promise<T> {
     const signal = options?.signal;
     signal?.throwIfAborted();
     await mkdir(dirname(this.file), { recursive: true, mode: 0o700 });
@@ -125,7 +128,7 @@ export class EncryptedCredentialStore implements CredentialStore {
         signal?.throwIfAborted(); if (compromised) throw compromised;
         await rename(temporary, this.file);
       }
-      try { commit?.(); }
+      try { await commit?.(); }
       catch (error) {
         if (changed) {
           // Keep the credential lock while rolling back a paired config write.
@@ -172,7 +175,7 @@ export class EncryptedCredentialStore implements CredentialStore {
   }
 
   /** Publish secret changes and a sanitized models.json save under one writer lock. */
-  saveApiKeys(keys: ReadonlyMap<string, string>, commit: () => void): Promise<void> {
+  saveApiKeys(keys: ReadonlyMap<string, string>, commit: () => void | Promise<void>): Promise<void> {
     return this.update(async (data) => {
       const before = JSON.stringify(Object.fromEntries(data));
       for (const [providerId, key] of keys) {

@@ -52,3 +52,21 @@ test("a commented models.json loads with its providers", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { providers: { acme: { models: [{ id: "a" }] } } });
 });
+
+test("untrusted saves cannot replace model configuration", async () => {
+  const previous = await readFile(modelsPath, "utf8");
+  const request = new Request("http://localhost/api/models-config", {
+    method: "PUT", headers: { Host: "localhost", Origin: "https://untrusted.example", "Content-Type": "application/json" },
+    body: JSON.stringify({ providers: {} }),
+  });
+  assert.equal((await PUT(request)).status, 403);
+  assert.equal(await readFile(modelsPath, "utf8"), previous);
+});
+
+test("a broken config error never returns the rejected secret text", async () => {
+  await writeFile(modelsPath, "header-leak-flag");
+  const response = await GET();
+  assert.equal(response.status, 422);
+  assert.equal((await response.text()).includes("header-leak-flag"), false);
+  assert.equal(await readFile(modelsPath, "utf8"), "header-leak-flag");
+});
