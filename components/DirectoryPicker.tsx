@@ -156,6 +156,7 @@ export function DirectoryPicker({ onCancel, onSelect, initialPath, busy = false,
 
   const handlePathSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (busy || loading) return;
     const candidate = pathInput.trim();
     if (candidate) void navigateTo(candidate);
   };
@@ -188,7 +189,7 @@ export function DirectoryPicker({ onCancel, onSelect, initialPath, busy = false,
   };
 
   const hasUncommittedPath = pathInput.trim() !== currentPath;
-  const canSelect = Boolean(currentPath) && !hasUncommittedPath && !busy;
+  const canSelect = Boolean(currentPath) && !hasUncommittedPath && !busy && !loading;
   const canCreate = canSelect && !loading;
   const canNavigateUp = Boolean(parentDirectory) || isWindowsDriveRoot(currentPath);
 
@@ -239,6 +240,7 @@ export function DirectoryPicker({ onCancel, onSelect, initialPath, busy = false,
             id="directory-path"
             type="text"
             value={pathInput}
+            disabled={busy || loading}
             placeholder="/path/to/project or ~/project"
             autoFocus
             autoComplete="off"
@@ -252,7 +254,7 @@ export function DirectoryPicker({ onCancel, onSelect, initialPath, busy = false,
           <button
             className="directory-picker-action"
             type="submit"
-            disabled={loading || !pathInput.trim()}
+            disabled={busy || loading || !pathInput.trim()}
             title={t("directoryPicker.goToDirectory")}
             style={{ minWidth: 58, height: 36, padding: "0 12px", border: "var(--hairline) solid var(--border)", borderRadius: 6, background: "var(--bg-hover)", color: "var(--text-muted)", cursor: loading || !pathInput.trim() ? "default" : "pointer", opacity: loading || !pathInput.trim() ? 0.6 : 1 }}
           >

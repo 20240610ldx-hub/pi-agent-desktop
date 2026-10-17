@@ -1,20 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_Mono } from "next/font/google";
 import { PwaRegistration } from "@/components/PwaRegistration";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 import "./settings.css";
+import "../vendor/open-claude-ui/cds-theme.css";
 // Fork-local restyle layer — must come after the upstream stylesheets so its
 // equal-specificity rules win the cascade. See app/native-theme.css.
 import "./native-theme.css";
 import { PRODUCT_NAME } from "@/lib/branding";
-
-const notoSansMono = Noto_Sans_Mono({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-noto-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: PRODUCT_NAME,
@@ -64,7 +58,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" translate="no" className={`${notoSansMono.variable} notranslate`} suppressHydrationWarning>
+    <html lang="en" translate="no" className="notranslate" suppressHydrationWarning>
       <head>
         <meta name="google" content="notranslate" />
         {/* Optional user stylesheet: <agentDir>/desktop/custom.css served by

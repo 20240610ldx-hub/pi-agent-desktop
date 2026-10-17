@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
-  "upstreamBaseline": "main@6fcd7d4 (v0.10.0)",
+  "upstreamBaseline": "6fcd7d4",
+  "upstreamBaselineDescription": "pi-web main@6fcd7d4 (v0.10.0)",
   "note": "Single source of truth for the pi-web merge boundary. `driftedUpstreamFiles` lists files agegr/pi-web owns that this fork has also edited \u2014 every one is a potential merge conflict, and a potential SILENT semantic conflict when git merges cleanly but the two sides changed different things. The automated sync (.github/workflows/component-updates.yml) intersects each incoming upstream release with this map to decide whether it may push to main unattended. Human-facing rationale lives in docs/ownership-boundaries.md.",
   "ignored": [
     "package-lock.json",
@@ -45,10 +46,10 @@
       "disposition": "accepted"
     },
     "components/FileExplorer.tsx": {
-      "risk": "low",
-      "drift": 19,
+      "risk": "medium",
+      "drift": 35,
       "reason": "Took upstream FileExplorer wholesale in the v0.8.11 merge (its file-search implementation won); only the selectedFilePath prop remains fork-side. Kept deliberately.",
-      "structuralDrift": 19,
+      "structuralDrift": 35,
       "disposition": "accepted"
     },
     "components/TabBar.tsx": {
@@ -193,6 +194,12 @@
     }
   },
   "forkOwnedPaths": [
+    "vendor/open-claude-ui/",
+    "components/PilaudeWelcome.tsx",
+    "components/PilaudeWelcome.test.mjs",
+    "lib/cds-scroll.ts",
+    "lib/cds-scroll.test.mjs",
+    "e2e/pilaude-ui.mjs",
     "src-tauri/",
     "desktop/",
     "scripts/",

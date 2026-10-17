@@ -702,10 +702,11 @@ test("keeps live following cancellable when the user scrolls away from the tail"
   assert.match(scrollToBottomSource, /container\.scrollTo\(\{ top: container\.scrollHeight, behavior \}\);\s*previousScrollTopRef\.current = container\.scrollTop;/);
   assert.doesNotMatch(scrollToBottomSource, /scrollIntoView/);
   assert.match(streamUpdateSource, /liveFollowFrameRef\.current === null/);
-  assert.match(streamUpdateSource, /requestAnimationFrame\(\(\) => \{[\s\S]*?liveFollowFrameRef\.current = null;[\s\S]*?if \(isNearBottomRef\.current\) scrollToBottom\("auto"\)/);
+  assert.match(streamUpdateSource, /requestAnimationFrame\(\(\) => \{[\s\S]*?liveFollowFrameRef\.current = null;[\s\S]*?if \(isNearBottomRef\.current && canFollowStream\(lastUserScrollInputAtRef\.current, performance\.now\(\)\)\) scrollToBottom\("auto"\)/);
   assert.match(scrollHandlerSource, /!wasAttached && isAttached && isAgentRunning[\s\S]*?scrollToBottom\("auto"\)/);
   assert.match(scrollHandlerSource, /cancelAnimationFrame\(liveFollowFrameRef\.current\)/);
-  assert.match(source, /previousScrollTopRef\.current = container\.scrollTop;\s*container\.addEventListener\("scroll", handleScrollPositionChange/);
+  assert.match(source, /previousScrollTopRef\.current = container\.scrollTop;[\s\S]*?container\.addEventListener\("scroll", handleScrollPositionChange/);
+  assert.match(source, /for \(const type of \["wheel", "touchstart", "keydown"\]\) container\.addEventListener\(type, markUserInput/);
   assert.doesNotMatch(source, /SCROLL_BOTTOM_THRESHOLD|completionScrollAllowedRef|ignoreProgrammaticScrollUntilRef/);
 });
 

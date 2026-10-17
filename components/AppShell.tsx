@@ -9,6 +9,8 @@ import { useGlobalKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useNativeAppMenu } from "@/hooks/useNativeAppMenu";
 import { selectProjectDirectoryNative } from "./ProjectPicker";
 import { SessionSidebar } from "./SessionSidebar";
+import { PilaudeWelcome } from "./PilaudeWelcome";
+import { DirectoryPicker } from "./DirectoryPicker";
 import { ChatWindow } from "./ChatWindow";
 import { useScheduledRunNotifications } from "@/hooks/useScheduledRunNotifications";
 import type { ChatScrollPosition } from "@/lib/chat-scroll-position";
@@ -195,6 +197,9 @@ export function AppShell() {
   const [changesCollapsed, setChangesCollapsed] = useState(true);
   const [sessionCatalog, setSessionCatalog] = useState<SessionInfo[]>([]);
   const [availableProjectRoots, setAvailableProjectRoots] = useState<string[]>([]);
+  const [welcomePickerOpen, setWelcomePickerOpen] = useState(false);
+  const [welcomePickerBusy, setWelcomePickerBusy] = useState(false);
+  const [welcomePickerError, setWelcomePickerError] = useState<string | null>(null);
   const handleSessionsChange = useCallback((sessions: SessionInfo[]) => {
     setSessionCatalog(sessions);
     // The sidebar hydrates metadata after the selected session has already
@@ -2758,18 +2763,10 @@ export function AppShell() {
                  {translate("workspace.selectSession")}
               </div>
             ) : (
-              <div style={{ position: "absolute", top: 12, left: 12, display: "flex", alignItems: "flex-start", gap: 8, userSelect: "none", pointerEvents: "none" }}>
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7, flexShrink: 0 }}>
-                  <line x1="20" y1="12" x2="4" y2="12" /><polyline points="10 6 4 12 10 18" />
-                </svg>
-                <div>
-                   <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>{translate("workspace.getStarted")}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8 }}>
-                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>1.</span>{translate("workspace.selectProject")}<br />
-                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>2.</span>{translate("workspace.addModels")}
-                  </div>
-                </div>
-              </div>
+              <PilaudeWelcome
+                onOpenProject={() => desktopMode ? void handleSelectProjectFromComposer() : setWelcomePickerOpen(true)}
+                onOpenModels={() => openSettingsSection("models")}
+              />
             )
           ) : null}
         </div>
@@ -3150,6 +3147,27 @@ export function AppShell() {
       </div>,
       document.body,
     )}
+    {welcomePickerOpen && <DirectoryPicker
+      onCancel={() => setWelcomePickerOpen(false)}
+      busy={welcomePickerBusy}
+      error={welcomePickerError}
+      onSelect={async (cwd) => {
+        if (welcomePickerBusy) return;
+        setWelcomePickerBusy(true);
+        setWelcomePickerError(null);
+        try {
+          const response = await fetch("/api/cwd/validate", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cwd }),
+          });
+          const data = await response.json() as { cwd?: string; error?: string };
+          if (!response.ok) throw new Error(data.error ?? `HTTP ${response.status}`);
+          handleNewSession(crypto.randomUUID(), data.cwd ?? cwd);
+          setWelcomePickerOpen(false);
+        } catch (error) {
+          setWelcomePickerError(error instanceof Error ? error.message : String(error));
+        } finally { setWelcomePickerBusy(false); }
+      }}
+    />}
     {/* After Settings, so it opens above it (z-index 1100 over 1000) when Settings › MCP asks for it. */}
     {projectTrustDialogOpen && projectTrustCwd && (
       <ProjectTrustDialog

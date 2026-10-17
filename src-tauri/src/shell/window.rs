@@ -47,8 +47,8 @@ pub fn build_window(app: &tauri::AppHandle, app_url: Url) -> tauri::Result<Webvi
 
     let mut builder = WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::External(app_url))
         .title("Pilaude")
-        .inner_size(1440.0, 900.0)
-        .min_inner_size(900.0, 600.0)
+        .inner_size(1280.0, 840.0)
+        .min_inner_size(960.0, 640.0)
         .resizable(true)
         // Pilaude already handles browser drag/drop for image attachments.
         .disable_drag_drop_handler()

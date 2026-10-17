@@ -51,6 +51,7 @@ import {
 } from "@/lib/chat-lazy-load";
 import { findChatScrollAnchor, type ChatScrollPosition } from "@/lib/chat-scroll-position";
 import { useI18n } from "@/hooks/useI18n";
+import { canFollowStream } from "@/lib/cds-scroll";
 import {
   INITIAL_STREAMING_STATE,
   streamReducer,
@@ -483,6 +484,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const lastUserMsgRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollToUserRef = useRef(false);
   const isNearBottomRef = useRef(true);
+  const lastUserScrollInputAtRef = useRef(-Infinity);
   const previousScrollTopRef = useRef(0);
   const liveFollowFrameRef = useRef<number | null>(null);
   const executeBashRef = useRef<(command: string, excludeFromContext: boolean) => Promise<void> | undefined>(undefined);
@@ -1723,12 +1725,12 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         }
         // Live-follow the streaming output only when the user is already near
         // the bottom of the message list. If they scrolled up, leave them there.
-        if (!pendingScrollToUserRef.current && isNearBottomRef.current && liveFollowFrameRef.current === null) {
+        if (!pendingScrollToUserRef.current && isNearBottomRef.current && canFollowStream(lastUserScrollInputAtRef.current, performance.now()) && liveFollowFrameRef.current === null) {
           // Defer the scroll so React has time to update the DOM with the new
           // streaming content; otherwise scrollIntoView may target stale layout.
           liveFollowFrameRef.current = requestAnimationFrame(() => {
             liveFollowFrameRef.current = null;
-            if (isNearBottomRef.current) scrollToBottom("auto");
+            if (isNearBottomRef.current && canFollowStream(lastUserScrollInputAtRef.current, performance.now())) scrollToBottom("auto");
           });
         }
         break;
@@ -2812,7 +2814,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       previousScrollTopRef.current = scrollTop;
       const shouldShow = shouldShowScrollToLatest(scrollTop, clientHeight, scrollHeight);
       setShowScrollToBottom((previous) => (previous === shouldShow ? previous : shouldShow));
-      if (!wasAttached && isAttached && isAgentRunning) {
+      if (!wasAttached && isAttached && isAgentRunning && canFollowStream(lastUserScrollInputAtRef.current, performance.now())) {
         scrollToBottom("auto");
       } else if (!isAttached && liveFollowFrameRef.current !== null) {
         cancelAnimationFrame(liveFollowFrameRef.current);
@@ -2963,8 +2965,18 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     const container = scrollContainerRef.current;
     if (!container) return;
     previousScrollTopRef.current = container.scrollTop;
+    const markUserInput = (event: Event) => {
+      if (event instanceof KeyboardEvent && !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) return;
+      lastUserScrollInputAtRef.current = performance.now();
+      if (liveFollowFrameRef.current !== null) {
+        cancelAnimationFrame(liveFollowFrameRef.current);
+        liveFollowFrameRef.current = null;
+      }
+    };
+    for (const type of ["wheel", "touchstart", "keydown"]) container.addEventListener(type, markUserInput, { passive: true });
     container.addEventListener("scroll", handleScrollPositionChange, { passive: true });
     return () => {
+      for (const type of ["wheel", "touchstart", "keydown"]) container.removeEventListener(type, markUserInput);
       container.removeEventListener("scroll", handleScrollPositionChange);
     };
   }, [messages.length, loading, handleScrollPositionChange]);
@@ -2996,7 +3008,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
             previousScrollTopRef.current = container.scrollTop;
           }
         }
-      } else if (!agentRunningRef.current && isNearBottomRef.current) {
+      } else if (!agentRunningRef.current && isNearBottomRef.current && canFollowStream(lastUserScrollInputAtRef.current, performance.now())) {
         scrollToBottom("auto");
       }
     }
