@@ -25,6 +25,7 @@ import { ScheduledSidebarRow } from "./scheduled/ScheduledSidebarRow";
 import { isScheduledRunSession } from "@/hooks/useScheduledTasks";
 import { prefetchSessionData } from "@/lib/session-data-cache";
 import { isImeComposing } from "@/lib/ime";
+import { PilaudeIcon } from "./PilaudeIcon";
 
 function sessionListUrl(summary: boolean, force: boolean): string {
   if (summary) return "/api/sessions?summary=1";
@@ -57,6 +58,10 @@ interface Props {
   /** Opens the Scheduled page; the row under New Session is absent without it. */
   onOpenScheduled?: () => void;
   scheduledOpen?: boolean;
+  onOpenCustomize?: () => void;
+  onOpenSettings?: () => void;
+  onOpenArtifacts?: () => void;
+  onOpenMore?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 interface WorktreeEntry {
@@ -173,7 +178,7 @@ function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
   return roots;
 }
 
-export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, scheduledOpen = false }: Props) {
+export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, onOpenCustomize, onOpenSettings, onOpenArtifacts, onOpenMore, scheduledOpen = false }: Props) {
   const { t } = useI18n();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
   // Tracked in a ref only: the version is compared against the polled value to
@@ -1379,9 +1384,59 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           </div>
         )}
 
+      <div className="sidebar-search-wrap" data-no-drag>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sidebar-search-icon">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="search"
+          className="sidebar-search-input"
+          value={sessionQuery}
+          onChange={(e) => setSessionQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              // Committing an IME candidate must not fire the search.
+              if (isImeComposing(e) || !sessionQuery.trim()) return;
+              e.preventDefault();
+              setContentSearch(true);
+              return;
+            }
+            if (e.key === "Escape" && !isImeComposing(e)) {
+              e.stopPropagation();
+              // Content results first, then the query, then the field itself.
+              if (contentSearch) setContentSearch(false);
+              else if (sessionQuery) setSessionQuery("");
+              else e.currentTarget.blur();
+            }
+          }}
+          title={t("sidebar.searchAllHint")}
+          placeholder={t("pilaude.search")}
+          aria-label={t("sidebar.searchSessions")}
+        />
+        {sessionQuery && (
+          <button
+            type="button"
+            className="sidebar-search-clear"
+            onClick={() => {
+              setSessionQuery("");
+              setContentSearch(false);
+            }}
+            title={t("sidebar.clearSearch")}
+            aria-label={t("sidebar.clearSearch")}
+          >
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+              <line x1="2" y1="2" x2="8" y2="8" />
+              <line x1="8" y1="2" x2="2" y2="8" />
+            </svg>
+          </button>
+        )}
+      </div>
+
         {/* Row 1: New Session — full-width flat row, Claude Desktop style */}
         <button
           className="sidebar-header-row sidebar-new-row"
+          aria-label={t("sidebar.newChat")}
           onClick={() => handleNewSession()}
           disabled={!selectedCwd}
           title={selectedCwd ? `${t("sidebar.newSessionTitle", { path: selectedCwd })} (⌘/Ctrl+N)` : t("sidebar.selectProject")}
@@ -1392,10 +1447,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
               <line x1="1.5" y1="6" x2="10.5" y2="6" />
             </svg>
           </span>
-          {t("sidebar.newChat")}
+          {t("pilaude.new")}
         </button>
 
+        {onOpenArtifacts && <button type="button" className="sidebar-header-row" onClick={onOpenArtifacts}><PilaudeIcon name="artifacts" />{t("pilaude.artifacts")}</button>}
         {onOpenScheduled && <ScheduledSidebarRow active={scheduledOpen} onOpen={onOpenScheduled} />}
+        {onOpenCustomize && <button type="button" className="sidebar-header-row" onClick={onOpenCustomize}><PilaudeIcon name="customize" />{t("pilaude.customize")}</button>}
+        {onOpenMore && <button type="button" className="sidebar-header-row" onClick={onOpenMore}><PilaudeIcon name="more" />{t("pilaude.more")}</button>}
 
         {/* Row 2: current folder — flat row */}
         <div className="sidebar-folder-row" data-no-drag style={{ display: showLegacyHeaderProjectRows ? "flex" : "none", alignItems: "center", gap: 2 }}>
@@ -1880,54 +1938,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           the confirmation for the server-side content search across every
           session; there is no mode button, so Escape (or the clear button) is
           the way back to the title filter. */}
-      <div className="sidebar-search-wrap" data-no-drag>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sidebar-search-icon">
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          type="search"
-          className="sidebar-search-input"
-          value={sessionQuery}
-          onChange={(e) => setSessionQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              // Committing an IME candidate must not fire the search.
-              if (isImeComposing(e) || !sessionQuery.trim()) return;
-              e.preventDefault();
-              setContentSearch(true);
-              return;
-            }
-            if (e.key === "Escape" && !isImeComposing(e)) {
-              e.stopPropagation();
-              // Content results first, then the query, then the field itself.
-              if (contentSearch) setContentSearch(false);
-              else if (sessionQuery) setSessionQuery("");
-              else e.currentTarget.blur();
-            }
-          }}
-          title={t("sidebar.searchAllHint")}
-          placeholder={t("sidebar.searchSessions")}
-          aria-label={t("sidebar.searchSessions")}
-        />
-        {sessionQuery && (
-          <button
-            type="button"
-            className="sidebar-search-clear"
-            onClick={() => {
-              setSessionQuery("");
-              setContentSearch(false);
-            }}
-            title={t("sidebar.clearSearch")}
-            aria-label={t("sidebar.clearSearch")}
-          >
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
-              <line x1="2" y1="2" x2="8" y2="8" />
-              <line x1="8" y1="2" x2="2" y2="8" />
-            </svg>
-          </button>
-        )}
-      </div>
       {/* Project tree (Codex-style) — replaces the old CHATS/FILES tabs. Every
           project is rendered as a flat row whose chats nest directly beneath.
           Clicking a project header toggles collapse; the ⋯ menu offers sort
@@ -2020,6 +2030,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         </div>
         </SessionSearch>
       )}
+      {onOpenSettings && <div className="pilaude-sidebar-footer"><button type="button" className="pilaude-local-profile" onClick={onOpenSettings}><span className="pilaude-profile-avatar">P</span><span>{PRODUCT_NAME}<small> · {t("pilaude.local")}</small></span><PilaudeIcon name="chevron" size={14} /></button><button type="button" className="sidebar-chrome-button" onClick={onOpenSettings} title={t("pilaude.appearance")} aria-label={t("pilaude.appearance")}><PilaudeIcon name="sun" /></button></div>}
       {projectMenu && projectMenuPos && createPortal(
         <div
           ref={projectMenuRef}

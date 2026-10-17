@@ -10,11 +10,13 @@ import { useNativeAppMenu } from "@/hooks/useNativeAppMenu";
 import { selectProjectDirectoryNative } from "./ProjectPicker";
 import { SessionSidebar } from "./SessionSidebar";
 import { PilaudeWelcome } from "./PilaudeWelcome";
+import { PilaudeWorkspaceContext } from "./PilaudeWorkspaceContext";
+import { PilaudeIcon } from "./PilaudeIcon";
 import { DirectoryPicker } from "./DirectoryPicker";
 import { ChatWindow } from "./ChatWindow";
 import { useScheduledRunNotifications } from "@/hooks/useScheduledRunNotifications";
 import type { ChatScrollPosition } from "@/lib/chat-scroll-position";
-import { clearDraft } from "@/lib/draft-store";
+import { clearDraft, getDraft, setDraft } from "@/lib/draft-store";
 import { TabBar, type Tab } from "./TabBar";
 
 // Heavy, rarely-used surfaces are code-split out of the main bundle. The
@@ -122,6 +124,13 @@ function parkedNewSessionDraftKey(cwd: string): string {
   return `parked-new:${cwd}`;
 }
 
+function parkNewSessionDraft(key: string, cwd: string): void {
+  const draft = getDraft(key);
+  const parked = parkedNewSessionDraftKey(cwd);
+  if (draft) setDraft(parked, draft);
+  else clearDraft(parked);
+}
+
 export function AppShell() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -196,6 +205,7 @@ export function AppShell() {
   const [changesCount, setChangesCount] = useState(0);
   const [changesCollapsed, setChangesCollapsed] = useState(true);
   const [sessionCatalog, setSessionCatalog] = useState<SessionInfo[]>([]);
+  const [sessionNavigation, setSessionNavigation] = useState<{ items: { key: string; session: SessionInfo | null; cwd: string; projectKey: string | null; draftId: string; scheduled: boolean }[]; index: number }>({ items: [], index: -1 });
   const [availableProjectRoots, setAvailableProjectRoots] = useState<string[]>([]);
   const [welcomePickerOpen, setWelcomePickerOpen] = useState(false);
   const [welcomePickerBusy, setWelcomePickerBusy] = useState(false);
@@ -294,6 +304,10 @@ export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(() => !initialNavigation.sidebarCollapsed);
   const desktopSidebarOpenRef = useRef(!initialNavigation.sidebarCollapsed);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [contextDockOpen, setContextDockOpen] = useState(false);
+  const handleContextDockClose = useCallback(() => setContextDockOpen(false), []);
+  const [artifactShelfOpen, setArtifactShelfOpen] = useState(false);
+  useEffect(() => { setContextDockOpen(window.innerWidth >= 1200); }, []);
   const [rightPanelExpanded, setRightPanelExpanded] = useState(false);
   const rightPanelFullWidth = rightPanelOpen && rightPanelExpanded && !isMobile;
   useEffect(() => {
@@ -879,7 +893,7 @@ export function AppShell() {
       // remembered session belongs to another worktree of this project.
       const activeDraftKey = activeNewSessionDraftKeyRef.current;
       if (activeDraftKey) {
-        rekeyDraft(activeDraftKey, parkedNewSessionDraftKey(cwd));
+        parkNewSessionDraft(activeDraftKey, cwd);
       }
       activeNewSessionDraftKeyRef.current = null;
       // Selecting the session must remount the chat with the session
@@ -920,6 +934,11 @@ export function AppShell() {
     const currentProject = activeProjectKeyRef.current
       ?? (selectedSession ? workspaceKeyOf(selectedSession) : null);
     activeProjectKeyRef.current = newProject;
+    setSessionNavigation(current => {
+      const entry = current.items[current.index];
+      if (!entry || entry.session || entry.cwd !== cwd || entry.projectKey === newProject) return current;
+      return { ...current, items: current.items.map((item, index) => index === current.index ? { ...item, projectKey: newProject } : item) };
+    });
 
     // Keep the project identity in sync during the initial URL restore without
     // remounting the just-created or restored chat.
@@ -954,7 +973,7 @@ export function AppShell() {
     // matches the selected project directory.
     const previousDraftKey = activeNewSessionDraftKeyRef.current;
     if (previousDraftKey && currentFreshCwd) {
-      rekeyDraft(previousDraftKey, parkedNewSessionDraftKey(currentFreshCwd));
+      parkNewSessionDraft(previousDraftKey, currentFreshCwd);
     }
     const draftId = typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
@@ -998,7 +1017,7 @@ export function AppShell() {
     const activeDraftKey = activeNewSessionDraftKeyRef.current;
     const activeDraftCwd = newSessionCwd ?? (selectedSession === null ? activeCwd : null);
     if (activeDraftKey && activeDraftCwd) {
-      rekeyDraft(activeDraftKey, parkedNewSessionDraftKey(activeDraftCwd));
+      parkNewSessionDraft(activeDraftKey, activeDraftCwd);
     }
     activeNewSessionDraftKeyRef.current = null;
     // Adopt an explicitly selected session before the sidebar reports its cwd.
@@ -1058,7 +1077,7 @@ export function AppShell() {
     }
   }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, router, isMobile, newSessionCwd, selectedSession]);
 
-  const handleNewSession = useCallback((sessionId: string, cwd: string) => {
+  const handleNewSession = useCallback((sessionId: string, cwd: string, restoreHistory = false) => {
     setScheduledOpen(false);
     invalidateWorkspaceRestore();
     // "New task" is an explicit reset. A cwd-based blank-task draft would
@@ -1066,7 +1085,7 @@ export function AppShell() {
     // key scheme kept for drafts written by older builds).
     clearDraft(`new:${cwd}`);
     const draftKey = `new:${sessionId}:${cwd}`;
-    rekeyDraft(parkedNewSessionDraftKey(cwd), draftKey);
+    if (!restoreHistory) rekeyDraft(parkedNewSessionDraftKey(cwd), draftKey);
     activeNewSessionDraftKeyRef.current = draftKey;
     setNewSessionDraftId(sessionId);
     setSelectedSession(null);
@@ -1521,6 +1540,13 @@ export function AppShell() {
     activeNewSessionDraftKeyRef.current = newSessionDraftKey;
   }, [newSessionDraftKey]);
   const showChat = selectedSession !== null || effectiveNewSessionCwd !== null;
+  const navigationKey = scheduledOpen ? "scheduled" : selectedSession ? `session:${selectedSession.id}` : newSessionDraftKey;
+  useEffect(() => {
+    if (!initialSessionRestored || !navigationKey) return;
+    setSessionNavigation(current => current.items[current.index]?.key === navigationKey ? current : {
+      items: [...current.items.slice(0, current.index + 1), { key: navigationKey, session: selectedSession, cwd: selectedSession?.cwd ?? effectiveNewSessionCwd ?? "", projectKey: selectedSession ? workspaceKeyOf(selectedSession) : activeProjectKeyRef.current, draftId: newSessionDraftId, scheduled: scheduledOpen }], index: current.index + 1,
+    });
+  }, [navigationKey, initialSessionRestored, selectedSession, effectiveNewSessionCwd, newSessionDraftId, scheduledOpen]);
   const projectTrustCwd = selectedSession?.cwd ?? effectiveNewSessionCwd;
   const toggleSettingsMenu = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     if (settingsMenuOpen) {
@@ -1782,6 +1808,21 @@ export function AppShell() {
 
   // Settings + collapse controls at the sidebar's own top-right (Claude Desktop
   // style). When the sidebar is closed, the topbar shows a reopen button.
+  const sessionHistoryControls = ([-1, 1] as const).map(direction => {
+    const target = sessionNavigation.items[sessionNavigation.index + direction];
+    const available = target && (!target.session || sessionCatalog.some(session => session.id === target.session?.id));
+    const label = translate(direction < 0 ? "pilaude.back" : "pilaude.forward");
+    return <button key={direction} type="button" className="sidebar-chrome-button" title={label} aria-label={label} disabled={!available} onClick={() => {
+      if (!available) return;
+      setSessionNavigation(current => ({ ...current, index: current.index + direction }));
+      if (target.scheduled) handleOpenScheduled();
+      else if (target.session) handleSelectSession(sessionCatalog.find(session => session.id === target.session?.id)!);
+      else {
+        handleCwdChange(target.cwd, null, target.projectKey);
+        handleNewSession(target.draftId, target.cwd, true);
+      }
+    }}><PilaudeIcon name={direction < 0 ? "back" : "forward"} /></button>;
+  });
   const sidebarHeaderControls = (
     <>
       <button
@@ -1793,10 +1834,7 @@ export function AppShell() {
         aria-haspopup="menu"
         aria-expanded={settingsMenuOpen}
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
+        <PilaudeIcon name="menu" />
       </button>
       <button
         className="sidebar-chrome-button"
@@ -1825,12 +1863,20 @@ export function AppShell() {
         selectedCwd={selectedSession?.cwd ?? newSessionCwd ?? null}
         onCwdChange={handleCwdChange}
         onProjectsChange={handleProjectsChange}
-        headerControls={sidebarHeaderControls}
+        headerControls={<>{sidebarHeaderControls}{sessionHistoryControls}</>}
         onOpenTerminal={handleOpenTerminal}
         onBackgroundTaskDone={handleBackgroundTaskDone}
         onRunningSessionIdsChange={handleRunningSessionIdsChange}
         onSessionsChange={handleSessionsChange}
         onOpenScheduled={handleOpenScheduled}
+        onOpenCustomize={() => openSettingsSection("skills")}
+        onOpenSettings={() => openSettingsSection("general")}
+        onOpenMore={toggleSettingsMenu}
+        onOpenArtifacts={() => {
+          setArtifactShelfOpen(true);
+          setActiveFileTabId(artifactTabs[0]?.id ?? null);
+          setRightPanelOpen(true);
+        }}
         scheduledOpen={scheduledOpen}
       />
     </>
@@ -2092,6 +2138,7 @@ export function AppShell() {
           <div className="app-topbar-title" title={topBarTitle}>
             <span>{topBarTitle}</span>
             <small>{topBarSubtitle}</small>
+            <PilaudeIcon name="chevron" size={14} />
           </div>
           {showChat && !scheduledOpen && projectTrust?.requiresTrust && !projectTrust.trusted && (
             <button
@@ -2695,9 +2742,11 @@ export function AppShell() {
 
           {/* Windows/Linux controls stay in the chat topbar while the floating
               panel is a separate card; the topbar still owns the visible edge. */}
+          {showChat && <button type="button" className="native-icon-button" title={translate("terminal.newTerminal")} aria-label={translate("terminal.newTerminal")} onClick={() => { if (activeCwd) handleOpenTerminal(activeCwd); }} disabled={!activeCwd}><PilaudeIcon name="terminal" /></button>}
+          {showChat && <button type="button" className="native-icon-button pilaude-context-toggle" title={translate("pilaude.contextPanel")} aria-label={translate("pilaude.contextPanel")} aria-pressed={contextDockOpen} onClick={() => setContextDockOpen(open => !open)}><PilaudeIcon name="context" /></button>}
           {(!rightPanelOpen || isMobile) && <WindowControls />}
         </div>
-        <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <div className="pilaude-workspace-body" style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
       {/* Center: chat */}
       <div inert={rightPanelFullWidth} style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, position: "relative" }}>
         {isMobile && renderProjectTrustWarning(true)}
@@ -2798,6 +2847,20 @@ export function AppShell() {
           />
         )}
       </div>
+      {showChat && contextDockOpen && !rightPanelOpen && !scheduledOpen && !settingsSection && !projectTrustDialogOpen && !welcomePickerOpen && (
+        <><button type="button" className="pilaude-context-backdrop" aria-label={translate("i18n.close")} onClick={() => setContextDockOpen(false)} /><PilaudeWorkspaceContext
+          session={selectedSession}
+          cwd={selectedSession?.cwd ?? effectiveNewSessionCwd ?? activeCwd ?? ""}
+          stats={sessionStats}
+          usage={contextUsage}
+          toolCount={systemTools?.length ?? null}
+          onOpenContext={openSessionStatsPanel}
+          onOpenTools={() => handleSystemInfoToggle("tools")}
+          onOpenConnectors={() => openSettingsSection("mcp")}
+          onClose={handleContextDockClose}
+          onOpenFiles={() => { setRightPanelOpen(true); setFileTreeOpen(true); setFileTreeNarrowOverride(true); }}
+        /></>
+      )}
         </div>
       </div>
 
@@ -2997,7 +3060,7 @@ export function AppShell() {
             />
           ) : !terminalTabs.some((tab) => tab.id === activeFileTabId) ? (
             <div className="right-panel-empty">
-              <span>{translate("files.noneOpen")}</span>
+              <span>{translate(artifactShelfOpen ? "pilaude.noArtifacts" : "files.noneOpen")}</span>
               {/* The file list starts hidden; offer it where the panel is empty. */}
               {activeCwd && !fileTreeShown && (
                 <button type="button" className="right-panel-empty-action" onClick={handleFileTreeToggle}>

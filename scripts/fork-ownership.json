@@ -169,6 +169,14 @@
       "structuralDrift": 31,
       "disposition": "accepted"
     },
+    "hooks/useChatAppearance.ts": {
+      "risk": "low", "drift": 2, "structuralDrift": 2, "disposition": "accepted",
+      "reason": "The Windows reference uses a 16px default reading size. Preserve the existing stored user preference and width/font reset behavior when merging."
+    },
+    "e2e/chat-appearance.mjs": {
+      "risk": "low", "drift": 8, "structuralDrift": 8, "disposition": "accepted",
+      "reason": "Appearance reset assertions track the 16px Windows default; persistence, independent width/font reset and multiline resizing assertions remain unchanged. Drift is measured against origin/main because this file postdates the baseline."
+    },
     "components/ChatInput.tsx": {
       "risk": "high",
       "drift": 1503,
@@ -319,6 +327,9 @@
     "vendor/open-claude-ui/",
     "components/PilaudeWelcome.tsx",
     "components/PilaudeWelcome.test.mjs",
+    "components/PilaudeIcon.tsx",
+    "components/PilaudeWorkspaceContext.tsx",
+    "app/api/desktop/environment/",
     "lib/cds-scroll.ts",
     "lib/cds-scroll.test.mjs",
     "e2e/pilaude-ui.mjs",

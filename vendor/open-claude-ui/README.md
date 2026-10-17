@@ -1,10 +1,10 @@
 # Open Claude UI source integration
 
-Source: [Caho1/open-claude-ui](https://github.com/Caho1/open-claude-ui), commit `fb1eceb5891ba201138456347663ef702db47e3a`. Copyright 2026 Caho1; MIT license is preserved beside these files.
+Source: [Caho1/open-claude-ui](https://github.com/Caho1/open-claude-ui), commit `ddf3aea1711db62fd6d24343bbab500a5ae69f64`. Copyright 2026 Caho1; MIT license is preserved beside these files.
 
 The files are copied from `code-examples/`. This directory is a deliberate versioned integration boundary: upstream sync updates the reference checkout, and changes here are reviewed with Pilaude's runtime tests before adoption.
 
-Latest checkout audit (2026-10-17): fork `cfc0efedf53e5b9e49502d31b20991b55ee61574` contains author main `ddf3aea1711db62fd6d24343bbab500a5ae69f64`. The actual copies below still come from the older source SHA above. The incoming theme and Button changes have been identified but are not yet adopted; changing only this SHA would misrepresent the code. The library's macOS 2.37337.1 evidence does not establish parity with the selected Windows stable 2.42304.0. See the [component inventory, missing assets, and parity gates](../../docs/pilaude-ui-parity.md). Every existing integration remains visually unverified against that Windows baseline.
+Latest checkout audit (2026-10-17): fork `cfc0efedf53e5b9e49502d31b20991b55ee61574` contains author main `ddf3aea1711db62fd6d24343bbab500a5ae69f64`. The three files below now adopt that author commit, retaining the documented Button adaptations. The library's macOS 2.37337.1 evidence does not establish parity with the selected Windows stable 2.42304.0. See the [component inventory, missing assets, and parity gates](../../docs/pilaude-ui-parity.md). The supplied Windows screenshot is being compared with running Pilaude captures using an unscaled 50% overlay, difference image and measured element rectangles; full visual/interaction parity has not passed.
 
 | Source | Use in Pilaude | Adaptation |
 | --- | --- | --- |

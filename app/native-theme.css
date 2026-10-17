@@ -7737,6 +7737,131 @@ html.native-desktop :is(
   font-size: 10px;
   line-height: 15px;
 }
+
+/* Windows Claude Desktop reference, 2026-10-17. Canonical CDS tokens come
+   from the updated open-claude-ui source; screenshot geometry is in CSS px. */
+.app-shell {
+  --bg: var(--cds-surface-1);
+  --bg-panel: var(--cds-surface-0);
+  --bg-input: var(--cds-surface-3);
+  --text: var(--cds-text-primary);
+  --text-muted: var(--cds-text-secondary);
+  --text-dim: var(--cds-text-muted);
+  --border: var(--cds-border);
+  --bg-hover: var(--cds-alpha-1);
+  --bg-selected: var(--cds-alpha-1);
+  font-family: var(--font-ui);
+  font-size: 16px;
+}
+.app-shell .app-sidebar { background: #fbfbf9 !important; border-color: #e2e2df !important; }
+[data-theme="dark"] .app-shell .app-sidebar { background: var(--cds-surface-0) !important; border-color: var(--cds-border) !important; }
+.app-shell .app-main-column { --bg: var(--cds-surface-1); background: var(--bg); }
+.app-shell .app-topbar { height: 45px !important; min-height: 45px !important; background: var(--bg) !important; border-bottom: 0 !important; padding: 0 12px 0 28px; gap: 4px; }
+.app-shell .app-topbar-title { flex-direction: row; align-items: center; justify-content: flex-start; max-width: none; min-width: 0; margin-left: 0; padding: 0; font-size: 16px; font-weight: 400; }
+.app-shell .app-topbar-title small { display: none; }
+.app-shell .app-topbar-title > span { font-family: var(--font-ui); font-size: inherit; font-weight: 400; letter-spacing: 0; }
+.app-shell .app-topbar-actions > .native-toolbar-button > span, .app-shell .app-topbar-actions > div > .native-toolbar-button > span, .app-shell .app-topbar-more-trigger > span { display: none; }
+.app-shell .app-topbar-actions > .native-toolbar-button, .app-shell .app-topbar-actions > div > .native-toolbar-button { width: 32px; min-width: 32px; padding: 0 !important; justify-content: center; }
+.app-shell .sidebar-chrome-button:disabled { opacity: 0.35; cursor: default; }
+.app-shell .app-topbar-title > svg { flex-shrink: 0; color: var(--text-muted); margin-left: 8px; }
+.app-shell .session-sidebar-header { padding: 0 10px 24px !important; border-bottom: 0 !important; }
+.app-shell .sidebar-controls-row { height: 45px; min-height: 45px; margin: 0 0 6px; justify-content: flex-start; gap: 4px; }
+:root[data-platform="macos"] .app-shell .sidebar-controls-row { justify-content: flex-end; padding-left: 78px; }
+:root[data-platform="macos"] .app-shell .sidebar-controls-row .sidebar-chrome-button { width: 28px; }
+.app-shell .sidebar-chrome-button { width: 32px; height: 32px; color: var(--text) !important; border-radius: 7px; }
+.app-shell .sidebar-controls-row .sidebar-chrome-button { margin: 0; }
+.app-shell .sidebar-search-wrap { margin: 0 6px 10px 3px; height: 30px; min-height: 30px; border: 1px solid var(--cds-border); border-radius: 7px; background: var(--cds-surface-2); box-shadow: 0 1px 2px #0000000a; }
+.app-shell .sidebar-search-icon { width: 16px; height: 16px; left: 10px; color: var(--text-dim); }
+.app-shell .sidebar-search-input { height: 28px; font-size: 16px; padding-left: 36px; color: var(--text); }
+.app-shell .sidebar-header-row, .app-shell .scheduled-sidebar-row { height: 32px !important; min-height: 32px; font-size: 16px !important; font-weight: 400 !important; gap: 8px !important; padding: 0 12px !important; color: var(--text-muted) !important; border-radius: 8px; }
+.app-shell .sidebar-new-row { color: var(--text-muted) !important; }
+.app-shell .sidebar-new-plus { width: 21px; height: 21px; background: var(--cds-alpha-1); color: var(--text-muted); }
+.app-shell .sidebar-header-row > svg, .app-shell .scheduled-sidebar-row svg { width: 18px; height: 18px; flex-shrink: 0; }
+.app-shell .sidebar-header-row:hover { background: var(--cds-alpha-1) !important; }
+.app-shell .sidebar-project-tree { padding: 2px 9px 16px; }
+.app-shell .sidebar-project-tree-header { margin-bottom: 8px; }
+.app-shell .sidebar-project-tree-title { font-size: 13px; font-weight: 400; color: var(--text-dim); letter-spacing: 0; }
+.app-shell .sidebar-project-tree-row { height: 32px; }
+.app-shell .sidebar-project-tree-name { font-size: 14px; font-weight: 400; color: var(--text-dim); }
+.app-shell .sidebar-project-tree-folder { display: none; }
+.app-shell .sidebar-project-tree-count, .app-shell .sidebar-project-tree-meta { display: none; }
+.app-shell .sidebar-project-tree-row-main { padding-left: 12px; }
+.app-shell .sidebar-project-tree-children { padding-left: 0; }
+.app-shell .sidebar-project-tree-group { margin-bottom: 24px; }
+.app-shell .session-tree-item { min-height: 32px; border-radius: 8px; }
+.app-shell .session-item-title { font-size: 16px !important; font-weight: 400 !important; line-height: 1.5; }
+.pilaude-sidebar-footer { margin-top: auto; min-height: 52px; display: flex; align-items: center; gap: 2px; padding: 6px 10px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.pilaude-local-profile { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; padding: 0 6px; height: 36px; border: 0; background: none; color: var(--text-muted); text-align: left; font-size: 15px; cursor: pointer; }
+.pilaude-local-profile > svg { margin-left: auto; }
+.pilaude-local-profile small { color: var(--text-dim); font-size: 14px; }
+.pilaude-profile-avatar { width: 25px; height: 25px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: #bd6687; color: white; font-size: 15px; }
+.pilaude-workspace-body { position: relative; }
+.pilaude-context-backdrop { display: none; }
+.pilaude-context-dock { width: 350px; flex: 0 0 350px; padding: 16px 14px 24px 0; overflow-y: auto; scrollbar-width: thin; background: var(--bg); }
+.pilaude-context-card { border: 1px solid var(--border); border-radius: 15px; background: var(--bg); margin-bottom: 10px; overflow: hidden; font-size: 16px; color: var(--text); }
+.pilaude-context-card > summary { list-style: none; display: flex; align-items: center; gap: 6px; min-height: 42px; padding: 12px 15px 8px; cursor: pointer; font-weight: 400; }
+.pilaude-context-card > summary::-webkit-details-marker { display: none; }
+.pilaude-context-card > summary > svg { color: var(--text-dim); transition: transform 150ms; }
+.pilaude-context-card:not([open]) > summary > svg { transform: rotate(-90deg); }
+.pilaude-context-card-body { padding: 2px 15px 15px; }
+.pilaude-environment-row { display: flex; align-items: center; gap: 13px; min-width: 0; width: 100%; min-height: 31px; text-align: left; padding: 1px 4px; border: 0; background: none; color: var(--text); font: inherit; }
+button.pilaude-environment-row { cursor: pointer; border-radius: 5px; }
+button.pilaude-environment-row:hover { background: var(--bg-hover); }
+.pilaude-environment-row > svg { flex-shrink: 0; color: var(--text-muted); width: 18px; height: 18px; }
+.pilaude-environment-row > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pilaude-environment-row > small { margin-left: auto; color: var(--text-dim); font-size: 14px; }
+.pilaude-context-usage { display: flex; width: 100%; align-items: baseline; justify-content: space-between; padding: 0; border: 0; background: none; color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.pilaude-context-usage > small { color: var(--text-dim); font-size: 14px; }
+.pilaude-context-meter { height: 5px; overflow: hidden; border-radius: 99px; background: var(--cds-alpha-1); margin: 7px 0 12px; }
+.pilaude-context-meter > span { display: block; height: 100%; background: #327dd6; border-radius: inherit; }
+.pilaude-token-rows { display: flex; flex-direction: column; gap: 9px; }
+.pilaude-token-row { display: flex; align-items: center; gap: 10px; color: var(--text-muted); min-height: 19px; }
+.pilaude-token-row > i { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.pilaude-token-row > small { margin-left: auto; color: var(--text-dim); font-size: 14px; font-variant-numeric: tabular-nums; }
+.pilaude-context-rule { height: 1px; background: var(--border); margin: 15px 0; }
+.pilaude-context-link { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: none; color: var(--text-muted); font: inherit; padding: 8px 0 0; cursor: pointer; }
+.pilaude-context-link > small { margin-left: auto; color: var(--text-dim); font-size: 14px; }
+.pilaude-context-link > svg { transform: rotate(-90deg); color: var(--text-dim); }
+.pilaude-context-card-action { min-height: 52px; width: 100%; display: flex; align-items: center; text-align: left; gap: 6px; padding: 12px 15px; cursor: pointer; }
+.pilaude-context-card-action > svg { transform: rotate(-90deg); color: var(--text-dim); }
+.pilaude-changes-link { width: calc(100% - 22px); margin: 0 11px 12px; font-size: 14px; }
+.pilaude-provider-error { max-width: 576px; margin-top: 8px; border: 1px solid var(--border); border-radius: 13px; overflow: hidden; color: var(--text-muted); font-size: var(--chat-content-font-size, 16px); }
+.pilaude-provider-error-heading { display: flex; align-items: center; gap: 14px; padding: 10px 15px; background: var(--cds-alpha-1); color: var(--text); }
+.pilaude-provider-error-heading > span { color: #a53232; }
+.pilaude-provider-error-body { padding: 16px 15px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pilaude-provider-error-actions { display: flex; justify-content: flex-end; padding: 4px 15px 14px; }
+.pilaude-provider-error-actions .native-button { min-height: 28px; padding: 2px 10px; border: 0; border-radius: 7px; background: var(--text); color: var(--bg); font-size: 16px; font-weight: 500; }
+.app-shell .message-assistant-footer { font-size: 14px; }
+.app-shell .message-assistant-footer > button { order: -1; opacity: 1 !important; pointer-events: auto !important; font-size: 12px !important; }
+.app-shell .message-assistant-footer > button > svg { width: 15px; height: 15px; }
+.app-shell .chat-input-shell { padding: 16px 32px 11px !important; background: linear-gradient(0deg,var(--bg) 85%,transparent) !important; }
+.app-shell .chat-composer { padding: 0 !important; min-height: 54px; border-radius: var(--cds-radius-composer) !important; background: var(--cds-surface-3) !important; }
+.app-shell .chat-composer-editor { min-height: 52px; padding: 8px 12px !important; box-shadow: none !important; border-radius: inherit !important; background: transparent !important; }
+.app-shell .chat-input-textarea { font-size: var(--chat-content-font-size, 16px) !important; line-height: 1.5 !important; }
+.app-shell .composer-trigger-hint { display: none; }
+.app-shell .chat-composer-controls { margin-top: 9px !important; min-height: 28px; padding: 0 6px; }
+.app-shell .chat-composer-controls > :first-child { order: 2; margin-left: auto; }
+.app-shell .chat-composer-controls > :nth-child(2) { order: 1; }
+.app-shell .chat-composer-controls > :last-child { order: 0; margin-left: 0 !important; }
+.app-shell .chat-project-context { display: none; }
+.app-shell .chat-composer-controls .native-toolbar-button { font-size: 14px !important; font-weight: 400; color: var(--text-muted) !important; }
+.app-shell .chat-scroll-container { padding-top: 24px !important; }
+.app-shell .chat-scroll-container > div { padding-left: 48px !important; padding-right: 48px !important; }
+.app-shell .conversation-navigator { opacity: 0; transition: opacity 150ms; }
+.app-shell .conversation-navigator:hover, .app-shell .conversation-navigator:focus-within { opacity: 1; }
+.app-shell .composer-send-button { width: 28px !important; height: 28px !important; }
+@media (max-width: 1199px) {
+  .pilaude-context-dock { position: absolute; right: 0; top: 0; bottom: 0; z-index: 41; width: min(350px, 94%); padding-left: 14px; box-shadow: -8px 0 24px #0000000a; }
+  .pilaude-context-backdrop { display: block; position: absolute; inset: 0; border: 0; background: #00000020; z-index: 40; }
+}
+@media (max-width: 640px) {
+  .app-shell .chat-input-shell { padding-left: 12px !important; padding-right: 12px !important; }
+  .app-shell .chat-scroll-container > div { padding-left: 16px !important; padding-right: 16px !important; }
+  .app-shell .chat-input-textarea { font-size: max(16px, var(--chat-content-font-size, 16px)) !important; }
+  .app-shell .chat-composer-controls > :first-child { grid-column: 3; grid-row: 1; }
+  .app-shell .chat-composer-controls > :last-child { grid-column: 1; grid-row: 1; }
+  .app-shell .app-topbar { padding-left: 8px; }
+}
 .models-spec-unsaved {
   background: color-mix(in srgb, var(--warning) 16%, transparent);
   color: var(--warning);

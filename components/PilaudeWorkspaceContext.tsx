@@ -1,0 +1,117 @@
+"use client";
+
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { SessionStatsInfo } from "@/lib/pi-types";
+import type { SessionInfo } from "@/lib/types";
+import { useI18n } from "@/hooks/useI18n";
+import { PilaudeIcon } from "./PilaudeIcon";
+import { focusModalPanel } from "@/lib/stacked-dialog";
+
+interface Props {
+  session: SessionInfo | null;
+  cwd: string;
+  stats: SessionStatsInfo | null;
+  usage: { percent: number | null; contextWindow: number; tokens: number | null } | null;
+  toolCount: number | null;
+  onOpenConnectors: () => void;
+  onOpenFiles: () => void;
+  onOpenContext: () => void;
+  onOpenTools: () => void;
+  onClose: () => void;
+}
+
+function shortCount(value: number | null | undefined): string {
+  if (value == null) return "—";
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
+  return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toLocaleString();
+}
+
+export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount, onOpenConnectors, onOpenFiles, onOpenContext, onOpenTools, onClose }: Props) {
+  const { t } = useI18n();
+  const paneRef = useRef<HTMLElement>(null);
+  const [isOverlay, setIsOverlay] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 1199px)");
+    const update = () => setIsOverlay(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  useLayoutEffect(() => {
+    if (!isOverlay) return;
+    const restoreFocus = focusModalPanel(document, paneRef.current, { restoreTextEntry: false });
+    const focusable = () => [...(paneRef.current?.querySelectorAll<HTMLElement>('summary,button:not([disabled]),a[href],input:not([disabled]),[tabindex]:not([tabindex="-1"])') ?? [])].filter(element => element.getClientRects().length > 0);
+    (focusable()[0] ?? paneRef.current)?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (event.isComposing || event.keyCode === 229) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        onClose();
+      } else if (event.key === "Tab") {
+        const elements = focusable();
+        const index = elements.indexOf(document.activeElement as HTMLElement);
+        if (index < 0 || (event.shiftKey ? index === 0 : index === elements.length - 1)) {
+          event.preventDefault();
+          (event.shiftKey ? elements.at(-1) : elements[0])?.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", keydown, true);
+    return () => {
+      document.removeEventListener("keydown", keydown, true);
+      restoreFocus();
+    };
+  }, [isOverlay, onClose]);
+  const open = (action: () => void) => { if (isOverlay) onClose(); action(); };
+  const [machine, setMachine] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/desktop/environment", { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (!controller.signal.aborted && typeof data?.hostname === "string") setMachine(data.hostname); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const context = usage ?? stats?.contextUsage;
+  const used = context?.percent == null ? null : Math.min(100, Math.max(0, context.percent));
+  const rows = [
+    { label: t("session.input"), value: stats?.tokens.input, color: "#327dd6" },
+    { label: t("session.output"), value: stats?.tokens.output, color: "#ed734c" },
+    { label: t("session.cacheRead"), value: stats?.tokens.cacheRead, color: "#26a87c" },
+    { label: t("session.cacheWrite"), value: stats?.tokens.cacheWrite, color: "#dda632" },
+  ];
+  const projectName = cwd.split(/[\\/]/).filter(Boolean).at(-1) || cwd;
+  return (
+    <aside ref={paneRef} tabIndex={-1} role={isOverlay ? "dialog" : undefined} aria-modal={isOverlay || undefined} className="pilaude-context-dock" aria-label={t("pilaude.contextPanel")}>
+      <details className="pilaude-context-card" open>
+        <summary>{t("pilaude.environment")}<PilaudeIcon name="chevron" size={14} /></summary>
+        <div className="pilaude-context-card-body">
+          <div className="pilaude-environment-row"><PilaudeIcon name="computer" /><span>{machine ?? t("pilaude.thisComputer")}</span></div>
+          <button className="pilaude-environment-row" onClick={() => open(onOpenFiles)} title={cwd}><PilaudeIcon name="folder" /><span>{projectName}</span><small>{cwd.match(/^[A-Za-z]:/)?.[0] ?? ""}</small></button>
+          {session?.branch && <div className="pilaude-environment-row" title={session.branch}><PilaudeIcon name="branch" /><span>{session.branch}</span>{session.isWorktree && <small>Worktree</small>}</div>}
+        </div>
+      </details>
+      <details className="pilaude-context-card" open>
+        <summary>{t("session.context")}<PilaudeIcon name="chevron" size={14} /></summary>
+        <div className="pilaude-context-card-body">
+          <button className="pilaude-context-usage" onClick={() => open(onOpenContext)}>
+            <span>{used == null ? "—" : `${used.toFixed(0)}%`} {t("pilaude.contextUsed")}</span>
+            <small>{shortCount(context?.tokens)} / {shortCount(context?.contextWindow)}</small>
+          </button>
+          <div className="pilaude-context-meter" role="progressbar" aria-label={t("session.context")} aria-valuenow={used ?? undefined} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${used ?? 0}%` }} /></div>
+          <div className="pilaude-token-rows">{rows.map(row => <div className="pilaude-token-row" key={row.label}><i style={{ background: row.color }} /><span>{row.label}</span><small>{shortCount(row.value)}</small></div>)}</div>
+          <div className="pilaude-context-rule" />
+          <div className="pilaude-token-row"><i style={{ background: "#a5a59a" }} /><span>{t("pilaude.messages")}</span><small>{shortCount(stats?.totalMessages)}</small></div>
+          <button className="pilaude-context-link" onClick={() => open(onOpenContext)}><PilaudeIcon name="chevron" size={14} /><span>{t("session.toolCalls")}</span><small>{shortCount(stats?.toolCalls)}</small></button>
+          <button className="pilaude-context-link" onClick={() => open(onOpenTools)}><PilaudeIcon name="chevron" size={14} /><span>{t("pilaude.availableTools")}</span><small>{shortCount(toolCount)}</small></button>
+        </div>
+      </details>
+      <button className="pilaude-context-card pilaude-context-card-action" onClick={() => open(onOpenConnectors)}><span>{t("pilaude.connectors")}</span><PilaudeIcon name="chevron" size={14} /></button>
+      <details className="pilaude-context-card" open>
+        <summary>{t("pilaude.changes")}<PilaudeIcon name="chevron" size={14} /></summary>
+        <button className="pilaude-environment-row pilaude-changes-link" onClick={() => open(onOpenFiles)}><PilaudeIcon name="branch" /><span>{t("pilaude.reviewFiles")}</span><PilaudeIcon name="chevron" size={14} /></button>
+      </details>
+    </aside>
+  );
+}
