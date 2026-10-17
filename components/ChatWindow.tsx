@@ -85,7 +85,6 @@ interface Props {
   /** Completion sound state + controls, owned by AppShell so tasks finishing in
    *  a non-active workspace can still ring. */
   soundEnabled?: boolean;
-  onSoundToggle?: () => void;
   playDoneSound?: () => void;
   unlockAudio?: () => void;
 }
@@ -258,7 +257,7 @@ function ProcessDetailsGroup({ messageCount, toolCallCount, defaultExpanded = fa
   );
 }
 
-export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initialScrollPosition, onScrollPositionChange, sessionRunning, newSessionCwd, newSessionDraftKey, onAgentEnd, onAttentionNeeded, onSessionCreated, onSessionForked, modelsRefreshKey, workspaceUnavailable, onRecheckWorkspace, chatInputRef, onBranchDataChange, onSystemPromptChange, onSystemToolsChange, onSystemInfoLoaderChange, onSessionStatsChange, onSessionStatsPanelOpen, onOpenSettings, onOpenModelsConfig, onContextUsageChange, onOpenFile, onOpenSession, onAskInNewChat, onSelectProject, projectOptions, onProjectChange, onProjectFilesImported, quoteSelectionEnabled = true, initialPrompt, onInitialPromptConsumed, soundEnabled = true, onSoundToggle, playDoneSound = () => {}, unlockAudio }: Props) {
+export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initialScrollPosition, onScrollPositionChange, sessionRunning, newSessionCwd, newSessionDraftKey, onAgentEnd, onAttentionNeeded, onSessionCreated, onSessionForked, modelsRefreshKey, workspaceUnavailable, onRecheckWorkspace, chatInputRef, onBranchDataChange, onSystemPromptChange, onSystemToolsChange, onSystemInfoLoaderChange, onSessionStatsChange, onSessionStatsPanelOpen, onOpenSettings, onOpenModelsConfig, onContextUsageChange, onOpenFile, onOpenSession, onAskInNewChat, onSelectProject, projectOptions, onProjectChange, onProjectFilesImported, quoteSelectionEnabled = true, initialPrompt, onInitialPromptConsumed, soundEnabled = true, playDoneSound = () => {}, unlockAudio }: Props) {
   const { t } = useI18n();
   const isMobile = useIsMobile();
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -1081,9 +1080,11 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
 
   // Jump to a conversation turn from the navigator rail. Turns can sit
   // outside the rendered window, so expand the window to the full branch
-  // first, then scroll once the anchor is mounted.
+  // first, then scroll once the anchor is mounted. The window counts rendered
+  // items, not messages: a turn's "Process details" group is one more item, so
+  // messages.length alone left the first turn outside the window.
   const selectConversationTurn = useCallback((turnIndex: number) => {
-    setVisibleCount(messages.length);
+    setVisibleCount((current) => Math.max(current, messages.length * 2));
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const container = scrollContainerRef.current;
       const anchor = container?.querySelector<HTMLElement>(`[data-conversation-turn="${turnIndex}"]`);
@@ -1146,8 +1147,6 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
       slashCommandsLoading={slashCommandsLoading}
       onLoadSlashCommands={loadSlashCommands}
       onBuiltinCommand={handleBuiltinSlashCommand}
-      soundEnabled={soundEnabled}
-      onSoundToggle={onSoundToggle}
       onAudioUnlock={unlockAudio}
       autoFocus={isNew}
       draftKey={session?.id ?? newSessionDraftKey ?? undefined}
@@ -1308,6 +1307,14 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                 }
               });
 
+              // Turn numbers for the navigator rail: they must count user messages
+              // exactly like `conversationTurns`, whose indexes the rail selects.
+              const turnIndexByMessageIndex = new Map<number, number>();
+              let nextTurnIndex = 0;
+              messages.forEach((msg, idx) => {
+                if (getUserInputText(msg)) turnIndexByMessageIndex.set(idx, nextTurnIndex++);
+              });
+
               const attachVisibleRef = (idx: number, refIndex: number) => (el: HTMLDivElement | null) => {
                 messageRefs.current[refIndex] = el;
                 if (idx === lastUserIdx) { (lastUserMsgRef as { current: HTMLDivElement | null }).current = el; }
@@ -1360,7 +1367,11 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                 );
                 if (!isVisible || currentRefIdx === undefined) return view;
                 return (
-                  <div key={`${keyPrefix}-${messageKey}`} data-entry-id={entryIds[idx]} ref={options.attachRef === false ? undefined : attachVisibleRef(idx, currentRefIdx)}>
+                  <div
+                    key={`${keyPrefix}-${messageKey}`}
+                    data-entry-id={entryIds[idx]}
+                    data-conversation-turn={turnIndexByMessageIndex.get(idx)}
+                    ref={options.attachRef === false ? undefined : attachVisibleRef(idx, currentRefIdx)}>
                     {view}
                   </div>
                 );

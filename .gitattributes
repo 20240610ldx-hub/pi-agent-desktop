@@ -3,4 +3,5 @@
 *.tsx text eol=lf
 *.mjs text eol=lf
 *.css text eol=lf
+*.yml text eol=lf
 public/preview-runtime/*.js text eol=lf

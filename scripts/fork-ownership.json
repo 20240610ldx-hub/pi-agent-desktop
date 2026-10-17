@@ -49,11 +49,11 @@
       "reason": "Server shutdown stream listeners are replaced by their owned Symbol during hot reload rather than accumulating one listener per registration."
     },
     "components/SettingsPanel.tsx": {
-      "risk": "high", "drift": 524, "structuralDrift": 420, "disposition": "accepted",
+      "risk": "high", "drift": 542, "structuralDrift": 437, "disposition": "accepted",
       "reason": "Pilaude mounts its app-owned data import section beside the existing desktop update section. Preserve this mount and existing settings behavior when merging upstream."
     },
     "components/ModelsConfig.tsx": {
-      "risk": "medium", "drift": 75, "structuralDrift": 30, "disposition": "accepted",
+      "risk": "medium", "drift": 173, "structuralDrift": 114, "disposition": "accepted",
       "reason": "Encrypted custom-provider credentials are stored rather than models-json credentials, so managed providers must be filtered from the generic account list to avoid duplicate rows."
     },
     "components/DirectoryPicker.tsx": {
@@ -97,15 +97,15 @@
       "reason": "The model test callback uses the transient Pilaude runtime; its temporary configuration omits API keys and headers while the SDK resolves in-memory draft authentication."
     },
     "lib/i18n/messages/en.ts": {
-      "risk": "high", "drift": 502, "structuralDrift": 502, "disposition": "accepted",
+      "risk": "high", "drift": 526, "structuralDrift": 526, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "lib/i18n/messages/zh-CN.ts": {
-      "risk": "high", "drift": 506, "structuralDrift": 506, "disposition": "accepted",
+      "risk": "high", "drift": 530, "structuralDrift": 530, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "lib/i18n/messages/zh-TW.ts": {
-      "risk": "high", "drift": 494, "structuralDrift": 494, "disposition": "accepted",
+      "risk": "high", "drift": 520, "structuralDrift": 520, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "components/SessionSidebar.tsx": {
@@ -117,9 +117,9 @@
     },
     "components/AppShell.tsx": {
       "risk": "high",
-      "drift": 1797,
+      "drift": 2291,
       "reason": "Top-bar redesign (toolbar consolidated into a more-menu, inline styles to classNames) plus the mount point for desktop chrome. The desktop-only parts moved to components/desktop/; the remaining 376 structural lines are the fork's own interaction design, not desktop plumbing, so this file stays high risk by design rather than by neglect.",
-      "structuralDrift": 1553,
+      "structuralDrift": 1898,
       "disposition": "accepted"
     },
     "components/FileViewer.tsx": {
@@ -145,9 +145,9 @@
     },
     "components/ChatWindow.tsx": {
       "risk": "high",
-      "drift": 515,
+      "drift": 741,
       "reason": "Redesigned empty state \u2014 the new-session branding header (app icon + PRODUCT_NAME) is removed and only the update chip remains. Part of the fork's interaction design. Kept deliberately.",
-      "structuralDrift": 722,
+      "structuralDrift": 619,
       "disposition": "accepted"
     },
     "hooks/useTheme.ts": {
@@ -159,9 +159,9 @@
     },
     "components/ChatInput.tsx": {
       "risk": "high",
-      "drift": 868,
+      "drift": 1503,
       "reason": "Composer chrome restyle. Upstream changed this file in v0.8.1, and components/ChatInput.test.mjs covers it.",
-      "structuralDrift": 802,
+      "structuralDrift": 1105,
       "disposition": "accepted"
     },
     "components/MessageView.tsx": {
@@ -278,6 +278,8 @@
     }
   },
   "forkOwnedPaths": [
+    "lib/ui-platform.ts",
+    "lib/ui-platform.test.mjs",
     "lib/encrypted-mcp-auth.ts",
     "lib/encrypted-mcp-auth.test.mjs",
     "lib/__fixtures__/encrypted-mcp-state.mjs",

@@ -17,7 +17,7 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - runner: macos-15
+          - runner: macos-26
             target: aarch64-apple-darwin
             args: --target aarch64-apple-darwin
             apple_signing_identity: "-"
@@ -58,6 +58,17 @@ jobs:
         env:
           TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
         run: node scripts/configure-updater-public-key.mjs
+
+      # The window controls are drawn by the AppKit the binary links, not the
+      # one it runs on: an SDK 15 build shows the legacy traffic lights even on
+      # macOS 26+, and with different button geometry (0.7.1 shipped from a
+      # macOS 15 runner that way). Fail here instead of shipping that again.
+      - name: Require the macOS 26 SDK
+        if: runner.os == 'macOS'
+        run: |
+          sdk="$(xcrun --sdk macosx --show-sdk-version)"
+          echo "macOS SDK $sdk"
+          test "${sdk%%.*}" -ge 26
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
