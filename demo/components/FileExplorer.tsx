@@ -51,7 +51,6 @@ interface Props {
   changesCollapsed: boolean;
   onChangesCountChange?: (count: number) => void;
   fileSearchOpen?: boolean;
-  selectedFilePath?: string | null;
   onFileSearchOpenChange?: (open: boolean) => void;
 }
 
@@ -713,7 +712,6 @@ export const FileExplorer = forwardRef<FileExplorerHandle, Props>(function FileE
   changesCollapsed,
   onChangesCountChange,
   fileSearchOpen = false,
-  selectedFilePath,
   onFileSearchOpenChange,
 }, ref) {
   const { t } = useI18n();
@@ -731,13 +729,6 @@ export const FileExplorer = forwardRef<FileExplorerHandle, Props>(function FileE
   const [uploadSummary, setUploadSummary] = useState<UploadSummary | null>(null);
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  useEffect(() => {
-    if (selectedFilePath) {
-      setSelectedPath(selectedFilePath);
-    }
-  }, [selectedFilePath]);
 
   const [searchPaths, setSearchPaths] = useState<string[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
