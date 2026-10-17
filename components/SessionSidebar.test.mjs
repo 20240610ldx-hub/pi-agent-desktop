@@ -41,7 +41,8 @@ test("re-adding a removed project clears only its sidebar marker", () => {
   assert.match(source, /const activateProject = useCallback\(\(cwd: string\) =>/);
   assert.match(source, /if \(!previous\.has\(projectRoot\)\) return previous;/);
   assert.match(source, /next\.delete\(projectRoot\);/);
-  assert.match(source, /onSelectCwd=\{activateProject\}/);
+  // The add-project dialog is the only picker left in the sidebar.
+  assert.match(source, /onSelectCwd=\{\(cwd\) => \{\s+activateProject\(cwd\);/);
 });
 
 test("exposes the polled running-session set to the shell", () => {
@@ -125,7 +126,7 @@ test("hides subagent rows and aggregates their state into the main session row",
   assert.doesNotMatch(source, /function SessionTreeItem/);
 });
 
-test("the project context menu reveals the project in the OS file manager", () => {
+test("the project context menu reveals the project in the OS file manager", async () => {
   // Upstream's open-in-file-manager (#907) reaches the fork through the
   // project context menu: the desktop shell reveals natively and the browser
   // goes through /api/open-in-explorer, which the menu only offers after the
@@ -135,7 +136,9 @@ test("the project context menu reveals the project in the OS file manager", () =
   assert.match(source, /revealItemInDirNative\(root\)/);
   assert.match(source, /fetch\("\/api\/open-in-explorer", \{\s*method: "POST"/);
   assert.match(source, /FILE_MANAGER_ERROR_KEYS\[data\.error \?\? ""\]/);
-  assert.match(source, /\{projectRevealError && \(/);
+  // The menu itself is fork-owned (components/ProjectContextMenu.tsx).
+  const menuSource = await readFile(new URL("./ProjectContextMenu.tsx", import.meta.url), "utf8");
+  assert.match(menuSource, /\{projectRevealError && \(/);
   // The platform-adaptive label (Finder / Explorer / generic).
   assert.match(source, /"sidebar\.openInFinder"/);
   assert.match(source, /"sidebar\.openInExplorer"/);
@@ -176,6 +179,23 @@ test("folded projects persist across reloads", () => {
   assert.match(source, /setPrefJson\(APP_PREF_KEYS\.collapsedProjects, \[\.\.\.collapsedProjects\]\)/);
   // "Collapse all" must look at the visible projects, not the stored set's size.
   assert.match(source, /allProjects\.some\(\(g\) => !collapsedProjects\.has\(g\.projectRoot\)\)/);
+});
+
+test("expanded session previews persist and reveal how many rows are hidden", () => {
+  assert.match(source, /getPrefJson<unknown>\(APP_PREF_KEYS\.expandedProjects\)/);
+  assert.match(source, /setPrefJson\(APP_PREF_KEYS\.expandedProjects, \[\.\.\.expandedProjectSessions\]\)/);
+  assert.match(
+    source,
+    /t\("sidebar\.showMoreSessions", \{ count: groupTree\.length - visibleGroupTree\.length \}\)/,
+  );
+});
+
+test("shows a cross-project recent section above the project tree", () => {
+  assert.match(source, /import \{ getRecallSessions, hasRecallSessionsToday \} from "@\/lib\/recent-sessions"/);
+  assert.match(source, /const recentSessions = !trimmedSessionQuery/);
+  assert.match(source, /<section className="sidebar-recent-section" aria-label=\{t\(hasTodaySessions \? "sidebar\.today" : "sidebar\.recent"\)\}>/);
+  assert.match(source, /t\(hasTodaySessions \? "sidebar\.today" : "sidebar\.recent"\)/);
+  assert.match(source, /subtitle=\{projectName\}/);
 });
 
 test("the row menu shows the compaction count only when the session was compacted", () => {
