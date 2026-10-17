@@ -1,6 +1,6 @@
-import { enLocale } from "./messages/en";
-import { zhCNLocale } from "./messages/zh-CN";
-import { zhTWLocale } from "./messages/zh-TW";
+import { enLocale } from "./messages/en.ts";
+import { zhCNLocale } from "./messages/zh-CN.ts";
+import { zhTWLocale } from "./messages/zh-TW.ts";
 import type { Locale, LocalePlugin } from "./types";
 
 const localePlugins: LocalePlugin[] = [enLocale, zhCNLocale, zhTWLocale];
