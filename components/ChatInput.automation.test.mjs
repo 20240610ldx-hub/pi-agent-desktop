@@ -4,6 +4,8 @@ import test from "node:test";
 import { createJiti } from "jiti";
 
 const source = readFileSync(new URL("./ChatInput.tsx", import.meta.url), "utf8");
+// The gear menu itself is fork-owned and lives outside ChatInput.
+const menuSource = readFileSync(new URL("./SessionAutomationMenu.tsx", import.meta.url), "utf8");
 
 const jiti = createJiti(import.meta.url, {
   jsx: { runtime: "automatic" },
@@ -42,12 +44,12 @@ test("automation gear exposes the four session-automation controls", () => {
   assert.match(html, /aria-label="Session automation"/);
   // Popover content renders in static markup (server render has no toggle state,
   // so assert the controls' labels exist inside the source popover markup).
-  assert.match(source, /t\("chat\.autoCompaction"\)/);
-  assert.match(source, /t\("chat\.autoRetry"\)/);
-  assert.match(source, /onSetAutomation\(\{ autoCompaction: e\.target\.checked \}\)/);
-  assert.match(source, /onSetAutomation\(\{ autoRetry: e\.target\.checked \}\)/);
-  assert.match(source, /onSetAutomation\(\{ steeringMode: mode \}\)/);
-  assert.match(source, /onSetAutomation\(\{ followUpMode: mode \}\)/);
+  assert.match(menuSource, /t\("chat\.autoCompaction"\)/);
+  assert.match(menuSource, /t\("chat\.autoRetry"\)/);
+  assert.match(menuSource, /onSetAutomation\(\{ autoCompaction: e\.target\.checked \}\)/);
+  assert.match(menuSource, /onSetAutomation\(\{ autoRetry: e\.target\.checked \}\)/);
+  assert.match(menuSource, /onSetAutomation\(\{ steeringMode: mode \}\)/);
+  assert.match(menuSource, /onSetAutomation\(\{ followUpMode: mode \}\)/);
 });
 
 test("automation gear stays hidden while values are unknown (new session)", () => {

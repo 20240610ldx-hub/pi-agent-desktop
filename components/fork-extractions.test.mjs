@@ -141,6 +141,34 @@ const EXTRACTIONS = [
       "handleForkAgentEvent(event)",
     ],
   },
+  {
+    name: "ChatInput fork layers",
+    origin: "components/ChatInput.tsx",
+    // The composer is upstream's. The fork's `#` session mentions, session (gear)
+    // menu and project chip live in fork-owned files; ChatInput keeps their state
+    // where its shared keyboard and outside-click handlers need it, and mounts them.
+    movedTo: [
+      "hooks/useSessionMentionPalette.ts",
+      "components/SessionMentionMenu.tsx",
+      "components/SessionAutomationMenu.tsx",
+      "components/ComposerProjectChip.tsx",
+    ],
+    movedDefinitions: ["getProjectLabel", "applyHashCompletion", "updateHashQuery", "hashMatches"],
+    absentFromOrigin: [
+      "sessionIndexFetchingRef",
+      "chat.noMatchingSessions",
+      "chat.autoCompaction",
+      "chat.steeringMode",
+      "chat-project-context",
+      "chat.switchProject",
+    ],
+    requiredInOrigin: [
+      "useSessionMentionPalette(",
+      "<SessionMentionMenu",
+      "<SessionAutomationMenu",
+      "<ComposerProjectChip",
+    ],
+  },
 ];
 
 const FORK_FEATURES = [
