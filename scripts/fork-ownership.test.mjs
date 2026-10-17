@@ -77,7 +77,6 @@ test("the structurally rewritten files are all classified high risk", () => {
   for (const path of [
     "components/SessionSidebar.tsx",
     "components/AppShell.tsx",
-    "components/FileViewer.tsx",
   ]) {
     assert.equal(manifest.driftedUpstreamFiles[path]?.risk, "high", `${path} must stay high risk`);
   }

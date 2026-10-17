@@ -1,9 +1,9 @@
 /**
  * Claude Design System (CDS) - Button System
- * 
+ *
  * 逆向溯源：依据 REA v6.5.0 对 Claude Desktop 生产环境 (shared-frame-BfjMqbuN.js / c6a992d55-sXiDGMFQ.css)
  * AST 逆向提取的完整按钮阶梯与物理阻尼规范。
- * 
+ *
  * 核心准则：
  *   - 严格遵循“单闭合边框原则 (The 1-Border Rule)”：卡片内部的 Secondary 按钮严禁带边框，默认采用 Surface-2 浅底填充。
  *   - 尺寸阶梯：XXS (20px)、XS (24px, 6px圆角)、SM (28px, 8px圆角)、MD (32px, 8px圆角)、LG (40px, 12px圆角)。

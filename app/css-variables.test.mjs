@@ -27,6 +27,7 @@ test("every CSS variable read without a fallback is defined somewhere", () => {
     .join("\n");
   const defined = new Set([
     ...Array.from(css.matchAll(/(--[\w-]+)\s*:/g), (match) => match[1]),
+    ...Array.from(css.matchAll(/@property\s+(--[\w-]+)/g), (match) => match[1]),
     ...Array.from(source.matchAll(/["'`](--[\w-]+)["'`]/g), (match) => match[1]),
   ]);
   const missing = new Set();

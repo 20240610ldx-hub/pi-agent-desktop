@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import ts from "typescript";
 
 const source = readFileSync(new URL("./AppShell.tsx", import.meta.url), "utf8");
 
@@ -58,18 +59,24 @@ test("topbar sits in the main column after the sidebar (sidebar runs full height
 });
 
 test("file panel stays a full-height embedded pane", () => {
-  const mainColumn = source.indexOf('className="app-main-column"');
-  const center = source.indexOf("{/* Center: chat */}");
-  const panelIdx = source.indexOf("right-panel-container");
-  assert.ok(mainColumn !== -1 && center > mainColumn && panelIdx > center, "layout markers not found in order");
-  // Between the center column and the panel, the inner row and the main
-  // column must both close; otherwise the topbar spans the panel again.
-  const between = source.slice(center, panelIdx);
-  assert.match(
-    between,
-    /\n      <\/div>\n        <\/div>\n      <\/div>\n\n      \{\/\* Mobile keeps this fixed toggle/,
-    "center column, inner row and main column must close before the panel block",
-  );
+  const ast = ts.createSourceFile("AppShell.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  function elementWith(attribute, value) {
+    let found;
+    function visit(node) {
+      if (ts.isJsxElement(node) && node.openingElement.attributes.properties.some(prop =>
+        ts.isJsxAttribute(prop) && prop.name.getText(ast) === attribute && prop.initializer?.getText(ast) === JSON.stringify(value))) found = node;
+      ts.forEachChild(node, visit);
+    }
+    visit(ast);
+    assert.ok(found, `${attribute}=${value} element missing`);
+    return found;
+  }
+  const main = elementWith("className", "app-main-column");
+  const panel = elementWith("id", "file-panel");
+  const body = elementWith("className", "pilaude-workspace-body");
+  assert.equal(panel.parent, main.parent, "panel must be a full-height sibling of the main column");
+  assert.equal(body.parent, main, "workspace body must stay inside the main column");
+  assert.equal(elementWith("id", "session-sidebar").parent, main.parent, "sidebar must share the outer row");
   assert.match(
     source,
     /borderLeft: "var\(--hairline\) solid var\(--separator\)"/,

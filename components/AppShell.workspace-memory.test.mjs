@@ -66,9 +66,10 @@ test("New restores the draft after session navigation and workspace auto-restore
   const cleanupStart = hookSource.indexOf("    return () => {", hookSource.indexOf("  // Load session on mount"));
   const cleanupEnd = hookSource.indexOf("    // eslint-disable-next-line", cleanupStart);
 
-  for (const rememberedCwd of ["/draft-project", "/draft-project-worktree"]) {
+  for (const [index, isWorktree] of [false, true].entries()) {
+    const cwd = `/draft-project-${index}`;
+    const rememberedCwd = isWorktree ? `${cwd}-worktree` : cwd;
     await t.test(`remembered session cwd: ${rememberedCwd}`, async () => {
-      const cwd = "/draft-project";
       const session = { id: "remembered", cwd: rememberedCwd, projectKey: cwd };
       const response = Promise.withResolvers();
       const context = vm.createContext({
@@ -88,6 +89,7 @@ test("New restores the draft after session navigation and workspace auto-restore
         handleRightPanelClose() {},
         rightPanelOpen: false,
         activeNewSessionDraftKeyRef: { current: `new:initial:${cwd}` },
+        scheduledOpenRef: { current: false },
         activeProjectKeyRef: { current: cwd },
         workspaceRestoreTokenRef: { current: 0 },
         suppressCwdBumpRef: { current: false },
@@ -108,6 +110,7 @@ test("New restores the draft after session navigation and workspace auto-restore
         selectedSession: null,
         sessionCatalog: [],
         sessionKey: 0,
+        sessionNavigation: { items: [], index: -1 },
       });
       context.invalidateWorkspaceRestore = () => context.workspaceRestoreTokenRef.current++;
       for (const [setter] of callbacks.matchAll(/\bset[A-Z]\w*(?=\()/g)) {

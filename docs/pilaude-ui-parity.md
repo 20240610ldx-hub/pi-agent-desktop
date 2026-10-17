@@ -92,7 +92,7 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 
 - 用户原图共 10 张已逐字节归档并核验 SHA-256，本机路径为 `D:\pilaude\references\claude-desktop\windows-2.42304.0\2026-10-17`。`README.md`、`manifest.json` 索引尺寸和状态。原始 PNG 不随公开代码或安装包发布；派生裁剪与叠图不覆盖原件。
 - 新增参考显示：Context 可与 Browser/Git dock 同时存在，也可在 Files 左侧浮出；Background tasks 和 Terminal 可垂直共存。当前“文件面板打开便隐藏 Context”的临时实现不满足该参考，须改为明确的面板/浮层布局状态后复测。
-- 新增回复局部图明确区分 rest 与 hover，操作栏在 rest 隐藏；当前常显复制按钮/绝对时间仍是差异，不能以可点击作为复刻通过。
+- 新增回复局部图明确区分 rest 与 hover，操作栏在 rest 隐藏；现已改为静止隐藏、hover/focus 显示、触屏可达和相对时间；回答分叉接入真实 Pi。复制/分叉截图及实际交互仍须逐状态对照，Pin/朗读尚未实现，不能以可点击作为复刻通过。
 
 - 原 Task 2 的四档截图、输入/面板测试仅证明相应功能可操作，缺少同版本 Claude 参考图和差异图，状态改为“功能已测、一致性未验”。
 - 欢迎页为 Pilaude 原先自建构图，尚未证明符合 Claude 当前首页；系统字体、Lucide 图标和深色文字的旧 Clay 按钮均待重新对照。
@@ -101,6 +101,6 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 
 ## 上游更新规则
 
-两个 fork 的 main 保持每 6 小时自动同步作者 main，失败由 Actions 记录。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。
+两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。
 
 `vendor/open-claude-ui` 是受控集成边界：参考 checkout 更新后，比较实际采用的 CSS/组件、记录新来源 SHA 和变更，再测试后接入；不能仅修改 README 的 SHA，也不能将整个库入口的 Electron 依赖带入 renderer。新资产没有通过运行验证时保持“已发现、未接入”，不能混作已完成。

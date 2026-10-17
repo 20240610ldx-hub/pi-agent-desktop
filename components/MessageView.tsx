@@ -197,7 +197,7 @@ interface Props {
   onOpenModelsConfig?: () => void;
   entryId?: string;
   searchBlock?: AssistantContentBlock;
-  onFork?: (entryId: string) => void;
+  onFork?: (entryId: string, position?: "after") => void;
   forking?: boolean;
   onEditContent?: (message: UserMessage, entryId: string) => void;
   onCancelEdit?: () => void;
@@ -249,6 +249,26 @@ function formatTime(ts?: number): string | null {
   return `${date} ${time}`;
 }
 
+export function formatRelativeMessageTime(timestamp: number, locale: string, now = Date.now()): string | null {
+  if (!Number.isFinite(timestamp) || !Number.isFinite(new Date(timestamp).getTime())) return null;
+  const elapsed = Math.max(0, Math.floor((now - timestamp) / 1000));
+  const [divisor, unit] = elapsed >= 86400 ? [86400, "day"] as const
+    : elapsed >= 3600 ? [3600, "hour"] as const
+    : elapsed >= 60 ? [60, "minute"] as const : [1, "second"] as const;
+  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(-Math.floor(elapsed / divisor), unit);
+}
+
+function ResponseTime({ timestamp }: { timestamp: number }) {
+  const { locale } = useI18n();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  const label = formatRelativeMessageTime(timestamp, locale, now);
+  return label ? <time className="message-response-time" dateTime={new Date(timestamp).toISOString()} title={formatTime(timestamp) ?? undefined}>{label}</time> : null;
+}
+
 export function replaceUserMessageText(message: UserMessage, text: string): UserMessage {
   if (typeof message.content === "string") return { ...message, content: text };
 
@@ -287,7 +307,7 @@ export const MessageView = memo(function MessageView({ message, isStreaming, too
     return <UserMessageView message={message as UserMessage} cwd={cwd} onOpenFile={onOpenFile} entryId={entryId} onFork={onFork} forking={forking} onEditContent={onEditContent} onCancelEdit={onCancelEdit} isEditing={isEditing} />;
   }
   if (message.role === "assistant") {
-    return <AssistantMessageView message={message as AssistantMessage} isStreaming={isStreaming} toolResults={toolResults} modelNames={modelNames} cwd={cwd} onOpenFile={onOpenFile} onOpenSession={onOpenSession} onOpenModelsConfig={onOpenModelsConfig} showTimestamp={showTimestamp} prevTimestamp={prevTimestamp} sessionId={sessionId} entryId={entryId} searchBlock={searchBlock} writtenFiles={writtenFiles} onCompact={onCompact} isCompacting={isCompacting} compactError={compactError} />;
+    return <AssistantMessageView message={message as AssistantMessage} isStreaming={isStreaming} toolResults={toolResults} modelNames={modelNames} cwd={cwd} onOpenFile={onOpenFile} onOpenSession={onOpenSession} onOpenModelsConfig={onOpenModelsConfig} showTimestamp={showTimestamp} prevTimestamp={prevTimestamp} sessionId={sessionId} entryId={entryId} onFork={onFork} forking={forking} searchBlock={searchBlock} writtenFiles={writtenFiles} onCompact={onCompact} isCompacting={isCompacting} compactError={compactError} />;
   }
   if (message.role === "toolResult") {
     // Rendered inline under its toolCall — skip standalone rendering if paired
@@ -336,7 +356,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
   cwd?: string;
   onOpenFile?: (filePath: string, page?: number) => void;
   entryId?: string;
-  onFork?: (entryId: string) => void;
+  onFork?: (entryId: string, position?: "after") => void;
   forking?: boolean;
   onEditContent?: (message: UserMessage, entryId: string) => void;
   onCancelEdit?: () => void;
@@ -638,6 +658,8 @@ function AssistantMessageView({
   prevTimestamp,
   sessionId,
   entryId,
+  onFork,
+  forking,
   searchBlock,
   writtenFiles,
   onCompact,
@@ -656,6 +678,8 @@ function AssistantMessageView({
   prevTimestamp?: number;
   sessionId?: string;
   entryId?: string;
+  onFork?: (entryId: string, position?: "after") => void;
+  forking?: boolean;
   searchBlock?: AssistantContentBlock;
   writtenFiles?: WrittenFile[];
   onCompact?: () => void;
@@ -671,7 +695,6 @@ function AssistantMessageView({
   const providerError = getAssistantErrorMessage(message, { isStreaming });
   const truncated = isAssistantTruncated(message, { isStreaming });
   const unansweredTruncation = truncated && !hasAssistantAnswer(message);
-  const [hovered, setHovered] = useState(false);
   const [copied, setCopied] = useState(false);
   const streamStartRef = useRef<number | null>(null);
   const [tps, setTps] = useState<number | null>(null);
@@ -796,8 +819,6 @@ function AssistantMessageView({
       data-message-role="assistant"
       data-entry-id={entryId}
       style={{ marginBottom: 16 }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       {/* Model label */}
       <div
@@ -915,7 +936,7 @@ function AssistantMessageView({
         {textContent && !isStreaming && (
           <button
             onClick={copyContent}
-             title={t("i18n.copyMessage")}
+            aria-label={copied ? t("i18n.copied") : t("i18n.copyMessage")}
             style={{
               display: "flex", alignItems: "center", gap: 4,
               padding: "3px 8px", height: 22,
@@ -925,8 +946,6 @@ function AssistantMessageView({
               cursor: "pointer",
               fontSize: 11, fontWeight: 400,
               whiteSpace: "nowrap",
-              opacity: hovered ? 1 : 0,
-              pointerEvents: hovered ? "auto" : "none",
               transition: "opacity 0.12s, color 0.12s",
             }}
             onMouseEnter={(e) => { if (!copied) e.currentTarget.style.color = "var(--accent)"; }}
@@ -942,12 +961,26 @@ function AssistantMessageView({
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
             )}
-             {copied ? t("i18n.copied") : t("i18n.copy")}
+            <span className="pilaude-action-tooltip" aria-hidden="true">{copied ? t("i18n.copied") : t("i18n.copy")}</span>
           </button>
         )}
-        {time && !isStreaming && (
-          <span className="message-meta" style={{ fontSize: 10, color: "var(--text-dim)", marginLeft: "auto" }}>{time}</span>
+        {textContent && !isStreaming && entryId && onFork && (
+          <button
+            type="button"
+            aria-label={t("pilaude.forkFromHere")}
+            disabled={forking}
+            onClick={() => onFork(entryId, "after")}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 12h6m0 0 8-8m-8 8 8 8M14 4h4v4m-4 12h4v-4" />
+            </svg>
+            <span className="pilaude-action-tooltip pilaude-action-tooltip--description" aria-hidden="true">
+              <strong>{t("pilaude.forkFromHere")}</strong>
+              <span>{t("pilaude.forkDescription")}</span>
+            </span>
+          </button>
         )}
+        {time && !isStreaming && <ResponseTime timestamp={message.timestamp!} /> }
       </div>
     </div>
   );

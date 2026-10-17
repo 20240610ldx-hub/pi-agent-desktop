@@ -114,8 +114,8 @@
   --cds-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 2px 8px 0 var(--cds-shadow-color);
   --cds-shadow-md: 0 2px 4px 0 rgba(0, 0, 0, 0.05), 0 6px 16px 0 var(--cds-shadow-color);
   --cds-shadow-lg: 0 4px 8px 0 rgba(0, 0, 0, 0.06), 0 12px 28px -2px var(--cds-shadow-color);
-  --cds-shadow-popover: inset 0 0 0 var(--cds-ring-inner) var(--cds-ring-color), 
-                        0 0 0 var(--cds-ring-outer) var(--cds-ring-color), 
+  --cds-shadow-popover: inset 0 0 0 var(--cds-ring-inner) var(--cds-ring-color),
+                        0 0 0 var(--cds-ring-outer) var(--cds-ring-color),
                         0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
 
   --cds-panel-shadow: 0 0 0 1px var(--cds-border), var(--cds-shadow-sm);
@@ -226,6 +226,23 @@
   --cds-fill-brand-subtle: var(--cds-clay-light);
   --cds-fill-danger: #ef4444;
   --cds-text-accent: var(--cds-clay);
+
+  /* 15. 语义化向后兼容别名与跨宿主通用别名 (Backward-Compatibility & Host Aliases) */
+  --cds-bg-surface-0: var(--cds-surface-0);
+  --cds-bg-surface-1: var(--cds-surface-1);
+  --cds-bg-surface-2: var(--cds-surface-2);
+  --cds-bg-surface-3: var(--cds-surface-3);
+  --cds-bg-input: var(--cds-surface-3);
+  --cds-text-tertiary: var(--cds-text-muted);
+  --cds-border-card: var(--cds-border);
+  --cds-radius-pill: 9999px;
+  --cds-radius-card: var(--radius-card);
+  --cds-card-radius: var(--radius-card);
+  --cds-radius-message-bubble: var(--cds-message-bubble-radius);
+  --cds-radius-dialog: 16px;
+  --cds-radius-code: 12px;
+  --cds-radius-btn-md: 8px;
+  --cds-radius-btn-xs: 6px;
 }
 
 /* 高分屏视网膜物理发丝细线补偿 */
@@ -272,7 +289,7 @@
   --cds-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4), 0 2px 8px 0 var(--cds-shadow-color);
   --cds-shadow-md: 0 2px 4px 0 rgba(0, 0, 0, 0.4), 0 6px 16px 0 var(--cds-shadow-color);
   --cds-shadow-lg: 0 4px 8px 0 rgba(0, 0, 0, 0.5), 0 16px 36px -2px var(--cds-shadow-color);
-  --cds-shadow-popover: inset 0 0 0 1px rgba(255, 255, 255, 0.10), 
+  --cds-shadow-popover: inset 0 0 0 1px rgba(255, 255, 255, 0.10),
                         0 8px 28px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.45);
 
   --cds-panel-shadow: 0 0 0 1px var(--cds-border), var(--cds-shadow-sm);
@@ -468,15 +485,15 @@
 .cds-shadow-popover { box-shadow: var(--cds-shadow-popover) !important; }
 .cds-panel-shadow { box-shadow: var(--cds-panel-shadow) !important; }
 
-.cds-composer-shadow { 
+.cds-composer-shadow {
   box-shadow: var(--cds-shadow-composer) !important;
   transition: box-shadow 220ms var(--cds-ease-swift), border-color 220ms ease;
 }
-.cds-composer-shadow:hover { 
-  box-shadow: var(--cds-shadow-composer-hover) !important; 
+.cds-composer-shadow:hover {
+  box-shadow: var(--cds-shadow-composer-hover) !important;
 }
-.cds-composer-shadow:focus-within { 
-  box-shadow: var(--cds-shadow-composer-focus) !important; 
+.cds-composer-shadow:focus-within {
+  box-shadow: var(--cds-shadow-composer-focus) !important;
 }
 
 .cds-hover-ghost {
@@ -770,7 +787,9 @@
 }
 
 @supports (animation-timeline: scroll()) {
-  .scroll-fade {
+  .scroll-fade,
+  .cds-scroll-fade,
+  .cds-scroll-fade-vertical {
     --cds-scroll-fade-top: calc(var(--cds-scroll-fade-top-raw) * var(--cds-scroll-fade-y-active) * var(--cds-scroll-fade-top-on));
     --cds-scroll-fade-bottom: calc(var(--cds-scroll-fade-bottom-raw) * var(--cds-scroll-fade-y-active) * var(--cds-scroll-fade-bottom-on));
     --cds-scroll-fade-left: calc(var(--cds-scroll-fade-left-raw) * var(--cds-scroll-fade-x-active) * var(--cds-scroll-fade-left-on));
@@ -785,5 +804,128 @@
     animation-range: 0px var(--cds-scroll-fade-size), calc(100% - var(--cds-scroll-fade-size)) 100%, 0px var(--cds-scroll-fade-size), calc(100% - var(--cds-scroll-fade-size)) 100%, 0px 101%, 0px 101%;
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
+  }
+}
+
+/* 纯 CSS 滚动消隐回退 (无 scroll-driven 浏览器) */
+.cds-scroll-fade-static-v {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--cds-scroll-fade-size, 28px), black calc(100% - var(--cds-scroll-fade-size, 28px)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, black var(--cds-scroll-fade-size, 28px), black calc(100% - var(--cds-scroll-fade-size, 28px)), transparent);
+}
+
+/* ==========================================================================
+   7. Chromium 115+ / Electron 44+ 纯 CSS @property 滚动插值引擎 (Zero-JS Scroll-Fade Engine)
+   基于 CSS @property 与 animation-timeline: scroll(self block / inline)
+   ========================================================================== */
+@property --cds-scroll-fade-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --cds-scroll-fade-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --cds-scroll-fade-left {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --cds-scroll-fade-right {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes cds-scroll-fade-top-in {
+  from { --cds-scroll-fade-top: 0px; }
+  to { --cds-scroll-fade-top: var(--cds-scroll-fade-size, 28px); }
+}
+@keyframes cds-scroll-fade-bottom-out {
+  from { --cds-scroll-fade-bottom: var(--cds-scroll-fade-size, 28px); }
+  to { --cds-scroll-fade-bottom: 0px; }
+}
+@keyframes cds-scroll-fade-left-in {
+  from { --cds-scroll-fade-left: 0px; }
+  to { --cds-scroll-fade-left: var(--cds-scroll-fade-size, 28px); }
+}
+@keyframes cds-scroll-fade-right-out {
+  from { --cds-scroll-fade-right: var(--cds-scroll-fade-size, 28px); }
+  to { --cds-scroll-fade-right: 0px; }
+}
+
+[data-cds-scroll-fade],
+.cds-scroll-fade {
+  --cds-scroll-fade-size: 28px;
+  overflow: auto;
+  position: relative;
+}
+
+@supports (animation-timeline: scroll(self block)) {
+  [data-cds-scroll-fade="vertical"],
+  [data-cds-scroll-fade="both"],
+  .cds-scroll-fade,
+  .cds-scroll-fade-vertical,
+  .cds-scroll-fade-v {
+    animation-timeline: scroll(self block), scroll(self block);
+    animation-name: cds-scroll-fade-top-in, cds-scroll-fade-bottom-out;
+    animation-range: 0 48px, calc(100% - 48px) 100%;
+    animation-fill-mode: both;
+    animation-timing-function: linear;
+    mask-image: linear-gradient(to bottom,
+      transparent,
+      rgba(0, 0, 0, 0.05) calc(var(--cds-scroll-fade-top) * 0.15),
+      rgba(0, 0, 0, 0.15) calc(var(--cds-scroll-fade-top) * 0.3),
+      rgba(0, 0, 0, 0.30) calc(var(--cds-scroll-fade-top) * 0.45),
+      rgba(0, 0, 0, 0.50) calc(var(--cds-scroll-fade-top) * 0.6),
+      rgba(0, 0, 0, 0.70) calc(var(--cds-scroll-fade-top) * 0.75),
+      rgba(0, 0, 0, 0.85) calc(var(--cds-scroll-fade-top) * 0.87),
+      #000 var(--cds-scroll-fade-top),
+      #000 calc(100% - var(--cds-scroll-fade-bottom)),
+      rgba(0, 0, 0, 0.85) calc(100% - var(--cds-scroll-fade-bottom) * 0.87),
+      rgba(0, 0, 0, 0.70) calc(100% - var(--cds-scroll-fade-bottom) * 0.75),
+      rgba(0, 0, 0, 0.50) calc(100% - var(--cds-scroll-fade-bottom) * 0.6),
+      rgba(0, 0, 0, 0.30) calc(100% - var(--cds-scroll-fade-bottom) * 0.45),
+      rgba(0, 0, 0, 0.15) calc(100% - var(--cds-scroll-fade-bottom) * 0.3),
+      rgba(0, 0, 0, 0.05) calc(100% - var(--cds-scroll-fade-bottom) * 0.15),
+      transparent);
+    -webkit-mask-image: linear-gradient(to bottom,
+      transparent,
+      rgba(0, 0, 0, 0.05) calc(var(--cds-scroll-fade-top) * 0.15),
+      rgba(0, 0, 0, 0.15) calc(var(--cds-scroll-fade-top) * 0.3),
+      rgba(0, 0, 0, 0.30) calc(var(--cds-scroll-fade-top) * 0.45),
+      rgba(0, 0, 0, 0.50) calc(var(--cds-scroll-fade-top) * 0.6),
+      rgba(0, 0, 0, 0.70) calc(var(--cds-scroll-fade-top) * 0.75),
+      rgba(0, 0, 0, 0.85) calc(var(--cds-scroll-fade-top) * 0.87),
+      #000 var(--cds-scroll-fade-top),
+      #000 calc(100% - var(--cds-scroll-fade-bottom)),
+      rgba(0, 0, 0, 0.85) calc(100% - var(--cds-scroll-fade-bottom) * 0.87),
+      rgba(0, 0, 0, 0.70) calc(100% - var(--cds-scroll-fade-bottom) * 0.75),
+      rgba(0, 0, 0, 0.50) calc(100% - var(--cds-scroll-fade-bottom) * 0.6),
+      rgba(0, 0, 0, 0.30) calc(100% - var(--cds-scroll-fade-bottom) * 0.45),
+      rgba(0, 0, 0, 0.15) calc(100% - var(--cds-scroll-fade-bottom) * 0.3),
+      rgba(0, 0, 0, 0.05) calc(100% - var(--cds-scroll-fade-bottom) * 0.15),
+      transparent);
+  }
+
+  [data-cds-scroll-fade="horizontal"],
+  .cds-scroll-fade-horizontal,
+  .cds-scroll-fade-h {
+    animation-timeline: scroll(self inline), scroll(self inline);
+    animation-name: cds-scroll-fade-left-in, cds-scroll-fade-right-out;
+    animation-range: 0 48px, calc(100% - 48px) 100%;
+    animation-fill-mode: both;
+    animation-timing-function: linear;
+    mask-image: linear-gradient(to right,
+      transparent,
+      #000 var(--cds-scroll-fade-left),
+      #000 calc(100% - var(--cds-scroll-fade-right)),
+      transparent);
+    -webkit-mask-image: linear-gradient(to right,
+      transparent,
+      #000 var(--cds-scroll-fade-left),
+      #000 calc(100% - var(--cds-scroll-fade-right)),
+      transparent);
   }
 }

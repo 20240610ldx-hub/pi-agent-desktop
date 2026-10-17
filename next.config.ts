@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
     : {}),
   outputFileTracingRoot: configDir,
   experimental: {
+    // Custom webpack rules disable the default worker. Isolate compilation so
+    // server/client compiler state does not accumulate past Node's heap limit.
+    webpackBuildWorker: true,
+    webpackMemoryOptimizations: true,
     // proxy.ts matches /api/:path*, and Next buffers the request body whenever
     // a proxy is present, capped at 10 MB by default. The upload route accepts
     // up to 100 MB per request, so raise the buffer above that or large uploads

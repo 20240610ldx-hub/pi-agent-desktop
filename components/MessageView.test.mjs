@@ -15,6 +15,7 @@ const {
   getTokenEstimateText,
   getToolCallInputText,
   replaceUserMessageText,
+  formatRelativeMessageTime,
 } = await jiti.import("./MessageView.tsx");
 const { I18nProvider } = await jiti.import("@/hooks/useI18n");
 const { splitFinalAssistantBlocks } = await jiti.import("@/lib/message-display");
@@ -28,6 +29,23 @@ function renderMessage(message, props = {}) {
     ),
   );
 }
+
+test("completed responses expose a fork action, while streaming responses cannot fork", () => {
+  const message = { role: "assistant", content: [{ type: "text", text: "A completed response." }] };
+  const props = { entryId: "reply", onFork() {} };
+  assert.match(renderMessage(message, props), /aria-label="Fork from here"/);
+  assert.doesNotMatch(renderMessage(message, { ...props, isStreaming: true }), /aria-label="Fork from here"/);
+});
+
+test("relative message times respect locale, elapsed minutes and invalid clocks", () => {
+  assert.equal(typeof formatRelativeMessageTime, "function");
+  const now = Date.UTC(2026, 9, 18, 2);
+  assert.equal(formatRelativeMessageTime(now - 180_000, "en", now), "3 minutes ago");
+  assert.equal(formatRelativeMessageTime(now - 7_200_000, "en", now), "2 hours ago");
+  assert.equal(formatRelativeMessageTime(now - 180_000, "zh-CN", now), "3分钟前");
+  assert.equal(formatRelativeMessageTime(now + 60_000, "en", now), "now");
+  assert.equal(formatRelativeMessageTime(NaN, "en", now), null);
+});
 
 test("updates a reused message when its written files change", () => {
   const props = { message: { role: "assistant", content: [] } };
@@ -201,7 +219,8 @@ test("renders a provider error when the assistant message has no content", () =>
   });
 
   assert.match(html, /role="alert"/);
-  assert.match(html, /Error: OpenAI API error \(403\)/);
+  assert.match(html, /Request failed/);
+  assert.match(html, /OpenAI API error \(403\)/);
   assert.match(html, /&lt;html&gt;request forbidden&lt;\/html&gt;/);
 });
 
@@ -262,7 +281,9 @@ test("renders partial assistant content before the provider error", () => {
   });
 
   assert.match(html, /Partial response/);
-  assert.match(html, /Error: Connection closed/);
+  assert.match(html, /role="alert"/);
+  assert.match(html, /Connection closed/);
+  assert.ok(html.indexOf("Partial response") < html.indexOf("Connection closed"));
 });
 
 test("marks persisted assistant messages with their source entry", () => {
