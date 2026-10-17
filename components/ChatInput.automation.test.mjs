@@ -62,7 +62,7 @@ test("server supports the automation command set end to end", () => {
   }
   assert.match(rpc, /steeringMode: this\.inner\.steeringMode/);
   assert.match(rpc, /followUpMode: this\.inner\.followUpMode/);
-  const hook = readFileSync(new URL("../hooks/useAgentSession.ts", import.meta.url), "utf8");
+  const hook = readFileSync(new URL("../hooks/useSessionAutomation.ts", import.meta.url), "utf8");
   assert.match(hook, /type: "set_auto_compaction", enabled: change\.autoCompaction/);
   assert.match(hook, /type: "set_steering_mode", mode: change\.steeringMode/);
 });

@@ -91,6 +91,56 @@ const EXTRACTIONS = [
     absentFromOrigin: ["/api/updates", "installLatestDesktopRelease", "closeQuits", "quitAppNative"],
     requiredInOrigin: ["AppUpdatesSection", "DesktopAppSection"],
   },
+  {
+    name: "useAgentSession fork layers",
+    origin: "hooks/useAgentSession.ts",
+    // useAgentSession is upstream's and the fork's biggest hook. The features the
+    // fork added on top (summarized branch switches, the 0.86 automation switches,
+    // compaction no-op notices, dismissible scope warnings, the extra SDK events)
+    // live in fork-owned hooks it calls; upstream's own code — the event-stream
+    // lifecycle, running-state reconciliation, the guards AGENTS.md lists — stays
+    // in the origin so upstream edits to it still merge in place.
+    movedTo: [
+      "hooks/useBranchSummary.ts",
+      "hooks/useSessionAutomation.ts",
+      "hooks/useCompactNotice.ts",
+      "hooks/useScopeWarningDismissal.ts",
+      "hooks/useForkAgentEvents.ts",
+    ],
+    movedDefinitions: [
+      "branchSummaryHolds",
+      "summarizeAndNavigate",
+      "handleAbortBranchSummary",
+      "handleSetAutomation",
+      "handleAbortRetry",
+      "compactNoopMessage",
+      "reportCompactFailure",
+      "dismissModelScopeWarnings",
+      "visibleModelScopeWarnings",
+      "PENDING_BASH_OUTPUT_CAP",
+      "externalAppendRefreshAtRef",
+    ],
+    absentFromOrigin: [
+      "abort_branch_summary",
+      "abort_retry",
+      "set_steering_mode",
+      "set_follow_up_mode",
+      'case "summarization_retry_scheduled"',
+      'case "bash_execution_update"',
+      'case "entry_appended"',
+      'case "session_replaced"',
+      "setDismissedScopeWarningKeys",
+    ],
+    requiredInOrigin: [
+      "useBranchSummary(",
+      "useSessionAutomation(",
+      "useSessionAutomationActions<",
+      "useCompactNotice(",
+      "useScopeWarningDismissal(",
+      "useForkAgentEvents(",
+      "handleForkAgentEvent(event)",
+    ],
+  },
 ];
 
 const FORK_FEATURES = [
