@@ -44,6 +44,18 @@ function definesSymbol(source, symbol) {
 
 const EXTRACTIONS = [
   {
+    name: "i18n fork message patch",
+    origin: "lib/i18n/registry.ts",
+    // Upstream message packs are intentionally held in upstream shape. The
+    // fork's additions, replacements, and deletions live in a fork-owned patch
+    // module so upstream key edits merge directly into the three message files.
+    movedTo: ["lib/i18n/locale-plugins.ts"],
+    movedDefinitions: ["FORK_MESSAGE_PATCHES", "withForkMessages", "forkLocalePlugins"],
+    absentFromOrigin: ["enLocale, zhCNLocale, zhTWLocale"],
+    presentInTargets: ["./messages/en.ts"],
+    requiredInOrigin: ["forkLocalePlugins"],
+  },
+  {
     name: "SessionSidebar project picker",
     origin: "components/SessionSidebar.tsx",
     // Roughly 500 lines were moved out of SessionSidebar into these files,
@@ -402,10 +414,10 @@ for (const extraction of EXTRACTIONS) {
 
     // Without this the origin-side check could pass simply because the code was
     // deleted everywhere rather than relocated.
-    for (const marker of extraction.absentFromOrigin) {
+    for (const marker of extraction.presentInTargets ?? extraction.absentFromOrigin) {
       assert.ok(
         targets.some((source) => source.includes(marker)),
-        `"${marker}" is absent from ${extraction.origin} but also from ` +
+        `"${marker}" is not owned by ` +
           `${extraction.movedTo.join(", ")} — it looks deleted, not moved.`,
       );
     }

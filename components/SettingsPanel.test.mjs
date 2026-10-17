@@ -11,8 +11,10 @@ const entryMenuSource = await readFile(new URL("./SettingsEntryMenu.tsx", import
 const sidebarSource = await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8");
 const themeSource = await readFile(new URL("../hooks/useTheme.ts", import.meta.url), "utf8");
 const themeOptionsSource = await readFile(new URL("../lib/theme.ts", import.meta.url), "utf8");
-const enSource = await readFile(new URL("../lib/i18n/messages/en.ts", import.meta.url), "utf8");
-const zhSource = await readFile(new URL("../lib/i18n/messages/zh-CN.ts", import.meta.url), "utf8");
+const { createJiti } = await import("jiti");
+const jiti = createJiti(import.meta.url);
+const { englishMessages: enMessages, forkLocalePlugins } = await jiti.import("../lib/i18n/locale-plugins.ts");
+const zhMessages = Object.fromEntries(forkLocalePlugins.map(({ id, messages }) => [id, messages]))["zh-CN"];
 const loginSource = await readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8");
 const stackedDialogSource = await readFile(new URL("../lib/stacked-dialog.ts", import.meta.url), "utf8");
 
@@ -66,7 +68,9 @@ test("Settings › MCP works without a project, and only project sections fall b
   assert.doesNotMatch(shellSource, /section !== "models"/);
   // Its own glyph, not the Plugins fallback.
   assert.match(panelSource, /if \(section === "mcp"\) return <svg \{\.\.\.common\}>/);
-  for (const source of [enSource, zhSource]) assert.match(source, /"settings\.mcp": "MCP"/);
+  for (const messages of [enMessages, zhMessages]) {
+    assert.equal(messages["settings.mcp"], "MCP");
+  }
 });
 
 test("restores the settings section and each list detail selection", async () => {
@@ -225,10 +229,10 @@ test("uses top navigation on desktop and one compact section picker on mobile", 
 });
 
 test("labels agent profiles as sub-agents", () => {
-  assert.match(enSource, /"common\.agents": "Sub-agents"/);
-  assert.match(enSource, /"agents\.new": "New sub-agent"/);
-  assert.match(zhSource, /"common\.agents": "子代理"/);
-  assert.match(zhSource, /"agents\.new": "新建子代理"/);
+  assert.equal(enMessages["common.agents"], "Sub-agents");
+  assert.equal(enMessages["agents.new"], "New sub-agent");
+  assert.equal(zhMessages["common.agents"], "子代理");
+  assert.equal(zhMessages["agents.new"], "新建子代理");
 });
 
 test("uses the child-session robot glyph for the sub-agents tab", () => {
