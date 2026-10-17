@@ -169,6 +169,32 @@ const EXTRACTIONS = [
       "<ComposerProjectChip",
     ],
   },
+  {
+    name: "AppShell fork layers",
+    origin: "components/AppShell.tsx",
+    // Desktop cold-start tab restore, the missing-workspace probe and the sidebar
+    // settings-entry menu are fork features; AppShell keeps the settings button
+    // (pinned by "sidebar header controls") and calls the hooks.
+    movedTo: [
+      "hooks/useDesktopWorkspaceTabs.ts",
+      "hooks/useWorkspaceAvailability.ts",
+      "components/SettingsEntryMenu.tsx",
+    ],
+    movedDefinitions: ["workspaceStatusRef", "toggleSettingsMenu", "openDomMenu"],
+    absentFromOrigin: [
+      "workspaceFileTabsMatchContext",
+      "setWorkspaceHydrated",
+      "/api/cwd/status",
+      "SETTINGS_SECTION_ITEMS",
+      "settings-entry-menu",
+    ],
+    requiredInOrigin: [
+      "useDesktopWorkspaceTabs(",
+      "useWorkspaceAvailability(",
+      "useSettingsEntryMenu(",
+      "<SettingsEntryMenu",
+    ],
+  },
 ];
 
 const FORK_FEATURES = [
