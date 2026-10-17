@@ -288,7 +288,7 @@ const FORK_FEATURES = [
   {
     name: "FileViewer toolbar",
     file: "components/FileViewer.tsx",
-    markers: ["FileViewerToolbar", "FileViewerStatus", "getFileIcon", "file-viewer-toolbar"],
+    markers: ["FileViewerToolbar", "getFileIcon", "file-viewer-toolbar"],
   },
   {
     name: "TabBar chrome",

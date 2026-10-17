@@ -2941,7 +2941,6 @@ export function AppShell() {
                   ref={fileExplorerRef}
                   cwd={activeCwd}
                   onOpenFile={handleOpenFile}
-                  selectedFilePath={activeFileTab?.filePath ?? null}
                   refreshKey={explorerRefreshKey}
                   onAtMention={handleAtMention}
                   onAtMentions={handleAtMentions}
