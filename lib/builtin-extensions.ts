@@ -376,6 +376,7 @@ export async function createPiWebBuiltinExtensions(
       "mcp",
       mcp.available && mcpHost
         ? createMcpExtension({
+            credentials: new mcp.internals.McpOAuthCredentialStore(),
             loadConfig: createMcpExtensionConfigLoader(mcp.internals, options.agentDir),
             createTransport: mcpHost.wrapTransportFactory(createPiWebMcpTransportFactory(mcp.internals)),
             // The host already waited, and Stop ends its wait. The extension's own wait for

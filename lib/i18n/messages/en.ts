@@ -807,7 +807,7 @@ export const enLocale: LocalePlugin = {
     "mcp.signIn.signedIn": "Signed in.",
     "mcp.signIn.notSignedIn": "Not signed in.",
     "mcp.signIn.registrationOnly": "Not signed in, but a client registration or an unfinished sign-in is stored for this server.",
-    "mcp.signIn.unknown": "Unknown: mcp-auth.json cannot be read.",
+    "mcp.signIn.unknown": "Unknown: the saved sign-in could not be read.",
     "mcp.signIn.header": "Authorization header",
     "mcp.signIn.provider": "Sends the token of the pi provider {provider}: sign in to it under Settings › Models.",
     "mcp.exposure.codemode": "Only the server's name and summary are listed; Code mode scripts search for its tools.",

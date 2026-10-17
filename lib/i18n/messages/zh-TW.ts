@@ -755,7 +755,7 @@ export const zhTWLocale: LocalePlugin = {
     "mcp.signIn.signedIn": "已登入。",
     "mcp.signIn.notSignedIn": "未登入。",
     "mcp.signIn.registrationOnly": "未登入，但儲存了此伺服器的用戶端註冊資訊或未完成的登入。",
-    "mcp.signIn.unknown": "未知：無法讀取 mcp-auth.json。",
+    "mcp.signIn.unknown": "未知：無法讀取已儲存的登入資訊。",
     "mcp.signIn.header": "Authorization 標頭",
     "mcp.signIn.provider": "傳送 pi 提供者 {provider} 的權杖：在「設定 › 模型」中登入它。",
     "mcp.exposure.codemode": "只列出伺服器名稱和簡介，程式碼模式指令碼按需搜尋它的工具。",

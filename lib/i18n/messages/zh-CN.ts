@@ -807,7 +807,7 @@ export const zhCNLocale: LocalePlugin = {
     "mcp.signIn.signedIn": "已登录。",
     "mcp.signIn.notSignedIn": "未登录。",
     "mcp.signIn.registrationOnly": "未登录，但保存了此服务器的客户端注册信息或未完成的登录。",
-    "mcp.signIn.unknown": "未知：无法读取 mcp-auth.json。",
+    "mcp.signIn.unknown": "未知：无法读取已保存的登录信息。",
     "mcp.signIn.header": "Authorization 请求头",
     "mcp.signIn.provider": "发送 pi 提供商 {provider} 的令牌：在“设置 › 模型”中登录它。",
     "mcp.exposure.codemode": "只列出服务器名称和简介，代码模式脚本按需搜索它的工具。",

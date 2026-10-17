@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +8,7 @@ import test, { after, beforeEach } from "node:test";
 import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
 import { createJiti } from "jiti";
 import { approveSignIn, startFakeOAuthServer } from "../../../../lib/__fixtures__/mcp-oauth-server.mjs";
+import { readMcpState, writeMcpState } from "../../../../lib/__fixtures__/encrypted-mcp-state.mjs";
 
 // /api/mcp/sign-in connects and writes mcp-auth.json, so every case runs
 // against a PI_CODING_AGENT_DIR in a temporary folder and a fake OAuth server
@@ -45,7 +46,7 @@ after(async () => {
 
 const globalPath = join(agentDir, "mcp.json");
 const projectPath = join(cwd, ".pi", "mcp.json");
-const authPath = join(agentDir, "mcp-auth.json");
+const authPath = join(agentDir, "mcp-credentials.json");
 const marker = join(root, "command-ran");
 const store = new ProjectTrustStore(agentDir);
 
@@ -159,7 +160,7 @@ test("a sign-in is started, polled, finished with a pasted address, and the list
   const done = await until(flowId, (flow) => ENDED.has(flow.phase));
   assert.equal(done.phase, "done", done.error);
   assert.equal(done.result.state, "connected", done.result.error);
-  const auth = JSON.parse(readFileSync(authPath, "utf8"));
+  const auth = readMcpState(agentDir);
   assert.ok(fake.issued.access.has(auth[mcpSignInKey("oauth", fake.url)].tokens.access_token));
   // The listing reads mcp-auth.json raw: signed in, with the reconnect as the status.
   const servers = await listed();
@@ -268,14 +269,14 @@ for (const [label, revoke] of [
 test("sign-out deletes the server's tokens through POST /api/mcp, under the checks of any change", async () => {
   const key = mcpSignInKey("oauth", fake.url);
   const other = mcpSignInKey("alias", fake.url);
-  await writeFile(authPath, `${JSON.stringify({ [key]: { serverUrl: fake.url, tokens: { access_token: "a", token_type: "Bearer" } }, [other]: { serverUrl: fake.url } }, null, 2)}\n`);
+  writeMcpState(agentDir, { [key]: { serverUrl: fake.url, tokens: { access_token: "a", token_type: "Bearer" } }, [other]: { serverUrl: fake.url } });
   assert.equal((await listed()).find((server) => server.name === "oauth").signedIn, true);
 
   const signedOut = await action({ action: "sign-out", scope: "global", name: "oauth" });
   assert.equal(signedOut.status, 200, JSON.stringify(signedOut.body));
   assert.deepEqual(signedOut.body.signedOut, { scope: "global", name: "oauth", removed: true });
   assert.equal(signedOut.body.servers.find((server) => server.name === "oauth").signedIn, false);
-  assert.deepEqual(Object.keys(JSON.parse(readFileSync(authPath, "utf8"))), [other]);
+  assert.deepEqual(Object.keys(readMcpState(agentDir)), [other]);
   assert.equal((await action({ action: "sign-out", scope: "global", name: "oauth" })).body.signedOut.removed, false);
 
   assert.equal((await action({ action: "sign-out", scope: "global", name: "lint" })).body.reason, "sign-in-not-oauth");
@@ -289,7 +290,7 @@ test("what a cancelled sign-in left behind without tokens is listed as stored, a
   // Kept by URL alone, as older versions did: the server reads it while it has no record of its own.
   const key = String(new URL(fake.url));
   // A dynamic registration and the PKCE state, saved before the browser was sent to the page.
-  await writeFile(authPath, `${JSON.stringify({ [key]: { serverUrl: key, clientInformation: { client_id: "c" }, codeVerifier: "v", oauthState: "s" } }, null, 2)}\n`);
+  writeMcpState(agentDir, { [key]: { serverUrl: key, clientInformation: { client_id: "c" }, codeVerifier: "v", oauthState: "s" } });
   const server = (await listed()).find((item) => item.name === "oauth");
   assert.deepEqual([server.signedIn, server.oauthStateStored], [false, true]);
   const signedOut = await action({ action: "sign-out", scope: "global", name: "oauth" });
@@ -297,7 +298,7 @@ test("what a cancelled sign-in left behind without tokens is listed as stored, a
   assert.deepEqual(signedOut.body.signedOut, { scope: "global", name: "oauth", removed: true });
   const after = signedOut.body.servers.find((item) => item.name === "oauth");
   assert.deepEqual([after.signedIn, after.oauthStateStored], [false, false]);
-  assert.deepEqual(JSON.parse(readFileSync(authPath, "utf8")), {});
+  assert.deepEqual(readMcpState(agentDir), {});
 });
 
 test("signing out cancels a sign-in under way and forgets what connections found", async () => {

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { encryptedMcpAuthBackend } from "./encrypted-mcp-auth";
 import type { McpRefusalReason, McpSignInFailure, McpSignInFlowInfo, McpSignInPhase, McpTestResult } from "./api-types";
 import {
   guardedCredentialStore,
@@ -677,8 +678,8 @@ export function signOutMcpServer(
 ): boolean {
   noteMcpSignOut(mcpSignInKey(name, url));
   cancelMcpSignInsFor(name, url);
-  if (!existsSync(join(agentDir, "mcp-auth.json"))) return false;
-  return new internals.McpOAuthCredentialStore().remove(name, url);
+  if (!existsSync(join(agentDir, "mcp-credentials.json"))) return false;
+  return new internals.McpOAuthCredentialStore(encryptedMcpAuthBackend(agentDir), agentDir).remove(name, url);
 }
 
 /** Ends and forgets every flow; for tests. */

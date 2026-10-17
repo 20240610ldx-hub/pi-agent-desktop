@@ -9,6 +9,8 @@ import {
   type McpTransportFactory,
 } from "@earendil-works/pi-coding-agent";
 import { readFileSync, realpathSync } from "node:fs";
+import type { AuthOperationOptions } from "@earendil-works/pi-ai";
+import { withEncryptedMcpCredentials } from "./encrypted-mcp-auth";
 import { findPackageJSON } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -57,7 +59,7 @@ const MEMBERS = {
 /** What a transport factory returns: pi-mcp's `McpTransport`, which the SDK root does not export. */
 export type McpTransport = ReturnType<McpTransportFactory>;
 
-/** The SDK's `McpOAuthCredentialStore`: per-server OAuth state in `<agent-dir>/mcp-auth.json`. */
+/** Pi's MCP OAuth store; default construction uses Pilaude's encrypted backend. */
 export type McpOAuthCredentialStore = NonNullable<McpExtensionOptions["credentials"]>;
 
 /** One server's slice of the credential store. */
@@ -65,6 +67,12 @@ export type McpOAuthServerStore = ReturnType<McpOAuthCredentialStore["forServer"
 
 /** pi-mcp's `McpOAuthStateStore`, which sign-in reads and writes. */
 export type McpOAuthStateStore = Pick<McpOAuthServerStore, "load" | "save">;
+
+/** The SDK's auth backend callback contract, including its async sibling. */
+export interface McpAuthStorageBackend {
+  withLock<T>(update: (current: string | undefined) => { result: T; next?: string }): T;
+  withLockAsync<T>(update: (current: string | undefined) => Promise<{ result: T; next?: string }>, options?: AuthOperationOptions): Promise<T>;
+}
 
 /** pi-mcp's `StdioTransportOptions`. */
 export interface StdioTransportOptions {
@@ -218,8 +226,8 @@ export interface PiSdkInternals {
   validateMcpServerConfig: (name: string, value: unknown) => McpServerConfig | string;
   getMcpToolExposure: (config: McpServerConfig, toolName: string) => McpExposure;
   signInMcpServer: (options: McpSignInOptions) => Promise<void>;
-  /** pi-web always uses the default store, `mcp-auth.json` in the agent directory. */
-  McpOAuthCredentialStore: new () => McpOAuthCredentialStore;
+  /** Default construction uses Pilaude's encrypted backend; explicit backends remain supported. */
+  McpOAuthCredentialStore: new (backend?: McpAuthStorageBackend, lockDir?: string) => McpOAuthCredentialStore;
   McpSignInCancelledError: new () => Error;
   resolveConfigValueOrThrow: (config: string, description: string, env?: Record<string, string>) => string;
   resolveHeadersOrThrow: (
@@ -399,12 +407,12 @@ export async function importPiSdkInternals(options: {
   } catch (error) {
     return { ok: false, reason: `${SDK_MODULES.mcpRuntime}: ${errorMessage(error)}` };
   }
-  return { ok: true, ...internals };
+  return { ok: true, ...internals, McpOAuthCredentialStore: withEncryptedMcpCredentials(internals.McpOAuthCredentialStore) };
 }
 
 // Route handlers and instrumentation are bundled into separate module graphs,
 // and hot reload re-evaluates this module; globalThis keeps one load per process.
-const INTERNALS_KEY: symbol = Symbol.for("pi-web.piSdkInternals");
+const INTERNALS_KEY: symbol = Symbol.for("pilaude.piSdkInternals.dpapi-v1");
 
 /**
  * The SDK's unexported MCP modules, loaded once per server process. When this

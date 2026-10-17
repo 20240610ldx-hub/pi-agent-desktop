@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdir, open, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -35,6 +35,24 @@ export type CredentialRemovalResult =
   | { status: "not_found" }
   | { status: "type_mismatch"; storedType: string };
 
+function credentialProcess(operation: "Protect" | "Unprotect") {
+  const script = `$ErrorActionPreference='Stop';Add-Type -AssemblyName System.Security;[Console]::InputEncoding=[Text.UTF8Encoding]::new($false);[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);$s=[Console]::In.ReadToEnd();$e=[Text.Encoding]::UTF8.GetBytes('io.github.20240610ldx-hub.pilaude:credentials:v1');$b=${operation === "Protect" ? "[Text.Encoding]::UTF8.GetBytes($s)" : "[Convert]::FromBase64String($s)"};$r=[Security.Cryptography.ProtectedData]::${operation}($b,$e,[Security.Cryptography.DataProtectionScope]::CurrentUser);[Console]::Write(${operation === "Protect" ? "[Convert]::ToBase64String($r)" : "[Text.Encoding]::UTF8.GetString($r)"});`;
+  const env: NodeJS.ProcessEnv = { NODE_ENV: "production", ...Object.fromEntries(["SystemRoot", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA"].flatMap((key) => process.env[key] ? [[key, process.env[key]]] : [])) };
+  return { binary: join(process.env.SystemRoot || "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), args: ["-NoProfile", "-NonInteractive", "-Command", script], env };
+}
+
+/** Pi's MCP AuthStorageBackend contract is synchronous. Secrets still use stdin. */
+export function windowsCredentialCipherSync() {
+  const run = (operation: "Protect" | "Unprotect", input: string): string => {
+    if (process.platform !== "win32") throw new Error("Encrypted credential storage is currently supported on Windows.");
+    const { binary, args, env } = credentialProcess(operation);
+    const result = spawnSync(binary, args, { input, encoding: "utf8", env, windowsHide: true, timeout: 10000, maxBuffer: 4 * 1024 * 1024, stdio: ["pipe", "pipe", "ignore"] });
+    if (result.error || result.status !== 0) throw new Error("Windows credential protection failed. Existing credentials were preserved.");
+    return result.stdout;
+  };
+  return { protect: (text: string) => run("Protect", text), unprotect: (text: string) => run("Unprotect", text) };
+}
+
 /** No secret is placed in process arguments or in the helper's environment. */
 export function windowsCredentialCipher(): CredentialCipher {
   if (process.platform !== "win32") {
@@ -43,9 +61,8 @@ export function windowsCredentialCipher(): CredentialCipher {
   }
   const run = (operation: "Protect" | "Unprotect", input: string, signal?: AbortSignal) => new Promise<string>((resolve, reject) => {
     signal?.throwIfAborted();
-    const script = `$ErrorActionPreference='Stop';Add-Type -AssemblyName System.Security;[Console]::InputEncoding=[Text.UTF8Encoding]::new($false);[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);$s=[Console]::In.ReadToEnd();$e=[Text.Encoding]::UTF8.GetBytes('io.github.20240610ldx-hub.pilaude:credentials:v1');$b=${operation === "Protect" ? "[Text.Encoding]::UTF8.GetBytes($s)" : "[Convert]::FromBase64String($s)"};$r=[Security.Cryptography.ProtectedData]::${operation}($b,$e,[Security.Cryptography.DataProtectionScope]::CurrentUser);[Console]::Write(${operation === "Protect" ? "[Convert]::ToBase64String($r)" : "[Text.Encoding]::UTF8.GetString($r)"});`;
-    const env: NodeJS.ProcessEnv = { NODE_ENV: "production", ...Object.fromEntries(["SystemRoot", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA"].flatMap((key) => process.env[key] ? [[key, process.env[key]]] : [])) };
-    const child = spawn(join(process.env.SystemRoot || "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), ["-NoProfile", "-NonInteractive", "-Command", script], { windowsHide: true, env, signal, timeout: 10000, stdio: ["pipe", "pipe", "ignore"] });
+    const { binary, args, env } = credentialProcess(operation);
+    const child = spawn(binary, args, { windowsHide: true, env, signal, timeout: 10000, stdio: ["pipe", "pipe", "ignore"] });
     let output = "";
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => { output += chunk; if (output.length > 4 * 1024 * 1024) child.kill(); });

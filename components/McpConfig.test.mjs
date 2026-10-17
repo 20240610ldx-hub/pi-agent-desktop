@@ -218,7 +218,7 @@ test("an HTTP server's detail shows its URL, header names, the variables it send
   }));
   assert.match(oauth(true), /Sign-in Signed in\./);
   assert.match(oauth(false), /Sign-in Not signed in\./);
-  assert.match(oauth(undefined), /Sign-in Unknown: mcp-auth\.json cannot be read\./);
+  assert.match(oauth(undefined), /Sign-in Unknown: the saved sign-in could not be read\./);
 
   // Code mode cannot run here, so its tools go through tool search.
   const sandboxDown = text(view({

@@ -24,6 +24,22 @@
     "note": "Risk levels that force the sync to open a reviewed PR instead of pushing straight to main and triggering a signed release. Most upstream releases will land here, because the remaining drift is accepted by decision rather than pending cleanup \u2014 see `dispositions` and `decisionLog`. Narrow this list only if the drift itself actually goes away."
   },
   "driftedUpstreamFiles": {
+    "lib/pi-sdk-internals.ts": {
+      "risk": "medium", "drift": 41, "structuralDrift": 41, "disposition": "accepted",
+      "reason": "The locked SDK adapter wraps default MCP OAuth storage with the app's encrypted backend and versions the hot-reload cache. Constructor options and refresh-lock behavior must survive upstream updates."
+    },
+    "lib/mcp-config-read.ts": {
+      "risk": "low", "drift": 15, "structuralDrift": 15, "disposition": "accepted",
+      "reason": "OAuth status is derived from a readonly encrypted store snapshot, without creating credential files, migrating records or returning token values to the renderer."
+    },
+    "lib/mcp-sign-in.ts": {
+      "risk": "low", "drift": 5, "structuralDrift": 5, "disposition": "accepted",
+      "reason": "Sign-out selects the encrypted Pilaude state file and backend while retaining the original late-refresh and cancelled-sign-in write guards."
+    },
+    "lib/builtin-extensions.ts": {
+      "risk": "low", "drift": 1, "structuralDrift": 1, "disposition": "accepted",
+      "reason": "The actual MCP extension is explicitly given encrypted credentials so its internal default cannot silently restore SDK plaintext token storage."
+    },
     "instrumentation.ts": {
       "risk": "low", "drift": 2, "structuralDrift": 2, "disposition": "accepted",
       "reason": "Initialize the independent Pilaude agent directory before importing any SDK-backed instrumentation or creating background services."
@@ -81,15 +97,15 @@
       "reason": "The model test callback uses the transient Pilaude runtime; its temporary configuration omits API keys and headers while the SDK resolves in-memory draft authentication."
     },
     "lib/i18n/messages/en.ts": {
-      "risk": "high", "drift": 500, "structuralDrift": 500, "disposition": "accepted",
+      "risk": "high", "drift": 502, "structuralDrift": 502, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "lib/i18n/messages/zh-CN.ts": {
-      "risk": "high", "drift": 504, "structuralDrift": 504, "disposition": "accepted",
+      "risk": "high", "drift": 506, "structuralDrift": 506, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "lib/i18n/messages/zh-TW.ts": {
-      "risk": "high", "drift": 492, "structuralDrift": 492, "disposition": "accepted",
+      "risk": "high", "drift": 494, "structuralDrift": 494, "disposition": "accepted",
       "reason": "Pilaude welcome, branding, and explicit local data migration messages extend the upstream locale. Preserve the complete matching locale key sets when merging."
     },
     "components/SessionSidebar.tsx": {
@@ -262,6 +278,10 @@
     }
   },
   "forkOwnedPaths": [
+    "lib/encrypted-mcp-auth.ts",
+    "lib/encrypted-mcp-auth.test.mjs",
+    "lib/__fixtures__/encrypted-mcp-state.mjs",
+    "e2e/pilaude-mcp-auth.mjs",
     "app/api/data/",
     "components/PilaudeDataSection.tsx",
     "lib/credential-store.ts",

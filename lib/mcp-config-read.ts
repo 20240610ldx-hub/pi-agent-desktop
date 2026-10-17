@@ -1,6 +1,7 @@
-import { closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readSync, realpathSync } from "node:fs";
+import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, readSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { CONFIG_DIR_NAME, type McpServerConfig } from "@earendil-works/pi-coding-agent";
+import { encryptedMcpAuthBackend } from "./encrypted-mcp-auth";
 import type {
   CodemodeSandboxStatus,
   McpAvailability,
@@ -305,22 +306,20 @@ function parseConfigText(info: McpConfigFileInfo, text: string): [name: string, 
   return entries;
 }
 
-/** What `mcp-auth.json` holds, by the SDK's keys: whether a record is there at all, and whether it has an access token. */
+/** Stored MCP OAuth metadata: record presence and whether it has an access token. */
 type McpAuthState = Map<string, { signedIn: boolean }>;
 
 /**
- * The records `mcp-auth.json` holds, by their keys (`mcpOAuthStoreKeys()`:
- * name and URL, or URL alone for a record older versions wrote). Read raw and
+ * The encrypted records, by their SDK keys (`mcpOAuthStoreKeys()`:
+ * name and URL, or URL alone for a record older versions wrote). Read without
  * never locked or created; undefined when the file cannot be read, so no
  * server is reported either way.
  */
 function readAuthState(agentDir: string): McpAuthState | undefined {
-  const path = join(agentDir, "mcp-auth.json");
   const state: McpAuthState = new Map();
-  if (!existsSync(path)) return state;
   try {
-    const text = readFileSync(path, "utf8");
-    if (!text.trim()) return state;
+    const text = encryptedMcpAuthBackend(agentDir).read();
+    if (!text) return state;
     const parsed: unknown = JSON.parse(text);
     if (!isRecord(parsed)) return state;
     for (const [key, value] of Object.entries(parsed)) {
