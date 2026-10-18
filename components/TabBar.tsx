@@ -6,6 +6,7 @@ import { useI18n } from "@/hooks/useI18n";
 import { canUseNativeMenu, showNativeMenu, type NativeMenuEntry } from "@/lib/desktop-menu";
 import { openDomMenu } from "@/lib/dom-menu-store";
 import type { FileViewerDisplayMode, FileViewerState } from "@/lib/file-viewer-state";
+import { splitFileName } from "@/lib/file-name-display";
 
 export interface Tab {
   id: string;
@@ -95,6 +96,7 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onNewTermin
     <div ref={barRef} className="file-tab-bar" role="tablist" aria-label="Open files">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTabId;
+        const fileName = tab.kind ? null : splitFileName(tab.label);
         return (
           <div
             key={tab.id}
@@ -142,8 +144,8 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onNewTermin
                 </svg>
               ) : getFileIcon(tab.label, 13)}
             </span>
-            <span className="file-tab-label" title={tab.filePath}>
-              {tab.label}
+            <span className={`file-tab-label${fileName ? " is-file-name" : ""}`} title={tab.filePath}>
+              {fileName ? <><span className="file-tab-stem">{fileName.stem}</span>{fileName.extension && <span className="file-tab-extension">{fileName.extension}</span>}</> : tab.label}
             </span>
             <button
               className="file-tab-close"

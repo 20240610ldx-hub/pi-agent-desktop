@@ -305,7 +305,7 @@ const FORK_FEATURES = [
   {
     name: "TabBar chrome",
     file: "components/TabBar.tsx",
-    markers: ["file-tab-bar", "file-tab-label", "file-tab-close"],
+    markers: ["file-tab-bar", "file-tab-label", "file-tab-close", "splitFileName", "file-tab-stem", "file-tab-extension"],
   },
   {
     name: "Scheduled entry in the sidebar",

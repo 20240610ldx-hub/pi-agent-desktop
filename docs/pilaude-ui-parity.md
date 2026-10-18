@@ -48,7 +48,7 @@
 | 分段选择 | `SegmentedControl` | 资源可用；实际 Pi 模式/设置状态需适配 |
 | 运行、加载、骨架 | `StatusIndicators` | 资源可用；绑定真实运行状态并核对所有节奏 |
 | 确认与权限对话框 | `ConfirmationDialog`、`McpToolDecisionCard` | 资源可用；后端审批、焦点陷阱、取消/错误状态待融合 |
-| 附件卡与预览 | `AttachmentCard` | 资源可用；文件拖放、长文件名、上传失败、缩略图待对照 |
+| 附件卡与预览 | `AttachmentCard` | 最后扩展名分离／双 span 布局已局部适配到普通文件 TabBar，按宽度省略保完整路径浮签；附件 tile／chip 未采用。长文件名官方状态图缺，窄容器实际检查单独记录 |
 | 输入器及底栏 | `ChatComposer`、`RichComposerWithMentions`、`ChatComposerChin` | 保留 Pi 真实输入器，部分 IME/草稿测试已有；几何、排队、菜单、提及/命令状态待对照 |
 | 消息、操作条、代码 | `ChatMessageBubbles`、`CodeBlock` | 已有 Pi 渲染器；新结构、排版、悬浮操作、复制/重试/编辑待融合 |
 | 思考展开和氛围 | `ThinkingAccordion`、`ReasoningAmbientGlow` | 资源可用；绑定真实流式思考、减少动效与状态切换 |
@@ -159,6 +159,10 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 - `changes-tooltip/comparison-after-type-calibrated/` 的三组原像素叠图以参考 100% 底层、actual 50% 上层，只整数平移。Go／Show／Settings 外宽差 −1.266／−0.160／−0.242 原像素，外高差约 −0.004；Go 字与快捷键墨迹尺寸吻合，Show 各宽 +1 且 gap −2，Settings 字框吻合，文字 y 均 +1。新一轮 Open in new window 同状态图缺；Close 未伪造快捷键，不作同文宽度比较。YAML property／string 根据原图核心色候选 #f47b85／#9be963 校准，原 CSS 色、DPI 和字体身份未证明。
 - ACK 新定向证据：`changes-ack-reliability/run-1792319138883/` 连续十次和旧窗口 A→B→A 隔离通过，最后 fresh 遇 document 重载仍保 partial；补剩余 `fresh-only-1792319508195/` 一次新 popup 反馈通过，匹配 ACK／草稿插入各一次，document 代际不变。两轮刷新后旧目标被拒绝的失败如实保留，没有延长超时／自动重放／修改 AppShell；不能把当前诊断当此前所有间歇失败的根因。
 - 本批定向组合 42 项、上游边界／CSS 基线 60 项通过；项目 TypeScript 和完整 lint 通过，保留既有 TerminalPanel aria 警告。完整 npm／terminal E2E 和 Windows 原生窗口／DPI 实物仍待验。Changes 的隐藏状态先 focus 竞态已改为布局可见提交后首次聚焦，Tab 退出显式关闭；`focus-diag-1792319835972/` 三次通过。最终 `syntax-keyboard-1792320000380/` 五组实际目标通过，覆盖源码／mark、键盘／IME／编辑器、390px 已加载表格和工具栏／finder、无横溢出与关闭焦点，errors／blockedWrites 为空。断点后 checker 真实重开外层再验收，未修改既有移动显隐语义。
+
+## 普通文件标签后缀保留专项
+
+`AttachmentCard` 的文件名前缀／最后扩展名分离及双 span 收缩已局部适配到 TabBar，不采用固定字符数截断。`file-tab-filename/run-1792321054232/` 九组实际检查通过六类文件名、390px 中文标签、阅读状态恢复与关闭活动标签；.tsx 在移动 label 69.594 CSS px 内仍完整，异常长后缀限制为 label 的 50%。完整路径 title／ARIA 保留，wrap=true／scrollTop=420 切回恢复。PNG、会话与 Files GET 为明确夹具，apiWrites／pageErrors 为空；16 项定向、类型与完整 lint 通过，既有 aria 警告保留。首轮虚拟 cwd 不存在的 checker 失败单独保存。没有对应官方长文件名状态图，功能结果不标为像素一致；Terminal／Artifact 标题与文件路径身份保持原有语义。
 
 ## 上游更新规则
 

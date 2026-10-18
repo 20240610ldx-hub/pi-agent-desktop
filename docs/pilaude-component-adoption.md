@@ -12,7 +12,7 @@
 - **未采用／独立实现**：产品已有同类能力，但没有来源适配证据。下表中的产品文件是现有实现或候选接点，不是采用证明。
 - **正在适配、未验**：新批进行中；不提前统计为直接采用或功能、视觉通过。
 
-截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；6 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，以及 `ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样。新增 consumer 与单测已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 26 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
+截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；7 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，`ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样，以及 `AttachmentCard` 的文件名前缀／最后扩展名分离与分段收缩布局。新增 consumer 与单测已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 25 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
 
 目前的直接消费链：
 
@@ -20,7 +20,8 @@
 2. [lib/cds-scroll.ts](../lib/cds-scroll.ts) 明确署名适配 `useClaudeScrollPinning`，导出 `canFollowStream(lastUserInputAt, now)`；[useAgentSession.ts](../hooks/useAgentSession.ts) 的流式滚动跟随和重新贴底路径调用它。
 3. [native-theme.css](../app/native-theme.css) 的图片样式明确署名 `MediaLightboxViewer` 自然尺寸／contain 几何，经 `.composer-attachment-image` 与 `.message-user-image` 消费到 [ChatInput.tsx](../components/ChatInput.tsx) 和 [MessageView.tsx](../components/MessageView.tsx)。新增 [image-view-transform.ts](../lib/image-view-transform.ts) 适配光标锚定 zoom、近 fit 平移约束与 wheel 指数缩放，由 [ImagePreview.tsx](../components/ImagePreview.tsx) 的真实灯箱消费；共享元素 inset／圆角追溯和 ViewTransition 仍未采用。
 4. [ChangesPane.tsx](../components/ChangesPane.tsx) 的 `rove` 与 `FadedScroll` 分别适配 roving 索引／Home/End／单 tabstop 和 2px 边缘判定；`ReviewDiff` 的 HTML table／tabular-nums gutter 与增删背景借鉴 `StreamingDiffViewer`。既有 [patch.ts](../lib/patch.ts) 的解析／配对继续复用，不能算成该源 parser 的采用。
-5. [cds-motion.ts](../lib/cds-motion.ts) 导入 [vendored ClaudeMotionPresets.ts](../vendor/open-claude-ui/ClaudeMotionPresets.ts) 的求解器和实际 `SPRING_SNAPPY`（320／28／1），补参数域、近临界与重阻尼数值边界，以 120Hz 生成 CSS `linear()` 采样；[DomContextMenuHost.tsx](../components/DomContextMenuHost.tsx) 的 `MenuPanel` 放置后实际消费曲线作 opacity 进入。没有搬 scale／y、退出延迟或其他 variants；opacity 会钳制物理超调，不能称为可见回弹。quiet [PilaudeWelcome.tsx](../components/PilaudeWelcome.tsx) 仍不消费这些 presets。
+5. [file-name-display.ts](../lib/file-name-display.ts) 与 [TabBar.tsx](../components/TabBar.tsx) 分别消费 `AttachmentCard` 最后扩展名分离与 prefix／extension 双 span 布局，CSS 按宽度省略，无字符硬切；普通文件标签路径／ARIA／开关动作不改。
+6. [cds-motion.ts](../lib/cds-motion.ts) 导入 [vendored ClaudeMotionPresets.ts](../vendor/open-claude-ui/ClaudeMotionPresets.ts) 的求解器和实际 `SPRING_SNAPPY`（320／28／1），补参数域、近临界与重阻尼数值边界，以 120Hz 生成 CSS `linear()` 采样；[DomContextMenuHost.tsx](../components/DomContextMenuHost.tsx) 的 `MenuPanel` 放置后实际消费曲线作 opacity 进入。没有搬 scale／y、退出延迟或其他 variants；opacity 会钳制物理超调，不能称为可见回弹。quiet [PilaudeWelcome.tsx](../components/PilaudeWelcome.tsx) 仍不消费这些 presets。
 
 ## 33 个模块逐项记录
 
@@ -29,7 +30,7 @@
 | # | 源模块 | 关键算法／交互 | 当前采用状态与实际 consumer 证据 | 可适配方向、依赖及未实施部分 |
 | --- | --- | --- | --- | --- |
 | 01 | `ArtifactsSplitPaneResizer.tsx` | 比例 min/max clamp、右侧折叠、pointer capture、Escape 回滚、双击 50/50 | **未采用／独立实现**。[useResizablePanel.ts](../hooks/useResizablePanel.ts)、[WorkspacePaneDock.tsx](../components/WorkspacePaneDock.tsx) 已有产品 resize／多列逻辑，无该模块导入。 | 可抽比例约束与回滚案例，保留产品多列布局与持久化。源码没有注释所说的 4px 死区、左侧折叠或 spring；其 shield 为 `pointer-events:none`，不能据此声称防 iframe 吞事件已解决。 |
-| 02 | `AttachmentCard.tsx` | `truncateFileName` 保留最后扩展名、前缀截断、扩展名 badge、tile/chip | **未采用**。现附件由 [ChatInput.tsx](../components/ChatInput.tsx) 管理，未消费该函数／组件；image 新批不等于本附件卡已采用。 | 优先抽文件名算法，补多后缀、超长扩展名、Unicode grapheme。卡片依赖 CDS/Tailwind 类；上传状态为外部 props，不能假造进度。 |
+| 02 | `AttachmentCard.tsx` | `truncateFileName` 保留最后扩展名、前缀截断、扩展名 badge、tile/chip | **局部适配**。[file-name-display.ts](../lib/file-name-display.ts) 适配最后扩展名分离，[TabBar.tsx](../components/TabBar.tsx) 的普通文件标签消费前缀／扩展名双 span 布局。helper／组件／原标签阅读状态共 16 项定向测试通过，窄容器实际证据另记。 | 不搬固定 14／20 字符阈值，CSS 按实际宽度省略，完整标签／路径／ARIA 不变；异常长后缀上限为标签宽度 50%，保留前缀与关闭入口。dotfile 和尾点不作扩展名，多点只保最后后缀。Terminal／Artifact 仍用原标题；未采用 tile／chip、badge 或演示上传进度，未有此状态官方参考。 |
 | 03 | `CdsButton.tsx` | 外定位／内 paint 分层，尺寸／variant，加载禁用，CSS spring 按压 | **直接采用**。[PilaudeDataSection.tsx](../components/PilaudeDataSection.tsx) 的 preview/import 动作消费；[SettingsPanel.tsx](../components/SettingsPanel.tsx) 挂载。当前欢迎页不是 consumer。 | 已有默认 `type="button"`、显式 variant/size 类和 Tailwind 4 样式适配。继续统一按钮时逐个登记使用点与状态证据，不把 vendor 存在算全站采用。 |
 | 04 | `CdsMotionEngine.tsx` | 200ms 按压、30ms chip 级联、105° skeleton sweep | **未采用**，无产品 consumer。 | 这是演示画布而非通用引擎。提取时序或 CSS，去掉固定 chips、演示色值、定时器和依赖外部动画类的展示逻辑。 |
 | 05 | `ChatComposer.tsx` | IME／229 Enter 保护、field-sizing、外点关菜单、附件局部状态 | **未采用／独立实现**。[ChatInput.tsx](../components/ChatInput.tsx) 有真实 Pi 输入器、草稿、队列和提交锁，无该组件导入。 | 可借布局／菜单样式，保留产品单次提交、延迟引用、拒绝恢复及会话切换保护。固定旧模型、模拟附件与发送后无条件清空不可移植。20px／Clay focus 也不能覆盖用户最新紧凑中性输入框选择。 |
@@ -65,7 +66,7 @@
 ## 尚未使用的高价值算法优先项
 
 1. **弹簧解析解与曲线采样**：菜单 opacity 已通过 adapter 接入 `calcDampedHarmonicOscillator`／SNAPPY；后续逐控件评估其余 springs 和 variants，分别记录 spring、交互状态、reduce-motion 和实物残差。单个菜单 consumer 不扩展为所有动效已采用。
-2. **小算法的剩余采用面**：文件名保后缀截断仍未采用；roving 索引与 ScrollFade 边缘判定已局部接入 Changes，其他菜单／selector／tabs 仍是候选。先修相应边界，再逐个登记新 consumer，不把一个面板的适配外推到全站。
+2. **小算法的剩余采用面**：文件名保后缀已局部接入普通文件 tabs；roving 索引与 ScrollFade 边缘判定已局部接入 Changes，其他菜单／selector／tabs 仍是候选。先修相应边界，再逐个登记新 consumer，不把一个面板的适配外推到全站。
 3. **拖放重排**：抽 before/after 命中与移除索引补偿，接已有 pinned/group metadata；键盘与指针共享同一排序事务。不要搬演示 sessions，也不把数组 splice 称为拓扑算法。
 4. **受控呈现组件**：Segmented、Thinking、Status、MCP card 值得逐个适配，但 pending／运行／完成／权限／token 必须保留后端真值；先拆 demo timers 与静态数据。
 5. **有依赖后再采用**：FFT 等真实音频链、host 工厂仅宿主参考、backoff 先落实幂等约束；diff 的源解析／增量引擎和 image 共享转场仍未采用，已落地的 zoom／pan 只覆盖上述局部算法。采用更多模块不是绕过这些边界的理由。
@@ -95,6 +96,12 @@
 
 - 最终 Changes 页面 `changes-reference/syntax-keyboard-1792320000380/` 五组实际目标通过：真实 API 原文与 inline／split DOM 无损一致、语法色与 mark 叠加／切换、finder 空结果与 Home／End、disabled／IME 边界、反馈编辑器保留 Ctrl+P／文本导航，以及 390px 已加载表格／header／finder 无根横溢出、关闭后焦点不留在 inert host。errors／blockedWrites 为空。移动断点会按既有设计先关外层，checker 通过真实入口重开后验收；此前没有重开导致的 timeout 保留。已保存并实际通过 [e2e/changes-focus.mjs](../e2e/changes-focus.mjs)，使用现有服务和明确允许的大型 Git 夹具，三轮验证初始焦点、Home／End、禁用项、IME、resize 不抢焦点、Tab／Shift+Tab、Escape 和外部聚焦；errors／blockedWrites 为空，不创建会话或发送模型。
 - ACK 可靠性另有只读调查：`changes-ack-reliability/run-1792319138883/` 连续十次／三次 popup 周期均匹配 ACK 且草稿各一次；A→B→A 后旧 popup 无 ACK、不插入新草稿、保留评论。该 run 最后一项新 popup 因主 document 重载使 target 失效，整体仍为 partial。仅补剩余 `fresh-only-1792319508195/` 一次提交通过，ACK／插入各一次、document 代际不变，errors／blocked 为空。首轮五次失败及第二轮末项失败均保留；这两轮诊断中的 receiver 与 live ref 一致，开发刷新造成目标更换，不据此反推更早间歇失败根因。没有修改产品超时、自动重放或 AppShell 生命周期。
+
+## 普通文件标签的后缀保留
+
+`AttachmentCard` 的最后扩展名分离及双 span 布局已通过 `file-name-display → TabBar` 实际消费。测试先复现缺少分段标签，再补实现；16 项 helper／静态组件／阅读状态检查、类型及完整 lint 通过，保留既有 TerminalPanel aria 警告。source 中按 UTF-16 固定字符数截断没有搬入；CSS 按宽度省略，完整 Unicode、title、ARIA、路径和选择／关闭回调保留。异常长扩展名的 50% 上限为产品边界，不冒充源规范。
+
+实际 `file-tab-filename/run-1792321054232/` 九组通过：六类文件名（.tsx、.tar.gz→.gz、CJK／emoji、异常长扩展名、dotfile、尾点）、390px 中文标签、阅读状态切回和活动标签关闭。桌面 label 217px 时 .tsx／.gz 分别 22.375／17.297px 完整可见，异常后缀 108.5px 为 50%；390px label 69.594px 时 .tsx 仍完整。wrap=true／scrollTop=420 在切换后恢复。会话和 Files GET 为显式夹具，Markdown 链接实际打开 TabBar／FileViewer，没有创建虚拟路径文件，apiWrites／pageErrors 为空。首轮虚拟 cwd 不存在造成 workspace unavailable 的 checker 失败保留，最终用已有 cwd 后通过；未调整产品生命周期。缺少对应官方长文件名状态参考，不做像素一致性声明。
 
 ## 更新条件
 

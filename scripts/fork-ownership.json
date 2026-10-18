@@ -174,9 +174,9 @@
     },
     "components/TabBar.tsx": {
       "risk": "medium",
-      "drift": 168,
-      "reason": "Accessibility, terminal tab labels and same-project terminals retain roving keyboard activation. The New terminal and terminal restart/terminate context menu are fork interaction design inside an upstream-owned component and require merge review.",
-      "structuralDrift": 121,
+      "drift": 172,
+      "reason": "Accessibility, terminal tab labels and same-project terminals retain roving keyboard activation. Ordinary file labels separately render a shrinking stem and bounded extension while preserving original title, ARIA, path and callbacks; keep terminal/artifact titles intact. New terminal and restart/terminate context menus also require merge review.",
+      "structuralDrift": 124,
       "disposition": "accepted"
     },
     "components/ChatWindow.tsx": {
@@ -378,6 +378,9 @@
     "lib/review-syntax.test.mjs",
     "lib/image-view-transform.ts",
     "lib/image-view-transform.test.mjs",
+    "lib/file-name-display.ts",
+    "lib/file-name-display.test.mjs",
+    "components/TabBar.test.mjs",
     "lib/cds-motion.ts",
     "lib/cds-motion.test.mjs",
     "components/DomContextMenuHost.motion.test.mjs",
@@ -480,6 +483,7 @@
     "2026-10-18 \u2014 Pilaude merged desktop 0.7.3 and measured drift against the recorded 6fcd7d4 baseline. FileViewer retains 375 structural lines, so its high-risk review entry is restored. FileExplorer measures 27 structural lines after removing unused code and is classified low by the unchanged 30/250 thresholds.",
     "2026-10-18 \u2014 Source freeze remeasured against 6fcd7d4: SessionSidebar 3238 total/2704 structural, AppShell 2425/2020, ChatInput 1419/1108, MessageView 549/344 and rpc-manager 323/323 remain high. The measured modified TypeScript scope totals 2093 cosmetic and 11490 structural lines. Preserve needs-input lifecycle, sidebar metadata, natural image bounds and scoped Changes feedback; thresholds remain 30/250 and medium/high still require review.",
     "2026-10-18 \u2014 git ls-tree at 6fcd7d4 confirms DomContextMenuHost, desktop-menu-model, dom-menu-store, desktop-native, app-prefs and the running SSE route are absent: record them with new sidebar/Git review/Changes page/feedback/window modules as fork-owned. The existing running snapshot, image-attachments validator and auth proxy remain shared review entries. Locale en/zh-CN/zh-TW files now have zero diff at this baseline and their stale high-risk entries are removed; fork text stays in locale-plugins.",
-    "2026-10-18 \u2014 ImagePreview adds source-keyed modal zoom/pan using the attributed MediaLightbox geometry adapter. At the 6fcd7d4 baseline it measures 249 total/226 structural and is explicitly accepted at medium risk. The modified TypeScript measurement is 2116 cosmetic/11713 structural lines. review-syntax, image-view-transform and cds-motion helpers remain fork-owned; unchanged 30/250 thresholds still require review for medium/high incoming overlaps."
+    "2026-10-18 \u2014 ImagePreview adds source-keyed modal zoom/pan using the attributed MediaLightbox geometry adapter. At the 6fcd7d4 baseline it measures 249 total/226 structural and is explicitly accepted at medium risk. The modified TypeScript measurement is 2116 cosmetic/11713 structural lines. review-syntax, image-view-transform and cds-motion helpers remain fork-owned; unchanged 30/250 thresholds still require review for medium/high incoming overlaps.",
+    "2026-10-18 \u2014 TabBar consumes AttachmentCard's filename stem/final-extension split and separate shrinking layout through file-name-display. Full labels, ARIA, paths and callbacks remain authoritative, with no fixed character truncation or terminal/artifact title changes. TabBar measures 172 total/124 structural at 6fcd7d4, remaining medium; measured modified TypeScript totals are 2117 cosmetic/11716 structural."
   ]
 }

@@ -1403,6 +1403,12 @@ html.dark .conversation-navigator-preview {
   font-weight: 550;
 }
 
+/* AttachmentCard's prefix/extension layout, adapted to the existing file tabs.
+   Width-based ellipsis preserves full labels and bounds unusually long suffixes. */
+.file-tab-label.is-file-name { display: flex; align-items: baseline; }
+.file-tab-stem { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.file-tab-extension { flex: 0 0 auto; max-width: 50%; overflow: hidden; text-overflow: ellipsis; }
+
 /* The close affordance only shows on the tab the pointer is on (or the active
    one), so a row of tabs does not read as a row of buttons. */
 .file-tab-close {
