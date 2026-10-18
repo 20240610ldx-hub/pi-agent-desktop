@@ -9054,6 +9054,25 @@ html.dark .changes-removed { color: #ff2c56; }
 .recommended-pi-extension-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
 .recommended-pi-extension-actions > a { color: var(--accent); font-size: 12px; }
 
+/* ThinkingAccordion Grid disclosure, adapted from open-claude-ui (MIT).
+   Pi's controller retains expansion preferences and deferred-history loading. */
+.thinking-disclosure { min-width: 0; border: var(--hairline) solid var(--border); border-radius: 7px; background: var(--bg); font: 400 calc(11px + var(--chat-font-size-offset, 0px))/1.5 var(--font-mono); }
+.thinking-disclosure-toggle { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; min-height: 28px; padding: 6px 10px; border: 0; border-radius: inherit; color: var(--text-muted); background: transparent; text-align: left; font: inherit; cursor: pointer; }
+.thinking-disclosure-toggle:hover { color: var(--text); }
+.thinking-disclosure-toggle:focus-visible { outline: 2px solid var(--focus-ring, Highlight); outline-offset: 2px; }
+.thinking-disclosure-chevron { flex: 0 0 auto; transition: transform .2s cubic-bezier(.19, 1, .22, 1); }
+.thinking-disclosure[data-expanded="true"] .thinking-disclosure-chevron { transform: rotate(90deg); }
+.thinking-disclosure-preview { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thinking-disclosure-metadata { flex-shrink: 0; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.thinking-disclosure-grid { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .2s cubic-bezier(.19, 1, .22, 1), visibility 0s .2s; }
+.thinking-disclosure[data-expanded="true"] .thinking-disclosure-grid { grid-template-rows: 1fr; visibility: visible; transition-delay: 0s; }
+.thinking-disclosure-clip { min-width: 0; min-height: 0; overflow: hidden; }
+.thinking-disclosure-content { padding: 8px 10px; color: var(--text-muted); font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.thinking-disclosure-content.is-error { color: var(--danger); }
+@media (prefers-reduced-motion: reduce) {
+  .thinking-disclosure-grid, .thinking-disclosure-chevron { transition: none; }
+}
+
 /* Mature diff renderer: layout and edit marks come from react-diff-view. */
 .changes-library-diff {
   --diff-background-color: transparent;

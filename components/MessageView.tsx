@@ -4,7 +4,7 @@ import { memo, useState, useRef, useEffect, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { MarkdownBody } from "./MarkdownBody";
 import { ImagePreview } from "./ImagePreview";
-import { ThinkingIcon } from "./ThinkingIcon";
+import { ThinkingDisclosure } from "./ThinkingDisclosure";
 import { copyText } from "@/lib/clipboard";
 import { useI18n } from "@/hooks/useI18n";
 import { useDiffViewMode } from "@/hooks/useDiffViewMode";
@@ -1058,66 +1058,15 @@ export function ThinkingBlock({ block, duration, sessionId, entryId, blockIndex 
     };
   }, [expanded, block.deferred, content, sessionId, entryId, blockIndex]);
 
-  return (
-    <div style={{
-      display: "flex", alignItems: "flex-start", gap: 6, minWidth: 0,
-      border: "var(--hairline) solid var(--border)",
-      borderRadius: 7,
-      padding: "6px 10px",
-      background: "var(--bg)",
-      fontFamily: "var(--font-mono)",
-      fontSize: "calc(11px + var(--chat-font-size-offset, 0px))",
-      lineHeight: 1.5,
-    }}>
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-label={`${t("i18n.thinking")}${preview ? `: ${preview}` : ""}`}
-        title={t("i18n.thinking")}
-        onClick={() => setExpanded((v) => !v)}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          width: expanded ? 14 : "100%",
-          flexShrink: expanded ? 0 : 1,
-          minWidth: 0,
-          minHeight: "1.5em",
-          padding: 0,
-          background: "transparent",
-          border: "none",
-          color: "var(--text-muted)",
-          cursor: "pointer",
-          font: "inherit",
-          textAlign: "left",
-        }}
-      >
-        <ThinkingIcon active={expanded} />
-        {!expanded && (
-          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {preview ? <ReactMarkdown allowedElements={[]} unwrapDisallowed skipHtml>{preview}</ReactMarkdown> : "..."}
-          </span>
-        )}
-      </button>
-      {expanded && (
-        <div
-          style={{
-            padding: "8px 10px",
-            color: error ? "var(--danger)" : "var(--text-muted)",
-            fontSize: 12,
-            lineHeight: 1.6,
-            whiteSpace: "pre-wrap",
-            overflowWrap: "anywhere",
-          }}
-        >
-           {loading ? t("i18n.loadingThinking") : error ?? (block.deferred ? content : block.thinking)}
-        </div>
-      )}
-      {duration !== undefined && (
-        <span style={{ flexShrink: 0, color: "var(--text-dim)", fontVariantNumeric: "tabular-nums" }}>{duration}s</span>
-      )}
-    </div>
-  );
+  return <ThinkingDisclosure
+    expanded={expanded}
+    onToggle={() => setExpanded(value => !value)}
+    label={`${t("i18n.thinking")}${preview ? `: ${preview}` : ""}`}
+    title={t("i18n.thinking")}
+    preview={expanded ? t("i18n.thinking") : preview ? <ReactMarkdown allowedElements={[]} unwrapDisallowed skipHtml>{preview}</ReactMarkdown> : "..."}
+    metadata={duration !== undefined ? `${duration}s` : undefined}
+    error={Boolean(error)}
+  >{loading ? t("i18n.loadingThinking") : error ?? (block.deferred ? content : block.thinking)}</ThinkingDisclosure>;
 }
 
 function isSubagentToolDetails(value: unknown): value is SubagentToolDetails {

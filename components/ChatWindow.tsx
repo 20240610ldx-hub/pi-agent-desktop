@@ -1850,9 +1850,11 @@ function ExtensionDialog({
   return (
     <div
       onKeyDown={(event) => {
-        if (event.key !== "Escape" || isImeComposing(event)) return;
-        event.preventDefault();
+        if (event.key !== "Escape") return;
+        // Keep candidate dismissal local to the dialog, away from global Stop.
         event.stopPropagation();
+        if (isImeComposing(event)) return;
+        event.preventDefault();
         onRespond(request, { cancelled: true });
       }}
       style={{
@@ -1994,7 +1996,7 @@ function ExtensionDialog({
                   ref={index === 0 ? focusFirstOption : undefined}
                   onClick={() => onRespond(request, { value: option })}
                   onKeyDown={(event) => {
-                    if (event.key !== "Enter" && event.key !== " ") return;
+                    if ((event.key !== "Enter" && event.key !== " ") || isImeComposing(event)) return;
                     event.preventDefault();
                     onRespond(request, { value: option });
                   }}

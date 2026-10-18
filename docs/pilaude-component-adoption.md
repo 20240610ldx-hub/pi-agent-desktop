@@ -1,6 +1,6 @@
 # open-claude-ui 组件与算法采用账本
 
-审计日期：2026-10-18。范围是 `code-examples/` 中的 **33 个 TS/TSX 源模块**；不把 `src/index.ts`、类型声明、主题 CSS 或 Storybook 算作组件模块。参考 checkout 为 `7490e105e418adf2b94c55ff716bb0973d44fb85`，包含作者提交 `638800b8a4cee4513c8763c3df0ecf8a77b32379`。模块源码统一以[该作者提交的 code-examples](https://github.com/Caho1/open-claude-ui/tree/638800b8a4cee4513c8763c3df0ecf8a77b32379/code-examples)为依据；MIT 来源见 [vendor 记录](../vendor/open-claude-ui/README.md)。
+审计日期：2026-10-19（保留各批原始验证日期）。范围是 `code-examples/` 中的 **33 个 TS/TSX 源模块**；不把 `src/index.ts`、类型声明、主题 CSS 或 Storybook 算作组件模块。参考 checkout 为 `7490e105e418adf2b94c55ff716bb0973d44fb85`，包含作者提交 `638800b8a4cee4513c8763c3df0ecf8a77b32379`。模块源码统一以[该作者提交的 code-examples](https://github.com/Caho1/open-claude-ui/tree/638800b8a4cee4513c8763c3df0ecf8a77b32379/code-examples)为依据；MIT 来源见 [vendor 记录](../vendor/open-claude-ui/README.md)。
 
 本账本回答“哪些源码或算法已被产品实际消费”，不证明 Windows 视觉一致性。逐像素和交互验收仍按[复刻基准](pilaude-ui-parity.md)执行。2026-10-18 的图片批次已完成定向测试和实际页面检查；Changes 已能指出局部算法 consumer，后端定向验证、核心页面和独立窗口目标交接均有证据；原生窗口、完整单轮回归及像素残差仍待完成。局部适配只覆盖明确列出的算法，不扩展为整个源组件已经采用。
 
@@ -12,9 +12,11 @@
 - **未采用／独立实现**：产品已有同类能力，但没有来源适配证据。下表中的产品文件是现有实现或候选接点，不是采用证明。
 - **正在适配、未验**：新批进行中；不提前统计为直接采用或功能、视觉通过。
 
-截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；7 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，`ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样，以及 `AttachmentCard` 的文件名前缀／最后扩展名分离与分段收缩布局。新增 consumer 与单测已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 25 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
+截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；8 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，`ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样，`AttachmentCard` 的文件名前缀／最后扩展名分离与分段收缩布局，以及 `ThinkingAccordion` 的受控 Grid 展开。新增 consumer 与单测已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 24 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
 
-`react-diff-view@3.3.3` 是另行记录的 npm 运行时库，不属于上面的 open-claude-ui 33 个模块。它在本轮接入 Changes 的通用 diff 呈现；上面的 1 项直接采用／7 项局部适配／25 项未确认采用计数不变。既有 `StreamingDiffViewer` 记录只保留 table／gutter 的局部呈现借鉴，不能把新库的 parser、split 配对、tokenize 或词差异能力归入该来源。新渲染路径的最终功能／视觉验收仍待完成，见下方独立记录。
+`ThinkingAccordion` 的 Grid 展开部分已通过真实 `MessageView → ThinkingDisclosure` 路径及九组实际页面检查，登记为**局部适配，仅 Grid 部分**。计数为 1 项直接采用／8 项局部适配／24 项未确认采用；这不代表完整源组件或 Windows 视觉一致性通过。
+
+`react-diff-view@3.3.3` 是另行记录的 npm 运行时库，不属于上面的 open-claude-ui 33 个模块。它接入 Changes 的通用 diff 呈现，本身不改变 open-claude-ui 的采用计数。既有 `StreamingDiffViewer` 记录只保留 table／gutter 的局部呈现借鉴，不能把新库的 parser、split 配对、tokenize 或词差异能力归入该来源。新渲染路径的最终功能／视觉验收仍待完成，见下方独立记录。
 
 目前的直接消费链：
 
@@ -24,6 +26,7 @@
 4. [ChangesPane.tsx](../components/ChangesPane.tsx) 的 `rove` 与 `FadedScroll` 分别适配 roving 索引／Home/End／单 tabstop 和 2px 边缘判定；[ReviewDiff.tsx](../components/ReviewDiff.tsx) 与 [native-theme.css](../app/native-theme.css) 保留 `StreamingDiffViewer` 的 table／tabular-nums gutter 与语义增删背景借鉴。通用表格、unified／split、解析／配对与 token／词差异已由独立的 `react-diff-view` 消费链负责，不计为该源算法采用。既有 [patch.ts](../lib/patch.ts) 仍供 FileViewer／MessageView 的其他路径使用；Changes 不再消费它。
 5. [file-name-display.ts](../lib/file-name-display.ts) 与 [TabBar.tsx](../components/TabBar.tsx) 分别消费 `AttachmentCard` 最后扩展名分离与 prefix／extension 双 span 布局，CSS 按宽度省略，无字符硬切；普通文件标签路径／ARIA／开关动作不改。
 6. [cds-motion.ts](../lib/cds-motion.ts) 导入 [vendored ClaudeMotionPresets.ts](../vendor/open-claude-ui/ClaudeMotionPresets.ts) 的求解器和实际 `SPRING_SNAPPY`（320／28／1），补参数域、近临界与重阻尼数值边界，以 120Hz 生成 CSS `linear()` 采样；[DomContextMenuHost.tsx](../components/DomContextMenuHost.tsx) 的 `MenuPanel` 放置后实际消费曲线作 opacity 进入。没有搬 scale／y、退出延迟或其他 variants；opacity 会钳制物理超调，不能称为可见回弹。quiet [PilaudeWelcome.tsx](../components/PilaudeWelcome.tsx) 仍不消费这些 presets。
+7. **局部适配，仅 Grid 部分**：[MessageView.tsx](../components/MessageView.tsx) 的 `ThinkingBlock` 挂载 [ThinkingDisclosure.tsx](../components/ThinkingDisclosure.tsx)，配合 [native-theme.css](../app/native-theme.css) 消费 `ThinkingAccordion` 的 Grid `0fr↔1fr` 与 200ms `cubic-bezier(.19,1,.22,1)`。产品继续控制展开偏好、延迟历史 fetch／重试和早关闭隔离；无 block-active wire 标志，不推导活跃指示，也不强制 live 展开。九组实际页面已通过加载／重试／缓存、设置／键盘、过渡／中断清理和深浅 390px，仍不等于完整源组件通过，见下方独立记录。
 
 ## 33 个模块逐项记录
 
@@ -58,7 +61,7 @@
 | 25 | `SegmentedControl.tsx` | 等分指示器公式、controlled/uncontrolled、CSS／layoutId 双模式 | **未采用**，无该组件 consumer；现设置／工具菜单各自实现。 | 可统一受控原子；固定 layoutId 多实例会串，缺 roving 键盘与空 tabs／无匹配值防御。依赖 CDS theme／Framer Motion，CSS 模式可单独采用。 |
 | 26 | `StatusIndicators.tsx` | status dot、三点 phase、105° skeleton、数据到样式映射 | **未采用模块**。[SessionSidebar.tsx](../components/SessionSidebar.tsx) 的 needs-input/running/unread/idle 由真实状态驱动，不是该组件导入。 | 借 loading／skeleton，不覆盖用户明确的黄／蓝／hollow 状态。动画需 reduce-motion 和实际状态生命周期；不能把主题 keyframes 可用视为 status component 已采用。 |
 | 27 | `StreamingDiffViewer.tsx` | `parseGitDiff`、行号对齐、unified/split、流式滚动／复制衰减 | **局部适配，仅呈现借鉴**。[ReviewDiff.tsx](../components/ReviewDiff.tsx) 与 [native-theme.css](../app/native-theme.css) 保留 HTML table 的共享行高、tabular-nums gutter 与语义增删背景；ChangesPane 挂载该 renderer。下方早期 inline／split、context、word mark 证据对应迁移前实现；新运行路径单独记录，最终验收待补。 | 通用 renderer、parser、split 配对、tokenize 和 markEdits 来自另行采用的 `react-diff-view@3.3.3`；语法仍用产品既有 Prism／refractor 注册表，由 `review-diff-renderer` 薄适配分 hunk／revision 调用库接口。旧 `review-syntax` 已删除，`patch.ts` 仅留在其他 consumer；以上均不是该源 parser／占位 split／lexer 的采用。无 streaming／worker／增量引擎采用证据，不增加本来源计数。 |
-| 28 | `ThinkingAccordion.tsx` | live-or-user-open 互斥、Grid 0fr↔1fr、引用复制、计时 | **未采用／独立实现**。[MessageView.tsx](../components/MessageView.tsx) 的 `ThinkingBlock` 有自身偏好与延迟加载。 | 借稳定高度展开，保留 deferred fetch／用户偏好／真实 streaming；无 Framer 依赖的 Grid 部分可单独采用，补键盘与 clipboard 错误。 |
+| 28 | `ThinkingAccordion.tsx` | live-or-user-open 互斥、Grid 0fr↔1fr、引用复制、计时 | **局部适配，仅 Grid 部分**。来源为作者 `638800b8a4cee4513c8763c3df0ecf8a77b32379`；[ThinkingDisclosure.tsx](../components/ThinkingDisclosure.tsx) 与 [native-theme.css](../app/native-theme.css) 适配 `0fr↔1fr`、200ms `cubic-bezier(.19,1,.22,1)`，由 [MessageView.tsx](../components/MessageView.tsx) 的真实 `ThinkingBlock` 消费。实际 `thinking-disclosure/run-1792341152373/` 九组通过，已按该有限范围计入局部适配。 | 保留产品展开偏好／通知、deferred fetch／重试、早关闭后忽略旧响应和 IME；adapter 补原生 button、ARIA／inert、关闭过渡内容保留与 reduced-motion。无 block-active wire 标志，因此不加活跃指示或强制 live 展开；未搬源 clipboard、复制成功 timer、elapsed 格式／模拟计时和其他布局，不称整个源组件采用或 Windows 同状态一致。 |
 | 29 | `createClaudeMainWindow.ts` | Electron host/view 分层、主题底色、状态圆角、traffic-light zoom 补偿 | **未采用**。产品 host 为 [src-tauri](../src-tauri)，无 Electron factory consumer。 | 仅作为 native 几何／白闪控制参考；依赖 Electron、preload 和 `__dirname`，不能从 renderer 总入口导入。Windows 窗口状态以 Tauri 与实物为准。 |
 | 30 | `useClaudeRovingFocus.ts` | 方向／RTL／Home/End、循环索引、单 tabindex、preventScroll | **局部适配**。[ChangesPane.tsx](../components/ChangesPane.tsx) 的 `rove` 明确署名，菜单／文件树／提交列表消费索引移动、Home/End、单 tabstop 与 preventScroll；过滤 disabled、空列表、非当前子项及 IME／229；核心菜单与文件查找已有实际证据，新增键盘意图函数明确区分 pane chrome、编辑器、修饰键和 IME；实际焦点专项及其修复状态见后续记录。其他菜单／目录仍为独立实现。 | 产品采用边界 clamp，未搬源循环／RTL／水平模式；避开源 `-1` 哨兵导致首项 Up/Left 不回绕的缺口。无需声称采用二维 grid；动态焦点、窄窗仍应实际验证。 |
 | 31 | `useClaudeScrollPinning.ts` | 150ms 意图锁、40px 贴底、120px 跳转阈值、程序滚动区分 | **局部适配**。[cds-scroll.ts](../lib/cds-scroll.ts) 的 `canFollowStream` 被 [useAgentSession.ts](../hooks/useAgentSession.ts) 的流式跟随／重新贴底路径实际调用。 | 已采用只限 150ms latch。保留产品分页、历史恢复与 prompt anchor，不用整 hook 覆盖；源码注释的 35vh buffer 不是该 hook 的已实施功能，其他阈值也不能记为已采用。 |
@@ -70,7 +73,7 @@
 1. **弹簧解析解与曲线采样**：菜单 opacity 已通过 adapter 接入 `calcDampedHarmonicOscillator`／SNAPPY；后续逐控件评估其余 springs 和 variants，分别记录 spring、交互状态、reduce-motion 和实物残差。单个菜单 consumer 不扩展为所有动效已采用。
 2. **小算法的剩余采用面**：文件名保后缀已局部接入普通文件 tabs；roving 索引与 ScrollFade 边缘判定已局部接入 Changes，其他菜单／selector／tabs 仍是候选。先修相应边界，再逐个登记新 consumer，不把一个面板的适配外推到全站。
 3. **拖放重排**：抽 before/after 命中与移除索引补偿，接已有 pinned/group metadata；键盘与指针共享同一排序事务。不要搬演示 sessions，也不把数组 splice 称为拓扑算法。
-4. **受控呈现组件**：Segmented、Thinking、Status、MCP card 值得逐个适配，但 pending／运行／完成／权限／token 必须保留后端真值；先拆 demo timers 与静态数据。
+4. **受控呈现组件**：Thinking 的 Grid 部分已接真实 consumer 并通过限定实际检查，完整源状态及 Windows 视觉待验；Segmented、Status、MCP card 仍待逐个适配。pending／运行／完成／权限／token 必须保留后端真值，不能从会话正在运行推导某个 Thinking block 活跃；先拆 demo timers 与静态数据。
 5. **有依赖后再采用**：FFT 等真实音频链、host 工厂仅宿主参考、backoff 先落实幂等约束；diff 的源解析／增量引擎和 image 共享转场仍未采用，已落地的 zoom／pan 只覆盖上述局部算法。采用更多模块不是绕过这些边界的理由。
 
 ## 演示与平台限制
@@ -154,6 +157,16 @@ YAML plain scalar 的真实 AST 是根文本，adapter 现只对 yaml／yml 根�
 ## New 首页导航补验
 
 New 改为现有首页入口，项目旁的 + 保持新建会话。首页通过 Next 集成的 History API 更新本地视图，保留后台 ChatWindow 挂载、会话／空会话 draft 身份，隐藏 Context 和会话操作；project roots 通知用稳定有序路径 key 避免 render loop。`new-welcome/run-1792330694586/` 七组真实页面检查通过 New、返回／刷新草稿、项目／模型入口、reduced-motion 和 390px 无横溢出。所有 API 为显式内存夹具，pageErrors、DOM 嵌套／深度警告和 blockedWrites 为空；console 有检查器 canvas readback 性能提示，不称 console 全空。早前冷加载／导航失败保留，不据此宣称所有开发服务问题已根治。首页流光是产品独立实现，不增加 open-claude-ui 模块采用数；最新按用户要求，单次点击只推进一道完整不规则亮纹，多次点击才产生独立起点／寿命／随机种子的波纹。最终 helper 7 项通过；`ripple-motion/single-double-1792336146500/single.gif` 的单次分组通过，整 run 后续 observer 阈值失败仍保留；独立 `single-double-1792336369255/double.gif` 及报告通过双次点击、控件／SVG 排除与 reduced-motion，两组格点位移均为 0、绘制约 30Hz。旧 `run-1792334850698` 和 `presentation-1792334257081` 只证明前轮版本，不当最新单波视觉证据；原像素构图、亮度和完整动态参考仍待校准，见[复刻基准](pilaude-ui-parity.md)。
+
+## ThinkingAccordion 的 Grid 局部适配
+
+2026-10-19 依据 [作者提交中的 ThinkingAccordion.tsx](https://github.com/Caho1/open-claude-ui/blob/638800b8a4cee4513c8763c3df0ecf8a77b32379/code-examples/ThinkingAccordion.tsx)，只提取 Grid `0fr↔1fr`、`min-height:0`／overflow 裁剪与 200ms `cubic-bezier(.19,1,.22,1)` 过渡。来源保持 `Copyright (c) 2026 Caho1`／MIT，见 [vendor 记录](../vendor/open-claude-ui/README.md)与其旁的 LICENSE；未把整个源码组件复制进 vendor 或将它登记为直接采用。
+
+真实链为 [MessageView.tsx](../components/MessageView.tsx) `ThinkingBlock` → [ThinkingDisclosure.tsx](../components/ThinkingDisclosure.tsx) → [native-theme.css](../app/native-theme.css) 的 Grid 规则。`ThinkingBlock` 保留 `isThinkingExpandedByDefault` 与偏好通知、真实 duration 元数据、原文／preview 和 deferred-history fetch／缓存／失败重试；展开取数仍由该 controller 负责，早关闭后的旧响应被取消标志隔离。披露 adapter 只接受受控 `expanded`，用原生 button 的键盘行为、相连 ARIA region、关闭时立即 `inert`／`aria-hidden` 和过渡结束后移除内容；reduced-motion／不可见路径即时清理。未改变 IME、模型请求或偏好写入语义。
+
+当前 wire 没有逐 Thinking block 的 active 标志，不能用会话运行状态替代。因此本批不加活跃点／跳动指示、不强制 live 展开、不搬源 copy-as-quote／复制成功 2 秒 timer、elapsed 字符串或模拟时钟；产品现有 duration 只是已有真实元数据。Grid 片段采用与完整源组件行为分开记账，不声称活动／流式锁、clipboard、源码全部样式或 Windows 同状态视觉已复刻。
+
+最终组合 126 项通过，类型与完整 lint 通过，保留既有 TerminalPanel aria 警告。实际 `thinking-disclosure/run-1792341152373/` 九组通过真实历史 MessageView：折叠不取数、原始 index 1／3／4、pending／cached 去重、畸形结果重试、Enter／Space、设置广播、正常与中断 Grid 清理、reduced-motion、深浅 390px 无溢出。思考请求恰为 [1,3,4,4]；non-read／external 请求、pageErrors、console warning／error 和 HMR 均为空。初轮快速 Settings 反向切换的正文残留已由 ResizeObserver 归零清理修复，RED 报告保留；后续热编译／reload／错误主题选择器造成的 failed 报告也保留，不改产品超时来通过测试。第 28 项现为局部 Grid 适配，33 项计数更新为 1 直接／8 局部／24 未确认。尚缺对应 Windows 官方同状态参考，不做完整视觉一致性结论。
 
 ## 更新条件
 

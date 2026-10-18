@@ -1,10 +1,87 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { Script } from "node:vm";
+import ts from "typescript";
+import { isImeComposing } from "../lib/ime.ts";
 
 const source = await readFile(new URL("./ChatWindow.tsx", import.meta.url), "utf8");
 const dialogSource = source.slice(source.indexOf("function ExtensionDialog"));
 const customSource = source.slice(source.indexOf("function ExtensionCustomPanel"));
+
+// Exercise the real JSX callbacks, as ChatInput.test.mjs does, without mounting
+// ChatWindow's session/transport hooks. Browser coverage checks actual bubbling.
+function dialogKeyHandler(option, scope) {
+  const ast = ts.createSourceFile("ChatWindow.tsx", dialogSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  function find(node) {
+    if (ts.isJsxAttribute(node) && node.name.getText(ast) === "onKeyDown") {
+      const isOption = node.parent.properties.some((attribute) => attribute.name?.getText(ast) === "data-extension-option");
+      if (isOption === option) return node.initializer.expression;
+    }
+    return ts.forEachChild(node, find);
+  }
+  const callback = find(ast);
+  assert.ok(callback, "dialog keyboard handler exists");
+  return new Script(ts.transpileModule(`(${callback.getText(ast)})`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2020 },
+  }).outputText).runInNewContext({ isImeComposing, ...scope });
+}
+
+function keyEvent(key, nativeEvent = {}) {
+  return {
+    key,
+    nativeEvent,
+    defaultPrevented: false,
+    propagationStopped: false,
+    preventDefault() { this.defaultPrevented = true; },
+    stopPropagation() { this.propagationStopped = true; },
+  };
+}
+
+test("select options leave IME Enter and Space to composition, then respond normally", () => {
+  const request = { id: "select-ime", method: "select", options: ["First", "Second"] };
+  const responses = [];
+  const handler = dialogKeyHandler(true, {
+    request,
+    option: "Second",
+    onRespond(receivedRequest, response) { responses.push({ request: receivedRequest, ...response }); },
+  });
+  for (const key of ["Enter", " "]) {
+    for (const nativeEvent of [{ isComposing: true }, { isComposing: false, keyCode: 229 }]) {
+      const event = keyEvent(key, nativeEvent);
+      handler(event);
+      assert.equal(responses.length, 0, `IME ${JSON.stringify(key)} must not answer the request`);
+      assert.equal(event.defaultPrevented, false, "the IME retains its default key behavior");
+    }
+  }
+  for (const key of ["Enter", " "]) {
+    const event = keyEvent(key);
+    handler(event);
+    assert.equal(event.defaultPrevented, true);
+  }
+  assert.deepEqual(responses, [{ request, value: "Second" }, { request, value: "Second" }]);
+});
+
+test("dialog owns IME Escape without cancelling; ordinary Escape cancels once", () => {
+  const request = { id: "escape-ime", method: "select", options: ["First"] };
+  const responses = [];
+  const handler = dialogKeyHandler(false, {
+    request,
+    onRespond(receivedRequest, response) { responses.push({ request: receivedRequest, ...response }); },
+  });
+  for (const nativeEvent of [{ isComposing: true }, { isComposing: false, keyCode: 229 }]) {
+    const event = keyEvent("Escape", nativeEvent);
+    handler(event);
+    assert.equal(responses.length, 0, "IME Escape must not cancel the request");
+    assert.equal(event.propagationStopped, true, "IME Escape must not reach global Stop");
+    assert.equal(event.defaultPrevented, false, "the IME can still dismiss its candidate window");
+  }
+  const event = keyEvent("Escape");
+  handler(event);
+  assert.equal(event.propagationStopped, true);
+  assert.equal(event.defaultPrevented, true);
+  assert.deepEqual(responses, [{ request, cancelled: true }]);
+});
 
 test("confines extension overlays to the content region above the composer", () => {
   assert.doesNotMatch(source, /function ExtensionRequestSheet/);

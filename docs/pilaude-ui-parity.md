@@ -214,6 +214,18 @@ Changes 内联 context 起点保留两侧坐标，Shift 到明确删除／添加
 
 实际 workspace 补验 `changes-reference/library-yaml-workspace-1792338305434/` 先通过真实 Git API 预检，再仅替换展示 GET，使用真实顶栏和 resize 控件将 pane 调到 790 CSS px（目标 789.6，差 +0.4）；990 原像素整数裁剪包含真实 1px border／10px radius 卡片。代码内容宽变为 571.7578 对参考 568，差约 +3.7578 原像素；参考 padding 未知，该内容宽为近似比较。参考另有约 15 原像素右滚动条带，当前 table 则延伸到卡片内缘；行距、gutter 和 table 内文本偏移保持。DOM Range 实测删除／添加 82、两侧 105 和 107 的换行与参考接近或吻合，83 的 `echo` 仍在 `>>` 之后而非之前换行，部分字形／标点与外层 canvas 留白仍有差异。只有两次既有只读 cwd validate POST，console error／warn、pageErrors、blockedWrites 为空。此补验说明 standalone 容器状态解释了大部分宽度残差，不改字体追逐不同容器。
 
+## ThinkingAccordion 受控呈现适配
+
+2026-10-19 新增 `MessageView.ThinkingBlock → ThinkingDisclosure` 实际消费链，局部适配 open-claude-ui `ThinkingAccordion.tsx` 的 Grid `0fr ↔ 1fr`、200ms／`cubic-bezier(.19,1,.22,1)` 展开机制。Pi 原控制器继续拥有 `pi-thinking-expanded` 默认偏好、设置广播、deferred history 按原始 blockIndex 获取、进行中 Promise 去重与失败重试；折叠不发起获取。新增真实 button、ARIA 关联／inert、关闭时正文暂留直到动画结束，以及 reduced-motion 静态回退。
+
+源组件的强制 live 展开、复制回调／计时和三点状态不随本次移植：当前 wire 没有独立思考 block 活动态，不能用整条 message streaming 伪装。首次 MessageView／呈现／偏好共 39 项通过，随后与扩展 IME、事件流、键盘及上游边界组合 126 项通过；类型及完整 lint 通过，保留既有 TerminalPanel aria 警告。实际 `thinking-disclosure/run-1792340616360/` 前五组通过原始 blockIndex、pending／cached 去重、失败重试、Enter／Space、正常开合中间高度与结束清理，但快速 Settings true→false 时没有启动的 CSS 过渡不发 transitionend，四个闭合区虽为零高且 inert／aria-hidden，正文仍留在 DOM，整轮保留 failed。已改为关闭阶段观察实际 Grid 高度，归零、隐藏或 reduced-motion 时清理；最终 `thinking-disclosure/run-1792341152373/` 九组实际检查通过，思考 GET 恰为原始 index [1,3,4,4]，无重复；设置快速反向开关、关闭时启用 reduced-motion 或 New 隐藏原 chat 都使 height／正文长度归零、inert／aria-hidden 保持。普通开合实际记录多个中间高度，展开到 265.438 CSS px，深浅 390px 长文均无根／正文横向溢出；non-read／external 请求、console warning／error、pageErrors 与 HMR 为空。后续热编译／reload 丢入口、主题选择器错误和先前受拦截 lease 的 failed 报告保留，最终使用实际 Settings 主题控件，未修改产品超时。当前没有专门 Windows 思考区逐状态原图，不将来源 macOS 取证或功能通过当作像素一致性证明。
+
+## 扩展对话框输入法按键归属
+
+2026-10-19 定向复查修复 select option 的 IME Enter／Space 误提交，以及 composing Escape 从 dialog 冒泡到全局 Stop。option 沿用现有 `isImeComposing`（含 229）过滤；dialog 只对 Escape 先 stopPropagation，合成中保留默认候选窗行为，普通 Escape 仍只回复一次取消。没有改扩展请求 ID、队列、后端 promise、权限策略或工具执行。
+
+相关 16 项定向检查与本批组合 126 项通过；实际 `extension-ime-20261019-002103-852/run.json` 使用六个显式合成队列请求，通过 composing／229 Enter／Space／Escape 不误回复／不取消／不 abort、方向键／Home／End、普通确认／取消、清空 dialog 后全局 Escape 正控制。API 全部本地拦截，不运行真实模型或扩展；本轮 response 与 abort 只是被记录的 fixture 请求。console warning／error 与页面错误为空，实际截图已读取核对。首轮 get_tools 夹具错误和此前未捕获 warnings 的范围明确保留；Windows 原生 IME 不据此标记通过。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。
