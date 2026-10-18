@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { Script, createContext } from "node:vm";
+import ts from "typescript";
 
 const source = await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8");
 const sessionItemSource = source.slice(source.indexOf("function SessionItem("));
@@ -80,8 +82,8 @@ test("includes project activity counts in accessible labels", () => {
   );
 });
 
-test("formats session timestamps with the active locale", () => {
-  assert.match(source, /import \{ formatCompactRelativeTime, formatRelativeTime \} from "@\/lib\/i18n\/format"/);
+test("formats session timestamps in the action menu with the active locale", () => {
+  assert.match(source, /import \{ formatRelativeTime \} from "@\/lib\/i18n\/format"/);
   assert.match(sessionItemSource, /const \{ locale, t \} = useI18n\(\)/);
   assert.match(sessionItemSource, /formatRelativeTime\(session\.modified, locale\)/);
 });
@@ -145,13 +147,13 @@ test("the project context menu reveals the project in the OS file manager", asyn
   assert.match(source, /"sidebar\.openInFileManager"/);
 });
 
-test("session rows swap a compact time for the action button in one fixed-width slot", () => {
-  // At rest the row shows its last-activity time; hover, touch and an open
-  // menu show the "…" button in the same slot so the title never reflows.
+test("session actions are available on selection, hover, keyboard focus and touch", () => {
   assert.match(sessionItemSource, /className="session-item-trailing"/);
-  assert.match(sessionItemSource, /hovered \|\| touchMode \|\| menuOpen \?/);
-  assert.match(sessionItemSource, /formatCompactRelativeTime\(session\.modified, locale\)/);
-  // Transient runtime rows have neither actions nor a reliable time.
+  assert.match(sessionItemSource, /hidden=\{!\(hovered \|\| touchMode \|\| menuOpen \|\| isSelected \|\| focusWithin\)\}/);
+  assert.match(sessionItemSource, /onFocus=\{\(\) => setFocusWithin\(true\)\}/);
+  assert.match(sessionItemSource, /e\.currentTarget\.contains\(e\.relatedTarget/);
+  assert.doesNotMatch(sessionItemSource, /session-item-time|formatCompactRelativeTime/);
+  // Runtime-only sessions still cannot rename or delete disk files.
   assert.match(sessionItemSource, /\{!session\.transient && \(\s*<div\s+className="session-item-trailing"/);
 });
 
@@ -159,19 +161,21 @@ test("project header shows a session count and chips only while folded", () => {
   // A folded project hides its rows, so the header carries the count.
   assert.match(source, /\{isCollapsed && \(\s*<span className="sidebar-project-tree-count"[^>]*>\s*\(\{groupTree\.length\}\)/);
   assert.match(source, /\{isCollapsed && \(\s*<span className="sidebar-project-tree-meta">/);
-  // The branch moved from the row into its tooltip.
+  // The full path/branch remains in the accessible label and clipped-name tooltip.
   assert.doesNotMatch(source, /className="sidebar-project-tree-branch"/);
-  assert.match(source, /title=\{rowTitle\}/);
+  assert.match(source, /aria-label=\{rowLabel\}/);
+  assert.match(source, /tooltipText=\{`\$\{projectDisplayNames\.get\(group\.projectRoot\) \?\? group\.displayName\}\\n\$\{rowLabel\}`\}/);
 });
 
-test("project header keeps its actions hover-only and no separate chevron", async () => {
+test("project header follows the name/chevron/plus reference and preserves touch actions", async () => {
   const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
-  // The folder glyph already shows open / closed; a chevron would repeat it.
-  assert.doesNotMatch(source, /sidebar-project-tree-chevron/);
+  const referenceCss = css.slice(css.indexOf("/* Session titles and activity reference */"));
+  assert.match(source, /sidebar-project-tree-chevron/);
+  assert.doesNotMatch(source, /className="sidebar-project-tree-folder"/);
   assert.match(source, /aria-expanded=\{!isCollapsed\}/);
-  assert.match(css, /\.sidebar-project-tree-row-actions \{[^}]*opacity: 0;[^}]*pointer-events: none;/);
-  assert.match(css, /\.sidebar-project-tree-row\.is-menu-open \.sidebar-project-tree-row-actions/);
-  assert.match(css, /@media \(hover: none\) \{[^@]*\.sidebar-project-tree-row-actions \{\s*opacity: 1;/);
+  assert.match(referenceCss, /\.sidebar-project-tree-row-actions \{[^}]*opacity: 1;[^}]*pointer-events: auto;/);
+  assert.match(referenceCss, /:is\(:hover, :has\(:focus-visible\), \.is-menu-open\) \.sidebar-project-tree-more/);
+  assert.match(referenceCss, /@media \(hover: none\) \{[^@]*\.sidebar-project-tree-more \{ opacity: 1; pointer-events: auto;/);
 });
 
 test("folded projects persist across reloads", () => {
@@ -203,4 +207,40 @@ test("the row menu shows the compaction count only when the session was compacte
     sessionItemSource,
     /\{\(session\.compactionCount \?\? 0\) > 0 && \(\s*<div>\{t\("sidebar\.compactionCount", \{ count: session\.compactionCount \?\? 0 \}\)\}<\/div>/,
   );
+});
+
+test("the full session name survives fallback selection and whitespace normalization", () => {
+  const ast = ts.createSourceFile("SessionSidebar.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const nodes = [];
+  const visit = (node) => { nodes.push(node); ts.forEachChild(node, visit); };
+  visit(ast);
+  const title = nodes.find((node) => ts.isVariableDeclaration(node) && node.name.getText(ast) === "title");
+  const resolve = (session, displayFirstMessage) => new Script(ts.transpileModule(title.initializer.getText(ast), {
+    compilerOptions: { target: ts.ScriptTarget.ESNext },
+  }).outputText).runInContext(createContext({ session, displayFirstMessage }));
+  const long = "A complete title after the former fifty character boundary ".repeat(3);
+  assert.equal(resolve({ id: "id", name: long }, "first message"), long.trim());
+  assert.equal(resolve({ id: "id" }, long), long.trim());
+  assert.equal(resolve({ id: "id", name: "多行\n名称\t保留" }, ""), "多行 名称 保留");
+  assert.equal(resolve({ id: "1234567890123456" }, ""), "123456789012");
+});
+
+test("the session title is a native focusable selection button with a full accessible name", () => {
+  assert.match(sessionItemSource, /<button\s+type="button"\s+className="session-item-main"/);
+  assert.match(sessionItemSource, /aria-current=\{isSelected \? "page" : undefined\}/);
+  assert.match(sessionItemSource, /aria-label=\{subtitle \? `\$\{title\} · \$\{subtitle\}` : title\}/);
+  assert.match(sessionItemSource, /onClick=\{\(e\) => \{ e\.stopPropagation\(\); onClick\(\); \}\}/);
+  assert.match(sessionItemSource, /<SidebarTitle className="session-item-title" text=\{title\} \/>/);
+});
+
+test("running, unread and neutral states use one leading dot with static reduced motion", async () => {
+  const indicators = source.slice(source.indexOf("function RunningSessionIndicator"), source.indexOf("function SessionItem"));
+  assert.match(indicators, /className="session-activity-dot is-running"[^>]*aria-label=\{t\("sidebar\.agentRunning"\)\}/);
+  assert.match(indicators, /className="session-activity-dot is-unread"[^>]*aria-label=\{t\("sidebar\.newSessionActivity"\)\}/);
+  assert.doesNotMatch(indicators, /animateTransform|<animate/);
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  const referenceCss = css.slice(css.indexOf("/* Session titles and activity reference */"));
+  assert.match(referenceCss, /\.session-activity-dot\.is-running \{ animation: scheduled-pulse 1\.4s ease-in-out infinite;/);
+  assert.match(referenceCss, /@media \(prefers-reduced-motion: reduce\) \{\s*\.session-activity-dot\.is-running \{ animation: none;/);
+  assert.match(referenceCss, /\.sidebar-title\.is-overflowing \{ mask-image: linear-gradient\(to right, #000 calc\(100% - 28\.8px\), transparent\)/);
 });

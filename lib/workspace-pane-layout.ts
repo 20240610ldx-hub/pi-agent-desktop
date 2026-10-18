@@ -144,6 +144,22 @@ export function reconcileWorkspacePanes(
   };
 }
 
+/** A single column belongs to the outer workbench resizer. Saved inner widths
+ * only constrain side-by-side columns, never a lone or expanded pane. */
+export function getWorkspacePaneGridStyle(layout: WorkspacePaneLayout): {
+  minWidth: number;
+  gridTemplateColumns: string;
+} {
+  if (layout.expandedPaneId || layout.columns.length <= 1) {
+    return { minWidth: 0, gridTemplateColumns: "minmax(0, 1fr)" };
+  }
+  return {
+    minWidth: layout.columns.reduce((sum, column) => sum + column.width, (layout.columns.length - 1) * 8),
+    gridTemplateColumns: layout.columns.map((column, index) => index === layout.columns.length - 1
+      ? `minmax(${column.width}px, 1fr)` : `${column.width}px`).join(" 8px "),
+  };
+}
+
 export function resizeWorkspacePaneColumn(
   layout: WorkspacePaneLayout,
   columnId: string,

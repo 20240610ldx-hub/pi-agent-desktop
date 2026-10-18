@@ -306,22 +306,59 @@ try {
     assert.deepEqual(rendered.filter((value) => value !== text(0)),
       Array.from({ length: 5000 - oldest }, (_, i) => text(oldest + i)), "Missing, reordered, or duplicate chat messages");
     if (viewport.width > 600) {
-      const navigator = page.getByRole("slider", { name: "Conversation navigation", exact: true });
+      const navigator = page.getByRole("button", { name: "Conversation navigation", exact: true });
+      const directory = page.locator(".conversation-navigator-directory");
+      const rows = directory.locator(".conversation-navigator-row");
+      const current = directory.locator('[aria-current="location"]');
       await navigator.waitFor();
       await navigator.focus();
-      const before = Number(await navigator.getAttribute("aria-valuenow"));
-      const maximum = Number(await navigator.getAttribute("aria-valuemax"));
-      const direction = before > 1 ? "ArrowUp" : "ArrowDown";
+      await directory.waitFor();
+      const before = Number(await current.getAttribute("data-navigation-index"));
+      const maximum = await rows.count();
+      assert.ok(maximum > 7, "All loaded turns are reachable in the bounded directory");
+      const direction = before > 0 ? "ArrowUp" : "ArrowDown";
       await page.keyboard.press(direction);
-      // The preview card is a button since #130 (click jumps to the turn).
-      const preview = page.locator(".conversation-navigator-preview");
-      await preview.waitFor();
-      const after = Number(await navigator.getAttribute("aria-valuenow"));
-      assert.equal(after, before + (direction === "ArrowUp" ? -1 : 1));
-      assert.ok(after >= 1 && after <= maximum);
-      assert.match(await preview.innerText(), /^E2E message \d{4}\nE2E message \d{4}$/);
+      const after = before + (direction === "ArrowUp" ? -1 : 1);
+      await page.waitForFunction((index) => document.querySelector(`.conversation-navigator-row[aria-current="location"]`)?.getAttribute("data-navigation-index") === String(index), after);
+      assert.ok(after >= 0 && after < maximum);
+      const selected = rows.locator(`[data-navigation-index="${after}"]`);
+      assert.match(await selected.innerText(), /^E2E message \d{4}$/);
+      await page.waitForFunction((index) => {
+        const container = document.querySelector(".chat-scroll-container");
+        const anchor = container?.querySelector(`[data-conversation-turn="${index}"]`);
+        if (!container || !anchor) return false;
+        return Math.abs(anchor.getBoundingClientRect().top - container.getBoundingClientRect().top - 16) <= 2;
+      }, after);
+      assert.equal(await current.evaluate((row) => {
+        const panel = row.closest("nav").getBoundingClientRect();
+        const item = row.getBoundingClientRect();
+        return item.top >= panel.top && item.bottom <= panel.bottom;
+      }), true, "The current item stays visible in a long directory");
+      await rows.first().hover();
+      assert.equal(Number(await current.getAttribute("data-navigation-index")), after, "Hover does not change the scroll-active section");
+      await selected.focus();
+      await page.keyboard.press("Enter");
+      await directory.waitFor({ state: "hidden" });
+      assert.equal(await navigator.evaluate((element) => element === document.activeElement), true, "Selection returns focus to the rail");
+      await page.keyboard.press("ArrowUp");
+      await directory.waitFor();
+      await page.keyboard.press("Escape");
+      await directory.waitFor({ state: "hidden" });
+      await navigator.blur();
+      await navigator.focus();
+      await directory.waitFor();
       await page.locator("textarea").last().focus();
-      await preview.waitFor({ state: "hidden" });
+      await directory.waitFor({ state: "hidden" });
+      // Real transcript scrolling updates the active marker independently of focus.
+      const scrollTarget = after > 2 ? after - 2 : after + 2;
+      await page.locator(`[data-conversation-turn="${scrollTarget}"]`).evaluate((element) => {
+        const container = element.closest(".chat-scroll-container");
+        container.scrollTop += element.getBoundingClientRect().top - container.getBoundingClientRect().top - 16;
+      });
+      await page.waitForFunction((index) => {
+        const ticks = Array.from(document.querySelectorAll(".conversation-navigator-tick"));
+        return ticks.findIndex((tick) => tick.classList.contains("is-active")) === index;
+      }, scrollTarget);
     }
     await page.screenshot({ path: join(artifacts, `history-${viewport.width}.png`) });
 

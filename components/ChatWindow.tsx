@@ -12,7 +12,7 @@ import { buildQuotedSelection } from "@/lib/quoted-selection";
 import { MessageView } from "./MessageView";
 import { MarkdownBody } from "./MarkdownBody";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
-import { ConversationNavigator, type ConversationTurnLocation } from "./ConversationNavigator";
+import { ConversationNavigator, SESSION_START_INDEX, type ConversationTurnLocation } from "./ConversationNavigator";
 import { ExtensionWidgets } from "./ExtensionWidgets";
 import { ExtensionStatusLine, formatExtensionStatusLine } from "./ExtensionStatusLine";
 import { AnsiText } from "./AnsiText";
@@ -122,17 +122,6 @@ function getUserInputText(message: AgentMessage): string | null {
     .join("\n")
     .trim();
   return text.length > 0 ? text : null;
-}
-
-function getAssistantPreviewText(message: AgentMessage): string | null {
-  if (message.role !== "assistant") return null;
-  const text = getFinalSplit(message as AssistantMessage).answerBlocks
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("\n")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text || null;
 }
 
 function withAssistantBlocks(
@@ -475,14 +464,10 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
     for (let userIdx = 0; userIdx < messages.length; userIdx++) {
       const question = getUserInputText(messages[userIdx]);
       if (!question) continue;
-      let answer: string | null = null;
-      for (let idx = userIdx + 1; idx < messages.length && messages[idx].role !== "user"; idx++) {
-        answer = getAssistantPreviewText(messages[idx]) ?? answer;
-      }
-      turns.push({ index: turns.length, question, answer });
+      turns.push({ index: turns.length, question, entryId: entryIds[userIdx] });
     }
     return turns;
-  }, [messages]);
+  }, [messages, entryIds]);
 
   // Fork/navigate stay referentially stable across busy transitions; gating
   // happens at call time (ref) and visually via the data-session-busy CSS
@@ -1083,16 +1068,31 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   // first, then scroll once the anchor is mounted. The window counts rendered
   // items, not messages: a turn's "Process details" group is one more item, so
   // messages.length alone left the first turn outside the window.
+  const navigatorFrameRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (navigatorFrameRef.current !== null) cancelAnimationFrame(navigatorFrameRef.current);
+  }, [session?.id, activeLeafId]);
   const selectConversationTurn = useCallback((turnIndex: number) => {
+    if (turnIndex === SESSION_START_INDEX && hasEarlierMessages) return;
     setVisibleCount((current) => Math.max(current, messages.length * 2));
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const container = scrollContainerRef.current;
-      const anchor = container?.querySelector<HTMLElement>(`[data-conversation-turn="${turnIndex}"]`);
-      if (!container || !anchor) return;
-      const top = anchor.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
-      container.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-    }));
-  }, [messages.length, scrollContainerRef]);
+    if (navigatorFrameRef.current !== null) cancelAnimationFrame(navigatorFrameRef.current);
+    navigatorFrameRef.current = requestAnimationFrame(() => {
+      navigatorFrameRef.current = requestAnimationFrame(() => {
+        navigatorFrameRef.current = null;
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
+        if (turnIndex === SESSION_START_INDEX) {
+          container.scrollTo({ top: 0, behavior });
+          return;
+        }
+        const anchor = container.querySelector<HTMLElement>(`[data-conversation-turn="${turnIndex}"]`);
+        if (!anchor) return;
+        const top = anchor.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
+        container.scrollTo({ top: Math.max(0, top), behavior });
+      });
+    });
+  }, [messages.length, hasEarlierMessages, scrollContainerRef]);
 
   const chatInputElement = (
     <ChatInput
@@ -1530,7 +1530,9 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
           </div>
         </div>
           <ConversationNavigator
+            key={`${session?.id ?? newSessionDraftKey ?? "new"}:${activeLeafId ?? ""}`}
             turns={conversationTurns}
+            hasSessionStart={!loading && !hasEarlierMessages}
             scrollContainerRef={scrollContainerRef}
             onSelect={selectConversationTurn}
           />

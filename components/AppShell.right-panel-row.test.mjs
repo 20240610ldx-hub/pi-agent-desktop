@@ -77,12 +77,16 @@ test("file panel stays a full-height embedded pane", () => {
   assert.equal(panel.parent, main.parent, "panel must be a full-height sibling of the main column");
   assert.equal(body.parent, main, "workspace body must stay inside the main column");
   assert.equal(elementWith("id", "session-sidebar").parent, main.parent, "sidebar must share the outer row");
-  assert.match(
-    source,
-    /borderLeft: "var\(--hairline\) solid var\(--separator\)"/,
-    "the embedded pane must keep a neutral fallback edge for full-width mode",
-  );
   const css = readFileSync(new URL("../app/native-theme.css", import.meta.url), "utf8");
-  assert.match(css, /Right panel as an embedded workbench/);
-  assert.match(css, /\.right-panel-container:not\(\.right-panel-full-width\) \{\s*\n\s*border-left: var\(--hairline\) solid var\(--separator\) !important;/);
+  const workspaceCss = css.slice(css.indexOf("/* Workspace pane chrome and column sizing */"));
+  assert.match(workspaceCss, /\.app-shell \.workspace-pane-workbench \{[^}]*border: 0 !important;/,
+    "the host must not add a second frame around individual pane cards");
+  assert.match(workspaceCss, /\.app-shell \.workspace-pane-dock \{[^}]*overflow: hidden; padding: 0;/);
+  assert.equal((source.match(/<WorkspacePaneControls\b/g) ?? []).length, 2, "desktop and mobile have mutually exclusive control hosts");
+  assert.match(source, /!isMobile && <WorkspacePaneControls/);
+  assert.match(source, /overlayControls=\{isMobile \? <div className="workspace-pane-mobile-controls"/);
+  assert.doesNotMatch(source, /workspace-pane-toolbar|workspace-pane-toolbar-spacer/);
+  const workbench = source.slice(source.indexOf("{/* Workspace panes stay mounted"));
+  assert.doesNotMatch(workbench, /className="file-panel-expand-button"|right-panel-close-button/);
+  assert.match(source, /windowControls=\{rightPanelOpen && !isMobile && desktopChrome\.isDesktop && !desktopChrome\.isMacOS \? <WindowControls/);
 });

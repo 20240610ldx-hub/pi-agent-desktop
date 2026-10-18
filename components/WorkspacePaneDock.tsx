@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent, type KeyboardEvent, type HTMLAttributes } from "react";
 import { APP_PREF_KEYS, getPrefJson, setPrefJson } from "@/lib/app-prefs";
 import { isImeComposing } from "@/lib/ime";
 import {
-  normalizeWorkspacePaneLayout, reconcileWorkspacePanes, resizeWorkspacePaneColumn,
+  getWorkspacePaneGridStyle, normalizeWorkspacePaneLayout, reconcileWorkspacePanes, resizeWorkspacePaneColumn,
   splitWorkspacePaneColumn, toggleWorkspacePaneExpanded, type WorkspacePaneLayout,
 } from "@/lib/workspace-pane-layout";
 
@@ -25,6 +25,11 @@ interface Props {
   resizeColumnLabel: string;
   resizeRowsLabel: string;
   revealRequest?: { id: string } | null;
+  /** Window chrome follows the upper-right visible pane, outside its scroller. */
+  windowControls?: ReactNode;
+  overlayControls?: ReactNode;
+  macWindowInset?: boolean;
+  headerDragProps?: HTMLAttributes<HTMLElement> & { "data-tauri-drag-region"?: true };
 }
 
 const MIN_PANE_HEIGHT = 160;
@@ -42,7 +47,7 @@ type Drag = {
 };
 
 /** Fixed sibling hosts: moving or hiding a pane must not remount a PTY or iframe. */
-export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel, resizeColumnLabel, resizeRowsLabel, revealRequest }: Props) {
+export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel, resizeColumnLabel, resizeRowsLabel, revealRequest, windowControls, overlayControls, macWindowInset = false, headerDragProps }: Props) {
   const [saved, setSaved] = useState(() => normalizeWorkspacePaneLayout(null));
   const [hydrated, setHydrated] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -51,6 +56,9 @@ export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel
   const openIds = JSON.stringify(panes.filter((pane) => pane.open).map((pane) => pane.id));
   const layout = useMemo(() => reconcileWorkspacePanes(saved, JSON.parse(openIds) as string[]), [saved, openIds]);
   const expanded = layout.expandedPaneId;
+  const chromePaneId = expanded ?? layout.columns.at(-1)?.paneIds[0];
+  const overlayPaneId = expanded ?? layout.columns[0]?.paneIds[0];
+  const multipleColumns = !expanded && layout.columns.length > 1;
 
   useEffect(() => {
     setSaved(normalizeWorkspacePaneLayout(getPrefJson(APP_PREF_KEYS.workspacePaneLayout)));
@@ -155,12 +163,10 @@ export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel
   }, []);
 
   return (
-    <div className={`workspace-pane-dock${expanded ? " has-expanded-pane" : ""}${dragging ? " is-resizing" : ""}`}>
-      <div ref={gridRef} className="workspace-pane-grid"
-        style={{
-          minWidth: expanded ? 280 : layout.columns.reduce((sum, column) => sum + column.width, Math.max(0, layout.columns.length - 1) * SEPARATOR_SIZE),
-          gridTemplateColumns: expanded ? "minmax(280px, 1fr)" : layout.columns.map((column, index) => index === layout.columns.length - 1 ? `minmax(${column.width}px, 1fr)` : `${column.width}px`).join(" 8px "),
-        }}>
+    <div className={`workspace-pane-dock${multipleColumns ? " has-multiple-columns" : ""}${expanded ? " has-expanded-pane" : ""}${dragging ? " is-resizing" : ""}`}>
+      {windowControls && <div className="workspace-pane-window-controls">{windowControls}</div>}
+      <div className="workspace-pane-scroll">
+      <div ref={gridRef} className="workspace-pane-grid" style={getWorkspacePaneGridStyle(layout)}>
         {panes.map((pane) => {
           const columnIndex = layout.columns.findIndex((column) => column.paneIds.includes(pane.id));
           const column = layout.columns[columnIndex];
@@ -174,8 +180,9 @@ export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel
               style={{ gridColumn: expanded ? 1 : columnIndex * 2 + 1, gridRow: 1,
                 alignSelf: index === 0 || expanded ? "start" : "end",
                 height: stacked ? `clamp(${MIN_PANE_HEIGHT}px, calc(${(fraction ?? .5) * 100}% - 4px), calc(100% - ${MIN_PANE_HEIGHT + SEPARATOR_SIZE}px))` : "100%" }}>
-              <header className="workspace-pane-header">
+              <header {...headerDragProps} className={`workspace-pane-header${pane.id === chromePaneId && windowControls ? " has-window-controls" : ""}${pane.id === overlayPaneId && macWindowInset ? " has-mac-window-inset" : ""}`}>
                 {pane.header ?? <span className="workspace-pane-title">{pane.title}</span>}
+                {pane.id === overlayPaneId && overlayControls}
                 <button type="button" className="file-workbench-icon-button workspace-pane-expand"
                   title={`${expanded === pane.id ? restoreLabel : expandLabel}: ${pane.title}`}
                   aria-label={`${expanded === pane.id ? restoreLabel : expandLabel}: ${pane.title}`}
@@ -204,6 +211,7 @@ export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel
               style={{ gridColumn: index * 2 + 2, gridRow: 1 }} onPointerDown={(event) => begin(event, column.id, "column")} onKeyDown={(event) => resizeKey(event, column.id, "column")} {...common} />,
           ];
         })}
+      </div>
       </div>
       {dragging && <div className="workspace-pane-resize-shield" aria-hidden="true" />}
     </div>

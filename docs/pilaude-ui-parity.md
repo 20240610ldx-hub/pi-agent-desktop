@@ -132,8 +132,12 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 - 首页字符流按用户否决意见重写为细密字母数字行和连续曲线流带；最终深色 opacity 0.34、浅色 0.20 的真实页面检查通过慢波动、点击随机不对称扩散、主题重绘、减少动态效果保持静态和前景按钮可达，页面错误为 0；离屏/隐藏暂停绘制。深浅截图在本机 `test-results/pilaude/home-ripple/`。首页原图仍待定位，档案保留 `pending_source_file`，完整构图与原版时序不标为通过。
 - Auto 官方公开设计、三个 MIT Pi 扩展及 Pi 1.3.0 执行接点研究见 [权限研究](pilaude-auto-permissions-research.md)。未启用 Auto，工具预设不冒充权限模式；后续统一 gate 必须覆盖子代理、codemode 内层和直接 shell，分类失败不放行。
 - 本次全量 `npm test` 曾运行但未完成：出现 17 条失败后在 MCP 集成测试挂起，已停止该测试任务。已定位的现基线问题包括 Windows 文件 mode/home/shell 路径假设、cwd fixture 读取真实 allowed roots，以及 HEAD 已存在的 prompt-anchor 属性顺序正则；MCP 其余失败仍需隔离诊断。附件测试因本批新增 class 导致的过严正则已修，相关 47 项定向回归通过。后续将 HEAD 旧 prompt-anchor 属性顺序断言在实际涉及该文件时一并修正；最终受影响功能组合共 264 项全部通过，类型检查通过，标准 lint 退出 0（保留 TerminalPanel `aria-description` 的 1 条警告）。这仍不能写成全量通过。
-- 新增左侧定位轨道两张原图已原字节保存至工作区 `references/claude-desktop/conversation-navigation-dark/2026-10-18/`，共 46491 字节，SHA-256 核验；原件 194×273、415×429，聊天显示高度不同，未补边或假称 payload 字节一致。静止普通刻度核心 13×3px、12px 间距，当前刻度 21×3px；展开目录外框 348×297px、约 12px 圆角，第 3 行 336×36px 悬停高亮与第 7 行当前段亮刻度是不同状态。现有组件仅有轮次 Q/A 预览，章节标题/Session start 与目录列表仍未接入，不把用户问题标题冒充全部章节。
-- 下一步继续主窗口/侧栏、会话定位目录、名称渐隐/完整名称浮签、运行状态、消息菜单、输入器、按钮、设置和模型选择，再扩展到统一授权、产物、受控浏览器、代理和计划任务。每个组件均按上述流程验收后更新记录。
+- 新增左侧定位轨道两张原图已原字节保存至工作区 `references/claude-desktop/conversation-navigation-dark/2026-10-18/`，共 46491 字节，SHA-256 核验；原件 194×273、415×429，聊天显示高度不同，未补边或假称 payload 字节一致。静止普通刻度核心 13×3px、12px 间距，当前刻度 21×3px；展开目录外框 348×297px、约 12px 圆角，第 3 行 336×36px 悬停高亮与第 7 行当前段亮刻度分别实现。原 Q/A 预览已改为常显轨道及完整目录，标签来自实际用户消息首行；只在最早历史页已加载时提供真实 Session start，并有三语言文案。不生成官方章节或冒充有章节摘要能力。已补内部/外部 Escape 归属、IME、稳定 entry key，以及增删目录时保持用户手动滚动位置。最终实际页面检查通过七项轨道/目录、hover 与 active 独立、16px 真实锚点定位、Session start、Home/End/Escape/外部焦点、中文和窄窗可达；页面错误为 0，零真实模型调用。证据在本机 `test-results/pilaude/navigation-reference/run-1792310942661/`。目录宽 348px、高 297.402px，记录 +0.402 原像素高度残差，未强行缩放图层。
+- 最新侧栏参考包含名称淡出/全名浮签，以及用户明确替换旧呼吸灯参考的左侧状态圆点图。现已实现按实际溢出检测淡出与 portal 浮签、键盘焦点/Escape/IME、真实运行/未读状态左点、竖菜单和项目 chevron。几何按本地 1.25 capture 归一，固定 chrome 字号与默认侧栏宽保持。500ms 浮签延迟和 1.4s 呼吸周期是工程默认，静图未给原版时序。实际检查通过短名无浮签、溢出名称完整浮签、键盘焦点/Escape、运行点与减少动效、竖菜单。默认 259 CSS px 侧栏使整行比裁图参考宽 36.75 原像素，选中行文字墨迹宽 −10、高 −2；全名浮签框宽 −24.453、高 +0.992，文字墨迹宽 −25、高 −2 原像素。原像素叠图位于本机 `test-results/pilaude/navigation-reference/comparison-final/`，参考 100% 底层、actual 50% 上层，只整数平移不缩放；这些字体、边界残差继续保留。
+- 首页与工作会话 placeholder 两图已原字节归档；只归档参考文案，产品快捷键必须与真实 Pi 行为一致，未伪造 Ctrl+Enter 排队能力。
+- Windows 回归修复已按差异迁入，当前产品分支定向 191 pass / 0 fail / 1 既有 Windows skip，MCP 进程清理自然退出；类型、依赖、lint 和 branding 通过。完整 npm test 未重新运行，详见 [Windows 验证记录](pilaude-windows-regression.md)。
+- 右列已移除重复工作台顶栏和主顶栏第二个新终端入口；单列随外层宽度填充，多列才使用内部保存宽度，常驻图标与浮签按新实测色及几何实现。实际单终端/上下两 pane、300px 最小外宽、伸缩、展开恢复、隐藏重开、第三 pane/窄窗验证通过，PID 与内容节点连续，未新增创建请求，页面错误为 0，详见 [分区记录](pilaude-workspace-panes.md)。用户新增 3p 整屏说明用于整体关系，原文件未定位，单独 pending；两张 actual 和工具栏 reference 三张已原字节归档，不将 actual 当 reference。
+- 下一步继续消息菜单、输入器、按钮、设置和模型选择等逐项实物校准，再扩展到统一授权、产物、受控浏览器、代理和计划任务。每个组件均按上述流程验收后更新记录。
 
 ## 上游更新规则
 

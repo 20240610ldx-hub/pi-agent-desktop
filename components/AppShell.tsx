@@ -19,7 +19,7 @@ import { clearDraft, getDraft, setDraft } from "@/lib/draft-store";
 import { TabBar, type Tab } from "./TabBar";
 import { TerminalSettingsMenu } from "./TerminalSettingsMenu";
 import { WorkspacePaneDock } from "./WorkspacePaneDock";
-import { WorkspacePaneControls, type WorkspacePaneId } from "./WorkspacePaneControls";
+import { WorkspaceControlButton, WorkspacePaneControls, type WorkspacePaneId } from "./WorkspacePaneControls";
 import { normalizeWorkspacePaneLayout } from "@/lib/workspace-pane-layout";
 
 // Heavy, rarely-used surfaces are code-split out of the main bundle. The
@@ -723,8 +723,9 @@ export function AppShell() {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
   const hideWorkspacePane = useCallback((id: WorkspacePaneId) => {
+    if (!Object.entries(openPanes).some(([paneId, open]) => paneId !== id && open)) handleRightPanelClose();
     setOpenPanes((panes) => ({ ...panes, [id]: false }));
-  }, []);
+  }, [handleRightPanelClose, openPanes]);
   const toggleWorkspacePane = (id: WorkspacePaneId) => {
     if (rightPanelOpen && openPanes[id]) hideWorkspacePane(id);
     else {
@@ -2647,8 +2648,7 @@ export function AppShell() {
 
           {/* Windows/Linux controls stay in the chat topbar while the floating
               panel is a separate card; the topbar still owns the visible edge. */}
-          <WorkspacePaneControls openPanes={{ files: rightPanelOpen && openPanes.files, terminal: rightPanelOpen && openPanes.terminal, tasks: rightPanelOpen && openPanes.tasks }} onToggle={toggleWorkspacePane} />
-          {showChat && <button type="button" className="native-icon-button" title={translate("terminal.newTerminal")} aria-label={translate("terminal.newTerminal")} onClick={() => { if (activeCwd) handleOpenTerminal(activeCwd); }} disabled={!activeCwd}><PilaudeIcon name="terminal" /></button>}
+          {!isMobile && <WorkspacePaneControls openPanes={{ files: rightPanelOpen && openPanes.files, terminal: rightPanelOpen && openPanes.terminal, tasks: rightPanelOpen && openPanes.tasks }} onToggle={toggleWorkspacePane} />}
           {showChat && <button type="button" className="native-icon-button pilaude-context-toggle" title={translate("pilaude.contextPanel")} aria-label={translate("pilaude.contextPanel")} aria-pressed={contextDockOpen} onClick={() => setContextDockOpen(open => !open)}><PilaudeIcon name="context" /></button>}
           {(!rightPanelOpen || isMobile) && <WindowControls />}
         </div>
@@ -2776,7 +2776,7 @@ export function AppShell() {
           rendering both on desktop stacks two overlapping icons whose clicks
           intercept each other. Scheduled keeps it available because closing
           that page must not strand an open mobile overlay. */}
-      {isMobile && showFilePanelToggle && (
+      {isMobile && showFilePanelToggle && !rightPanelOpen && (
         <button
           type="button"
           className={`right-panel-toggle-button${rightPanelOpen ? " is-open" : ""}`}
@@ -2824,94 +2824,22 @@ export function AppShell() {
           background: "var(--bg)",
         } as React.CSSProperties}
       >
-        {/* The legacy browser mode remains disabled pending a controlled browser. */}
-        {/*
-          <button
-            type="button"
-            role="tab"
-            aria-selected={contextPanelTab === "files"}
-            className={`context-panel-mode-tab${contextPanelTab === "files" ? " is-active" : ""}`}
-            onClick={() => setContextPanelTab("files")}
-            title={translate("contextPanel.tabFiles")}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-            </svg>
-            <span>{translate("contextPanel.tabFiles")}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={contextPanelTab === "browser"}
-            className={`context-panel-mode-tab${contextPanelTab === "browser" ? " is-active" : ""}`}
-            onClick={() => setContextPanelTab("browser")}
-            title={translate("contextPanel.tabBrowser")}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M3 12h18M12 3c2.2 2.4 3.3 5.4 3.3 9s-1.1 6.6-3.3 9c-2.2-2.4-3.3-5.4-3.3-9S9.8 5.4 12 3Z" />
-            </svg>
-            <span>{translate("contextPanel.tabBrowser")}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={contextPanelTab === "diff"}
-            className={`context-panel-mode-tab${contextPanelTab === "diff" ? " is-active" : ""}`}
-            onClick={() => setContextPanelTab("diff")}
-            title={translate("contextPanel.tabDiff")}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="6" r="2.5" />
-              <circle cx="12" cy="18" r="2.5" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            <span>{translate("contextPanel.tabDiff")}</span>
-          </button>
-        */}
-        <div
-          className={`right-panel-tab-strip workspace-pane-toolbar${macLightsOverPanel ? " right-panel-tab-strip--mac-inset" : ""}`}
-          // The card reaches the window top, so its header row moves the window.
-          {...desktopChrome.dragRegionProps}
-          {...windowDrag}
-        >
-          <WorkspacePaneControls openPanes={openPanes} onToggle={toggleWorkspacePane} />
-          <span className="workspace-pane-toolbar-spacer" />
-          <button
-            type="button"
-            className="file-panel-expand-button"
-            onClick={handleRightPanelExpandToggle}
-            aria-controls="file-panel"
-            aria-pressed={rightPanelFullWidth}
-            title={translate(rightPanelFullWidth ? "files.restorePanelWidth" : "files.expandPanel")}
-            aria-label={translate(rightPanelFullWidth ? "files.restorePanelWidth" : "files.expandPanel")}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d={rightPanelFullWidth
-                ? "M4 9V4h5M20 15v5h-5M4 15v5h5M20 9V4h-5"
-                : "M15 4h5v5M9 20H4v-5M20 15v5h-5M4 9V4h5"} />
-            </svg>
-          </button>
-          {/* The panel's own way out. The topbar toggle is covered whenever the
-              panel spans the chat column (full width, and always on mobile). */}
-          <button
-            type="button"
-            className="file-workbench-icon-button right-panel-close-button"
-            onClick={handleRightPanelClose}
-            aria-controls="file-panel"
-            aria-expanded={rightPanelOpen}
-            title={translate("workspace.hidePanel")}
-            aria-label={translate("workspace.hidePanel")}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-          {rightPanelOpen && !isMobile && <WindowControls />}
-        </div>
-
         <WorkspacePaneDock
           revealRequest={paneRevealRequest}
+          headerDragProps={{ ...desktopChrome.dragRegionProps, ...windowDrag }}
+          macWindowInset={macLightsOverPanel}
+          windowControls={rightPanelOpen && !isMobile && desktopChrome.isDesktop && !desktopChrome.isMacOS ? <WindowControls /> : undefined}
+          overlayControls={isMobile ? <div className="workspace-pane-mobile-controls" data-no-drag>
+            <WorkspacePaneControls openPanes={openPanes} onToggle={toggleWorkspacePane} />
+            <WorkspaceControlButton className="file-workbench-icon-button workspace-pane-hide-workbench"
+              onClick={handleRightPanelClose} aria-controls="file-panel" label={translate("workspace.hidePanel")}>
+              <PilaudeIcon name="panel" size={16} />
+            </WorkspaceControlButton>
+          </div> : rightPanelFullWidth ? <WorkspaceControlButton
+            className="file-workbench-icon-button workspace-pane-restore-workbench"
+            onClick={handleRightPanelExpandToggle} aria-controls="file-panel"
+            label={translate("files.restorePanelWidth")} shortcut={desktopChrome.isMacOS ? "⌘⇧\\" : "Ctrl+Shift+\\"}
+          ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 9h5V4m11 11h-5v5M9 9 3 3m12 12 6 6" /></svg></WorkspaceControlButton> : undefined}
           expandLabel={translate("workspace.expandPane")}
           restoreLabel={translate("workspace.restorePane")}
           closeLabel={translate("workspace.hidePane", { name: "{name}" })}

@@ -176,7 +176,9 @@ try {
     const showPanel = async () => {
       // On mobile the sidebar is a modal overlay whose backdrop covers the toggle.
       const backdrop = page.locator(".sidebar-overlay-backdrop:visible");
-      if (await backdrop.count()) await backdrop.click({ position: { x: 380, y: 400 } });
+      if (await backdrop.count() && await backdrop.evaluate((element) => getComputedStyle(element).pointerEvents !== "none")) {
+        await backdrop.click({ position: { x: 380, y: 400 } });
+      }
       // Desktop: topbar toggle. Mobile: the fixed floating toggle outside the topbar.
       const toggle = page.locator('button[aria-label="Show workspace"]:visible').first();
       if (await toggle.count()) await toggle.click();
@@ -188,7 +190,8 @@ try {
       await showPanel();
       const terminalPane = page.locator("#workspace-pane-terminal");
       if (!await terminalPane.isVisible()) {
-        await page.locator('#file-panel .workspace-pane-toggle[aria-controls="workspace-pane-terminal"]').click();
+        const controls = viewport.width <= 640 ? '#file-panel .workspace-pane-mobile-controls' : '.app-topbar';
+        await page.locator(`${controls} .workspace-pane-toggle[aria-controls="workspace-pane-terminal"]:visible`).click();
       }
       const previousIds = new Set((await savedTabs()).map((tab) => tab.id));
       await terminalPane.getByRole("button", { name: "New terminal", exact: true }).first().click();
@@ -203,8 +206,15 @@ try {
       // ready/input cannot accidentally target the previously active terminal.
       await terminalPane.locator(".workspace-terminal-tab:not([hidden])").evaluate((element, id) => { element.dataset.e2eTerminalId = id; }, newId);
     };
-    // The panel's own close button stays reachable in full-width/mobile mode.
-    const hidePanel = () => page.locator('#file-panel > .workspace-pane-toolbar button[aria-label="Hide workspace"]').click();
+    // Mobile has an in-pane exit; desktop uses the existing global close key.
+    // Both hide the complete workbench and preserve resident terminal tabs/PIDs.
+    const hidePanel = async () => {
+      if (viewport.width <= 640) await page.locator('#file-panel .workspace-pane-hide-workbench[aria-label="Hide workspace"]:visible').click();
+      else {
+        await page.locator('.app-topbar').click({ position: { x: 5, y: 5 } });
+        await page.keyboard.press("Backslash");
+      }
+    };
     try {
       await page.goto(`${base}/?session=${fixtures[0].id}`);
       await page.getByText("Terminal session one message", { exact: true }).waitFor();
@@ -350,10 +360,10 @@ try {
       const workspacePid = (await text()).match(/WORKSPACE_SEED:retained:(\d+)/)[1];
       await hidePanel();
       await showSidebar();
-      await page.getByRole("button").and(page.getByTitle(workspace, { exact: true })).first().click();
+      await page.locator('.sidebar-project-tree-row-main').and(page.getByRole("button", { name: workspace, exact: true })).first().click();
       // A project row both selects its cwd and toggles the folder, so the target
       // may land collapsed; expand it before looking for its session.
-      const otherRow = page.getByRole("button").and(page.getByTitle(otherWorkspace, { exact: true }));
+      const otherRow = page.locator('.sidebar-project-tree-row-main').and(page.getByRole("button", { name: otherWorkspace, exact: true }));
       await otherRow.click();
       if (await otherRow.getAttribute("aria-expanded") === "false") await otherRow.click();
       await page.getByText("Other workspace session", { exact: true }).waitFor();

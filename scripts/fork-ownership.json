@@ -122,16 +122,16 @@
     },
     "components/SessionSidebar.tsx": {
       "risk": "high",
-      "drift": 3128,
-      "reason": "~500 lines were MOVED OUT into components/ProjectPicker.tsx and components/path-ui.tsx, which do not exist upstream. git merge does not track cross-file moves: an upstream edit to the project-picker block can merge back cleanly and silently resurrect a second copy.",
-      "structuralDrift": 2586,
+      "drift": 3156,
+      "reason": "Project selection moved into ProjectPicker.tsx and path-ui.tsx; upstream edits can silently restore a second copy. Preserve the reference project/session rows, full unclipped accessible names, overflow-only SidebarTitle tooltip, leading real activity dots, and touch/keyboard action menus during merges.",
+      "structuralDrift": 2605,
       "disposition": "accepted"
     },
     "components/AppShell.tsx": {
       "risk": "high",
-      "drift": 2414,
+      "drift": 2377,
       "reason": "The author 0.7.3 shell extraction, Pilaude navigation and desktop chrome differ from the baseline. Files (including Artifact), Terminal and real session-family tasks now use stable sibling WorkspacePaneDock hosts, with independent file/terminal selection and hidden rather than remounted panes; Context cards remain independent. Preserve high-risk merge review for layout restore, focus, workspace guards and terminal lifecycle boundaries.",
-      "structuralDrift": 2007,
+      "structuralDrift": 1975,
       "disposition": "accepted"
     },
     "components/FileViewer.tsx": {
@@ -181,9 +181,9 @@
     },
     "components/ChatWindow.tsx": {
       "risk": "high",
-      "drift": 742,
-      "reason": "Redesigned empty state \u2014 the new-session branding header (app icon + PRODUCT_NAME) is removed and only the update chip remains. Part of the fork's interaction design. Kept deliberately.",
-      "structuralDrift": 620,
+      "drift": 747,
+      "reason": "The empty-state branding header stays removed. Preserve real user-turn anchors, reveal of the existing history render window, truthful Session start availability, reduced-motion navigation, and cancellation of pending jumps on session/branch changes.",
+      "structuralDrift": 623,
       "disposition": "accepted"
     },
     "hooks/useTheme.ts": {
@@ -349,8 +349,15 @@
     "e2e/pilaude-agent-api.mjs",
     "e2e/pilaude-data.mjs",
     "vendor/open-claude-ui/",
+    "components/ConversationNavigator.tsx",
+    "components/ConversationNavigator.test.mjs",
+    "components/SidebarTitle.tsx",
+    "components/SidebarTitle.test.mjs",
     "components/WorkspacePaneDock.tsx",
     "components/WorkspacePaneControls.tsx",
+    "components/WorkspacePaneControls.test.mjs",
+    "components/WorkspacePaneDock.test.mjs",
+    "docs/pilaude-windows-regression.md",
     "lib/workspace-pane-layout.ts",
     "lib/workspace-pane-layout.test.mjs",
     "docs/pilaude-workspace-panes.md",
