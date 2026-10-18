@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState, useCallback, useRef, type ReactNode } from "react";
-import type { SessionInfo } from "@/lib/types";
+import type { SessionInfo, SessionWorkspaceKind } from "@/lib/types";
 import { listSessionFamilies } from "@/lib/session-family";
 import { dispatchSessionRowContextMenu } from "@/lib/session-row-context-menu";
 import { skillExpansionToCommand } from "@/lib/slash-display";
@@ -54,7 +54,7 @@ function sessionListUrl(summary: boolean, force: boolean): string {
 interface Props {
   selectedSessionId: string | null;
   onSelectSession: (session: SessionInfo, isRestore?: boolean, entryId?: string, blockIndex?: number) => void;
-  onNewSession?: (sessionId: string, cwd: string) => void;
+  onNewSession?: (sessionId: string, cwd: string, workspaceKind?: SessionWorkspaceKind) => void;
   initialSessionId?: string | null;
   skipInitialProjectSelection?: boolean;
   onInitialRestoreDone?: () => void;
@@ -65,7 +65,9 @@ interface Props {
     cwd: string | null,
     projectRoot?: string | null,
     projectKey?: string | null,
+    workspaceKind?: SessionWorkspaceKind,
   ) => void;
+  onChatWorkspaceCwdChange?: (cwd: string | null) => void;
   onOpenTerminal?: (cwd: string) => void;
   /** Fired when a session that is not currently selected finishes running.
    *  Lets the app play a cross-workspace completion tone. */
@@ -97,6 +99,7 @@ interface WorktreeState {
 interface ProjectSelection {
   root: string;
   key: string;
+  kind: SessionWorkspaceKind;
 }
 
 // Server error codes with a translation; any other code is shown verbatim.
@@ -133,6 +136,7 @@ interface SessionTreeNode {
 }
 
 const MAX_VISIBLE_PROJECT_SESSIONS = 5;
+const MAX_VISIBLE_CHAT_SESSIONS = 5;
 
 const SESSION_LIST_ITEM_HEIGHT = 54;
 
@@ -251,9 +255,11 @@ function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
   return roots;
 }
 
-export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, scheduledOpen = false }: Props) {
+export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onChatWorkspaceCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, scheduledOpen = false }: Props) {
   const { t } = useI18n();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
+  const [chatWorkspaceCwd, setChatWorkspaceCwd] = useState<string | null>(null);
+  const [chatVisibleCount, setChatVisibleCount] = useState(MAX_VISIBLE_CHAT_SESSIONS);
   // Tracked in a ref only: the version is compared against the polled value to
   // decide whether the list needs reloading, and no render reads it.
   const sessionListVersionRef = useRef<number | null>(null);
@@ -276,7 +282,11 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const [contentSearch, setContentSearch] = useState(false);
   // Worktree switcher state
   const [worktreeState, setWorktreeState] = useState<WorktreeState | null>(null);
-  const lastNotifiedProjectRef = useRef<{ cwd: string | null; key: string | null } | null>(null);
+  const lastNotifiedProjectRef = useRef<{
+    cwd: string | null;
+    key: string | null;
+    kind: SessionWorkspaceKind;
+  } | null>(null);
 
   // The checked-out worktree for the current selection (falls back to the
   // project's main worktree when the selection is not itself a worktree).
@@ -291,16 +301,26 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     : undefined;
   const currentWorktreePath = currentWorktree?.path ?? null;
 
+  /** Chat detection always comes from server-provided identity or the exact
+   *  chat cwd the server returned. The browser never derives the hidden path. */
+  const isChatCwd = useCallback((cwd: string | null): boolean => {
+    if (!cwd) return false;
+    if (chatWorkspaceCwd && cwd === chatWorkspaceCwd) return true;
+    return allSessions.some((session) => session.workspaceKind === "chat" && session.cwd === cwd);
+  }, [allSessions, chatWorkspaceCwd]);
+  const selectedCwdIsChat = selectedCwd ? isChatCwd(selectedCwd) : false;
+
   /** Resolve the project root for a cwd from the freshest data available */
   const projectRootFor = useCallback((cwd: string | null): string | null => {
     if (!cwd) return null;
+    if (isChatCwd(cwd)) return null;
     if (worktreeState && worktreeState.forCwd === cwd) return worktreeState.projectRoot;
     // Any path in the loaded worktree list belongs to that project — covers
     // worktrees without sessions, so switching to them keeps the row mounted.
     if (worktreeState?.worktrees.some((w) => w.path === cwd)) return worktreeState.projectRoot;
     const match = allSessions.find((s) => s.cwd === cwd);
     return match?.projectRoot ?? cwd;
-  }, [worktreeState, allSessions]);
+  }, [allSessions, isChatCwd, worktreeState]);
   // Branch currently being checked out (name shown dimmed with a spinner)
   const [wtSwitchingBranch, setWtSwitchingBranch] = useState<string | null>(null);
   // Ticked by the poll/focus effect below so the worktree row reflects
@@ -441,10 +461,12 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         sessionListVersion: number;
         runningSessionIds?: string[];
         completionNotificationSuppressedSessionIds?: string[];
+        chatWorkspaceCwd?: string | null;
       };
       if (loadId !== sessionLoadIdRef.current) return;
       sessionListVersionRef.current = data.sessionListVersion;
       setAllSessions(data.sessions);
+      setChatWorkspaceCwd(data.chatWorkspaceCwd ?? null);
       // Treat the fetched running set as an initial fallback only. Once the
       // live SSE stream is connected, a slow session-list fetch cannot overwrite it.
       if (!sseAuthoritativeRef.current) {
@@ -469,6 +491,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       if (loadId === sessionLoadIdRef.current) setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    // The server always returns the hidden cwd. Do not publish the initial
+    // null before the first list load, or it would overwrite the shell's
+    // earlier /api/chat-workspace answer.
+    if (chatWorkspaceCwd) onChatWorkspaceCwdChange?.(chatWorkspaceCwd);
+  }, [chatWorkspaceCwd, onChatWorkspaceCwdChange]);
 
   const initialLoadDone = useRef(false);
   useEffect(() => {
@@ -713,14 +742,16 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
 
   const restoredRef = useRef(false);
 
-  const projectSelection = useCallback((root: string, key: string): ProjectSelection => ({
+  const projectSelection = useCallback((root: string, key: string, kind: SessionWorkspaceKind = "project"): ProjectSelection => ({
     root,
     key,
+    kind,
   }), []);
 
   /** Resolve both display root and stable identity from server-provided data. */
   const projectFor = useCallback((cwd: string | null): ProjectSelection | null => {
     if (!cwd) return null;
+    if (isChatCwd(cwd)) return projectSelection(cwd, cwd, "chat");
     // Custom-path identity validation lives in ProjectPicker (the extraction
     // boundary this file's sentinel test guards); identity here resolves from
     // server-provided worktree and session data only.
@@ -735,10 +766,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     const match = allSessions.find((session) => (
       session.cwd === cwd || (session.projectRoot ?? session.cwd) === cwd
     ));
+    if (match?.workspaceKind === "chat") {
+      return projectSelection(match.cwd, match.cwd, "chat");
+    }
     return match
       ? projectSelection(match.projectRoot ?? match.cwd, workspaceKeyOf(match))
       : projectSelection(cwd, cwd);
-  }, [worktreeState, allSessions, projectSelection]);
+  }, [worktreeState, allSessions, isChatCwd, projectSelection]);
 
   // Selecting a directory is also the explicit "add project" action. If the
   // project was previously removed from the sidebar, make it visible again
@@ -759,12 +793,14 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   useEffect(() => {
     const project = projectFor(selectedCwd);
     const previous = lastNotifiedProjectRef.current;
-    if (previous?.cwd === selectedCwd && previous.key === (project?.key ?? null)) return;
-    lastNotifiedProjectRef.current = { cwd: selectedCwd, key: project?.key ?? null };
+    const kind = project?.kind ?? "project";
+    if (previous?.cwd === selectedCwd && previous.key === (project?.key ?? null) && previous.kind === kind) return;
+    lastNotifiedProjectRef.current = { cwd: selectedCwd, key: project?.key ?? null, kind };
     onCwdChange?.(
       selectedCwd,
       project?.root ?? null,
       project?.key ?? null,
+      project?.kind,
     );
   }, [selectedCwd, onCwdChange, projectFor]);
 
@@ -783,7 +819,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   // Load worktrees for the current effective cwd
   const [wtRefreshKey, setWtRefreshKey] = useState(0);
   useLayoutEffect(() => {
-    if (!selectedCwd) {
+    if (!selectedCwd || selectedCwdIsChat) {
       setWorktreeState(null);
       return;
     }
@@ -810,7 +846,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         if (!cancelled) setWorktreeState(null);
       });
     return () => { cancelled = true; };
-  }, [selectedCwd, wtRefreshKey, refreshKey, wtPollTick]);
+  }, [selectedCwd, selectedCwdIsChat, wtRefreshKey, refreshKey, wtPollTick]);
 
   // Keep the worktree/branch display honest when branches are switched outside
   // pi (terminal, IDE, another client): poll while the tab is visible and
@@ -835,7 +871,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const recentProjects = getRecentProjects(allSessions);
   // Auto-select cwd and restore session from URL on first load
   useEffect(() => {
-    if (allSessions.length === 0 || skipInitialProjectSelection) return;
+    if (loading || skipInitialProjectSelection) return;
 
     if (selectedCwd === null) {
       // If restoring a session, set cwd to match that session
@@ -852,8 +888,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       }
       const projects = recentProjects;
       if (projects.length > 0) setSelectedCwd(projects[0]);
+      else if (chatWorkspaceCwd) setSelectedCwd(chatWorkspaceCwd);
     }
-  }, [allSessions, selectedCwd, initialSessionId, skipInitialProjectSelection, onSelectSession, onInitialRestoreDone, recentProjects]);
+  }, [allSessions, chatWorkspaceCwd, loading, selectedCwd, initialSessionId, skipInitialProjectSelection, onSelectSession, onInitialRestoreDone, recentProjects]);
 
   // The worktree behind the active project's branch subtitle; falls back to
   // the main worktree while worktreeState catches up with a new selection.
@@ -986,18 +1023,21 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     onSelectSession(s, false, entryId, blockIndex);
   }, [onSelectSession]);
 
-  const handleNewSession = useCallback((cwdOverride?: string) => {
-    const cwd = cwdOverride ?? selectedCwd;
+  const handleNewSession = useCallback((cwdOverride?: string, workspaceKindOverride?: SessionWorkspaceKind) => {
+    const cwd = cwdOverride ?? selectedCwd ?? chatWorkspaceCwd;
     if (!cwd) return;
+    const workspaceKind = workspaceKindOverride ?? (isChatCwd(cwd) ? "chat" : "project");
     // Creating a session is also the activation gesture for an archived
     // project. This keeps the archive list useful without a second step.
-    const projectRoot = projectRootFor(cwd) ?? cwd;
-    if (archivedProjectRoots.has(projectRoot)) {
-      setArchivedProjectRoots((prev) => {
-        const next = new Set(prev);
-        next.delete(projectRoot);
-        return next;
-      });
+    if (workspaceKind === "project") {
+      const projectRoot = projectRootFor(cwd) ?? cwd;
+      if (archivedProjectRoots.has(projectRoot)) {
+        setArchivedProjectRoots((prev) => {
+          const next = new Set(prev);
+          next.delete(projectRoot);
+          return next;
+        });
+      }
     }
     if (cwd !== selectedCwd) setSelectedCwd(cwd);
     // Generate a temporary UUID client-side — no backend call needed.
@@ -1005,8 +1045,8 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     const tempId = typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
-    onNewSession?.(tempId, cwd);
-  }, [selectedCwd, archivedProjectRoots, onNewSession, projectRootFor]);
+    onNewSession?.(tempId, cwd, workspaceKind);
+  }, [selectedCwd, chatWorkspaceCwd, archivedProjectRoots, onNewSession, projectRootFor, isChatCwd]);
 
   const handleAddProject = useCallback(async () => {
     if (!isTauriDesktop()) {
@@ -1127,8 +1167,15 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         (session.name ?? "").toLowerCase().includes(trimmedSessionQuery)
         || session.firstMessage.toLowerCase().includes(trimmedSessionQuery))
     : treeSessions;
-  const sessionFamilies = listSessionFamilies(filteredSessions);
-  const allProjects = groupByProject(filteredSessions, { runningIds: runningSessionIds, unreadIds: unreadSessionIds });
+  const chatSessions = filteredSessions
+    .filter((session) => session.workspaceKind === "chat" || isChatCwd(session.cwd))
+    .sort((a, b) => b.modified.localeCompare(a.modified));
+  const projectSessions = filteredSessions.filter(
+    (session) => session.workspaceKind !== "chat" && !isChatCwd(session.cwd),
+  );
+  const chatFamilies = listSessionFamilies(chatSessions);
+  const sessionFamilies = listSessionFamilies(projectSessions);
+  const allProjects = groupByProject(projectSessions, { runningIds: runningSessionIds, unreadIds: unreadSessionIds });
   const activeProjects = allProjects.filter((group) => !archivedProjectRoots.has(group.projectRoot));
   const activeProjectRoots = activeProjects.map((group) => group.projectRoot);
   const projectDisplayNames = getProjectDisplayNames(activeProjectRoots);
@@ -1150,6 +1197,22 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   }, [activeProjects, onProjectsChange]);
   // Sessions of every worktree in the selected project are shown together
   const selectedProjectObject = projectFor(selectedCwd);
+  const selectedProjectRoot = selectedProjectObject?.kind === "project"
+    ? selectedProjectObject.root
+    : null;
+  let visibleChatFamilies = trimmedSessionQuery
+    ? chatFamilies
+    : chatFamilies.slice(0, chatVisibleCount);
+  if (!trimmedSessionQuery && selectedSessionId) {
+    const selectedFamily = chatFamilies.find((family) => (
+      family.root.id === selectedSessionId
+      || family.subagents.some((session) => session.id === selectedSessionId)
+    ));
+    if (selectedFamily && !visibleChatFamilies.includes(selectedFamily)) {
+      visibleChatFamilies = [...visibleChatFamilies.slice(0, -1), selectedFamily];
+    }
+  }
+  const hiddenChatFamilyCount = chatFamilies.length - visibleChatFamilies.length;
 
   const renderProjectGroup = (group: ReturnType<typeof groupByProject>[number]) => {
     const isCollapsed = !trimmedSessionQuery && collapsedProjects.has(group.projectRoot);
@@ -1473,8 +1536,16 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         <button
           className="sidebar-header-row sidebar-new-row"
           onClick={() => handleNewSession()}
-          disabled={!selectedCwd}
-          title={selectedCwd ? `${t("sidebar.newSessionTitle", { path: selectedCwd })} (⌘/Ctrl+N)` : t("sidebar.selectProject")}
+          disabled={!selectedCwd && !chatWorkspaceCwd}
+          title={
+            selectedCwd
+              ? `${selectedCwdIsChat
+                ? t("sidebar.newChatTitle")
+                : t("sidebar.newSessionTitle", { path: selectedCwd })} (⌘/Ctrl+N)`
+              : chatWorkspaceCwd
+                ? t("sidebar.newChatTitle")
+                : t("sidebar.selectProject")
+          }
         >
           <span className="sidebar-new-plus" aria-hidden="true">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -1540,105 +1611,154 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           </button>
         )}
       </div>
-      {/* Project tree (Codex-style) — replaces the old CHATS/FILES tabs. Every
-          project is rendered as a flat row whose chats nest directly beneath.
-          Clicking a project header toggles collapse; the ⋯ menu switches
-          between grouped and chronological views and offers collapse/expand-all;
-          the + button opens the project picker to add a new project. The
-          FileExplorer has moved to the right panel. */}
-      {allProjects.length === 0 ? (
-        <div className="sidebar-project-tree-empty">
-          {loading
-            ? t("sidebar.loading")
-            : error
-              ? (
-                // A failed list load must not read as "no projects": that
-                // offers "Add project" as if the user's sessions were gone.
-                <div className="sidebar-empty-action" role="alert">
-                  <span className="sidebar-empty-text" title={error}>{t("sidebar.loadFailed")}</span>
-                  <button
-                    type="button"
-                    className="sidebar-empty-add"
-                    onClick={() => void loadSessions(true, true)}
-                  >
-                    <span>{t("common.retry")}</span>
-                  </button>
-                </div>
-              )
-            : trimmedSessionQuery
-              ? t("sidebar.noMatchingSessions")
-              : (
-                <div className="sidebar-empty-action">
-                  <span className="sidebar-empty-text">{t("sidebar.noProjects")}</span>
-                  <button
-                    type="button"
-                    className="sidebar-empty-add"
-                    onClick={() => void handleAddProject()}
-                    title={t("sidebar.addProject")}
-                    aria-label={t("sidebar.addProject")}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    <span>{t("sidebar.addProject")}</span>
-                  </button>
-                </div>
-              )}
+      {/* Chats sit beside Projects: the same session model and event stream,
+          but a model-only workspace that never enters project grouping. */}
+      <SessionSearch
+        open={contentSearch}
+        query={sessionQuery}
+        selectedSessionId={selectedSessionId}
+        onSelectSession={handleSelectSessionFromList}
+      >
+      <div
+        ref={listScrollRef}
+        className="sidebar-project-tree"
+        role="tree"
+        aria-label={`${t("sidebar.chats")} / ${t("sidebar.projects")}`}
+        onScroll={handleListScroll}
+      >
+        <div className="sidebar-project-tree-header sidebar-chats-header">
+          <span className="sidebar-project-tree-title">{t("sidebar.chats")}</span>
+          <button
+            type="button"
+            className="sidebar-chats-add"
+            onClick={() => handleNewSession(chatWorkspaceCwd ?? undefined, "chat")}
+            disabled={!chatWorkspaceCwd}
+            title={t("sidebar.newChatTitle")}
+            aria-label={t("sidebar.newChatTitle")}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
         </div>
-      ) : (
-        <SessionSearch
-          open={contentSearch}
-          query={sessionQuery}
-          selectedSessionId={selectedSessionId}
-          onSelectSession={handleSelectSessionFromList}
-        >
-        <div
-          ref={listScrollRef}
-          className="sidebar-project-tree"
-          role="tree"
-          aria-label={t("sidebar.projects")}
-          onScroll={handleListScroll}
-        >
-          <div className={`sidebar-project-tree-header${projectViewMenuOpen ? " is-menu-open" : ""}`}>
-            <span className="sidebar-project-tree-title">{t("sidebar.projects")}</span>
-            <div className="sidebar-project-tree-tools">
-              <button
-                ref={projectViewMenuButtonRef}
-                type="button"
-                className={`sidebar-project-tree-menu${projectViewMenuOpen ? " is-open" : ""}`}
-                title={t("sidebar.projectViewMenu")}
-                aria-label={t("sidebar.projectViewMenu")}
-                aria-haspopup="menu"
-                aria-expanded={projectViewMenuOpen}
-                onClick={toggleProjectViewMenu}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <circle cx="5" cy="12" r="1.6" />
-                  <circle cx="12" cy="12" r="1.6" />
-                  <circle cx="19" cy="12" r="1.6" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                className="sidebar-project-tree-add"
-                onClick={() => void handleAddProject()}
-                title={t("sidebar.addProject")}
-                aria-label={t("sidebar.addProject")}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
+        <div className="sidebar-project-tree-children sidebar-chats-list">
+          {visibleChatFamilies.map((family) => {
+            const [node] = buildSessionTree([family.root, ...family.subagents]);
+            if (!node) return null;
+            return (
+              <SessionFamilyItem
+                key={family.root.id}
+                node={node}
+                familySessions={[family.root, ...family.subagents]}
+                selectedSessionId={selectedSessionId}
+                runningSessionIds={runningSessionIds}
+                unreadSessionIds={unreadSessionIds}
+                onSelectSession={handleSelectSessionFromList}
+                onRenamed={loadSessions}
+                onSessionDeleted={(id) => {
+                  onSessionDeleted?.(id);
+                  loadSessions();
+                }}
+              />
+            );
+          })}
+          {!loading && !error && chatFamilies.length === 0 && (
+            <div className="sidebar-chats-empty">
+              {trimmedSessionQuery ? t("sidebar.noMatchingSessions") : t("sidebar.noChats")}
             </div>
-          </div>
-          {projectViewMode === "timeline"
-            ? renderTimeline()
-            : activeProjects.map((group) => renderProjectGroup(group))}
+          )}
+          {hiddenChatFamilyCount > 0 && (
+            <button
+              type="button"
+              className="sidebar-project-tree-show-more"
+              onClick={() => setChatVisibleCount((count) => count + MAX_VISIBLE_CHAT_SESSIONS)}
+            >
+              {t("sidebar.showMoreSessions", {
+                count: Math.min(MAX_VISIBLE_CHAT_SESSIONS, hiddenChatFamilyCount),
+              })}
+            </button>
+          )}
         </div>
-        </SessionSearch>
-      )}
+
+        <div className={`sidebar-project-tree-header${projectViewMenuOpen ? " is-menu-open" : ""}`}>
+          <span className="sidebar-project-tree-title">{t("sidebar.projects")}</span>
+          <div className="sidebar-project-tree-tools">
+            <button
+              ref={projectViewMenuButtonRef}
+              type="button"
+              className={`sidebar-project-tree-menu${projectViewMenuOpen ? " is-open" : ""}`}
+              title={t("sidebar.projectViewMenu")}
+              aria-label={t("sidebar.projectViewMenu")}
+              aria-haspopup="menu"
+              aria-expanded={projectViewMenuOpen}
+              onClick={toggleProjectViewMenu}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.6" />
+                <circle cx="12" cy="12" r="1.6" />
+                <circle cx="19" cy="12" r="1.6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="sidebar-project-tree-add"
+              onClick={() => void handleAddProject()}
+              title={t("sidebar.addProject")}
+              aria-label={t("sidebar.addProject")}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        {allProjects.length === 0 ? (
+          <div className="sidebar-project-tree-empty">
+            {loading
+              ? t("sidebar.loading")
+              : error
+                ? (
+                  // A failed list load must not read as "no projects": that
+                  // offers "Add project" as if the user's sessions were gone.
+                  <div className="sidebar-empty-action" role="alert">
+                    <span className="sidebar-empty-text" title={error}>{t("sidebar.loadFailed")}</span>
+                    <button
+                      type="button"
+                      className="sidebar-empty-add"
+                      onClick={() => void loadSessions(true, true)}
+                    >
+                      <span>{t("common.retry")}</span>
+                    </button>
+                  </div>
+                )
+              : trimmedSessionQuery
+                ? t("sidebar.noMatchingSessions")
+                : (
+                  <div className="sidebar-empty-action">
+                    <span className="sidebar-empty-text">{t("sidebar.noProjects")}</span>
+                    <button
+                      type="button"
+                      className="sidebar-empty-add"
+                      onClick={() => void handleAddProject()}
+                      title={t("sidebar.addProject")}
+                      aria-label={t("sidebar.addProject")}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      <span>{t("sidebar.addProject")}</span>
+                    </button>
+                  </div>
+                )}
+          </div>
+        ) : projectViewMode === "timeline"
+          ? renderTimeline()
+          : activeProjects.map((group) => renderProjectGroup(group))}
+      </div>
+      </SessionSearch>
       {projectViewMenuOpen && projectViewMenuPos && (
         <ProjectViewMenu
           menuRef={projectViewMenuRef}
@@ -1700,8 +1820,8 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           <div className="project-picker-modal-shell" onClick={(e) => e.stopPropagation()}>
             <ProjectPicker
               recentProjects={recentProjects}
-              selectedCwd={selectedCwdProp ?? null}
-              selectedProject={selectedProjectObject?.root ?? null}
+              selectedCwd={selectedCwdProp && !isChatCwd(selectedCwdProp) ? selectedCwdProp : null}
+              selectedProject={selectedProjectRoot}
               homeDir={homeDir}
               onSelectCwd={(cwd) => {
                 activateProject(cwd);

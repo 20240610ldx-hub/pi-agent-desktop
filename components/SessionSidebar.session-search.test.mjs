@@ -25,7 +25,10 @@ test("the sidebar mounts the content-search wrapper around the project tree", ()
   assert.match(treeMarkup, /ref=\{listScrollRef\}/);
   assert.match(treeMarkup, /className="sidebar-project-tree"/);
   assert.match(treeMarkup, /role="tree"/);
-  assert.match(treeMarkup, /aria-label=\{t\("sidebar\.projects"\)\}/);
+  assert.ok(
+    treeMarkup.includes('aria-label={`${t("sidebar.chats")} / ${t("sidebar.projects")}`}'),
+    "the tree label names both the chat and project sections",
+  );
 });
 
 test("the search row confirms content search with Enter, not a mode button", () => {
@@ -50,4 +53,16 @@ test("selecting a result carries the entry id so the chat can jump to the match"
   assert.match(searchSource, /onSelectSession\(session, entryId, blockIndex\)/);
   assert.match(source, /onSelectSession\(s, false, entryId, blockIndex\)/);
   assert.match(routeSource, /searchSessionContents\(sessions, query, request\.signal\)/);
+});
+
+test("content-search rows label chats without exposing the hidden workspace path", () => {
+  assert.match(
+    searchSource,
+    /title=\{session\.workspaceKind === "chat" \? t\("sidebar\.chats"\) : session\.cwd\}/,
+  );
+  assert.match(
+    searchSource,
+    /\{session\.workspaceKind === "chat" \? t\("sidebar\.chats"\) : session\.cwd\}/,
+  );
+  assert.match(englishMessages["sidebar.chats"], /Chats/);
 });

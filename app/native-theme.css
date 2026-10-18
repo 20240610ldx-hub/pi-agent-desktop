@@ -2165,6 +2165,42 @@ html.dark .sidebar-view-switcher-thumb {
   color: var(--text-dim);
 }
 
+.sidebar-chats-header {
+  margin-top: 2px;
+}
+
+.sidebar-chats-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.sidebar-chats-add:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.sidebar-chats-add:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.sidebar-chats-empty {
+  padding: 3px 10px 6px 31px;
+  color: var(--text-dim);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+
 .sidebar-project-tree-tools {
   display: flex;
   align-items: center;

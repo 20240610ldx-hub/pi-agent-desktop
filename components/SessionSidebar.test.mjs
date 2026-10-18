@@ -18,9 +18,9 @@ test("only Shift+click bypasses session deletion confirmation", () => {
 test("keeps the project-tree sidebar without an inline explorer section", () => {
   // Upstream's resizable sidebar explorer (ed50d88) is deliberately not
   // adopted: this fork renders the file explorer in the right panel and the
-  // sidebar as a project tree. The upstream quick-filter stays.
+  // sidebar as Chats + project lists. The upstream quick-filter stays.
   assert.match(source, /sidebar-search-input/);
-  assert.match(source, /Project tree \(Codex-style\)/);
+  assert.match(source, /sidebar-chats-header/);
   assert.doesNotMatch(source, /data-resize-handle="sidebar-sections"/);
 });
 
@@ -127,10 +127,44 @@ test("does not expose disk-backed actions for transient sessions", () => {
 });
 
 test("hides subagent rows and aggregates their state into the main session row", () => {
-  assert.match(source, /const sessionFamilies = listSessionFamilies\(filteredSessions\)/);
+  assert.match(source, /const sessionFamilies = listSessionFamilies\(projectSessions\)/);
   assert.match(source, /familySessions\.some\(\(session\) => session\.id === selectedSessionId\)/);
   assert.match(source, /familySessions\.some\(\(session\) => runningSessionIds\.has\(session\.id\)\)/);
   assert.doesNotMatch(source, /function SessionTreeItem/);
+});
+
+test("Chats sit beside Projects and never enter project grouping", () => {
+  assert.match(
+    source,
+    /const chatSessions = filteredSessions[\s\S]*?session\.workspaceKind === "chat" \|\| isChatCwd\(session\.cwd\)[\s\S]*?const projectSessions = filteredSessions\.filter\(/,
+  );
+  assert.match(source, /const chatFamilies = listSessionFamilies\(chatSessions\)/);
+  assert.match(source, /const sessionFamilies = listSessionFamilies\(projectSessions\)/);
+  assert.match(source, /groupByProject\(projectSessions,/);
+  assert.match(source, /getRecentProjects\(allSessions\)/);
+  assert.match(source, /<div className="sidebar-project-tree-header sidebar-chats-header">/);
+  assert.match(source, /handleNewSession\(chatWorkspaceCwd \?\? undefined, "chat"\)/);
+});
+
+test("Chats show five families at a time even when there are no projects", () => {
+  assert.match(source, /const MAX_VISIBLE_CHAT_SESSIONS = 5/);
+  assert.match(source, /: chatFamilies\.slice\(0, chatVisibleCount\)/);
+  assert.match(source, /setChatVisibleCount\(\(count\) => count \+ MAX_VISIBLE_CHAT_SESSIONS\)/);
+  assert.match(source, /!loading && !error && chatFamilies\.length === 0/);
+  assert.match(source, /sidebar-chats-empty/);
+  // The Chats section renders before the Projects empty state, so it remains
+  // available when `activeProjects` is empty.
+  assert.match(
+    source,
+    /sidebar-chats-header[\s\S]*?\{allProjects\.length === 0 \? \(/,
+  );
+});
+
+test("a chat cwd skips worktree lookup and stays out of project pickers", () => {
+  assert.match(source, /if \(!selectedCwd \|\| selectedCwdIsChat\) \{\s*setWorktreeState\(null\)/);
+  assert.match(source, /const selectedProjectRoot = selectedProjectObject\?\.kind === "project"/);
+  assert.match(source, /selectedCwd=\{selectedCwdProp && !isChatCwd\(selectedCwdProp\) \? selectedCwdProp : null\}/);
+  assert.match(source, /if \(isChatCwd\(cwd\)\) return projectSelection\(cwd, cwd, "chat"\)/);
 });
 
 test("the project context menu reveals the project in the OS file manager", async () => {

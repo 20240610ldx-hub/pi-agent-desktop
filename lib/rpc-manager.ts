@@ -64,6 +64,7 @@ import {
   readSessionToolSelection,
   validateSessionToolSelection,
 } from "./session-tool-selection";
+import { isChatWorkspacePath } from "./chat-workspace";
 
 // ============================================================================
 // Types
@@ -122,6 +123,8 @@ type ExtensionUiRequestBody = Record<string, unknown> & {
 type AgentSessionWrapperOptions = {
   exactSystemPrompt?: () => string;
   chatOnly?: boolean;
+  /** The hidden non-project workspace. Chats reject tool and shell commands. */
+  chatWorkspace?: boolean;
   onAgentRunComplete?: AgentRunCompleteListener;
   suppressCompletionNotifications?: boolean;
   /** Connects the session's MCP servers before a prompt starts a run, and lets go of them when it closes (lib/mcp-host.ts). */
@@ -305,6 +308,7 @@ export class AgentSessionWrapper {
   private extensionBindingError: unknown = null;
   private readonly exactSystemPrompt?: () => string;
   private readonly chatOnly: boolean;
+  private readonly chatWorkspace: boolean;
   private readonly onAgentRunComplete?: AgentRunCompleteListener;
   private readonly suppressCompletionNotifications: boolean;
   private readonly mcpHost?: Pick<McpHost, "prepareForPrompt" | "dispose">;
@@ -332,6 +336,7 @@ export class AgentSessionWrapper {
   ) {
     this.exactSystemPrompt = options.exactSystemPrompt;
     this.chatOnly = options.chatOnly ?? false;
+    this.chatWorkspace = options.chatWorkspace ?? false;
     this.onAgentRunComplete = options.onAgentRunComplete;
     this.suppressCompletionNotifications = options.suppressCompletionNotifications ?? false;
     this.mcpHost = options.mcpHost;
@@ -402,6 +407,10 @@ export class AgentSessionWrapper {
 
   isChatOnly(): boolean {
     return this.chatOnly;
+  }
+
+  isChatWorkspace(): boolean {
+    return this.chatWorkspace;
   }
 
   hasSuppressedCompletionNotifications(): boolean {
@@ -1161,6 +1170,7 @@ export class AgentSessionWrapper {
       }
 
       case "get_tools": {
+        if (this.chatWorkspace) return [];
         // A hidden tool is withdrawn: pi ignores it when setting the active tools.
         const all: ToolInfo[] = this.inner.getAllTools().filter((t) => t.exposure !== "hidden");
         const active = new Set<string>(this.inner.getActiveToolNames());
@@ -1180,6 +1190,7 @@ export class AgentSessionWrapper {
       }
 
       case "get_commands": {
+        if (this.chatWorkspace) return { commands: [] };
         const commands: SlashCommandInfo[] = [];
         for (const registered of this.inner.extensionRunner.getRegisteredCommands()) {
           commands.push({
@@ -1209,6 +1220,9 @@ export class AgentSessionWrapper {
       }
 
       case "set_tools": {
+        if (this.chatWorkspace) {
+          throw new Error("Chats have no tools. Open a project to change the tool preset.");
+        }
         const toolNames = command.toolNames as string[];
         this.setActiveToolSelection(toolNames);
         return null;
@@ -1265,6 +1279,9 @@ export class AgentSessionWrapper {
       }
 
       case "bash": {
+        if (this.chatWorkspace) {
+          throw new Error("Shell commands are unavailable in chats. Open a project to run one.");
+        }
         if (this.pendingPromptCount > 0 || this.inner.isStreaming || this.inner.isCompacting || this.inner.isBashRunning) {
           throw new Error("Cannot run a shell command while the session is busy");
         }
@@ -2207,6 +2224,9 @@ export async function setRpcSessionTools(
       return setRpcSessionTools(sessionId, sessionFile, requestedToolNames);
     }
     const manager = SessionManager.open(sessionFile, undefined);
+    if (isChatWorkspacePath(manager.getCwd())) {
+      throw new Error("Chats have no tools. Open a project to change the tool preset.");
+    }
     if (readSubagentSessionResources(manager.getEntries() as unknown as SessionEntry[])) {
       throw new Error("Subagent tool selection is fixed by its profile");
     }
@@ -2218,6 +2238,9 @@ export async function setRpcSessionTools(
   }
 
   if (existing.isRunning()) throw new Error("Cannot change tools while the session is running");
+  if (existing.isChatWorkspace()) {
+    throw new Error("Chats have no tools. Open a project to change the tool preset.");
+  }
   if (readSubagentSessionResources(existing.inner.sessionManager.getEntries() as unknown as SessionEntry[])) {
     throw new Error("Subagent tool selection is fixed by its profile");
   }
@@ -2463,7 +2486,8 @@ export async function startRpcSession(
     );
   }
   const sessionCwd = sessionManager.getCwd();
-  const subagentResources = sessionFile
+  const chatWorkspace = isChatWorkspacePath(sessionCwd);
+  const subagentResources = sessionFile && !chatWorkspace
     ? readSubagentSessionResources(
         sessionManager.getEntries() as unknown as SessionEntry[],
       )
@@ -2471,7 +2495,9 @@ export async function startRpcSession(
   const persistedToolNames = subagentResources
     ? undefined
     : readSessionToolSelection(sessionManager.getEntries() as unknown as SessionEntry[]);
-  const selectedToolNames = subagentResources?.tools ?? persistedToolNames ?? requestedToolNames;
+  const selectedToolNames = chatWorkspace
+    ? []
+    : subagentResources?.tools ?? persistedToolNames ?? requestedToolNames;
   if (!subagentResources && persistedToolNames === undefined && requestedToolNames !== undefined) {
     appendSessionToolSelection(sessionManager, requestedToolNames);
   }
@@ -2544,7 +2570,13 @@ export async function startRpcSession(
             ...(usesExactSystemPrompt ? { extensionFactories: [exactSystemPromptExtension] } : {}),
           }
         : chatOnly
-          ? { ...CHAT_ONLY_RESOURCE_LOADER_OPTIONS, extensionFactories: [exactSystemPromptExtension] }
+          ? {
+              ...CHAT_ONLY_RESOURCE_LOADER_OPTIONS,
+              // A chat is deliberately model-only: no global, ancestor, or
+              // project instructions may leak into its prompt.
+              ...(chatWorkspace ? { noContextFiles: true } : {}),
+              extensionFactories: [exactSystemPromptExtension],
+            }
         : {
             extensionFactories: [
               ...(builtins?.extensions ?? []),
@@ -2624,14 +2656,17 @@ export async function startRpcSession(
     const exactSystemPrompt = subagentResources?.exactSystemPrompt !== undefined
       ? () => subagentResources.exactSystemPrompt!
       : chatOnly
-        ? subagentResources
-          ? () => subagentResources.appendSystemPrompt[0] ?? ""
-          : () => contextFilesSystemPrompt(inner.resourceLoader.getAgentsFiles().agentsFiles)
+        ? chatWorkspace
+          ? () => ""
+          : subagentResources
+            ? () => subagentResources.appendSystemPrompt[0] ?? ""
+            : () => contextFilesSystemPrompt(inner.resourceLoader.getAgentsFiles().agentsFiles)
         : undefined;
     exactSystemPromptRef.current = exactSystemPrompt;
     const wrapper = new AgentSessionWrapper(inner, {
       exactSystemPrompt,
       chatOnly,
+      chatWorkspace,
       onAgentRunComplete: (completedSessionId) => {
         void notifySessionComplete(completedSessionId).catch((error) => {
           console.error("[pi-web] failed to send completion push:", error instanceof Error ? error.message : error);

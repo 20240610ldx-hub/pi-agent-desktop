@@ -189,6 +189,8 @@ export interface UseAgentSessionOptions {
   sessionRunning?: boolean;
   newSessionCwd: string | null;
   newSessionDraftKey: string | null;
+  /** Hidden model-only workspace: always no tools and no shell commands. */
+  chatWorkspace?: boolean;
   onAgentEnd?: () => void;
   onAttentionNeeded?: (request: BlockingExtensionUiRequest) => void;
   onSessionCreated?: (session: SessionInfo, sourceDraftKey: string) => void;
@@ -339,7 +341,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const {
     session, newSessionCwd, newSessionDraftKey, onAgentEnd, onAttentionNeeded, onSessionCreated, onSessionForked,
     modelsRefreshKey, onBranchDataChange, onSystemPromptChange, onSystemToolsChange, onSystemInfoLoaderChange, onSessionStatsPanelOpen,
-    onOpenSettings,
+    onOpenSettings, chatWorkspace = false,
   } = opts;
   const { t } = useI18n();
 
@@ -372,7 +374,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const [modelThinkingLevelMaps, setModelThinkingLevelMaps] = useState<Record<string, Record<string, string | null>>>({});
   const [newSessionModel, setNewSessionModel] = useState<SelectedModel | null>(null);
   const [newSessionDefaultModel, setNewSessionDefaultModel] = useState<SelectedModel | null>(null);
-  const [toolPreset, setToolPreset] = useState<ToolPreset>(CONFIGURED_TOOL_PRESET);
+  const [toolPreset, setToolPreset] = useState<ToolPreset>(
+    chatWorkspace ? "none" : CONFIGURED_TOOL_PRESET,
+  );
   const [newSessionThinkingLevel, setNewSessionThinkingLevel] = useState<ConcreteThinkingLevel | null>(null);
   const [newSessionDefaultThinkingLevel, setNewSessionDefaultThinkingLevel] = useState<ConcreteThinkingLevel | null>(null);
   const [savedDefaultThinkingLevel, setSavedDefaultThinkingLevel] = useState<ConcreteThinkingLevel | null>(null);
@@ -506,9 +510,13 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const existingSessionId = session?.id;
 
   useLayoutEffect(() => {
+    if (chatWorkspace) {
+      setToolPresetState("none");
+      return;
+    }
     if (!existingSessionId && (!isNew || sessionIdRef.current)) return;
     setToolPresetState(getPreferredToolPreset());
-  }, [existingSessionId, isNew, setToolPresetState]);
+  }, [chatWorkspace, existingSessionId, isNew, setToolPresetState]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = scrollContainerRef.current;
@@ -810,8 +818,12 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       }
       // Tool-preset state is independent of the view cache: it must be applied
       // on every read, cached window or not (#700).
-      sessionToolsPinnedRef.current = d.toolNames !== undefined;
-      setToolPresetState(d.toolNames !== undefined ? getPresetFromToolNames(d.toolNames) : CONFIGURED_TOOL_PRESET);
+      sessionToolsPinnedRef.current = chatWorkspace || d.toolNames !== undefined;
+      setToolPresetState(chatWorkspace
+        ? "none"
+        : d.toolNames !== undefined
+          ? getPresetFromToolNames(d.toolNames)
+          : CONFIGURED_TOOL_PRESET);
       setCurrentModelOverride((current) => modelSwitchPendingRef.current ? current : null);
       setCurrentThinkingOverride(null);
       setError(null);
@@ -881,7 +893,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       if (loadFlightsRef.current.get(flightKey) === flight) loadFlightsRef.current.delete(flightKey);
     });
     return await flight;
-  }, [seedStreamingSnapshot, setToolPresetState, syncLiveModel]);
+  }, [chatWorkspace, seedStreamingSnapshot, setToolPresetState, syncLiveModel]);
 
   const loadContext = useCallback(async (sid: string, leafId: string | null, before?: string | null, options?: { tail?: number; signal?: AbortSignal }) => {
     const requestId = ++contextLoadIdRef.current;
@@ -944,14 +956,18 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       const tools = await sendAgentCommand<ToolEntry[]>(sid, { type: "get_tools" });
       if (!tools || !isCurrent() || !sessionHookMountedRef.current) return null;
       const { getPresetFromTools } = await import("@/lib/tool-presets");
-      setToolPresetState(sessionToolsPinnedRef.current ? getPresetFromTools(tools) : CONFIGURED_TOOL_PRESET);
+      setToolPresetState(chatWorkspace
+        ? "none"
+        : sessionToolsPinnedRef.current
+          ? getPresetFromTools(tools)
+          : CONFIGURED_TOOL_PRESET);
       onSystemToolsChange?.(tools);
       return tools;
     } catch (e) {
       console.error("Failed to load tools:", e);
       return null;
     }
-  }, [onSystemToolsChange, setToolPresetState]);
+  }, [chatWorkspace, onSystemToolsChange, setToolPresetState]);
 
   const promoteNewSession = useCallback((messageCount = 0, firstMessage = "(no messages)") => {
     const sid = sessionIdRef.current;
@@ -976,8 +992,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       messageCount,
       firstMessage,
       transient: true,
+      workspaceKind: chatWorkspace ? "chat" : "project",
     }, provisionalDraftKey);
-  }, [isNew, newSessionCwd, newSessionDraftKey, onSessionCreated, opts.chatInputRef]);
+  }, [chatWorkspace, isNew, newSessionCwd, newSessionDraftKey, onSessionCreated, opts.chatInputRef]);
 
   const ensureNewSession = useCallback(async () => {
     if (sessionIdRef.current) return sessionIdRef.current;
@@ -992,8 +1009,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       if (selectedModel) setPendingModel(selectedModel);
       // Undefined means the user never overrode the loadout: omit the field entirely
       // so pi resolves settings.json defaultTools instead of being pinned to ours (#700).
-      const toolNames = getToolNamesForPreset(toolPreset);
-      sessionToolsPinnedRef.current = toolNames !== undefined;
+      const toolNames = chatWorkspace ? [] : getToolNamesForPreset(toolPreset);
+      sessionToolsPinnedRef.current = chatWorkspace || toolNames !== undefined;
       const res = await fetch("/api/agent/new", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1037,7 +1054,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } finally {
       ensuringNewSessionRef.current = null;
     }
-  }, [isNew, newSessionCwd, toolPreset]);
+  }, [chatWorkspace, isNew, newSessionCwd, toolPreset]);
 
   // Opening the System or Tools panel may initialize an otherwise dormant
   // session. This is deliberately a non-prompt command: it creates no message
@@ -1864,6 +1881,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         restoreSubmission(message, images, composerDraftKey);
         return;
       }
+      if (chatWorkspace) {
+        addNotice({ type: "error", message: t("chat.chatOnlyNoShell") });
+        restoreSubmission(message, images, composerDraftKey);
+        return;
+      }
       await executeBashRef.current?.(bashCmd, isExcluded);
       return;
     }
@@ -1964,11 +1986,16 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       setAgentPhase(null);
       dispatch({ type: "end" });
     }
-  }, [isNew, newSessionCwd, newSessionModel, session, ensureNewSession, ensureEventsConnected, promoteNewSession, waitForPromptSettlement, addNotice, cancelEventStreamGrace, closeEvents, composerDraftKey, reconcileAgentState, restoreSubmission, editEntryId, setEdit, branchSummarySessionIdRef]);
+  }, [isNew, newSessionCwd, newSessionModel, session, ensureNewSession, ensureEventsConnected, promoteNewSession, waitForPromptSettlement, addNotice, cancelEventStreamGrace, chatWorkspace, closeEvents, composerDraftKey, reconcileAgentState, restoreSubmission, editEntryId, setEdit, branchSummarySessionIdRef, t]);
 
   const executeBash = useCallback(async (command: string, excludeFromContext: boolean) => {
     if (agentRunningRef.current || bashRunningRef.current) return;
     const inputText = `${excludeFromContext ? "!!" : "!"}${command}`;
+    if (chatWorkspace) {
+      addNotice({ type: "error", message: t("chat.chatOnlyNoShell") });
+      restoreSubmission(inputText, undefined, composerDraftKey);
+      return;
+    }
     bashRunningRef.current = true;
     setPendingBash({ command, excludeFromContext, output: "" });
     setBashRunning(true);
@@ -1995,7 +2022,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       setPendingBash(null);
       setBashRunning(false);
     }
-  }, [addNotice, composerDraftKey, ensureEventsConnected, ensureNewSession, loadSession, promoteNewSession, restoreSubmission, session]);
+  }, [addNotice, chatWorkspace, composerDraftKey, ensureEventsConnected, ensureNewSession, loadSession, promoteNewSession, restoreSubmission, session, t]);
   executeBashRef.current = executeBash;
 
   const handleAbort = useCallback(async () => {
@@ -2533,6 +2560,10 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   }, [addNotice, displayThinkingLevel, handleThinkingLevelChange, reloadModelsQuietly, saveDefaultPreferences]);
 
   const handleToolPresetChange = useCallback(async (preset: ToolPreset) => {
+    if (chatWorkspace) {
+      setToolPresetState("none");
+      return;
+    }
     const toolNames = getToolNamesForPreset(preset);
     setPreferredToolPreset(preset);
     setToolPresetState(preset);
@@ -2577,7 +2608,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } catch (e) {
       console.error("Failed to set tools:", e);
     }
-  }, [cancelEventStreamGrace, clearSlashCommands, closeEvents, loadTools, maintainEventsConnected, setToolPresetState, syncLiveModel]);
+  }, [cancelEventStreamGrace, chatWorkspace, clearSlashCommands, closeEvents, loadTools, maintainEventsConnected, setToolPresetState, syncLiveModel]);
 
   const scrollToMessage = useCallback((element: HTMLElement, viewportOffset = 16) => {
     const container = scrollContainerRef.current;
