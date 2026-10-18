@@ -6,12 +6,27 @@ import path from "node:path";
 import test, { after } from "node:test";
 import { createJiti } from "jiti";
 
+// Real paths: the temp folder is a link on macOS, and allowed roots compare resolved paths.
+const root = realpathSync(await mkdtemp(path.join(os.tmpdir(), "pi-web-cwd-status-")));
+// Session cwds are allowed roots too: a real session rooted at home can cover
+// the system temp folder and make this test's outside paths legitimately allowed.
+const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+const previousHome = process.env.PI_AGENT_HOME;
+process.env.PI_CODING_AGENT_DIR = path.join(root, "agent");
+process.env.PI_AGENT_HOME = path.join(root, "home");
+await mkdir(process.env.PI_CODING_AGENT_DIR);
+await mkdir(process.env.PI_AGENT_HOME);
+after(async () => {
+  if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+  else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+  if (previousHome === undefined) delete process.env.PI_AGENT_HOME;
+  else process.env.PI_AGENT_HOME = previousHome;
+  await rm(root, { recursive: true, force: true });
+});
+
 const jiti = createJiti(import.meta.url, { alias: { "@": process.cwd() }, interopDefault: true });
 const { GET } = await jiti.import("./route.ts");
 const { allowFileRoot } = await jiti.import("../../../../lib/file-access.ts");
-
-// Real paths: the temp folder is a link on macOS, and allowed roots compare resolved paths.
-const root = realpathSync(await mkdtemp(path.join(os.tmpdir(), "pi-web-cwd-status-")));
 const allowed = path.join(root, "allowed");
 const project = path.join(allowed, "project");
 const deleted = path.join(allowed, "deleted");
@@ -21,9 +36,8 @@ const outside = path.join(root, "outside");
 await mkdir(project, { recursive: true });
 await mkdir(outside, { recursive: true });
 await writeFile(file, "not a folder");
-await symlink(outside, escape);
+await symlink(outside, escape, process.platform === "win32" ? "junction" : "dir");
 allowFileRoot(allowed);
-after(() => rm(root, { recursive: true, force: true }));
 
 async function status(cwd) {
   const response = await GET(new Request(`http://localhost/api/cwd/status?cwd=${encodeURIComponent(cwd)}`));

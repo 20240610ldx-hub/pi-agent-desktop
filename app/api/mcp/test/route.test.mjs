@@ -40,7 +40,10 @@ after(async () => {
 const FIXTURE = fileURLToPath(new URL("../../../../lib/__fixtures__/mcp-env-server.mjs", import.meta.url));
 const globalPath = join(agentDir, "mcp.json");
 const projectPath = join(cwd, ".pi", "mcp.json");
-const marker = join(root, "command-ran");
+const marker = join(root, "command ran");
+const markerFixture = fileURLToPath(new URL("../../../../lib/__fixtures__/mcp-marker-command.mjs", import.meta.url));
+// The SDK resolves !commands through a shell, including Git Bash on Windows.
+const markerCommand = `!${[process.execPath, markerFixture, marker].map((arg) => `"${arg.replaceAll("\\", "/")}"`).join(" ")}`;
 const envFile = join(root, "env-names.json");
 const store = new ProjectTrustStore(agentDir);
 const SECRET = "literal-header-secret-value";
@@ -58,7 +61,7 @@ beforeEach(async () => {
   delete process.env.PI_WEB_DISABLE_MCP;
   clearMcpStatuses();
   await writeFile(globalPath, `${JSON.stringify({ mcpServers: globalServers }, null, 2)}\n`);
-  await writeFile(projectPath, `${JSON.stringify({ mcpServers: { repo: fixture({ TOKEN: `!touch ${marker} && echo ok` }) } }, null, 2)}\n`);
+  await writeFile(projectPath, `${JSON.stringify({ mcpServers: { repo: fixture({ TOKEN: markerCommand }) } }, null, 2)}\n`);
   await rm(marker, { force: true });
   store.set(cwd, null);
 });
@@ -94,6 +97,7 @@ test("a global server is tested from its file and answers with what it found", a
   const home = join(root, "home");
   await mkdir(home, { recursive: true });
   setEnvFor(t, "HOME", home);
+  setEnvFor(t, "USERPROFILE", home);
   assert.equal(homedir(), home);
   const { status, body } = await post({ scope: "global", name: "lint" });
   assert.equal(status, 200);

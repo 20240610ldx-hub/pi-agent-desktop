@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test, { after, beforeEach } from "node:test";
+import { fileURLToPath } from "node:url";
 import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
 import { createJiti } from "jiti";
 import { approveSignIn, startFakeOAuthServer } from "../../../../lib/__fixtures__/mcp-oauth-server.mjs";
@@ -47,7 +48,10 @@ after(async () => {
 const globalPath = join(agentDir, "mcp.json");
 const projectPath = join(cwd, ".pi", "mcp.json");
 const authPath = join(agentDir, "mcp-credentials.json");
-const marker = join(root, "command-ran");
+const marker = join(root, "command ran");
+const markerFixture = fileURLToPath(new URL("../../../../lib/__fixtures__/mcp-marker-command.mjs", import.meta.url));
+// The SDK resolves !commands through a shell, including Git Bash on Windows.
+const markerCommand = `!${[process.execPath, markerFixture, marker].map((arg) => `"${arg.replaceAll("\\", "/")}"`).join(" ")}`;
 const store = new ProjectTrustStore(agentDir);
 
 beforeEach(async () => {
@@ -69,7 +73,7 @@ beforeEach(async () => {
     },
   }, null, 2)}\n`);
   await writeFile(projectPath, `${JSON.stringify({
-    mcpServers: { repo: { url: fake.url, headers: { "X-Probe": `!touch ${marker} && echo probe` } } },
+    mcpServers: { repo: { url: fake.url, headers: { "X-Probe": markerCommand } } },
   }, null, 2)}\n`);
   store.set(cwd, null);
 });
