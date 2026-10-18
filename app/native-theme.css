@@ -2127,29 +2127,15 @@ html.dark .sidebar-view-switcher-thumb {
   min-height: 0;
 }
 
-.sidebar-recent-section {
+.sidebar-project-timeline {
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
-  padding-bottom: 6px;
-}
-
-.sidebar-recent-header {
-  border-bottom: var(--hairline) solid var(--separator);
-  margin-bottom: 2px;
-}
-
-.sidebar-recent-items {
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-recent-items .session-item {
-  height: 32px !important;
+  padding: 2px 0 8px;
 }
 
 .session-item-project {
-  max-width: 28%;
+  max-width: 34%;
   flex: 0 1 auto;
   overflow: hidden;
   color: var(--text-dim);
@@ -2184,6 +2170,16 @@ html.dark .sidebar-view-switcher-thumb {
   align-items: center;
   gap: 2px;
   flex: 0 0 auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+
+.sidebar-project-tree-header:hover .sidebar-project-tree-tools,
+.sidebar-project-tree-header.is-menu-open .sidebar-project-tree-tools,
+.sidebar-project-tree-header:focus-within .sidebar-project-tree-tools {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .sidebar-project-tree-menu,
@@ -2202,10 +2198,61 @@ html.dark .sidebar-view-switcher-thumb {
   transition: background 120ms ease, color 120ms ease;
 }
 
+@media (hover: none) {
+  .sidebar-project-tree-tools {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 .sidebar-project-tree-menu:hover,
-.sidebar-project-tree-add:hover {
+.sidebar-project-tree-add:hover,
+.sidebar-project-tree-menu.is-open {
   background: var(--bg-hover);
   color: var(--text);
+}
+
+.project-view-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  width: 216px;
+  padding: 5px;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.project-view-menu-heading {
+  padding: 5px 8px 4px;
+  color: var(--text-dim);
+  font-size: var(--fs-caption);
+}
+
+.project-view-menu button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 0 8px;
+  text-align: left;
+}
+
+.project-view-menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.project-view-menu-check {
+  width: 14px;
+  flex: 0 0 14px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.project-view-menu-separator {
+  height: var(--hairline);
+  margin: 4px 6px;
+  background: var(--separator);
 }
 
 .sidebar-project-tree-menu-popover .sidebar-project-tree-menu-item {

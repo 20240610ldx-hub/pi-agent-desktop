@@ -23,17 +23,23 @@ import {
 } from "./ProjectContextMenu";
 import { useProjectWorktreeActions } from "@/hooks/useProjectWorktreeActions";
 import { getRecentProjects } from "./path-ui";
-import { APP_PREF_KEYS, getPrefJson, removePref, setPrefJson } from "@/lib/app-prefs";
+import { APP_PREF_KEYS, getPref, getPrefJson, removePref, setPref, setPrefJson } from "@/lib/app-prefs";
 import { groupByProject } from "@/lib/project-group";
 import { getProjectDisplayName, getProjectDisplayNames } from "@/lib/project-display";
-import { getRecallSessions, hasRecallSessionsToday } from "@/lib/recent-sessions";
 import { notifyDesktop } from "@/lib/desktop-notify";
 import { revealItemInDirNative } from "@/lib/desktop-native";
 import { isTauriDesktop } from "@/lib/desktop-updater";
-import { canUseNativeMenu, menuPointBelow, showNativeMenu, type NativeMenuPoint } from "@/lib/desktop-menu";
+import {
+  canUseNativeMenu,
+  menuPointBelow,
+  showNativeMenu,
+  type NativeMenuEntry,
+  type NativeMenuPoint,
+} from "@/lib/desktop-menu";
 import { getDesktopPlatform, type DesktopPlatform } from "@/lib/desktop-window";
 import { useWindowDrag } from "./desktop";
 import { SessionSearch } from "./SessionSearch";
+import { ProjectViewMenu, type ProjectViewMode } from "./ProjectViewMenu";
 import { ScheduledSidebarRow } from "./scheduled/ScheduledSidebarRow";
 import { isScheduledRunSession } from "@/hooks/useScheduledTasks";
 import { prefetchSessionData } from "@/lib/session-data-cache";
@@ -112,6 +118,10 @@ function saveUnreadSessionIds(ids: Set<string>): void {
   if (typeof window === "undefined") return;
   if (ids.size === 0) removePref(APP_PREF_KEYS.unreadSessionIds);
   else setPrefJson(APP_PREF_KEYS.unreadSessionIds, [...ids]);
+}
+
+function loadProjectViewMode(): ProjectViewMode {
+  return getPref(APP_PREF_KEYS.projectViewMode) === "timeline" ? "timeline" : "grouped";
 }
 
 
@@ -302,11 +312,25 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       ? new Set(stored.filter((root): root is string => typeof root === "string"))
       : new Set();
   });
-  const [expandedProjectSessions, setExpandedProjectSessions] = useState<Set<string>>(() => {
+  const [projectSessionPages, setProjectSessionPages] = useState<Record<string, number>>(() => {
     const stored = getPrefJson<unknown>(APP_PREF_KEYS.expandedProjects);
-    return Array.isArray(stored)
-      ? new Set(stored.filter((root): root is string => typeof root === "string"))
-      : new Set();
+    if (Array.isArray(stored)) {
+      // Older builds stored a set of fully expanded projects. Start those at
+      // one extra page instead of restoring the unbounded list.
+      return Object.fromEntries(
+        stored
+          .filter((root): root is string => typeof root === "string")
+          .map((root) => [root, 1]),
+      );
+    }
+    if (!stored || typeof stored !== "object") return {};
+    return Object.fromEntries(
+      Object.entries(stored).flatMap(([root, pages]) => (
+        typeof pages === "number" && Number.isFinite(pages) && pages > 0
+          ? [[root, Math.floor(pages)]]
+          : []
+      )),
+    );
   });
   const [archivedProjectRoots, setArchivedProjectRoots] = useState<Set<string>>(() => {
     const stored = getPrefJson<unknown>(APP_PREF_KEYS.archivedProjects);
@@ -314,6 +338,11 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       ? new Set(stored.filter((root): root is string => typeof root === "string"))
       : new Set();
   });
+  const [projectViewMode, setProjectViewMode] = useState<ProjectViewMode>(loadProjectViewMode);
+  const [projectViewMenuOpen, setProjectViewMenuOpen] = useState(false);
+  const [projectViewMenuPos, setProjectViewMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const projectViewMenuRef = useRef<HTMLDivElement>(null);
+  const projectViewMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [projectMenu, setProjectMenu] = useState<{ root: string } | null>(null);
   const [projectMenuPos, setProjectMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [projectBranchMenu, setProjectBranchMenu] = useState<ProjectBranchMenuState | null>(null);
@@ -487,9 +516,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   }, [collapsedProjects]);
 
   useEffect(() => {
-    if (expandedProjectSessions.size === 0) removePref(APP_PREF_KEYS.expandedProjects);
-    else setPrefJson(APP_PREF_KEYS.expandedProjects, [...expandedProjectSessions]);
-  }, [expandedProjectSessions]);
+    if (Object.keys(projectSessionPages).length === 0) removePref(APP_PREF_KEYS.expandedProjects);
+    else setPrefJson(APP_PREF_KEYS.expandedProjects, projectSessionPages);
+  }, [projectSessionPages]);
 
   useEffect(() => {
     // Live running status via SSE — no polling. The server pushes the current
@@ -558,6 +587,37 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [projectMenu]);
+
+  useEffect(() => {
+    if (!projectViewMenuOpen || !projectViewMenuPos) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (projectViewMenuRef.current?.contains(target)) return;
+      if (projectViewMenuButtonRef.current?.contains(target)) return;
+      setProjectViewMenuOpen(false);
+      setProjectViewMenuPos(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isImeComposing(event)) {
+        setProjectViewMenuOpen(false);
+        setProjectViewMenuPos(null);
+      }
+    };
+    const closeOnViewportChange = () => {
+      setProjectViewMenuOpen(false);
+      setProjectViewMenuPos(null);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", closeOnViewportChange, true);
+    window.addEventListener("resize", closeOnViewportChange);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", closeOnViewportChange, true);
+      window.removeEventListener("resize", closeOnViewportChange);
+    };
+  }, [projectViewMenuOpen, projectViewMenuPos]);
 
   useEffect(() => {
     onRunningSessionIdsChange?.(runningSessionIds);
@@ -1070,11 +1130,20 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const sessionFamilies = listSessionFamilies(filteredSessions);
   const allProjects = groupByProject(filteredSessions, { runningIds: runningSessionIds, unreadIds: unreadSessionIds });
   const activeProjects = allProjects.filter((group) => !archivedProjectRoots.has(group.projectRoot));
-  const projectDisplayNames = getProjectDisplayNames(activeProjects.map((group) => group.projectRoot));
-  const hasTodaySessions = !trimmedSessionQuery && hasRecallSessionsToday(treeSessions);
-  const recentSessions = !trimmedSessionQuery
-    ? getRecallSessions(treeSessions)
+  const activeProjectRoots = activeProjects.map((group) => group.projectRoot);
+  const projectDisplayNames = getProjectDisplayNames(activeProjectRoots);
+  const canCollapseAllProjects = activeProjects.some((group) => !collapsedProjects.has(group.projectRoot));
+  const canExpandAllProjects = activeProjects.some((group) => collapsedProjects.has(group.projectRoot));
+  const timelineFamilies = projectViewMode === "timeline"
+    ? sessionFamilies.filter((family) => (
+        !archivedProjectRoots.has(family.root.projectRoot ?? family.root.cwd)
+      )).sort((a, b) => b.root.modified.localeCompare(a.root.modified))
     : [];
+  const timelineRootNodes = new Map<string, SessionTreeNode>();
+  for (const family of timelineFamilies) {
+    const [rootNode] = buildSessionTree([family.root, ...family.subagents]);
+    if (rootNode) timelineRootNodes.set(family.root.id, rootNode);
+  }
   useEffect(() => {
     const projectRoots = activeProjects.map((group) => group.projectRoot);
     onProjectsChange?.(projectRoots);
@@ -1088,19 +1157,20 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     const runningCount = group.runningIds.size;
     const unreadCount = group.unreadIds.size;
     const groupTree = buildSessionTree(group.sessions);
-    const showSessionOverflow = groupTree.length > MAX_VISIBLE_PROJECT_SESSIONS;
-    const isSessionOverflowExpanded = Boolean(trimmedSessionQuery) || expandedProjectSessions.has(group.projectRoot);
-    let visibleGroupTree = isSessionOverflowExpanded
+    const extraPages = projectSessionPages[group.projectRoot] ?? 0;
+    const visibleSessionLimit = MAX_VISIBLE_PROJECT_SESSIONS * (extraPages + 1);
+    let visibleGroupTree = trimmedSessionQuery
       ? groupTree
-      : groupTree.slice(0, MAX_VISIBLE_PROJECT_SESSIONS);
+      : groupTree.slice(0, visibleSessionLimit);
     // Keep the selected session reachable even when it is older than the
     // collapsed preview window.
-    if (!isSessionOverflowExpanded && selectedSessionId) {
+    if (!trimmedSessionQuery && selectedSessionId) {
       const selectedRoot = groupTree.find((node) => treeContainsSession(node, selectedSessionId));
       if (selectedRoot && !visibleGroupTree.includes(selectedRoot)) {
         visibleGroupTree = [...visibleGroupTree.slice(0, -1), selectedRoot];
       }
     }
+    const hiddenSessionCount = groupTree.length - visibleGroupTree.length;
     const branchSubtitle = isActive && currentWt?.branch
       ? currentWt.branch
       : group.branches.length === 1
@@ -1113,6 +1183,12 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         const next = new Set(prev);
         if (next.has(group.projectRoot)) next.delete(group.projectRoot);
         else next.add(group.projectRoot);
+        return next;
+      });
+      setProjectSessionPages((prev) => {
+        if (!(group.projectRoot in prev)) return prev;
+        const next = { ...prev };
+        delete next[group.projectRoot];
         return next;
       });
       if (!isActive) setSelectedCwd(group.projectRoot);
@@ -1239,26 +1315,137 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
               />
               );
             })}
-            {showSessionOverflow && (
+            {hiddenSessionCount > 0 && (
               <button
                 type="button"
                 className="sidebar-project-tree-show-more"
-                onClick={() => setExpandedProjectSessions((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(group.projectRoot)) next.delete(group.projectRoot);
-                  else next.add(group.projectRoot);
-                  return next;
-                })}
+                onClick={() => setProjectSessionPages((prev) => ({
+                  ...prev,
+                  [group.projectRoot]: (prev[group.projectRoot] ?? 0) + 1,
+                }))}
               >
-                {isSessionOverflowExpanded
-                  ? t("sidebar.showLessSessions")
-                  : t("sidebar.showMoreSessions", { count: groupTree.length - visibleGroupTree.length })}
+                {t("sidebar.showMoreSessions", {
+                  count: Math.min(MAX_VISIBLE_PROJECT_SESSIONS, hiddenSessionCount),
+                })}
               </button>
             )}
           </div>
         )}
       </div>
     );
+  };
+
+  const renderTimeline = () => (
+    <div className="sidebar-project-timeline">
+      {timelineFamilies.map((family) => {
+        const node = timelineRootNodes.get(family.root.id);
+        if (!node) return null;
+        const projectRoot = family.root.projectRoot ?? family.root.cwd;
+        const projectName = projectDisplayNames.get(projectRoot)
+          ?? getProjectDisplayName(projectRoot, activeProjectRoots);
+        const familySessions = [family.root, ...family.subagents];
+        return (
+          <SessionFamilyItem
+            key={family.root.id}
+            node={node}
+            familySessions={familySessions}
+            subtitle={projectName}
+            selectedSessionId={selectedSessionId}
+            runningSessionIds={runningSessionIds}
+            unreadSessionIds={unreadSessionIds}
+            onSelectSession={handleSelectSessionFromList}
+            onRenamed={loadSessions}
+            onSessionDeleted={(id) => {
+              onSessionDeleted?.(id);
+              loadSessions();
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+
+  const closeProjectViewMenu = () => {
+    setProjectViewMenuOpen(false);
+    setProjectViewMenuPos(null);
+  };
+
+  const changeProjectViewMode = (mode: ProjectViewMode) => {
+    setProjectViewMode(mode);
+    setPref(APP_PREF_KEYS.projectViewMode, mode);
+    closeProjectViewMenu();
+  };
+
+  const collapseAllProjects = () => {
+    setCollapsedProjects(new Set(activeProjectRoots));
+    setProjectSessionPages({});
+    closeProjectViewMenu();
+  };
+
+  const expandAllProjects = () => {
+    setCollapsedProjects(new Set());
+    closeProjectViewMenu();
+  };
+
+  const openProjectViewDomMenu = (anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    const width = 216;
+    const estimatedHeight = 180;
+    const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+    const top = rect.bottom + 4 + estimatedHeight > window.innerHeight - 8
+      ? Math.max(8, rect.top - estimatedHeight - 4)
+      : rect.bottom + 4;
+    setProjectViewMenuPos({ top, left });
+    setProjectViewMenuOpen(true);
+  };
+
+  const toggleProjectViewMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (projectViewMenuOpen && projectViewMenuPos) {
+      closeProjectViewMenu();
+      return;
+    }
+    if (projectViewMenuOpen) return;
+    setProjectMenu(null);
+    setProjectMenuPos(null);
+    const anchor = event.currentTarget;
+    const controlsDisabled = projectViewMode !== "grouped";
+    if (!canUseNativeMenu()) {
+      openProjectViewDomMenu(anchor);
+      return;
+    }
+    const entries: NativeMenuEntry[] = [
+      {
+        label: t("sidebar.projectViewGrouped"),
+        checked: projectViewMode === "grouped",
+        onSelect: () => changeProjectViewMode("grouped"),
+      },
+      {
+        label: t("sidebar.projectViewTimeline"),
+        checked: projectViewMode === "timeline",
+        onSelect: () => changeProjectViewMode("timeline"),
+      },
+      { kind: "separator" },
+      {
+        label: t("sidebar.collapseAllProjects"),
+        disabled: controlsDisabled || !canCollapseAllProjects,
+        onSelect: collapseAllProjects,
+      },
+      {
+        label: t("sidebar.expandAllProjects"),
+        disabled: controlsDisabled || !canExpandAllProjects,
+        onSelect: expandAllProjects,
+      },
+    ];
+    setProjectViewMenuOpen(true);
+    setProjectViewMenuPos(null);
+    void showNativeMenu(entries, menuPointBelow(anchor, "right")).then((shown) => {
+      if (shown) {
+        setProjectViewMenuOpen(false);
+        return;
+      }
+      openProjectViewDomMenu(anchor);
+    });
   };
 
   return (
@@ -1355,9 +1542,10 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       </div>
       {/* Project tree (Codex-style) — replaces the old CHATS/FILES tabs. Every
           project is rendered as a flat row whose chats nest directly beneath.
-          Clicking a project header toggles collapse; the ⋯ menu offers sort
-          and collapse/expand-all; the + button opens the project picker to
-          add a new project. The FileExplorer has moved to the right panel. */}
+          Clicking a project header toggles collapse; the ⋯ menu switches
+          between grouped and chronological views and offers collapse/expand-all;
+          the + button opens the project picker to add a new project. The
+          FileExplorer has moved to the right panel. */}
       {allProjects.length === 0 ? (
         <div className="sidebar-project-tree-empty">
           {loading
@@ -1412,45 +1600,18 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           aria-label={t("sidebar.projects")}
           onScroll={handleListScroll}
         >
-          {recentSessions.length > 0 && (
-            <section className="sidebar-recent-section" aria-label={t(hasTodaySessions ? "sidebar.today" : "sidebar.recent")}>
-              <div className="sidebar-project-tree-header sidebar-recent-header">
-                <span className="sidebar-project-tree-title">{t(hasTodaySessions ? "sidebar.today" : "sidebar.recent")}</span>
-              </div>
-              <div className="sidebar-recent-items">
-                {recentSessions.map((session) => {
-                  const projectRoot = session.projectRoot ?? session.cwd;
-                  const projectName = projectDisplayNames.get(projectRoot)
-                    ?? getProjectDisplayName(projectRoot, activeProjects.map((group) => group.projectRoot));
-                  return (
-                    <SessionItem
-                      key={`recent-${session.id}`}
-                      session={session}
-                      isSelected={session.id === selectedSessionId}
-                      isRunning={runningSessionIds.has(session.id)}
-                      isUnread={unreadSessionIds.has(session.id)}
-                      onClick={() => handleSelectSessionFromList(session)}
-                      subtitle={projectName}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          )}
-          <div className="sidebar-project-tree-header">
+          <div className={`sidebar-project-tree-header${projectViewMenuOpen ? " is-menu-open" : ""}`}>
             <span className="sidebar-project-tree-title">{t("sidebar.projects")}</span>
             <div className="sidebar-project-tree-tools">
               <button
-                className="sidebar-project-tree-menu"
-                title={t("sidebar.moreActions")}
-                aria-label={t("sidebar.moreActions")}
-                onClick={() => {
-                  if (allProjects.some((g) => !collapsedProjects.has(g.projectRoot))) {
-                    setCollapsedProjects(new Set(allProjects.map((g) => g.projectRoot)));
-                  } else {
-                    setCollapsedProjects(new Set());
-                  }
-                }}
+                ref={projectViewMenuButtonRef}
+                type="button"
+                className={`sidebar-project-tree-menu${projectViewMenuOpen ? " is-open" : ""}`}
+                title={t("sidebar.projectViewMenu")}
+                aria-label={t("sidebar.projectViewMenu")}
+                aria-haspopup="menu"
+                aria-expanded={projectViewMenuOpen}
+                onClick={toggleProjectViewMenu}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <circle cx="5" cy="12" r="1.6" />
@@ -1472,9 +1633,24 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
               </button>
             </div>
           </div>
-          {activeProjects.map((group) => renderProjectGroup(group))}
+          {projectViewMode === "timeline"
+            ? renderTimeline()
+            : activeProjects.map((group) => renderProjectGroup(group))}
         </div>
         </SessionSearch>
+      )}
+      {projectViewMenuOpen && projectViewMenuPos && (
+        <ProjectViewMenu
+          menuRef={projectViewMenuRef}
+          pos={projectViewMenuPos}
+          mode={projectViewMode}
+          canCollapseAll={canCollapseAllProjects}
+          canExpandAll={canExpandAllProjects}
+          controlsDisabled={projectViewMode !== "grouped"}
+          onModeChange={changeProjectViewMode}
+          onCollapseAll={collapseAllProjects}
+          onExpandAll={expandAllProjects}
+        />
       )}
       {projectMenu && projectMenuPos && (
         <ProjectContextMenu
@@ -1550,6 +1726,7 @@ function SessionFamilyItem({
   onRenamed,
   onSessionDeleted,
   familySessions,
+  subtitle,
 }: {
   node: SessionTreeNode;
   familySessions?: SessionInfo[];
@@ -1560,6 +1737,8 @@ function SessionFamilyItem({
   onSelectSession: (s: SessionInfo) => void;
   onRenamed?: () => void;
   onSessionDeleted?: (id: string) => void;
+  /** Cross-project context, shown by the chronological sidebar view. */
+  subtitle?: string;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const hasChildren = node.children.length > 0;
@@ -1588,6 +1767,7 @@ function SessionFamilyItem({
           hasChildren={hasChildren}
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed((v) => !v)}
+          subtitle={subtitle}
         />
       </div>
       {hasChildren && !collapsed && (
@@ -1603,6 +1783,7 @@ function SessionFamilyItem({
               onSelectSession={onSelectSession}
               onRenamed={onRenamed}
               onSessionDeleted={onSessionDeleted}
+              subtitle={subtitle}
             />
           ))}
         </div>

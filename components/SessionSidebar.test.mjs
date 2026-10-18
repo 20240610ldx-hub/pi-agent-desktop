@@ -182,28 +182,71 @@ test("project header keeps its actions hover-only and no separate chevron", asyn
   assert.match(css, /@media \(hover: none\) \{[^@]*\.sidebar-project-tree-row-actions \{\s*opacity: 1;/);
 });
 
+test("Projects header actions stay hover-only", async () => {
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  assert.match(css, /\.sidebar-project-tree-tools \{[^}]*opacity: 0;[^}]*pointer-events: none;/);
+  assert.match(css, /\.sidebar-project-tree-header:hover \.sidebar-project-tree-tools,/);
+  assert.match(css, /\.sidebar-project-tree-header\.is-menu-open \.sidebar-project-tree-tools,/);
+  assert.match(css, /\.sidebar-project-tree-header:focus-within \.sidebar-project-tree-tools \{\s*opacity: 1;\s*pointer-events: auto;/);
+  assert.match(css, /@media \(hover: none\) \{[^@]*\.sidebar-project-tree-tools \{\s*opacity: 1;\s*pointer-events: auto;/);
+});
+
 test("folded projects persist across reloads", () => {
   assert.match(source, /getPrefJson<unknown>\(APP_PREF_KEYS\.collapsedProjects\)/);
   assert.match(source, /setPrefJson\(APP_PREF_KEYS\.collapsedProjects, \[\.\.\.collapsedProjects\]\)/);
-  // "Collapse all" must look at the visible projects, not the stored set's size.
-  assert.match(source, /allProjects\.some\(\(g\) => !collapsedProjects\.has\(g\.projectRoot\)\)/);
+  // Collapse/expand-all operate on the visible project groups.
+  assert.match(source, /const canCollapseAllProjects = activeProjects\.some\(\(group\) => !collapsedProjects\.has\(group\.projectRoot\)\)/);
+  assert.match(source, /const canExpandAllProjects = activeProjects\.some\(\(group\) => collapsedProjects\.has\(group\.projectRoot\)\)/);
+  assert.match(source, /setCollapsedProjects\(new Set\(activeProjectRoots\)\)/);
+  assert.match(source, /setCollapsedProjects\(new Set\(\)\)/);
 });
 
-test("expanded session previews persist and reveal how many rows are hidden", () => {
+test("show more reveals five sessions at a time and a project toggle resets it", () => {
   assert.match(source, /getPrefJson<unknown>\(APP_PREF_KEYS\.expandedProjects\)/);
-  assert.match(source, /setPrefJson\(APP_PREF_KEYS\.expandedProjects, \[\.\.\.expandedProjectSessions\]\)/);
+  assert.match(source, /setPrefJson\(APP_PREF_KEYS\.expandedProjects, projectSessionPages\)/);
+  assert.match(source, /const visibleSessionLimit = MAX_VISIBLE_PROJECT_SESSIONS \* \(extraPages \+ 1\)/);
   assert.match(
     source,
-    /t\("sidebar\.showMoreSessions", \{ count: groupTree\.length - visibleGroupTree\.length \}\)/,
+    /\[group\.projectRoot\]: \(prev\[group\.projectRoot\] \?\? 0\) \+ 1/,
+  );
+  assert.match(
+    source,
+    /count: Math\.min\(MAX_VISIBLE_PROJECT_SESSIONS, hiddenSessionCount\)/,
+  );
+  // Reopening a project starts from its latest five sessions again.
+  assert.match(source, /setProjectSessionPages\(\(prev\) => \{[\s\S]*?delete next\[group\.projectRoot\]/);
+  // Legacy arrays meant "expanded everything"; migrate them to one extra page.
+  assert.match(source, /Array\.isArray\(stored\)[\s\S]*?\.map\(\(root\) => \[root, 1\]\)/);
+});
+
+test("Projects pane chooses between grouped and chronological views", () => {
+  // The old Recent section is replaced by a persisted display mode.
+  assert.doesNotMatch(source, /recent-sessions|sidebar-recent-section|hasTodaySessions|recentSessions/);
+  assert.match(source, /const \[projectViewMode, setProjectViewMode\] = useState<ProjectViewMode>\(loadProjectViewMode\)/);
+  assert.match(source, /setPref\(APP_PREF_KEYS\.projectViewMode, mode\)/);
+  assert.match(
+    source,
+    /projectViewMode === "timeline"\s*\? renderTimeline\(\)\s*: activeProjects\.map\(\(group\) => renderProjectGroup\(group\)\)/,
   );
 });
 
-test("shows a cross-project recent section above the project tree", () => {
-  assert.match(source, /import \{ getRecallSessions, hasRecallSessionsToday \} from "@\/lib\/recent-sessions"/);
-  assert.match(source, /const recentSessions = !trimmedSessionQuery/);
-  assert.match(source, /<section className="sidebar-recent-section" aria-label=\{t\(hasTodaySessions \? "sidebar\.today" : "sidebar\.recent"\)\}>/);
-  assert.match(source, /t\(hasTodaySessions \? "sidebar\.today" : "sidebar\.recent"\)/);
+test("the chronological view lists session families by activity with project labels", () => {
+  assert.match(source, /const timelineFamilies = projectViewMode === "timeline"/);
+  assert.match(source, /sessionFamilies\.filter\(\(family\) =>/);
+  assert.match(source, /\.sort\(\(a, b\) => b\.root\.modified\.localeCompare\(a\.root\.modified\)\)/);
+  assert.match(source, /buildSessionTree\(\[family\.root, \.\.\.family\.subagents\]\)/);
+  assert.match(source, /className="sidebar-project-timeline"/);
   assert.match(source, /subtitle=\{projectName\}/);
+});
+
+test("the Projects menu keeps grouped/timeline choices and collapse controls", async () => {
+  const menuSource = await readFile(new URL("./ProjectViewMenu.tsx", import.meta.url), "utf8");
+  assert.match(menuSource, /role="menuitemradio"/);
+  assert.match(menuSource, /sidebar\.projectViewGrouped/);
+  assert.match(menuSource, /sidebar\.projectViewTimeline/);
+  assert.match(menuSource, /sidebar\.collapseAllProjects/);
+  assert.match(menuSource, /sidebar\.expandAllProjects/);
+  assert.match(source, /canUseNativeMenu\(\)[\s\S]*?showNativeMenu\(entries, menuPointBelow\(anchor, "right"\)\)/);
 });
 
 test("the row menu shows the compaction count only when the session was compacted", () => {
