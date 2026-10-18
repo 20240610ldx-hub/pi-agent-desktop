@@ -38,6 +38,7 @@ import { ScheduledSidebarRow } from "./scheduled/ScheduledSidebarRow";
 import { isScheduledRunSession } from "@/hooks/useScheduledTasks";
 import { prefetchSessionData } from "@/lib/session-data-cache";
 import { isImeComposing } from "@/lib/ime";
+import { appNotify } from "@/lib/notification-store";
 
 function sessionListUrl(summary: boolean, force: boolean): string {
   if (summary) return "/api/sessions?summary=1";
@@ -124,6 +125,73 @@ interface SessionTreeNode {
 const MAX_VISIBLE_PROJECT_SESSIONS = 5;
 
 const SESSION_LIST_ITEM_HEIGHT = 54;
+
+function focusSidebarTreeRow(current: HTMLElement, offset: number | "first" | "last") {
+  const rows = Array.from(
+    current.closest(".sidebar-project-tree")?.querySelectorAll<HTMLElement>("[data-sidebar-tree-row]") ?? [],
+  );
+  if (rows.length === 0) return;
+  const index = rows.indexOf(current);
+  const next = offset === "first" || index < 0
+    ? rows[0]
+    : offset === "last"
+      ? rows[rows.length - 1]
+      : rows[Math.max(0, Math.min(rows.length - 1, index + offset))];
+  next.focus();
+}
+
+function handleSidebarTreeKeyDown(
+  event: React.KeyboardEvent<HTMLElement>,
+  handlers: {
+    activate?: () => void;
+    expand?: () => void;
+    collapse?: () => void;
+    rename?: () => void;
+    requestDelete?: () => void;
+  },
+) {
+  if (event.target !== event.currentTarget || isImeComposing(event)) return;
+  const current = event.currentTarget;
+  switch (event.key) {
+    case "ArrowDown":
+      event.preventDefault();
+      focusSidebarTreeRow(current, 1);
+      break;
+    case "ArrowUp":
+      event.preventDefault();
+      focusSidebarTreeRow(current, -1);
+      break;
+    case "Home":
+      event.preventDefault();
+      focusSidebarTreeRow(current, "first");
+      break;
+    case "End":
+      event.preventDefault();
+      focusSidebarTreeRow(current, "last");
+      break;
+    case "ArrowRight":
+      event.preventDefault();
+      handlers.expand?.();
+      break;
+    case "ArrowLeft":
+      event.preventDefault();
+      handlers.collapse?.();
+      break;
+    case "Enter":
+    case " ":
+      event.preventDefault();
+      handlers.activate?.();
+      break;
+    case "F2":
+      event.preventDefault();
+      handlers.rename?.();
+      break;
+    case "Delete":
+      event.preventDefault();
+      handlers.requestDelete?.();
+      break;
+  }
+}
 
 function treeContainsSession(node: SessionTreeNode, sessionId: string): boolean {
   return node.session.id === sessionId || node.children.some((child) => treeContainsSession(child, sessionId));
@@ -1059,9 +1127,22 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           <button
             type="button"
             className="sidebar-project-tree-row-main"
+            data-sidebar-tree-row
+            tabIndex={0}
+            role="treeitem"
+            aria-selected={isActive}
             onClick={toggleCollapse}
             aria-expanded={!isCollapsed}
             title={rowTitle}
+            onKeyDown={(e) => handleSidebarTreeKeyDown(e, {
+              activate: toggleCollapse,
+              expand: () => {
+                if (isCollapsed) toggleCollapse();
+              },
+              collapse: () => {
+                if (!isCollapsed) toggleCollapse();
+              },
+            })}
           >
             <span className="sidebar-project-tree-folder" aria-hidden="true">
               {/* Closed folder vs. folder with its flap lifted; the closed one
@@ -1118,12 +1199,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
             </button>
-            <button
+              <button
               type="button"
               className="sidebar-project-tree-action sidebar-project-tree-more"
               onClick={(e) => openProjectMenu(e, group.projectRoot)}
               title={t("sidebar.moreActions")}
               aria-label={t("sidebar.moreActions")}
+                aria-haspopup="menu"
               aria-expanded={isMenuOpen}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -1323,7 +1405,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           selectedSessionId={selectedSessionId}
           onSelectSession={handleSelectSessionFromList}
         >
-        <div ref={listScrollRef} className="sidebar-project-tree" onScroll={handleListScroll}>
+        <div
+          ref={listScrollRef}
+          className="sidebar-project-tree"
+          role="tree"
+          aria-label={t("sidebar.projects")}
+          onScroll={handleListScroll}
+        >
           {recentSessions.length > 0 && (
             <section className="sidebar-recent-section" aria-label={t(hasTodaySessions ? "sidebar.today" : "sidebar.recent")}>
               <div className="sidebar-project-tree-header sidebar-recent-header">
@@ -1664,7 +1752,6 @@ function SessionItem({
   // Coarse pointers have no hover: the "…" action menu must be permanently
   // visible there, otherwise rename/delete are unreachable on touch.
   const [touchMode, setTouchMode] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
   // Downstream hook (extensions/desktop) may claim the row's context menu;
   // when it handles the event the built-in menu never opens.
   const [renaming, setRenaming] = useState(false);
@@ -1673,6 +1760,7 @@ function SessionItem({
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [treeFocused, setTreeFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -1702,9 +1790,13 @@ function SessionItem({
     setRenaming(true);
   }, [session.name, session.transient]);
 
+  const beginDeleteConfirmation = useCallback(() => {
+    if (session.transient) return;
+    setConfirmDelete(true);
+  }, [session.transient]);
+
   const reportActionError = useCallback((message: string) => {
-    setActionError(message);
-    window.setTimeout(() => setActionError((current) => current === message ? null : current), 3500);
+    appNotify.error({ message });
   }, []);
 
   const commitRename = useCallback(async () => {
@@ -1758,7 +1850,7 @@ function SessionItem({
     setMenuOpen(true);
     const shown = await showNativeMenu([
       { label: t("sidebar.rename"), onSelect: startRename },
-      { label: t("sidebar.delete"), onSelect: () => setConfirmDelete(true) },
+      { label: t("sidebar.delete"), onSelect: beginDeleteConfirmation },
       { kind: "separator" },
       {
         label: `${formatRelativeTime(session.modified, locale)} · ${t("sidebar.messagesCount", { count: session.messageCount })}`,
@@ -1771,7 +1863,7 @@ function SessionItem({
     ], at);
     setMenuOpen(false);
     return shown;
-  }, [locale, session.compactionCount, session.messageCount, session.modified, session.transient, session.worktreeBranch, startRename, t]);
+  }, [beginDeleteConfirmation, locale, session.compactionCount, session.messageCount, session.modified, session.transient, session.worktreeBranch, startRename, t]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const handled = dispatchSessionRowContextMenu({
@@ -1856,7 +1948,25 @@ function SessionItem({
   return (
     <div
       className={`session-item${isSelected ? " is-selected" : ""}${isRunning ? " is-running" : ""}${isUnread ? " is-unread" : ""}`}
+      data-sidebar-tree-row
+      tabIndex={0}
+      role="treeitem"
+      aria-selected={isSelected}
+      onBlur={() => setTreeFocused(false)}
       onClick={confirmDelete || renaming ? undefined : onClick}
+      onKeyDown={(e) => handleSidebarTreeKeyDown(e, {
+        activate: () => {
+          if (!confirmDelete && !renaming) onClick();
+        },
+        expand: () => {
+          if (hasChildren && collapsed) onToggleCollapse?.();
+        },
+        collapse: () => {
+          if (hasChildren && !collapsed) onToggleCollapse?.();
+        },
+        rename: startRename,
+        requestDelete: beginDeleteConfirmation,
+      })}
       onContextMenu={confirmDelete || renaming ? undefined : handleContextMenu}
       onMouseEnter={() => {
         setHovered(true);
@@ -1865,6 +1975,7 @@ function SessionItem({
       onPointerDown={() => {
         if (!isRunning && !isSelected) prefetchSessionData(session.id);
       }}
+      onFocus={() => setTreeFocused(true)}
       onMouseLeave={() => { setHovered(false); }}
       style={{
         height: SESSION_LIST_ITEM_HEIGHT,
@@ -1875,7 +1986,7 @@ function SessionItem({
         cursor: confirmDelete || renaming ? "default" : "pointer",
         background: confirmDelete
           ? "color-mix(in srgb, var(--danger) 6%, transparent)"
-          : isSelected ? "var(--bg-selected)" : (hovered || menuOpen) ? "var(--bg-hover)" : "transparent",
+          : isSelected ? "var(--bg-selected)" : (hovered || treeFocused || menuOpen) ? "var(--bg-hover)" : "transparent",
         borderLeft: confirmDelete
           ? "2px solid var(--danger)"
           : isSelected ? "2px solid var(--accent)" : "2px solid transparent",
@@ -2028,7 +2139,7 @@ function SessionItem({
                 width: 28, height: 24, flexShrink: 0,
               }}
             >
-              {hovered || touchMode || menuOpen ? (
+              {hovered || treeFocused || touchMode || menuOpen ? (
                 <button
                   ref={menuButtonRef}
                   onClick={toggleMenu}
@@ -2137,24 +2248,6 @@ function SessionItem({
             document.body,
           )}
 
-          {actionError && createPortal(
-            <div
-              role="alert"
-              style={{
-                position: "fixed", bottom: 26, left: "50%", transform: "translateX(-50%)",
-                zIndex: 1000, maxWidth: "80vw",
-                background: "color-mix(in srgb, var(--bg-panel) 94%, #000)",
-                color: "var(--danger)",
-                border: "var(--hairline) solid color-mix(in srgb, var(--danger) 35%, transparent)",
-                padding: "8px 14px", borderRadius: 8, fontSize: 12,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {actionError}
-            </div>,
-            document.body,
-          )}
         </>
       )}
     </div>

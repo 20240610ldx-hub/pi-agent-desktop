@@ -24,10 +24,17 @@ test("keeps the project-tree sidebar without an inline explorer section", () => 
   assert.doesNotMatch(source, /data-resize-handle="sidebar-sections"/);
 });
 
-test("does not register row-level session deletion shortcuts", () => {
-  assert.doesNotMatch(sessionItemSource, /const handleKeyDown/);
-  assert.doesNotMatch(sessionItemSource, /onKeyDown=\{handleKeyDown\}/);
-  assert.doesNotMatch(sessionItemSource, /tabIndex=\{0\}/);
+test("the sidebar tree supports row-level keyboard navigation", () => {
+  assert.match(source, /role="tree"/);
+  assert.match(source, /data-sidebar-tree-row/);
+  assert.match(source, /case "ArrowDown":[\s\S]*?focusSidebarTreeRow\(current, 1\)/);
+  assert.match(source, /case "ArrowUp":[\s\S]*?focusSidebarTreeRow\(current, -1\)/);
+  assert.match(source, /case "Home":[\s\S]*?focusSidebarTreeRow\(current, "first"\)/);
+  assert.match(source, /case "End":[\s\S]*?focusSidebarTreeRow\(current, "last"\)/);
+  assert.match(sessionItemSource, /role="treeitem"/);
+  assert.match(sessionItemSource, /aria-selected=\{isSelected\}/);
+  assert.match(sessionItemSource, /requestDelete: beginDeleteConfirmation/);
+  assert.match(sessionItemSource, /rename: startRename/);
 });
 
 test("streams running sessions and reconnects after visibility or network changes", () => {
@@ -146,10 +153,11 @@ test("the project context menu reveals the project in the OS file manager", asyn
 });
 
 test("session rows swap a compact time for the action button in one fixed-width slot", () => {
-  // At rest the row shows its last-activity time; hover, touch and an open
-  // menu show the "…" button in the same slot so the title never reflows.
+  // At rest the row shows its last-activity time; hover, keyboard focus,
+  // touch and an open menu show the "…" button in the same slot so the title
+  // never reflows.
   assert.match(sessionItemSource, /className="session-item-trailing"/);
-  assert.match(sessionItemSource, /hovered \|\| touchMode \|\| menuOpen \?/);
+  assert.match(sessionItemSource, /hovered \|\| treeFocused \|\| touchMode \|\| menuOpen \?/);
   assert.match(sessionItemSource, /formatCompactRelativeTime\(session\.modified, locale\)/);
   // Transient runtime rows have neither actions nor a reliable time.
   assert.match(sessionItemSource, /\{!session\.transient && \(\s*<div\s+className="session-item-trailing"/);

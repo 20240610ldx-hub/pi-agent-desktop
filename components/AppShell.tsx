@@ -9,6 +9,7 @@ import { useNativeAppMenu } from "@/hooks/useNativeAppMenu";
 import { selectProjectDirectoryNative } from "./ProjectPicker";
 import { SessionSidebar } from "./SessionSidebar";
 import { ChatWindow } from "./ChatWindow";
+import { AppNoticeShelf } from "./AppNoticeShelf";
 import { useScheduledRunNotifications } from "@/hooks/useScheduledRunNotifications";
 import type { ChatScrollPosition } from "@/lib/chat-scroll-position";
 import { clearDraft } from "@/lib/draft-store";
@@ -254,6 +255,8 @@ export function AppShell() {
   const topMoreRef = useRef<HTMLDivElement>(null);
   const topMoreMenuRef = useRef<HTMLDivElement>(null);
   const [topMorePos, setTopMorePos] = useState<{ top: number; right: number } | null>(null);
+  const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
+  const shortcutHelpDialogRef = useRef<HTMLDivElement | null>(null);
   const [projectTrust, setProjectTrust] = useState<ProjectTrustStatus | null>(null);
   const [projectTrustDialogOpen, setProjectTrustDialogOpen] = useState(false);
   const [projectTrustBusy, setProjectTrustBusy] = useState(false);
@@ -1123,19 +1126,65 @@ export function AppShell() {
     setSettingsSection(getLastSettingsSection(selectedSession?.cwd ?? newSessionCwd ?? activeCwd));
   }, [activeCwd, closeSettingsMenu, newSessionCwd, selectedSession]);
 
+  const toggleShortcutHelp = useCallback(() => {
+    setShortcutHelpOpen((open) => {
+      if (!open) {
+        closeSettingsMenu();
+        setActiveTopPanel(null);
+        setTopMoreOpen(false);
+      }
+      return !open;
+    });
+  }, [closeSettingsMenu]);
+
   // The native macOS menu is the only reliable route when the webview has no
   // focused element. Route its custom items back through the same app state.
   useNativeAppMenu(handleNativeMenuAction);
 
   // Global keyboard shortcuts (handles Esc, Ctrl+Alt+N etc.)
   useGlobalKeyboardShortcuts({
-    onNewSession: (cwd: string) => handleNewSession(`kb-${Date.now()}`, cwd),
+    onNewSession: settingsSection || shortcutHelpOpen
+      ? undefined
+      : (cwd: string) => handleNewSession(`kb-${Date.now()}`, cwd),
     activeCwd,
     // Only while open: a closed panel must leave \ and focus alone.
-    onCloseRightPanel: rightPanelOpen ? handleRightPanelClose : undefined,
+    onCloseRightPanel: rightPanelOpen && !shortcutHelpOpen ? handleRightPanelClose : undefined,
     // Already open: leave it where it is.
     onOpenSettings: settingsSection ? undefined : openSettingsAtLastSection,
+    onShortcutHelp: settingsSection ? undefined : toggleShortcutHelp,
+    onToggleSidebar: settingsSection || shortcutHelpOpen ? undefined : handleSidebarToggle,
+    onFocusComposer: settingsSection || shortcutHelpOpen ? undefined : () => chatInputRef.current?.focus(),
   });
+
+  useEffect(() => {
+    if (!shortcutHelpOpen) return;
+    const dialog = shortcutHelpDialogRef.current;
+    const opener = document.activeElement;
+    dialog?.focus({ preventScroll: true });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        setShortcutHelpOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = dialog?.querySelectorAll<HTMLElement>(`
+        button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])
+      `);
+      if (!focusable?.length) return;
+      event.preventDefault();
+      const next = event.shiftKey ? focusable[focusable.length - 1] : focusable[0];
+      next.focus({ preventScroll: true });
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+      const focusable = opener as (Element & Partial<HTMLElement>) | null;
+      if (focusable?.isConnected && typeof focusable.focus === "function") {
+        focusable.focus({ preventScroll: true });
+      }
+    };
+  }, [shortcutHelpOpen]);
 
   // Client-built transient SessionInfo (new session / fork) lacks the
   // server-computed projectKey, which the same-project check in
@@ -1761,7 +1810,7 @@ export function AppShell() {
         onClick={handleRightPanelToggle}
         aria-controls="file-panel"
         aria-expanded={rightPanelOpen}
-        title={rightPanelOpen ? translate("workspace.hidePanel") : translate("workspace.showPanel")}
+        title={rightPanelOpen ? translate("workspace.hidePanelHint") : translate("workspace.showPanel")}
         aria-label={rightPanelOpen ? translate("workspace.hidePanel") : translate("workspace.showPanel")}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -2697,6 +2746,50 @@ export function AppShell() {
         className={`right-panel-overlay-backdrop${rightPanelOpen ? " is-open" : ""}`}
         onClick={handleRightPanelClose}
       />
+      {shortcutHelpOpen && createPortal(
+        <div
+          className="shortcut-help-backdrop"
+          onClick={toggleShortcutHelp}
+        >
+          <div
+            className="shortcut-help-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label={translate("shortcutHelp.title")}
+            tabIndex={-1}
+            ref={shortcutHelpDialogRef}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="shortcut-help-header">
+              <strong>{translate("shortcutHelp.title")}</strong>
+              <button
+                type="button"
+                className="file-workbench-icon-button"
+                onClick={toggleShortcutHelp}
+                aria-label={translate("i18n.close")}
+                title={translate("i18n.close")}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </header>
+            <dl className="shortcut-help-list">
+              <div><dt><kbd>Esc</kbd></dt><dd>{translate("shortcutHelp.stop")}</dd></div>
+              <div><dt><kbd>⌘/Ctrl+N</kbd></dt><dd>{translate("shortcutHelp.newSession")}</dd></div>
+              <div><dt><kbd>⌘/Ctrl+,</kbd></dt><dd>{translate("shortcutHelp.settings")}</dd></div>
+              <div><dt><kbd>⌘/Ctrl+/</kbd></dt><dd>{translate("shortcutHelp.help")}</dd></div>
+              <div><dt><kbd>⌘/Ctrl+\</kbd></dt><dd>{translate("shortcutHelp.hideWorkspace")}</dd></div>
+              <div><dt><kbd>⌘/Ctrl+B</kbd></dt><dd>{translate("shortcutHelp.toggleSidebar")}</dd></div>
+              <div><dt><kbd>⌘/Ctrl+L</kbd></dt><dd>{translate("shortcutHelp.focusComposer")}</dd></div>
+              <div><dt><kbd>⌘/Ctrl+Enter</kbd></dt><dd>{translate("shortcutHelp.send")}</dd></div>
+              <div><dt><kbd>↑</kbd></dt><dd>{translate("shortcutHelp.inputHistory")}</dd></div>
+              <div><dt><kbd>Tab / →</kbd></dt><dd>{translate("shortcutHelp.acceptCompletion")}</dd></div>
+            </dl>
+          </div>
+        </div>,
+        document.body,
+      )}
       {rightPanelOpen && (
         <div
           {...rightPanelResizer.separatorProps}
@@ -2820,8 +2913,9 @@ export function AppShell() {
             onClick={handleRightPanelClose}
             aria-controls="file-panel"
             aria-expanded={rightPanelOpen}
-            title={translate("workspace.hidePanel")}
-            aria-label={translate("workspace.hidePanel")}
+            aria-keyshortcuts="Meta+\\ Control+\\"
+          title={translate("workspace.hidePanelHint")}
+          aria-label={translate("workspace.hidePanel")}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -3013,6 +3107,7 @@ export function AppShell() {
     )}
     <UpdateReminder onOpenSettings={() => setSettingsSection("general")} />
     <DomContextMenuHost />
+    <AppNoticeShelf />
     </div>
     </>
   );

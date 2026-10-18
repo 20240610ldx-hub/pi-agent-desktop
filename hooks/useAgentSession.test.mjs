@@ -202,7 +202,10 @@ test("forking stays available during a run while in-session branch switches wait
   // Fork copies into a new file, so only a shell command blocks it; the
   // in-session edit still waits because pi refuses navigate_tree mid-run.
   assert.match(chatWindowSource, /onFork=\{bashRunning \|\| isNew \? undefined : handleFork\}/);
-  assert.match(chatWindowSource, /onEditContent=\{sessionBusy \? undefined : handleEditContent\}/);
+  assert.match(chatWindowSource, /onEditContent=\{handleEditContent\}/);
+  assert.match(chatWindowSource, /editDisabled=\{sessionBusy\}/);
+  assert.match(messageViewSource, /disabled=\{editBlocked\}/);
+  assert.match(messageViewSource, /t\("i18n\.editFromHereBusyTitle"\)/);
   assert.match(chatWindowSource, /onAskInNewChat && quotedSelection\.sourceEntryId && !bashRunning &&/);
   assert.match(forkSource, /addNotice\(\{ type: "error", message:/);
 

@@ -1353,7 +1353,8 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                     searchBlock={entryIds[idx] === pendingSearchScroll?.entryId ? searchBlock : undefined}
                     onFork={bashRunning || isNew ? undefined : handleFork}
                     forking={forkingEntryId === entryIds[idx]}
-                    onEditContent={sessionBusy ? undefined : handleEditContent}
+                    onEditContent={handleEditContent}
+                    editDisabled={sessionBusy}
                     onCancelEdit={cancelEdit}
                     isEditing={editEntryId === entryIds[idx]}
                     showTimestamp={showTimestamp}

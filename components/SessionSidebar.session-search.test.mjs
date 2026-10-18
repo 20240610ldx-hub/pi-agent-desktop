@@ -19,7 +19,13 @@ test("the sidebar mounts the content-search wrapper around the project tree", ()
   assert.match(source, /query=\{sessionQuery\}/);
   assert.match(source, /onSelectSession=\{handleSelectSessionFromList\}/);
   // The tree must stay the wrapper's child, not a sibling the results replace.
-  assert.match(source, /<SessionSearch[\s\S]{0,400}?<div ref=\{listScrollRef\} className="sidebar-project-tree" onScroll=\{handleListScroll\}>/);
+  const treeStart = source.indexOf("<SessionSearch");
+  const treeEnd = source.indexOf("onScroll={handleListScroll}", treeStart);
+  const treeMarkup = source.slice(treeStart, treeEnd);
+  assert.match(treeMarkup, /ref=\{listScrollRef\}/);
+  assert.match(treeMarkup, /className="sidebar-project-tree"/);
+  assert.match(treeMarkup, /role="tree"/);
+  assert.match(treeMarkup, /aria-label=\{t\("sidebar\.projects"\)\}/);
 });
 
 test("the search row confirms content search with Enter, not a mode button", () => {
