@@ -2412,13 +2412,21 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   // Let AgentSession.prompt decide atomically whether to queue against the
   // current run or start a new turn if it settled while the request was in
   // flight. Direct steer/followUp calls can strand a message in an idle queue.
+  // Bind callbacks to the render that exposed them: a delayed composer must
+  // never resolve its destination through another session's mutable ref.
+  const streamingSessionId = sessionIdRef.current;
+  const streamingSessionGeneration = sessionGenerationRef.current;
   const sendStreamingPrompt = useCallback(async (
     message: string,
     behavior: "steer" | "followUp",
     images?: AttachedImage[],
   ) => {
-    const sid = sessionIdRef.current;
+    const sid = streamingSessionId;
     const restore = () => restoreSubmission(message, images, composerDraftKey);
+    if (!sessionHookMountedRef.current || sessionGenerationRef.current !== streamingSessionGeneration) {
+      restore();
+      return;
+    }
     // A pending history edit must branch when sent, never join the current run.
     if (editEntryId) {
       restore();
@@ -2448,7 +2456,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         message: e instanceof Error ? e.message : String(e),
       });
     }
-  }, [addNotice, composerDraftKey, editEntryId, restoreSubmission]);
+  }, [addNotice, composerDraftKey, editEntryId, restoreSubmission, streamingSessionGeneration, streamingSessionId]);
 
   const handleSteer = useCallback(async (message: string, images?: AttachedImage[]) => {
     await sendStreamingPrompt(message, "steer", images);

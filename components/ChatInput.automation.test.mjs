@@ -69,10 +69,11 @@ test("server supports the automation command set end to end", () => {
   assert.match(hook, /type: "set_steering_mode", mode: change\.steeringMode/);
 });
 
-test("narrow screens keep Stop one tap away while streaming", () => {
-  const block = source.slice(source.indexOf("Stop must stay one tap away"));
-  assert.ok(block.length > 0);
-  assert.match(block.slice(0, 1400), /isNarrow && isStreaming && !controlsMenuOpen/);
+test("streaming Stop stays in the editor instead of the collapsed narrow settings", () => {
+  const html = render({ isStreaming: true });
+  assert.match(html, /class="composer-primary-actions"[\s\S]*class="composer-abort-button"/);
+  assert.equal((html.match(/aria-label="Stop agent"/g) ?? []).length, 1);
+  assert.ok(html.indexOf('class="composer-abort-button"') < html.indexOf('class="chat-composer-controls"'));
 });
 
 test("tool preset control dims instead of vanishing while streaming", () => {

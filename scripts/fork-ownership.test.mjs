@@ -135,8 +135,8 @@ test("untouched and ignored files never trigger review", () => {
 
 test("the real v0.8.0 -> v0.8.1 changeset would have demanded review", () => {
   // Regression anchor: this is what upstream actually shipped in one patch
-  // release. Ten of these files now carry fork drift, including the models
-  // listing's credential factory and the directory navigation race fix. The previous
+  // release. Eleven of these files now carry fork drift, including the models
+  // credential factory, directory navigation and source-bound queue callbacks. The previous
   // push-straight-to-signed-release path was applying them unattended.
   // lib/directory-browser.ts is in both lists for a reason — v0.8.1 introduced
   // it, and its homedir() usage is what broke the Windows build.
@@ -161,7 +161,8 @@ test("the real v0.8.0 -> v0.8.1 changeset would have demanded review", () => {
 
   assert.equal(result.reviewRequired, true);
   assert.equal(result.highestRisk, "high");
-  assert.equal(result.overlaps.length, 10);
+  assert.equal(result.overlaps.length, 11);
+  assert.ok(result.overlaps.some((entry) => entry.path === "hooks/useAgentSession.ts"), "queued-message ownership must require upstream review");
   assert.equal(result.overlaps[0].risk, "high", "the riskiest overlap must be reported first");
   assert.match(formatReport(result), /silent semantic conflicts/);
 });

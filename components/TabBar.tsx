@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type MouseEvent } from "react";
 import { getFileIcon } from "./FileIcons";
 import { useI18n } from "@/hooks/useI18n";
+import { canUseNativeMenu, showNativeMenu, type NativeMenuEntry } from "@/lib/desktop-menu";
+import { openDomMenu } from "@/lib/dom-menu-store";
 import type { FileViewerDisplayMode, FileViewerState } from "@/lib/file-viewer-state";
 
 export interface Tab {
@@ -25,11 +27,23 @@ interface Props {
   onSelectTab: (id: string) => void;
   onCloseTab: (id: string) => void;
   onNewTerminal?: () => void;
+  onRestartTerminal?: (id: string) => void;
 }
 
-export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onNewTerminal }: Props) {
+export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onNewTerminal, onRestartTerminal }: Props) {
   const { t } = useI18n();
   const barRef = useRef<HTMLDivElement>(null);
+  const openTerminalMenu = async (event: MouseEvent, tab: Tab) => {
+    if (tab.kind !== "terminal") return;
+    event.preventDefault();
+    const at = { x: event.clientX, y: event.clientY };
+    const entries: NativeMenuEntry[] = [
+      { label: t("terminal.restart"), disabled: tab.closing, onSelect: () => onRestartTerminal?.(tab.id) },
+      { label: t("terminal.close"), disabled: tab.closing, onSelect: () => onCloseTab(tab.id) },
+    ];
+    if (canUseNativeMenu() && await showNativeMenu(entries, at)) return;
+    openDomMenu(entries, at);
+  };
 
   // Flag which edges have tabs scrolled past them; the CSS turns each flag
   // into a fade, so a tab sliding under the chips beside the bar dissolves
@@ -84,7 +98,7 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onNewTermin
         return (
           <div
             key={tab.id}
-            className={`file-tab${isActive ? " is-active" : ""}`}
+            className={`file-tab${tab.kind === "terminal" ? " is-terminal" : ""}${isActive ? " is-active" : ""}`}
             role="tab"
             aria-label={tab.kind === "terminal" ? t("terminal.tabLabel", { name: tab.label }) : tab.label}
             aria-selected={isActive}
@@ -106,6 +120,7 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onNewTermin
               }
             }}
             onClick={() => onSelectTab(tab.id)}
+            onContextMenu={(event) => { void openTerminalMenu(event, tab); }}
             onMouseDown={(event) => {
               if (event.button === 1) event.preventDefault();
             }}

@@ -54,7 +54,7 @@ test("topbar sits in the main column after the sidebar (sidebar runs full height
   // closes means the panel slid back under the topbar inside the main column.
   const panelIdx = source.indexOf("right-panel-container");
   const tail = source.slice(panelIdx);
-  const nesting = tail.indexOf("          )}\n      </div>\n      </div>\n    </div>\n    {settingsSection");
+  const nesting = tail.indexOf("        />\n      </div>\n    </div>\n    {settingsSection");
   assert.ok(nesting !== -1, "panel close must be followed by outer row, then shell close");
 });
 

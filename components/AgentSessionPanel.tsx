@@ -297,7 +297,7 @@ export function AgentSessionPanel({ rootSession, subagents, selectedSessionId, r
             {controlError}
           </div>
         )}
-        {subagents.length > 8 && (
+        {(subagents.length > 8 || query.length > 0) && (
           <div style={{ padding: 8, borderBottom: "var(--hairline) solid var(--border)" }}>
             <input
               type="search"

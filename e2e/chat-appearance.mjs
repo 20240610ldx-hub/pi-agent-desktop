@@ -44,6 +44,46 @@ export async function checkChatAppearanceReset(page) {
   assert.equal(await resetFontSize.isDisabled(), true);
 }
 
+export async function checkComposerGeometry(page) {
+  const textarea = page.locator(".chat-input-textarea");
+  const draft = await textarea.inputValue();
+  try {
+    for (const value of ["", "A single line", "First line\nSecond line\nThird line"]) {
+      await textarea.fill(value);
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const geometry = await textarea.evaluate((input) => {
+        const composer = input.closest(".chat-composer");
+        const action = composer.querySelector(".composer-send-button, .composer-abort-button");
+        const card = composer.getBoundingClientRect();
+        const text = input.getBoundingClientRect();
+        const button = action.getBoundingClientRect();
+        const style = getComputedStyle(input);
+        const lineHeight = Number.parseFloat(style.lineHeight);
+        return {
+          height: card.height,
+          font: style.fontSize,
+          lineHeight,
+          actionCenter: button.y + button.height / 2,
+          lastLineCenter: text.bottom - Number.parseFloat(style.paddingBottom) - lineHeight / 2,
+          cardCenter: card.y + card.height / 2,
+          attachBelow: composer.parentElement.querySelector(".composer-attach-button").getBoundingClientRect().top >= card.bottom,
+        };
+      });
+      assert.ok(Math.abs(geometry.actionCenter - geometry.lastLineCenter) <= 0.6, "Send/Stop must align to the last text row");
+      assert.equal(geometry.attachBelow, true, "Attach must stay below the input card");
+      if (!value.includes("\n")) {
+        assert.ok(Math.abs(geometry.height - 48) <= 0.1, "The user-selected 3p single-line calibration stays 48 CSS px");
+        assert.ok(Math.abs(geometry.actionCenter - geometry.cardCenter) <= 0.6, "The single-line action must be centered in the card");
+      } else {
+        assert.ok(geometry.height > 48, "Multiple lines must grow the card");
+        assert.ok(geometry.actionCenter > geometry.cardCenter + geometry.lineHeight / 2, "Multiline actions follow the bottom row");
+      }
+    }
+  } finally {
+    await textarea.fill(draft);
+  }
+}
+
 export async function checkChatAppearance(page) {
   await page.setViewportSize({ width: 2560, height: 1100 });
   const textarea = page.locator(".chat-input-textarea");
@@ -117,6 +157,7 @@ export async function checkChatAppearance(page) {
   await closeSettings();
   assert.equal(await font(userMessage), "14px");
   await checkFixedTypography();
+  await checkComposerGeometry(page);
   const mediumCodeSize = Number.parseFloat(await font(code));
   const draft = "Existing drafts resize when the available width changes, while the composer font stays fixed. ".repeat(6);
   await textarea.fill(draft);
@@ -196,6 +237,7 @@ export async function checkChatAppearance(page) {
   await closeSettings();
   assert.equal(await font(textarea), "16px", "Mobile inputs retain the focus-zoom minimum");
   assert.equal(await font(userMessage), "13px");
+  await checkComposerGeometry(page);
   const mobileDraft = "A mobile draft wraps and resizes within the available space.";
   await textarea.fill(mobileDraft);
   const mobileHeight = await fittedHeight();

@@ -16,6 +16,7 @@ export interface DomMenuState {
   entries: NativeMenuEntry[];
   /** Viewport coordinates (the right-click position). */
   at: { x: number; y: number };
+  appearance?: "terminal";
 }
 
 type Listener = () => void;
@@ -40,9 +41,9 @@ export function domMenuEntries(entries: NativeMenuEntry[]): NativeMenuEntry[] {
   return out;
 }
 
-export function openDomMenu(entries: NativeMenuEntry[], at: { x: number; y: number }): void {
+export function openDomMenu(entries: NativeMenuEntry[], at: { x: number; y: number }, appearance?: "terminal"): void {
   const tidy = domMenuEntries(entries);
-  current = tidy.length > 0 ? { id: ++sequence, entries: tidy, at } : null;
+  current = tidy.length > 0 ? { id: ++sequence, entries: tidy, at, ...(appearance ? { appearance } : {}) } : null;
   emit();
 }
 

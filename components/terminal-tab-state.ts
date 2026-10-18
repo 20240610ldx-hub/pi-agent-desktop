@@ -7,6 +7,10 @@ export interface TerminalTab {
 
 export const TERMINAL_TABS_KEY = "pi-web:terminal-tabs";
 
+export function resolveActiveTerminalTabId(tabs: TerminalTab[], requestedId: string | null): string | null {
+  return tabs.some((tab) => tab.id === requestedId) ? requestedId : tabs.at(-1)?.id ?? null;
+}
+
 export function newTerminalTab(cwd: string): TerminalTab {
   const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("");
   return { id, cwd };
@@ -19,7 +23,7 @@ export function restoreTerminalTabs(raw: string | null): { tabs: TerminalTab[]; 
     for (const tab of Array.isArray(saved?.tabs) ? saved.tabs : []) {
       if (tab && typeof tab.id === "string" && /^[a-f0-9]{32}$/.test(tab.id)
         && typeof tab.cwd === "string" && tab.cwd.trim()
-        && !tabs.some((existing) => existing.id === tab.id || existing.cwd === tab.cwd)) {
+        && !tabs.some((existing) => existing.id === tab.id)) {
         tabs.push({ id: tab.id, cwd: tab.cwd, restored: true });
       }
     }

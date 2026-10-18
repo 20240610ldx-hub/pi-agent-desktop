@@ -45,12 +45,34 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
   useLayoutEffect(() => {
     const container = paneRef.current?.parentElement;
     if (!container) return;
-    const update = () => setPresentation(getContextPresentation({ availableWidth: container.clientWidth, viewportWidth: window.innerWidth, rightPanelOpen, rightPanelFullWidth }));
-    update();
+    let composer: HTMLElement | null = null;
+    let composerAncestors: HTMLElement[] = [];
+    const update = () => {
+      const nextComposer = container.querySelector<HTMLElement>(".chat-input-shell");
+      if (nextComposer !== composer) {
+        for (const element of composerAncestors) observer.unobserve(element);
+        composer = nextComposer;
+        composerAncestors = [];
+        // Extension widgets below the editor can move it without resizing it.
+        for (let element = composer; element && element !== container; element = element.parentElement) {
+          composerAncestors.push(element);
+          observer.observe(element);
+        }
+      }
+      setPresentation(getContextPresentation({ availableWidth: container.clientWidth, viewportWidth: window.innerWidth, rightPanelOpen, rightPanelFullWidth }));
+      const bounds = container.getBoundingClientRect();
+      const composerTop = composer?.getBoundingClientRect().top ?? bounds.bottom;
+      paneRef.current?.style.setProperty("--context-available-height", `${Math.max(0, Math.min(bounds.height, composerTop - bounds.top - 8))}px`);
+    };
     const observer = new ResizeObserver(update);
+    const children = new MutationObserver(() => {
+      if (composer !== container.querySelector(".chat-input-shell")) update();
+    });
+    update();
     observer.observe(container);
+    children.observe(container, { childList: true, subtree: true });
     window.addEventListener("resize", update);
-    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
+    return () => { observer.disconnect(); children.disconnect(); window.removeEventListener("resize", update); };
   }, [rightPanelOpen, rightPanelFullWidth]);
   useLayoutEffect(() => {
     if (presentation !== "modal" && presentation !== "floating") return;
@@ -113,6 +135,7 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
       <details className="pilaude-context-card" open>
         <summary>{t("session.context")}<PilaudeIcon name="chevron" size={14} /></summary>
         <div className="pilaude-context-card-body">
+          {used == null ? <p className="pilaude-context-empty">{t("pilaude.contextEmpty")}</p> : <>
           <button className="pilaude-context-usage" onClick={() => open(onOpenContext)}>
             <span>{used == null ? "—" : `${used.toFixed(0)}%`} {t("pilaude.contextUsed")}</span>
             <small>{shortCount(context?.tokens)} / {shortCount(context?.contextWindow)}</small>
@@ -123,6 +146,7 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
           <div className="pilaude-token-row"><i style={{ background: "#a5a59a" }} /><span>{t("pilaude.messages")}</span><small>{shortCount(stats?.totalMessages)}</small></div>
           <button className="pilaude-context-link" onClick={() => open(onOpenContext)}><PilaudeIcon name="chevron" size={14} /><span>{t("session.toolCalls")}</span><small>{shortCount(stats?.toolCalls)}</small></button>
           <button className="pilaude-context-link" onClick={() => open(onOpenTools)}><PilaudeIcon name="chevron" size={14} /><span>{t("pilaude.availableTools")}</span><small>{shortCount(toolCount)}</small></button>
+          </>}
         </div>
       </details>
       <button className="pilaude-context-card pilaude-context-card-action" onClick={() => open(onOpenConnectors)}><span>{t("pilaude.connectors")}</span><PilaudeIcon name="chevron" size={14} /></button>

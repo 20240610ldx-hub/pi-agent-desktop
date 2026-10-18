@@ -10,7 +10,7 @@ export type NativeMenuEntry =
       checked?: boolean;
     }
   | { kind: "separator" }
-  | { kind: "submenu"; label: string; items: NativeMenuEntry[]; disabled?: boolean }
+  | { kind: "submenu"; label: string; detail?: string; items: NativeMenuEntry[]; disabled?: boolean }
   | {
       kind: "predefined";
       item: "Copy" | "Cut" | "Paste" | "SelectAll" | "Undo" | "Redo";
@@ -52,7 +52,7 @@ export function toPopupSpec(entries: NativeMenuEntry[]): {
           out.push({ kind: "predefined", item: entry.item, ...(entry.label ? { text: entry.label } : {}) });
           break;
         case "submenu":
-          out.push({ kind: "submenu", text: entry.label, enabled: !entry.disabled, items: convert(entry.items) });
+          out.push({ kind: "submenu", text: entry.detail ? `${entry.label}\t${entry.detail}` : entry.label, enabled: !entry.disabled, items: convert(entry.items) });
           break;
         default: {
           const id = String(next++);

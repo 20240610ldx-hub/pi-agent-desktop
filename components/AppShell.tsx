@@ -17,6 +17,10 @@ import { useScheduledRunNotifications } from "@/hooks/useScheduledRunNotificatio
 import type { ChatScrollPosition } from "@/lib/chat-scroll-position";
 import { clearDraft, getDraft, setDraft } from "@/lib/draft-store";
 import { TabBar, type Tab } from "./TabBar";
+import { TerminalSettingsMenu } from "./TerminalSettingsMenu";
+import { WorkspacePaneDock } from "./WorkspacePaneDock";
+import { WorkspacePaneControls, type WorkspacePaneId } from "./WorkspacePaneControls";
+import { normalizeWorkspacePaneLayout } from "@/lib/workspace-pane-layout";
 
 // Heavy, rarely-used surfaces are code-split out of the main bundle. The
 // config modals may never be opened at all; FileViewer drags in markdown +
@@ -35,7 +39,7 @@ import { UpdateReminder } from "./UpdateReminder";
 import { useTheme } from "@/hooks/useTheme";
 import { useI18n } from "@/hooks/useI18n";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { APP_PREF_KEYS, getPrefBool, getPrefJson, setPref } from "@/lib/app-prefs";
+import { APP_PREF_KEYS, getPrefBool, getPrefJson, setPref, setPrefJson } from "@/lib/app-prefs";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import { useResizablePanel } from "@/hooks/useResizablePanel";
 import { useDesktopConnection } from "@/lib/desktop-connection";
@@ -57,7 +61,7 @@ import { WindowControls, useDesktopChrome, useWindowDrag } from "./desktop";
 import { SystemPromptPanel } from "./SystemPromptPanel";
 import { ToolDefinitionsPanel } from "./ToolDefinitionsPanel";
 import { AgentSessionPanel } from "./AgentSessionPanel";
-import { newTerminalTab, restoreTerminalTabs, TERMINAL_TABS_KEY, type TerminalTab } from "./terminal-tab-state";
+import { newTerminalTab, restoreTerminalTabs, resolveActiveTerminalTabId, TERMINAL_TABS_KEY, type TerminalTab } from "./terminal-tab-state";
 import { artifactPanelTab, artifactTabId, artifactTabsForSession, upsertArtifactTab, type ArtifactTab } from "./artifact-tabs";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { setArtifactOpener, useArtifactTitles } from "@/lib/artifact-store";
@@ -677,23 +681,57 @@ export function AppShell() {
     return () => ro.disconnect();
   }, [activeTopPanel]);
 
-  // Files unmount when inactive; workspace terminals stay mounted until closed.
+  // Files mount only their active viewer; every terminal keeps its own stable host.
   const [fileTabs, setFileTabs] = useState<Tab[]>([]);
   const [activeFileTabId, setActiveFileTabId] = useState<string | null>(null);
   const [terminalTabs, setTerminalTabs] = useState<TerminalTab[]>([]);
+  const [requestedActiveTerminalTabId, setActiveTerminalTabId] = useState<string | null>(null);
+  const activeTerminalTabId = resolveActiveTerminalTabId(terminalTabs, requestedActiveTerminalTabId);
   const [terminalsRestored, setTerminalsRestored] = useState(false);
+  const [openPanes, setOpenPanes] = useState<Record<WorkspacePaneId, boolean>>({ files: true, terminal: false, tasks: false });
+  const [paneRevealRequest, setPaneRevealRequest] = useState<{ id: WorkspacePaneId } | null>(null);
+  const [workspacePanesRestored, setWorkspacePanesRestored] = useState(false);
+  useEffect(() => {
+    const layout = normalizeWorkspacePaneLayout(getPrefJson(APP_PREF_KEYS.workspacePaneLayout));
+    const ids = layout.columns.flatMap((column) => column.paneIds);
+    if (ids.length) setOpenPanes({ files: ids.includes("files"), terminal: ids.includes("terminal"), tasks: ids.includes("tasks") });
+    const visibility = getPrefJson(APP_PREF_KEYS.workspacePaneVisibility);
+    if (visibility === true && ids.length) setRightPanelOpen(true);
+    setWorkspacePanesRestored(true);
+  }, []);
+  useEffect(() => {
+    if (workspacePanesRestored) setPrefJson(APP_PREF_KEYS.workspacePaneVisibility, rightPanelOpen);
+  }, [rightPanelOpen, workspacePanesRestored]);
   const [artifactTabs, setArtifactTabs] = useState<ArtifactTab[]>([]);
-  // artifactPanelTab reads each tab's newest title; this re-renders when one changes.
+  // Artifacts continue to share the Files workbench; they are not a fourth pane.
   useArtifactTitles(artifactTabs);
-  const panelTabs: Tab[] = [...fileTabs, ...terminalTabs.map((tab) => ({
+  const filesPaneTabs: Tab[] = [...fileTabs, ...artifactTabs.map(artifactPanelTab)];
+  const terminalPaneTabs: Tab[] = terminalTabs.map((tab) => ({
     id: tab.id,
-    label: getFileName(tab.cwd) || tab.cwd,
+    label: translate("terminal.title"),
     filePath: tab.cwd,
     kind: "terminal" as const,
     closing: Boolean(tab.closing),
-  })), ...artifactTabs.map(artifactPanelTab)];
-  const panelTabCount = panelTabs.length;
+  }));
+  const activeTerminalTab = terminalTabs.find((tab) => tab.id === activeTerminalTabId) ?? null;
+  const panelTabCount = filesPaneTabs.length + terminalPaneTabs.length;
   const activeArtifactTab = artifactTabs.find((tab) => tab.id === activeFileTabId) ?? null;
+  const revealWorkspacePane = useCallback((id: WorkspacePaneId) => {
+    setPaneRevealRequest({ id });
+    setOpenPanes((panes) => ({ ...panes, [id]: true }));
+    setRightPanelOpen(true);
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
+  const hideWorkspacePane = useCallback((id: WorkspacePaneId) => {
+    setOpenPanes((panes) => ({ ...panes, [id]: false }));
+  }, []);
+  const toggleWorkspacePane = (id: WorkspacePaneId) => {
+    if (rightPanelOpen && openPanes[id]) hideWorkspacePane(id);
+    else {
+      if (id === "files" && !filesPaneTabs.length) setFileTreeOpen(true);
+      revealWorkspacePane(id);
+    }
+  };
   const handleRightPanelToggle = useCallback(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -703,19 +741,21 @@ export function AppShell() {
     setRightPanelOpen((open) => {
       // A manual open with no tab lands on the project file tree, not a mostly
       // empty "No file open" state.
+      if (!open && !Object.values(openPanes).some(Boolean)) setOpenPanes((panes) => ({ ...panes, files: true }));
       if (!open && panelTabCount === 0) setFileTreeOpen(true);
       if (open) setRightPanelExpanded(false);
       return !open;
     });
-  }, [isMobile, panelTabCount]);
+  }, [isMobile, openPanes, panelTabCount]);
 
   useEffect(() => {
     try {
       const saved = restoreTerminalTabs(window.sessionStorage.getItem(TERMINAL_TABS_KEY));
       setTerminalTabs(saved.tabs);
-      if (saved.activeId) {
-        setActiveFileTabId(saved.activeId);
-        setRightPanelOpen(saved.open);
+      setActiveTerminalTabId(saved.activeId ?? saved.tabs[0]?.id ?? null);
+      if (saved.open && saved.tabs.length) {
+        setOpenPanes((panes) => ({ ...panes, terminal: true }));
+        setRightPanelOpen(true);
       }
     } catch { /* storage is optional */ }
     setTerminalsRestored(true);
@@ -726,11 +766,11 @@ export function AppShell() {
     try {
       window.sessionStorage.setItem(TERMINAL_TABS_KEY, JSON.stringify({
         tabs: terminalTabs.map(({ id, cwd }) => ({ id, cwd })),
-        activeId: activeFileTabId,
-        open: rightPanelOpen,
+        activeId: activeTerminalTabId,
+        open: rightPanelOpen && openPanes.terminal,
       }));
     } catch { /* storage is optional */ }
-  }, [terminalTabs, activeFileTabId, rightPanelOpen, terminalsRestored]);
+  }, [terminalTabs, activeTerminalTabId, openPanes.terminal, rightPanelOpen, terminalsRestored]);
 
   const handleFileViewerStateChange = useCallback((
     tabId: string,
@@ -768,6 +808,7 @@ export function AppShell() {
 
   const initialSessionId = initialNavigation.sessionId;
   const [activeCwd, setActiveCwd] = useState<string | null>(null);
+  const terminalCwd = activeTerminalTab?.cwd ?? activeCwd;
   const activeProjectKeyRef = useRef<string | null>(null);
   // True once the initial ?session= URL param has been resolved (or confirmed absent)
   const [initialSessionRestored, setInitialSessionRestored] = useState<boolean>(() => !initialSessionId);
@@ -988,7 +1029,7 @@ export function AppShell() {
       setFileTabs([]);
       if (!activeFileTabId || activeFileTabId.startsWith("file:")) {
         setActiveFileTabId(null);
-        setRightPanelOpen(false);
+        if (!openPanes.terminal && !openPanes.tasks) setRightPanelOpen(false);
       }
       // Restore the workspace we switched to: its last open session, or keep
       // the default welcome page when none is remembered.
@@ -1000,7 +1041,7 @@ export function AppShell() {
     if (!scheduledOpenRef.current) {
       router.replace(typeof window !== "undefined" ? window.location.pathname : "/", { scroll: false });
     }
-  }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, newSessionCwd, router, selectedSession, restoreWorkspaceContext]);
+  }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, newSessionCwd, openPanes.terminal, openPanes.tasks, router, selectedSession, restoreWorkspaceContext]);
 
   const handleSelectSession = useCallback((session: SessionInfo, isRestore = false, entryId?: string, blockIndex?: number) => {
     // Picking a session means leaving Scheduled; a cold-start restore must not.
@@ -1019,7 +1060,7 @@ export function AppShell() {
       setFileTabs([]);
       if (!activeFileTabId || activeFileTabId.startsWith("file:")) {
         setActiveFileTabId(null);
-        setRightPanelOpen(false);
+        if (!openPanes.terminal && !openPanes.tasks) setRightPanelOpen(false);
       }
       setActiveTopPanel(null);
     }
@@ -1068,7 +1109,7 @@ export function AppShell() {
     } else if (!isRestore || new URLSearchParams(window.location.search).get("session") !== session.id) {
       router.replace(`?session=${encodeURIComponent(session.id)}`, { scroll: false });
     }
-  }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, router, isMobile, newSessionCwd, selectedSession]);
+  }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, router, isMobile, newSessionCwd, openPanes.terminal, openPanes.tasks, selectedSession]);
 
   const handleNewSession = useCallback((sessionId: string, cwd: string, restoreHistory = false) => {
     setScheduledOpen(false);
@@ -1158,6 +1199,7 @@ export function AppShell() {
     activeCwd,
     // Only while open: a closed panel must leave \ and focus alone.
     onCloseRightPanel: rightPanelOpen ? handleRightPanelClose : undefined,
+    onExpandRightPanel: rightPanelOpen ? handleRightPanelExpandToggle : undefined,
     // Already open: leave it where it is.
     onOpenSettings: settingsSection ? undefined : openSettingsAtLastSection,
   });
@@ -1424,10 +1466,8 @@ export function AppShell() {
       tabId,
     }));
     setActiveFileTabId(tabId);
-    setRightPanelOpen(true);
-    // On mobile the file panel is full-screen; close the drawer so it shows.
-    if (isMobile) setSidebarOpen(false);
-  }, [isMobile]);
+    revealWorkspacePane("files");
+  }, [revealWorkspacePane]);
 
   const [copiedSessionField, setCopiedSessionField] = useState<SessionCopyField | null>(null);
   const sessionCopyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1444,13 +1484,11 @@ export function AppShell() {
   }, [handleOpenFile, selectedSession?.id]);
 
   const handleOpenTerminal = useCallback((cwd: string) => {
-    const existing = terminalTabs.find((tab) => tab.cwd === cwd);
-    const tab = existing ?? newTerminalTab(cwd);
-    if (!existing) setTerminalTabs((tabs) => [...tabs, tab]);
-    setActiveFileTabId(tab.id);
-    setRightPanelOpen(true);
-    if (isMobile) setSidebarOpen(false);
-  }, [terminalTabs, isMobile]);
+    const tab = newTerminalTab(cwd);
+    setTerminalTabs((tabs) => [...tabs, tab]);
+    setActiveTerminalTabId(tab.id);
+    revealWorkspacePane("terminal");
+  }, [revealWorkspacePane]);
 
   // Message cards open artifacts through lib/artifact-store. An automatic open
   // (a streamed artifact just finished) is skipped on mobile, where the panel
@@ -1459,20 +1497,20 @@ export function AppShell() {
     if (request.auto && isMobile) return;
     setArtifactTabs((tabs) => upsertArtifactTab(tabs, request, Date.now()));
     setActiveFileTabId(artifactTabId(request.sessionId, request.identifier));
-    if (request.reveal !== false) setRightPanelOpen(true);
-  }), [isMobile]);
+    if (request.reveal !== false) revealWorkspacePane("files");
+  }), [isMobile, revealWorkspacePane]);
 
   const selectedSessionId = selectedSession?.id ?? null;
   // Read by the effect below without re-running it on every tab change.
-  const panelTabsRef = useRef({ fileTabs, terminalTabs });
+  const panelTabsRef = useRef({ fileTabs });
   useEffect(() => {
-    panelTabsRef.current = { fileTabs, terminalTabs };
+    panelTabsRef.current = { fileTabs };
   });
   useEffect(() => {
     setArtifactTabs((tabs) => artifactTabsForSession(tabs, selectedSessionId));
     setActiveFileTabId((current) => (
       current?.startsWith("artifact:") && !current.startsWith(`artifact:${selectedSessionId}:`)
-        ? panelTabsRef.current.fileTabs.at(-1)?.id ?? panelTabsRef.current.terminalTabs.at(-1)?.id ?? null
+        ? panelTabsRef.current.fileTabs.at(-1)?.id ?? null
         : current
     ));
   }, [selectedSessionId]);
@@ -1481,33 +1519,26 @@ export function AppShell() {
     const replacement = tab.closing === "restart" ? newTerminalTab(tab.cwd) : null;
     const remaining = terminalTabs.filter((item) => item.id !== tab.id);
     setTerminalTabs((tabs) => tabs.flatMap((item) => item.id !== tab.id ? [item] : replacement ? [replacement] : []));
-    setActiveFileTabId((current) => current !== tab.id ? current : replacement?.id ?? remaining.at(-1)?.id ?? fileTabs.at(-1)?.id ?? null);
-    if (!replacement && !remaining.length && !fileTabs.length && !artifactTabs.length) setRightPanelOpen(false);
+    setActiveTerminalTabId((current) => current !== tab.id ? current : replacement?.id ?? remaining.at(-1)?.id ?? null);
   };
 
+  const handleCloseTerminalTab = (tabId: string) => {
+    setTerminalTabs((tabs) => tabs.map((tab) => tab.id === tabId && !tab.closing ? { ...tab, closing: "close" } : tab));
+  };
   const handleCloseFileTab = useCallback((tabId: string) => {
     if (artifactTabs.some((tab) => tab.id === tabId)) {
       const remaining = artifactTabs.filter((tab) => tab.id !== tabId);
       setArtifactTabs(remaining);
-      setActiveFileTabId((cur) => cur !== tabId ? cur : remaining.at(-1)?.id ?? fileTabs.at(-1)?.id ?? terminalTabs.at(-1)?.id ?? null);
-      if (!remaining.length && !fileTabs.length && !terminalTabs.length) setRightPanelOpen(false);
+      setActiveFileTabId((cur) => cur !== tabId ? cur : remaining.at(-1)?.id ?? fileTabs.at(-1)?.id ?? null);
       return;
     }
-    if (terminalTabs.some((tab) => tab.id === tabId)) {
-      setTerminalTabs((tabs) => tabs.map((tab) => tab.id === tabId && !tab.closing ? { ...tab, closing: "close" } : tab));
-      return;
-    }
-    setFileTabs((prev) => {
-      const next = prev.filter((t) => t.id !== tabId);
-      if (next.length === 0 && terminalTabs.length === 0 && artifactTabs.length === 0) setRightPanelOpen(false);
-      return next;
-    });
+    setFileTabs((prev) => prev.filter((tab) => tab.id !== tabId));
     setActiveFileTabId((cur) => {
       if (cur !== tabId) return cur;
-      const remaining = fileTabs.filter((t) => t.id !== tabId);
-      return remaining.at(-1)?.id ?? terminalTabs.at(-1)?.id ?? artifactTabs.at(-1)?.id ?? null;
+      const remaining = fileTabs.filter((tab) => tab.id !== tabId);
+      return remaining.at(-1)?.id ?? artifactTabs.at(-1)?.id ?? null;
     });
-  }, [fileTabs, terminalTabs, artifactTabs]);
+  }, [fileTabs, artifactTabs]);
 
   const handleViewFullHistory = useCallback(() => {
     if (!selectedSession) return;
@@ -1544,6 +1575,13 @@ export function AppShell() {
   // While restoring initial session from URL, don't show the placeholder
   const showPlaceholder = initialSessionRestored && !showChat;
 
+  // File restore must not close a separately restored terminal workspace.
+  const restoreFilesPaneVisibility = useCallback((update: React.SetStateAction<boolean>) => {
+    if (update === true) {
+      setOpenPanes((panes) => ({ ...panes, files: true }));
+      setRightPanelOpen(true);
+    }
+  }, []);
   useDesktopWorkspaceTabs({
     desktopMode,
     initialSessionRestored,
@@ -1553,10 +1591,10 @@ export function AppShell() {
     showPlaceholder,
     fileTabs,
     activeFileTabId,
-    rightPanelOpen,
+    rightPanelOpen: rightPanelOpen && openPanes.files,
     setFileTabs,
     setActiveFileTabId,
-    setRightPanelOpen,
+    setRightPanelOpen: restoreFilesPaneVisibility,
   });
 
   const { workspaceAvailability, unavailableWorkspace, recheckWorkspace } = useWorkspaceAvailability(projectTrustCwd, setModelsRefreshKey);
@@ -1639,7 +1677,7 @@ export function AppShell() {
     setFileTreeNarrowSeen(fileTreeNarrow);
     setFileTreeNarrowOverride(false);
   }
-  const panelHasViewer = Boolean(activeFileTabId && panelTabs.some((tab) => tab.id === activeFileTabId));
+  const panelHasViewer = Boolean(activeFileTabId && filesPaneTabs.some((tab) => tab.id === activeFileTabId));
   const fileTreeAutoCollapsed = fileTreeNarrow && panelHasViewer && !fileTreeNarrowOverride;
   const fileTreeShown = fileTreeOpen && !fileTreeAutoCollapsed;
   const handleFileTreeToggle = () => {
@@ -1742,7 +1780,7 @@ export function AppShell() {
         onOpenArtifacts={() => {
           setArtifactShelfOpen(true);
           setActiveFileTabId(artifactTabs[0]?.id ?? null);
-          setRightPanelOpen(true);
+          revealWorkspacePane("files");
         }}
         scheduledOpen={scheduledOpen}
       />
@@ -2609,6 +2647,7 @@ export function AppShell() {
 
           {/* Windows/Linux controls stay in the chat topbar while the floating
               panel is a separate card; the topbar still owns the visible edge. */}
+          <WorkspacePaneControls openPanes={{ files: rightPanelOpen && openPanes.files, terminal: rightPanelOpen && openPanes.terminal, tasks: rightPanelOpen && openPanes.tasks }} onToggle={toggleWorkspacePane} />
           {showChat && <button type="button" className="native-icon-button" title={translate("terminal.newTerminal")} aria-label={translate("terminal.newTerminal")} onClick={() => { if (activeCwd) handleOpenTerminal(activeCwd); }} disabled={!activeCwd}><PilaudeIcon name="terminal" /></button>}
           {showChat && <button type="button" className="native-icon-button pilaude-context-toggle" title={translate("pilaude.contextPanel")} aria-label={translate("pilaude.contextPanel")} aria-pressed={contextDockOpen} onClick={() => setContextDockOpen(open => !open)}><PilaudeIcon name="context" /></button>}
           {(!rightPanelOpen || isMobile) && <WindowControls />}
@@ -2727,7 +2766,7 @@ export function AppShell() {
           onOpenTools={() => handleSystemInfoToggle("tools")}
           onOpenConnectors={() => openSettingsSection("mcp")}
           onClose={handleContextDockClose}
-          onOpenFiles={() => { setRightPanelOpen(true); setFileTreeOpen(true); setFileTreeNarrowOverride(true); }}
+          onOpenFiles={() => { revealWorkspacePane("files"); setFileTreeOpen(true); setFileTreeNarrowOverride(true); }}
         />
       )}
         </div>
@@ -2771,11 +2810,12 @@ export function AppShell() {
         />
       )}
 
-      {/* Right panel: local files, browser, or diff — width animated via CSS */}
+      {/* Workspace panes stay mounted in this full-height row sibling. */}
       <div
         ref={rightPanelResizer.panelRef}
         id="file-panel"
-        className={`right-panel-container${rightPanelOpen ? " right-panel-open" : " right-panel-closed"}${rightPanelFullWidth ? " right-panel-full-width" : ""}${rightPanelResizer.isResizing ? " right-panel-resizing" : ""}`}
+        inert={!rightPanelOpen}
+        className={`right-panel-container workspace-pane-workbench${rightPanelOpen ? " right-panel-open" : " right-panel-closed"}${rightPanelFullWidth ? " right-panel-full-width" : ""}${rightPanelResizer.isResizing ? " right-panel-resizing" : ""}`}
         style={{
           "--right-panel-width": `${rightPanelResizer.width}px`,
           display: "flex",
@@ -2784,7 +2824,7 @@ export function AppShell() {
           background: "var(--bg)",
         } as React.CSSProperties}
       >
-        {/* The panel is intentionally focused on local files. */}
+        {/* The legacy browser mode remains disabled pending a controlled browser. */}
         {/*
           <button
             type="button"
@@ -2830,36 +2870,13 @@ export function AppShell() {
           </button>
         */}
         <div
-          className={`right-panel-tab-strip${macLightsOverPanel ? " right-panel-tab-strip--mac-inset" : ""}`}
+          className={`right-panel-tab-strip workspace-pane-toolbar${macLightsOverPanel ? " right-panel-tab-strip--mac-inset" : ""}`}
           // The card reaches the window top, so its header row moves the window.
           {...desktopChrome.dragRegionProps}
           {...windowDrag}
         >
-          <div className="file-tab-bar-slot">
-            <TabBar
-              tabs={panelTabs}
-              activeTabId={activeFileTabId ?? ""}
-              onSelectTab={setActiveFileTabId}
-              onCloseTab={handleCloseFileTab}
-              onNewTerminal={activeCwd ? () => handleOpenTerminal(activeCwd) : undefined}
-            />
-          </div>
-          {activeCwd && (
-            <button
-              type="button"
-              className={`file-workbench-icon-button file-tree-toggle${fileTreeShown ? " is-active" : ""}`}
-              onClick={handleFileTreeToggle}
-              title={translate(fileTreeShown ? "contextPanel.hideFileList" : "contextPanel.showFileList")}
-              aria-label={translate(fileTreeShown ? "contextPanel.hideFileList" : "contextPanel.showFileList")}
-              aria-pressed={fileTreeShown}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="4.25" cy="5.25" r="1.35" fill="currentColor" stroke="none" /><path d="M7.75 5.25H21" />
-                <circle cx="4.25" cy="12" r="1.35" fill="currentColor" stroke="none" /><path d="M7.75 12H21" />
-                <circle cx="4.25" cy="18.75" r="1.35" fill="currentColor" stroke="none" /><path d="M7.75 18.75H21" />
-              </svg>
-            </button>
-          )}
+          <WorkspacePaneControls openPanes={openPanes} onToggle={toggleWorkspacePane} />
+          <span className="workspace-pane-toolbar-spacer" />
           <button
             type="button"
             className="file-panel-expand-button"
@@ -2893,6 +2910,29 @@ export function AppShell() {
           {rightPanelOpen && !isMobile && <WindowControls />}
         </div>
 
+        <WorkspacePaneDock
+          revealRequest={paneRevealRequest}
+          expandLabel={translate("workspace.expandPane")}
+          restoreLabel={translate("workspace.restorePane")}
+          closeLabel={translate("workspace.hidePane", { name: "{name}" })}
+          resizeColumnLabel={translate("workspace.resizePaneColumn")}
+          resizeRowsLabel={translate("workspace.resizePaneRows")}
+          panes={[
+            {
+              id: "files", title: translate("workspace.pane.files"), open: openPanes.files,
+              onClose: () => hideWorkspacePane("files"),
+              header: <>
+                <span className="workspace-pane-title">{translate("workspace.pane.files")}</span>
+                {activeCwd && <button type="button" className={`file-workbench-icon-button file-tree-toggle${fileTreeShown ? " is-active" : ""}`}
+                  onClick={handleFileTreeToggle} title={translate(fileTreeShown ? "contextPanel.hideFileList" : "contextPanel.showFileList")}
+                  aria-label={translate(fileTreeShown ? "contextPanel.hideFileList" : "contextPanel.showFileList")} aria-pressed={fileTreeShown}>
+                  <PilaudeIcon name="folder" size={15} />
+                </button>}
+              </>,
+              children: (filesVisible) => <>
+                <div className="workspace-pane-tab-strip">
+                  <TabBar tabs={filesPaneTabs} activeTabId={activeFileTabId ?? ""} onSelectTab={setActiveFileTabId} onCloseTab={handleCloseFileTab} />
+                </div>
         {/* Only the active viewer is mounted. Lightweight per-tab state is restored on activation. */}
         <div ref={panelBodyRef} className="right-panel-body" style={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -2914,13 +2954,13 @@ export function AppShell() {
               initialDisplayMode={activeFileTab.initialDisplayMode}
               initialPage={activeFileTab.page}
               initialState={activeFileTab.viewerState}
-              watchEnabled={rightPanelOpen}
+              watchEnabled={rightPanelOpen && filesVisible}
               onStateChange={(viewerState) => handleFileViewerStateChange(
                 activeFileTab.id,
                 activeFileTab.viewerRevision ?? 0,
                 viewerState,
               )}
-              onMentionLines={rightPanelOpen ? handleFileLineMention : undefined}
+              onMentionLines={rightPanelOpen && filesVisible ? handleFileLineMention : undefined}
               onAtMention={handleAtMention}
               onOpenFile={(filePath, page) => handleOpenFile(
                 filePath,
@@ -2928,7 +2968,7 @@ export function AppShell() {
                 { sourceSessionId: activeFileTab.sourceSessionId, page },
               )}
             />
-          ) : !terminalTabs.some((tab) => tab.id === activeFileTabId) ? (
+          ) : (
             <div className="right-panel-empty">
               <span>{translate(artifactShelfOpen ? "pilaude.noArtifacts" : "files.noneOpen")}</span>
               {/* The file list starts hidden; offer it where the panel is empty. */}
@@ -2938,18 +2978,7 @@ export function AppShell() {
                 </button>
               )}
             </div>
-          ) : null}
-          {terminalTabs.map((tab) => (
-            <div key={tab.id} hidden={tab.id !== activeFileTabId} style={{ width: "100%", height: "100%" }}>
-              <TerminalPanel
-                tab={tab}
-                active={rightPanelOpen && tab.id === activeFileTabId}
-                onRestart={() => setTerminalTabs((tabs) => tabs.map((item) => item.id === tab.id ? { ...item, closing: "restart" } : item))}
-                onClosed={() => handleTerminalClosed(tab)}
-                onCloseError={() => setTerminalTabs((tabs) => tabs.map((item) => item.id === tab.id ? { ...item, closing: undefined } : item))}
-              />
-            </div>
-          ))}
+          )}
         </div>
       
         {/* Explorer column — always-on project file tree */}
@@ -3039,6 +3068,48 @@ export function AppShell() {
             </>
           )}
       </div>
+              </>,
+            },
+            {
+              id: "terminal", title: translate("workspace.pane.terminal"), open: openPanes.terminal,
+              onClose: () => hideWorkspacePane("terminal"),
+              header: <><span className="workspace-pane-title">{translate("workspace.pane.terminal")}</span><TerminalSettingsMenu /></>,
+              children: (terminalVisible) => <>
+                <div className="workspace-pane-tab-strip" role="group" aria-label={translate("workspace.terminalTabs")}>
+                  <TabBar tabs={terminalPaneTabs} activeTabId={activeTerminalTabId ?? ""}
+                    onSelectTab={setActiveTerminalTabId} onCloseTab={handleCloseTerminalTab}
+                    onNewTerminal={terminalCwd ? () => handleOpenTerminal(terminalCwd) : undefined}
+                    onRestartTerminal={(id) => setTerminalTabs((tabs) => tabs.map((tab) => tab.id === id ? { ...tab, closing: "restart" } : tab))} />
+                </div>
+                <div className="workspace-terminal-tabs">
+                  {terminalTabs.map((tab) => (
+                    <div key={tab.id} hidden={tab.id !== activeTerminalTabId} className="workspace-terminal-tab">
+                      <TerminalPanel tab={tab} active={rightPanelOpen && terminalVisible && tab.id === activeTerminalTabId}
+                        onRestart={() => setTerminalTabs((tabs) => tabs.map((item) => item.id === tab.id ? { ...item, closing: "restart" } : item))}
+                        onClosed={() => handleTerminalClosed(tab)}
+                        onCloseError={() => setTerminalTabs((tabs) => tabs.map((item) => item.id === tab.id ? { ...item, closing: undefined } : item))} />
+                    </div>
+                  ))}
+                  {!terminalTabs.length && <div className="right-panel-empty">
+                    <span>{translate("workspace.terminalEmpty")}</span>
+                    {terminalCwd && <button type="button" className="right-panel-empty-action" onClick={() => handleOpenTerminal(terminalCwd)}>{translate("terminal.newTerminal")}</button>}
+                  </div>}
+                </div>
+              </>,
+            },
+            {
+              id: "tasks", title: translate("workspace.pane.tasks"), open: openPanes.tasks,
+              onClose: () => hideWorkspacePane("tasks"),
+              children: <div className="workspace-tasks-content">
+                {activeSessionFamily && selectedSession ? <AgentSessionPanel key={activeSessionFamily.root.id}
+                  rootSession={activeSessionFamily.root} subagents={activeSessionFamily.subagents}
+                  selectedSessionId={selectedSession.id} runningSessionIds={runningSessionIds}
+                  onSelectSession={handleSelectSession} />
+                  : <div className="right-panel-empty">{translate("workspace.noTaskSession")}</div>}
+              </div>,
+            },
+          ]}
+        />
       </div>
     </div>
     {settingsSection && (

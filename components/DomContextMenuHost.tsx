@@ -46,6 +46,7 @@ function MenuPanel({
   openIndex,
   autoFocus,
   onKeyboardClose,
+  appearance,
 }: {
   entries: NativeMenuEntry[];
   place: Place;
@@ -58,6 +59,7 @@ function MenuPanel({
   autoFocus?: boolean;
   /** Called for ArrowLeft in a submenu. */
   onKeyboardClose?: () => void;
+  appearance?: "terminal";
 }) {
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
 
@@ -103,7 +105,7 @@ function MenuPanel({
   return (
     <div
       ref={panelRef}
-      className="dom-context-menu native-popover"
+      className={`dom-context-menu native-popover${appearance ? ` dom-context-menu--${appearance}` : ""}`}
       role="menu"
       aria-label={label}
       tabIndex={-1}
@@ -133,8 +135,9 @@ function MenuPanel({
               // A click with no pointer (Enter, ArrowRight) has `detail === 0`.
               onClick={(event) => onSubmenu(index, event.currentTarget.getBoundingClientRect(), event.detail === 0)}
             >
-              {hasChecks && <span className="dom-context-menu-check" />}
+              {hasChecks && appearance !== "terminal" && <span className="dom-context-menu-check" />}
               <span className="dom-context-menu-label">{entry.label}</span>
+              {entry.detail && <span className="dom-context-menu-detail">{entry.detail}</span>}
               <span className="dom-context-menu-chevron" aria-hidden="true">›</span>
             </button>
           );
@@ -234,6 +237,7 @@ function MenuView({ menu }: { menu: DomMenuState }) {
         entries={menu.entries}
         place={placeRoot}
         panelRef={rootRef}
+        appearance={menu.appearance}
         onItem={onItem}
         onSubmenu={onSubmenu}
         openIndex={sub?.index ?? null}
@@ -245,6 +249,7 @@ function MenuView({ menu }: { menu: DomMenuState }) {
           entries={openSubmenu.items}
           place={placeSub}
           panelRef={subRef}
+          appearance={menu.appearance}
           label={openSubmenu.label}
           onItem={onItem}
           autoFocus={sub?.focus}

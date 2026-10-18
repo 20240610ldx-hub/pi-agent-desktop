@@ -105,6 +105,7 @@ test("New restores the draft after session navigation and workspace auto-restore
         desktopMode: false,
         activeCwd: cwd,
         activeFileTabId: null,
+        openPanes: { files: true, terminal: false, tasks: false },
         newSessionCwd: cwd,
         newSessionDraftId: "initial",
         selectedSession: null,

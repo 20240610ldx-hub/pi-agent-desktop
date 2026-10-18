@@ -23,6 +23,9 @@ export const APP_PREF_KEYS = {
   notifyOnComplete: "pi-desktop-notify-on-complete",
   chatDrafts: "pi-chat-drafts-v1",
   diffViewMode: "pi-diff-view-mode",
+  terminalAppearance: "pi-terminal-appearance",
+  workspacePaneLayout: "pi-workspace-pane-layout-v1",
+  workspacePaneVisibility: "pi-workspace-pane-visibility-v1",
   /** Last open session / cwd / file tabs for desktop cold-start restore. */
   workspace: "pi-workspace-v1",
 } as const;

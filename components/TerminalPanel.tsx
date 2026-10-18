@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FitAddon } from "@xterm/addon-fit";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, type ITheme } from "@xterm/xterm";
 import { useI18n } from "@/hooks/useI18n";
+import { useTheme } from "@/hooks/useTheme";
+import { copyText } from "@/lib/clipboard";
+import { useTerminalAppearance } from "@/lib/terminal-appearance";
 import { createTerminalWriter, terminalRequest } from "@/lib/terminal-client";
-import type { TerminalEvent } from "@/lib/terminal-manager";
+import { subscribeTerminalEvents } from "@/lib/terminal-events-client";
 import type { TerminalTab } from "./terminal-tab-state";
 
 interface Props {
@@ -16,8 +19,23 @@ interface Props {
   onCloseError: () => void;
 }
 
+function terminalTheme(container: HTMLElement): ITheme {
+  const style = getComputedStyle(container);
+  return {
+    background: style.getPropertyValue("--pilaude-terminal-background").trim(),
+    foreground: style.getPropertyValue("--pilaude-terminal-foreground").trim(),
+    cursor: style.getPropertyValue("--pilaude-terminal-cursor").trim(),
+    cursorAccent: style.getPropertyValue("--pilaude-terminal-background").trim(),
+    selectionBackground: style.getPropertyValue("--pilaude-terminal-selection").trim(),
+  };
+}
+
 export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }: Props) {
   const { t } = useI18n();
+  const { theme } = useTheme();
+  const { appearance } = useTerminalAppearance();
+  const appearanceRef = useRef(appearance);
+  appearanceRef.current = appearance;
   const { id, cwd, restored } = tab;
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -34,8 +52,7 @@ export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }
     const container = containerRef.current;
     if (!container) return;
     let disposed = false;
-    let events: EventSource | null = null;
-    let offset: number | undefined;
+    let unsubscribeEvents: (() => void) | null = null;
     let connected = false;
     let exited = false;
     let inputFailed = false;
@@ -44,22 +61,15 @@ export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }
     setExitCode(null);
 
     const terminal = new Terminal({
-      cursorBlink: true,
-      fontFamily: getComputedStyle(container).getPropertyValue("--font-mono").trim() || "monospace",
-      fontSize: 13,
-      lineHeight: 1.25,
-      scrollback: 8000,
+      cursorStyle: appearanceRef.current.cursorStyle,
+      cursorBlink: appearanceRef.current.cursorBlink,
+      fontFamily: getComputedStyle(container).getPropertyValue("--pilaude-terminal-font").trim() || "monospace",
+      fontSize: 12,
+      lineHeight: 1.1,
+      scrollback: appearanceRef.current.scrollback,
       screenReaderMode: true,
       disableStdin: true,
-      theme: {
-        background: "#111318", foreground: "#d7dce5", cursor: "#60a5fa",
-        selectionBackground: "#365b8a",
-        black: "#1d222b", red: "#f87171", green: "#4ade80", yellow: "#facc15",
-        blue: "#60a5fa", magenta: "#c084fc", cyan: "#22d3ee", white: "#e5e7eb",
-        brightBlack: "#6b7280", brightRed: "#fca5a5", brightGreen: "#86efac",
-        brightYellow: "#fde047", brightBlue: "#93c5fd", brightMagenta: "#d8b4fe",
-        brightCyan: "#67e8f9", brightWhite: "#ffffff",
-      },
+      theme: terminalTheme(container),
     });
     terminalRef.current = terminal;
     const fit = new FitAddon();
@@ -68,6 +78,7 @@ export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }
     terminal.attachCustomKeyEventHandler((event) => {
       if (event.type !== "keydown") return true;
       const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.code === "Backslash") return false;
       if ((event.ctrlKey || event.metaKey) && key === "v") return false;
       if ((event.ctrlKey || event.metaKey) && key === "c" && terminal.hasSelection()) return false;
       return true;
@@ -84,6 +95,11 @@ export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }
     const onData = terminal.onData((data) => {
       if (connected && !exited && !inputFailed) writer.write(data);
     });
+    const onSelectionChange = terminal.onSelectionChange(() => {
+      if (!appearanceRef.current.copyOnSelect) return;
+      const selection = terminal.getSelection();
+      if (selection) void copyText(selection).catch(() => {});
+    });
     const fitAndResize = () => {
       if (!container.offsetWidth || !container.offsetHeight) return;
       fit.fit();
@@ -95,40 +111,38 @@ export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }
     resizeObserver.observe(container);
 
     const connect = () => {
-      if (disposed || exited || !navigator.onLine) return;
-      events?.close();
-      events = new EventSource(`/api/terminal/${encodeURIComponent(id)}/events${offset === undefined ? "" : `?after=${offset}`}`);
-      events.onmessage = (message) => {
-        const event = JSON.parse(message.data) as TerminalEvent;
-        if (event.type === "output") {
-          if (event.reset) terminal.reset();
-          else if (offset !== undefined && event.offset <= offset) return;
-          terminal.write(event.data);
-          offset = event.offset;
-        } else {
-          exited = true;
+      if (disposed || exited) return;
+      unsubscribeEvents = subscribeTerminalEvents(id, {
+        onEvent(event) {
+          if (disposed) return;
+          if (event.type === "output") {
+            if (event.reset) terminal.reset();
+            terminal.write(event.data);
+          } else {
+            exited = true;
+            connected = false;
+            terminal.options.disableStdin = true;
+            setExitCode(event.type === "exit" ? event.exitCode : null);
+            setStatus("exited");
+          }
+        },
+        onOpen() {
+          if (disposed || exited) return;
+          connected = true;
+          if (inputFailed) return;
+          terminal.options.disableStdin = false;
+          setStatus("ready");
+          fitAndResize();
+          writer.resize(terminal.cols, terminal.rows);
+          if (container.offsetWidth && container.offsetHeight) terminal.focus();
+        },
+        onDisconnect() {
+          if (disposed || exited) return;
           connected = false;
           terminal.options.disableStdin = true;
-          events?.close();
-          setExitCode(event.type === "exit" ? event.exitCode : null);
-          setStatus("exited");
-        }
-      };
-      events.onopen = () => {
-        connected = true;
-        if (inputFailed) return;
-        terminal.options.disableStdin = false;
-        setStatus("ready");
-        fitAndResize();
-        writer.resize(terminal.cols, terminal.rows);
-        if (container.offsetWidth && container.offsetHeight) terminal.focus();
-      };
-      events.onerror = () => {
-        if (disposed || exited) return;
-        connected = false;
-        terminal.options.disableStdin = true;
-        setStatus(events?.readyState === EventSource.CLOSED ? "error" : "connecting");
-      };
+          if (!inputFailed) setStatus("connecting");
+        },
+      });
     };
 
     startRef.current = (async () => {
@@ -150,32 +164,32 @@ export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }
       setStatus("error");
     });
 
-    const pageHide = () => {
-      connected = false;
-      terminal.options.disableStdin = true;
-      events?.close();
-      if (!exited && !inputFailed) setStatus("connecting");
-    };
-    const pageShow = (event: PageTransitionEvent) => { if (event.persisted) connect(); };
-    window.addEventListener("pagehide", pageHide);
-    window.addEventListener("pageshow", pageShow);
-    window.addEventListener("offline", pageHide);
-    window.addEventListener("online", connect);
     return () => {
       disposed = true;
-      events?.close();
+      unsubscribeEvents?.();
       void writer.stop();
       resizeObserver.disconnect();
       onData.dispose();
+      onSelectionChange.dispose();
       onResize.dispose();
-      window.removeEventListener("pagehide", pageHide);
-      window.removeEventListener("pageshow", pageShow);
-      window.removeEventListener("offline", pageHide);
-      window.removeEventListener("online", connect);
       terminal.dispose();
       terminalRef.current = null;
     };
   }, [id, cwd, restored, reconnectKey]);
+
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.cursorStyle = appearance.cursorStyle;
+    terminal.options.cursorBlink = appearance.cursorBlink;
+    terminal.options.scrollback = appearance.scrollback;
+  }, [appearance]);
+
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    const container = containerRef.current;
+    if (terminal && container) terminal.options.theme = terminalTheme(container);
+  }, [theme]);
 
   useEffect(() => {
     if (active) terminalRef.current?.focus();
@@ -200,8 +214,8 @@ export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }
   }, [id, tab.closing]);
 
   return (
-    <section className="terminal-panel" aria-label={t("terminal.title")}>
-      <header className="terminal-panel-header">
+    <section className="terminal-panel" aria-label={t("terminal.title")} aria-description={cwd} data-status={status}>
+      {(status === "error" || status === "exited") && <header className="terminal-panel-header">
         <div className="terminal-panel-path">
           <span className={`terminal-status-dot is-${status}`} title={t(`terminal.${status}`)} />
           <span title={cwd}>{cwd}</span>
@@ -218,7 +232,7 @@ export function TerminalPanel({ tab, active, onRestart, onClosed, onCloseError }
             <path d="M20 11a8 8 0 1 0-2.34 5.66" /><polyline points="20 4 20 11 13 11" />
           </svg>
         </button>
-      </header>
+      </header>}
       <div>
         {error && <div className="terminal-panel-error" role="alert">{error}</div>}
         {status === "exited" && <div className="terminal-panel-exit" role="status">{exitCode === null ? t("terminal.exited") : t("terminal.exitCode", { code: exitCode })}</div>}

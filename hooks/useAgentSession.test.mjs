@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { Script } from "node:vm";
+import ts from "typescript";
 
 const jitiSource = async (url) => (await readFile(url, "utf8")).replace(/\r\n/g, "\n");
 const source = await jitiSource(new URL("./useAgentSession.ts", import.meta.url));
@@ -344,6 +346,92 @@ test("streaming submissions cannot be stranded in an idle direct queue", () => {
   assert.match(queueSource, /if \(isPromptRejectedError\(e\)\) restore\(\)/);
   assert.doesNotMatch(queueSource, /type: "steer"/);
   assert.doesNotMatch(queueSource, /type: "follow_up"/);
+});
+
+function streamingPromptCallback(context) {
+  const parsed = ts.createSourceFile("useAgentSession.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  function find(node) {
+    if (ts.isVariableDeclaration(node) && node.name.getText(parsed) === "sendStreamingPrompt") return node.initializer.arguments[0];
+    return ts.forEachChild(node, find);
+  }
+  return new Script(ts.transpileModule(find(parsed).getText(parsed), {
+    compilerOptions: { target: ts.ScriptTarget.ES2020 },
+  }).outputText).runInNewContext(context);
+}
+
+function deferredSubmission() {
+  let resolve;
+  let reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+function streamingPromptHarness(request) {
+  const sent = [];
+  const restored = [];
+  const notices = [];
+  const context = {
+    streamingSessionId: "session-a", streamingSessionGeneration: 3,
+    sessionIdRef: { current: "session-a" }, sessionGenerationRef: { current: 3 },
+    sessionHookMountedRef: { current: true }, composerDraftKey: "session-a", editEntryId: null,
+    restoreSubmission: (...args) => restored.push(args),
+    addNotice: (notice) => notices.push(notice),
+    isPromptRejectedError: (error) => error.rejected === true,
+    console: { error() {} },
+    sendAgentCommand: (id, command) => { sent.push([id, command]); return request.promise; },
+  };
+  return { context, sent, restored, notices, send: streamingPromptCallback(context) };
+}
+
+test("stale queue callbacks never dispatch to the newly selected session, including A-B-A", async () => {
+  for (const id of ["session-b", "session-a"]) {
+    const harness = streamingPromptHarness(deferredSubmission());
+    harness.context.sessionIdRef.current = id;
+    harness.context.sessionGenerationRef.current += 1;
+    await harness.send("late queued message", "steer");
+    assert.deepEqual(harness.sent, []);
+    assert.deepEqual(harness.restored, [["late queued message", undefined, "session-a"]]);
+  }
+  const unmounted = streamingPromptHarness(deferredSubmission());
+  unmounted.context.sessionHookMountedRef.current = false;
+  await unmounted.send("late queued message", "followUp");
+  assert.deepEqual(unmounted.sent, []);
+  assert.equal(unmounted.restored[0][2], "session-a");
+});
+
+test("accepted queued prompts retain their dispatch target and never restore after navigation", async () => {
+  const request = deferredSubmission();
+  const harness = streamingPromptHarness(request);
+  const pending = harness.send("queued once", "followUp");
+  assert.equal(harness.sent[0][0], "session-a");
+  assert.equal(harness.sent[0][1].streamingBehavior, "followUp");
+  harness.context.sessionIdRef.current = "session-b";
+  harness.context.sessionGenerationRef.current += 1;
+  request.resolve({ success: true });
+  await pending;
+  assert.equal(harness.sent.length, 1);
+  assert.deepEqual(harness.restored, []);
+});
+
+test("delayed queued rejections restore only the originating draft; ambiguous failures do not replay", async () => {
+  for (const rejected of [true, false]) {
+    const request = deferredSubmission();
+    const harness = streamingPromptHarness(request);
+    const image = { data: "AQID", mimeType: "image/png", previewUrl: "blob:submitted" };
+    const pending = harness.send("queued with image", "steer", [image]);
+    harness.context.sessionIdRef.current = "session-b";
+    harness.context.sessionGenerationRef.current += 1;
+    request.reject(Object.assign(new Error("late failure"), { rejected }));
+    await pending;
+    assert.equal(harness.sent.length, 1);
+    assert.equal(harness.sent[0][0], "session-a");
+    assert.equal(harness.sent[0][1].images[0].data, image.data);
+    assert.equal(harness.restored.length, rejected ? 1 : 0);
+    if (rejected) {
+      assert.equal(harness.restored[0][0], "queued with image");
+      assert.equal(harness.restored[0][2], "session-a");
+    }
+  }
 });
 
 test("built-in clone switches to the independent child session", () => {
@@ -785,7 +873,7 @@ test("keeps prompt anchor measurement outside the React update cycle", () => {
   assert.match(anchorLifecycleEffectSource, /promptAnchorMeasureFrameRef\.current = requestAnimationFrame\(\(\) => \{\s*promptAnchorMeasureFrameRef\.current = null;\s*updatePromptAnchorSpacer\(\)/);
   assert.match(anchorLifecycleEffectSource, /disposed = true;[\s\S]*?promptAnchorUpdateRef\.current === updatePromptAnchorSpacer[\s\S]*?cancelAnimationFrame\(promptAnchorMeasureFrameRef\.current\)/);
   assert.match(anchorSyncEffectSource, /promptAnchorUpdateRef\.current\?\.\(\);\s*\}, \[streamState\.streamingMessage\]\)/);
-  assert.match(chatWindowSource, /<div ref=\{messageContentRef\}[^>]*style=\{\{/);
+  assert.match(chatWindowSource, /<div\b(?=[^>]*\bref=\{messageContentRef\})(?=[^>]*\bstyle=\{\{)[^>]*>/);
 });
 
 test("sizes the floating-composer spacer without a React render", () => {

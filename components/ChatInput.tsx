@@ -7,7 +7,6 @@ import type { ModelScopeWarning } from "@/lib/model-scope-warnings";
 import type { UnavailableWorkspace } from "@/lib/workspace-availability";
 import type { TextContent, UserMessage } from "@/lib/types";
 import {
-  clearDraft,
   getDraft,
   mergeRestoredSubmissionDraft,
   mergeRestoredSubmissionText,
@@ -52,6 +51,12 @@ export interface AttachedImage {
   mimeType: string;
   previewUrl: string; // object URL for display
 }
+
+type ComposerSubmission = {
+  value: string;
+  images: AttachedImage[];
+  context: object;
+};
 
 interface Props {
   onSend: (message: string, images?: AttachedImage[]) => void;
@@ -888,6 +893,21 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const valueRef = useRef(value);
   const attachedImagesRef = useRef(attachedImages);
   const pendingImageCountRef = useRef(0);
+  const submissionContextRef = useRef<object | null>(null);
+  const submissionPendingRef = useRef<ComposerSubmission | null>(null);
+  // A -> B -> A is a new composer visit too. Invalidate pending reference
+  // resolution before another draft is shown, and on unmount.
+  useLayoutEffect(() => {
+    const context = {};
+    submissionContextRef.current = context;
+    submissionPendingRef.current = null;
+    return () => {
+      if (submissionContextRef.current === context) {
+        submissionContextRef.current = null;
+        submissionPendingRef.current = null;
+      }
+    };
+  }, [draftKey]);
   const {
     hashQuery, setHashQuery, hashMenuOpen, setHashMenuOpen, hashActiveIndex, setHashActiveIndex,
     hashMatches, hashItemRefs, sessionIndex, sessionMentionTargetsRef, updateHashQuery, applyHashCompletion,
@@ -1136,27 +1156,38 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     });
   }, []);
 
-  const clearImages = useCallback(() => {
-    attachedImagesRef.current = [];
-    setAttachedImages((prev) => {
-      prev.forEach(revokeImagePreview);
-      return [];
-    });
+  const beginSubmission = useCallback((): ComposerSubmission | null => {
+    const context = submissionContextRef.current;
+    if (!context || submissionPendingRef.current) return null;
+    const submission = { value: valueRef.current, images: [...attachedImagesRef.current], context };
+    if (!submission.value.trim() && !submission.images.length) return null;
+    submissionPendingRef.current = submission;
+    return submission;
   }, []);
 
-  const clearInput = useCallback(() => {
-    valueRef.current = "";
-    setValue("");
-    setAtQuery(null);
-    setHashQuery(null);
-    setHistoryMenuOpen(false);
-    if (draftKey) clearDraft(draftKey);
-    if (draftKeyRef.current && draftKeyRef.current !== draftKey) clearDraft(draftKeyRef.current);
-    clearImages();
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+  const consumeSubmission = useCallback((submission: ComposerSubmission) => {
+    if (submissionContextRef.current !== submission.context) return;
+    // Consume only what was submitted. Text typed and images added while a
+    // reference was loading belong to the next draft.
+    if (valueRef.current === submission.value) {
+      valueRef.current = "";
+      setValue("");
+      setAtQuery(null);
+      setHashQuery(null);
+      setHistoryMenuOpen(false);
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
     }
-  }, [clearImages, draftKey, setHashQuery]);
+    const submittedImages = new Set(submission.images);
+    const remainingImages = attachedImagesRef.current.filter((image) => !submittedImages.has(image));
+    attachedImagesRef.current = remainingImages;
+    setAttachedImages((current) => {
+      const remaining = current.filter((image) => !submittedImages.has(image));
+      current.filter((image) => submittedImages.has(image)).forEach(revokeImagePreview);
+      return remaining;
+    });
+    const key = draftKeyRef.current;
+    if (key) setDraft(key, { value: valueRef.current, images: remainingImages.map(imageToDraftImage) });
+  }, [setHashQuery]);
 
   useEffect(() => {
     if (!draftKey || draftKeyRef.current !== draftKey) return;
@@ -1246,30 +1277,43 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     if (builtinCommandPendingRef.current) return true;
     builtinCommandPendingRef.current = true;
     setBuiltinCommandPending(true);
+    const context = submissionContextRef.current;
+    const submittedValue = valueRef.current;
     try {
       const result = await onBuiltinCommand(msg);
       if (!result.handled) return false;
-      if (!result.error && canClearBuiltinCommandInput(valueRef.current, attachedImagesRef.current.length, msg)) clearInput();
+      if (!result.error && context && submissionContextRef.current === context
+        && canClearBuiltinCommandInput(valueRef.current, attachedImagesRef.current.length, msg)) {
+        consumeSubmission({ value: submittedValue, images: [], context });
+      }
       return true;
     } finally {
       builtinCommandPendingRef.current = false;
       setBuiltinCommandPending(false);
     }
-  }, [attachedImages.length, clearInput, onBuiltinCommand]);
+  }, [attachedImages.length, consumeSubmission, onBuiltinCommand]);
 
   const handleSend = useCallback(async () => {
-    const msg = value.trim();
-    if (!msg && !attachedImages.length) return;
-    onAudioUnlock?.();
-    const builtinAllowed = !isStreaming || offersBuiltinSlashCommandWhileStreaming(msg);
-    if (builtinAllowed && await runBuiltinCommand(msg)) return;
-    if (isStreaming) return;
-    // A run cannot start in a cwd that is gone; keep the draft until it is back or another project is picked.
-    if (workspaceUnavailable) return;
-    const resolvedMessage = await resolveSessionReferences(msg, sessionMentionTargetsRef.current);
-    onSend(resolvedMessage, attachedImages.length ? attachedImages : undefined);
-    clearInput();
-  }, [value, attachedImages, workspaceUnavailable, isStreaming, runBuiltinCommand, onSend, clearInput, onAudioUnlock, sessionMentionTargetsRef]);
+    const submission = beginSubmission();
+    if (!submission) return;
+    const msg = submission.value.trim();
+    const targets = new Map(sessionMentionTargetsRef.current);
+    try {
+      onAudioUnlock?.();
+      const builtinAllowed = !isStreaming || offersBuiltinSlashCommandWhileStreaming(msg);
+      if (builtinAllowed && await runBuiltinCommand(msg)) return;
+      if (isStreaming || submissionContextRef.current !== submission.context) return;
+      // A run cannot start in a cwd that is gone; keep the draft until it is back or another project is picked.
+      if (workspaceUnavailable) return;
+      const resolvedMessage = await resolveSessionReferences(msg, targets);
+      if (submissionContextRef.current !== submission.context) return;
+      // Clear before the callback: an immediate rejection may restore the draft.
+      consumeSubmission(submission);
+      onSend(resolvedMessage, submission.images.length ? submission.images : undefined);
+    } finally {
+      if (submissionPendingRef.current === submission) submissionPendingRef.current = null;
+    }
+  }, [beginSubmission, workspaceUnavailable, isStreaming, runBuiltinCommand, onSend, consumeSubmission, onAudioUnlock, sessionMentionTargetsRef]);
 
   const slashQuery = !compact && value.startsWith("/") && !/\s/.test(value.slice(1))
     ? value.slice(1).toLowerCase()
@@ -1502,39 +1546,41 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   }, []);
 
   const sendQueued = useCallback(async (mode: "steer" | "followup") => {
-    const msg = value.trim();
-    if (!msg && !attachedImages.length) return;
-    onAudioUnlock?.();
-    const images = attachedImages.length ? attachedImages : undefined;
-    const queue = async () => {
-      const resolvedMessage = await resolveSessionReferences(msg, sessionMentionTargetsRef.current);
-      const streamingBehavior = mode === "steer" ? "steer" : "followUp";
-      if (msg.startsWith("/") && onPromptWithStreamingBehavior) {
-        clearInput();
-        onPromptWithStreamingBehavior(resolvedMessage, streamingBehavior, images);
+    const submission = beginSubmission();
+    if (!submission) return;
+    const msg = submission.value.trim();
+    const targets = new Map(sessionMentionTargetsRef.current);
+    const images = submission.images.length ? submission.images : undefined;
+    try {
+      onAudioUnlock?.();
+      if (!images && onBuiltinCommand && canRunBuiltinSlashCommandWhileStreaming(msg)) {
+        await runBuiltinCommand(msg);
         return;
       }
-      clearInput();
-      if (mode === "steer" && onSteer) {
+      if (!images && onBuiltinCommand && isBareMcpCommand(msg)) {
+        // Settings > MCP opens when pi's built-in MCP extension owns /mcp;
+        // another extension's /mcp is queued against this same composer visit.
+        const handled = await runBuiltinCommand(msg).catch(() => false);
+        if (handled) return;
+      }
+      if (submissionContextRef.current !== submission.context) return;
+      const resolvedMessage = await resolveSessionReferences(msg, targets);
+      if (submissionContextRef.current !== submission.context) return;
+      const streamingBehavior = mode === "steer" ? "steer" : "followUp";
+      if (msg.startsWith("/") && onPromptWithStreamingBehavior) {
+        consumeSubmission(submission);
+        onPromptWithStreamingBehavior(resolvedMessage, streamingBehavior, images);
+      } else if (mode === "steer" && onSteer) {
+        consumeSubmission(submission);
         onSteer(resolvedMessage, images);
       } else if (mode === "followup" && onFollowUp) {
+        consumeSubmission(submission);
         onFollowUp(resolvedMessage, images);
       }
-    };
-    if (!attachedImages.length && onBuiltinCommand && canRunBuiltinSlashCommandWhileStreaming(msg)) {
-      void runBuiltinCommand(msg);
-      return;
+    } finally {
+      if (submissionPendingRef.current === submission) submissionPendingRef.current = null;
     }
-    if (!attachedImages.length && onBuiltinCommand && isBareMcpCommand(msg)) {
-      // Settings > MCP opens when pi's built-in MCP extension owns /mcp; another
-      // extension's /mcp is queued as before. The composer is disabled meanwhile.
-      void runBuiltinCommand(msg).then((handled) => {
-        if (!handled) void queue();
-      }, () => void queue());
-      return;
-    }
-    void queue();
-  }, [value, attachedImages, onBuiltinCommand, onPromptWithStreamingBehavior, onSteer, onFollowUp, clearInput, onAudioUnlock, runBuiltinCommand, sessionMentionTargetsRef]);
+  }, [beginSubmission, onBuiltinCommand, onPromptWithStreamingBehavior, onSteer, onFollowUp, consumeSubmission, onAudioUnlock, runBuiltinCommand, sessionMentionTargetsRef]);
 
   const getNextSlashIndex = useCallback((direction: "up" | "down" | "left" | "right") => {
     const lastIndex = displayedSlashCommands.length - 1;
@@ -2163,39 +2209,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             {compactError}
           </div>
         )}
-        {/* Image previews */}
-        {attachedImages.length > 0 && (
-          <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
-            {attachedImages.map((img, i) => (
-              <div key={i} style={{ position: "relative", flexShrink: 0 }}>
-                <ImagePreview key={img.previewUrl} src={img.previewUrl}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.previewUrl}
-                    alt=""
-                    style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6, border: "var(--hairline) solid var(--border)", display: "block" }}
-                  />
-                </ImagePreview>
-                <button
-                  type="button"
-                  onClick={() => removeImage(i)}
-                  style={{
-                    position: "absolute", top: -4, right: -4,
-                    width: 16, height: 16, borderRadius: "50%",
-                    background: "var(--bg-panel)", border: "var(--hairline) solid var(--border)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", padding: 0, color: "var(--text-muted)",
-                  }}
-                >
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <line x1="1" y1="1" x2="7" y2="7" /><line x1="7" y1="1" x2="1" y2="7" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Main input */}
         <div style={{ position: "relative", minWidth: 0 }}>
           {historyMenuOpen && inputHistory.length > 0 && (
@@ -2552,10 +2565,34 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           <div
             ref={composerRef}
             className="chat-composer"
-            // Tints the card's hairline (native-theme.css): a shell command, or a
-            // run that will take this message as a steer / follow-up.
+            data-compact={compact || undefined}
+            // Keep shell/steer state available to the controls and theme; the
+            // reference card uses a neutral hairline in every state.
             data-state={compact ? undefined : bashMode ? "bash" : isStreaming && (onSteer || onFollowUp) ? "steer" : undefined}
           >
+          {attachedImages.length > 0 && (
+            <div className="composer-attachments">
+              {attachedImages.map((img, i) => (
+                <div key={i} className="composer-attachment">
+                  <ImagePreview key={img.previewUrl} src={img.previewUrl}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className="composer-attachment-image" src={img.previewUrl} alt="" />
+                  </ImagePreview>
+                  <button
+                    type="button"
+                    className="composer-attachment-remove"
+                    onClick={() => removeImage(i)}
+                    aria-label={t("chat.close")}
+                    title={t("chat.close")}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+                      <path d="m2 2 6 6m0-6-6 6" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div
             className="chat-composer-editor"
             style={{
@@ -2571,23 +2608,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
             } as React.CSSProperties}
           >
-          {/* Attaching is a content action, so it lives in the card with the
-              text it goes with; the row below holds only session context. */}
-          {!compact && (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              title={t("chat.attachImage")}
-              aria-label={t("chat.attachImage")}
-              className="native-toolbar-button composer-attach-button"
-              data-active={attachedImages.length > 0 || undefined}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
-          )}
           <textarea
             ref={textareaRef}
             className="chat-input-textarea"
@@ -2637,9 +2657,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               resize: "none",
               color: "var(--text)",
               fontSize: "var(--pilaude-composer-font-size, 14px)",
-              lineHeight: 1.6,
+              lineHeight: 1.5,
               fontFamily: "inherit",
-              minHeight: compact ? 96 : 24,
+              minHeight: compact ? 96 : "1.5em",
               maxHeight: 200,
               overflow: "auto",
             }}
@@ -2651,8 +2671,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             <span className="composer-trigger-hint" aria-hidden="true">{t("chat.composerHint")}</span>
           )}
 
+          <div className="composer-primary-actions">
           {isStreaming ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, alignSelf: "flex-end" }}>
+            <div className="composer-streaming-actions" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               {onSteer && (
                 <button
                   className="composer-queue-button"
@@ -2683,26 +2704,38 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                   {t("chat.followUp")}
                 </button>
               )}
+              {!compact && (
+                <button
+                  type="button"
+                  className="composer-abort-button"
+                  onClick={onAbort}
+                  title={t("chat.stopAgent")}
+                  aria-label={t("chat.stopAgent")}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6" />
+                    <rect x="5.5" y="5.5" width="5" height="5" rx="0.7" fill="currentColor" stroke="none" />
+                  </svg>
+                </button>
+              )}
             </div>
           ) : (
             <button
-              // The main composer's Send is a round icon whose two states (quiet /
-              // filled) are the "ready to send" signal; the compact quote composer
-              // sits in a dialog, where a labelled button reads better.
+              // The compact quote composer keeps its labelled dialog action.
               className={compact ? "native-primary-button" : "composer-send-button"}
               onClick={handleSend}
               disabled={!canSend}
               title={t("chat.send")}
               aria-label={t("chat.send")}
-              style={{ flexShrink: 0, alignSelf: "flex-end", ...(compact ? { display: "flex", alignItems: "center", gap: 6 } : null) }}
+              style={{ flexShrink: 0, ...(compact ? { display: "flex", alignItems: "center", gap: 6 } : null) }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="8" y1="13" x2="8" y2="3.5" />
-                <polyline points="3.5 7.5 8 3 12.5 7.5" />
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M13 3.5v5H3m3-3-3 3 3 3" />
               </svg>
               {compact && t("chat.send")}
             </button>
           )}
+          </div>
           </div>
           {/* Session controls sit below the input card, not inside it. */}
           </div>
@@ -2723,9 +2756,23 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           gap: 6,
         }}>
 
-          {/* LEFT: project context + model selector (idle) or steer/followup toggle (streaming) */}
+          <div className="composer-leading-actions">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              title={t("chat.attachImage")}
+              aria-label={t("chat.attachImage")}
+              className="native-toolbar-button composer-attach-button"
+              data-active={attachedImages.length > 0 || undefined}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+          </div>
 
-          <div style={{ flex: isNarrow ? "1 1 auto" : "0 0 auto", minWidth: 0, display: "flex", alignItems: "center", gap: 2 }}>
+          {/* The selected model precedes reasoning, as in the official footer. */}
+          <div className="composer-model-controls" style={{ flex: isNarrow ? "1 1 auto" : "0 0 auto", minWidth: 0, display: "flex", alignItems: "center", gap: 2 }}>
             {projectLabel && (
               <ComposerProjectChip
                 menuRef={projectDropdownRef}
@@ -2764,11 +2811,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             <ContextUsageRing contextUsage={contextUsage} sessionStats={sessionStats} onOpenStats={onSessionStatsPanelOpen} />
           </div>
 
-          {/* spacer */}
-          {!isNarrow && <div style={{ flex: 1 }} />}
-
-          {/* RIGHT: thinking + tools preset + compact + sound (idle) | Stop + sound (streaming) */}
-          <div ref={controlsMenuRef} style={{
+          {/* Pi reasoning, tool presets and session automation keep their real callbacks. */}
+          <div className="composer-session-controls" ref={controlsMenuRef} style={{
             flex: "0 0 auto",
             display: "flex",
             alignItems: "center",
@@ -2776,27 +2820,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             position: "relative",
             marginLeft: isNarrow ? 0 : "auto",
           }}>
-            {/* Narrow screens collapse the controls behind "More controls";
-                Stop must stay one tap away while a run is active. */}
-            {isNarrow && isStreaming && !controlsMenuOpen && (
-              <button
-                type="button"
-                onClick={onAbort}
-                title={t("chat.stopAgent")}
-                aria-label={t("chat.stopAgent")}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 32, height: 32, marginRight: 6,
-                  background: "color-mix(in srgb, var(--danger) 8%, transparent)",
-                  border: "var(--hairline) solid color-mix(in srgb, var(--danger) 30%, transparent)",
-                  borderRadius: 9, color: "var(--danger)", cursor: "pointer",
-                }}
-              >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                  <rect x="1.5" y="1.5" width="7" height="7" rx="1.5" fill="currentColor" />
-                </svg>
-              </button>
-            )}
+            {/* Narrow screens collapse settings behind "More controls";
+                the editor's Stop stays one tap away while a run is active. */}
             {isNarrow && (
               <button
                 type="button"
@@ -3025,28 +3050,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                 onSetAutomation={onSetAutomation}
                 onCompact={canCompactNow ? onCompact : undefined}
               />
-            )}
-
-            {isStreaming && (
-              <button
-                onClick={onAbort}
-                 title={t("chat.stopAgent")}
-                className="composer-stop-button"
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "8px 14px",
-                  height: 32,
-                  borderRadius: 9,
-                  cursor: "pointer",
-                  fontSize: 12, fontWeight: 600,
-                  whiteSpace: "nowrap", letterSpacing: "-0.01em",
-                }}
-              >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <rect x="1.5" y="1.5" width="7" height="7" rx="1.5" fill="currentColor" />
-                </svg>
-                 {t("chat.stop")}
-              </button>
             )}
 
             {isNarrow && controlsMenuOpen && (

@@ -50,6 +50,8 @@ interface UseGlobalKeyboardShortcutsOptions {
   onCloseRightPanel?: () => void;
   /** Called by ⌘, (macOS) / Ctrl+, to open Settings. */
   onOpenSettings?: () => void;
+  /** Called by Ctrl+Shift+\ (or ⌘+Shift+\) to expand the open panel. */
+  onExpandRightPanel?: () => void;
 }
 
 /**
@@ -62,6 +64,14 @@ export function handleOpenSettingsShortcut(event: KeyboardEvent, onOpenSettings:
   if (event.defaultPrevented || !onOpenSettings) return false;
   event.preventDefault();
   onOpenSettings();
+  return true;
+}
+
+export function handleExpandRightPanelShortcut(event: KeyboardEvent, onExpand: (() => void) | undefined): boolean {
+  if (event.code !== "Backslash" || !(event.metaKey || event.ctrlKey) || !event.shiftKey || event.altKey) return false;
+  if (event.defaultPrevented || !onExpand) return false;
+  event.preventDefault();
+  onExpand();
   return true;
 }
 
@@ -83,7 +93,7 @@ export function handleOpenSettingsShortcut(event: KeyboardEvent, onOpenSettings:
 export function useGlobalKeyboardShortcuts(
   options: UseGlobalKeyboardShortcutsOptions,
 ): void {
-  const { onNewSession, activeCwd, onCloseRightPanel, onOpenSettings } = options;
+  const { onNewSession, activeCwd, onCloseRightPanel, onOpenSettings, onExpandRightPanel } = options;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -113,6 +123,7 @@ export function useGlobalKeyboardShortcuts(
         }
       }
 
+      if (handleExpandRightPanelShortcut(e, onExpandRightPanel)) return;
       if (handleOpenSettingsShortcut(e, onOpenSettings)) return;
 
       // ---- ⌘N / Ctrl+N: new session ----
@@ -127,5 +138,5 @@ export function useGlobalKeyboardShortcuts(
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [activeCwd, onNewSession, onCloseRightPanel, onOpenSettings]);
+  }, [activeCwd, onNewSession, onCloseRightPanel, onOpenSettings, onExpandRightPanel]);
 }

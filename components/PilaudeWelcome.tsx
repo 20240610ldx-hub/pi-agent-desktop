@@ -1,6 +1,7 @@
 "use client";
 
 import { CdsButton } from "@/vendor/open-claude-ui/CdsButton";
+import { PilaudeCodeRipple } from "./PilaudeCodeRipple";
 import { useI18n } from "@/hooks/useI18n";
 import { motion, useReducedMotion } from "framer-motion";
 import { SPRING_SNAPPY } from "@/vendor/open-claude-ui/ClaudeMotionPresets";
@@ -15,6 +16,7 @@ export function PilaudeWelcome({ onOpenProject, onOpenModels }: {
     <motion.section className="pilaude-welcome" aria-labelledby="pilaude-welcome-title"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }} transition={reducedMotion ? { duration: 0 } : SPRING_SNAPPY}>
+      <PilaudeCodeRipple />
       <div className="pilaude-welcome-wordmark">Pilaude</div>
       <h1 id="pilaude-welcome-title">{t("welcome.title")}</h1>
       <p className="pilaude-welcome-description">{t("welcome.description")}</p>

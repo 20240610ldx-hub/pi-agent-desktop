@@ -580,7 +580,8 @@ test("locks built-in command submission until it settles", async () => {
     attachedImagesRef: { current: [] },
     builtinCommandPendingRef: { current: false },
     canClearBuiltinCommandInput,
-    clearInput() {},
+    consumeSubmission() {},
+    submissionContextRef: { current: {} },
     onBuiltinCommand: async () => new Promise((resolve) => { callback.resolve = resolve; }),
     setBuiltinCommandPending(value) { callback.pendingStates.push(value); },
     valueRef: { current: "/reload" },
@@ -638,6 +639,17 @@ test("Enter on pi's built-in /mcp submits it at once; other extension commands s
 });
 
 function chatInputCallback(name, context) {
+  const submissionContext = {
+    submissionContextRef: { current: {} },
+    submissionPendingRef: { current: null },
+    valueRef: { current: context.value ?? "" },
+    attachedImagesRef: { current: context.attachedImages ?? [] },
+    ...context,
+  };
+  if (name !== "beginSubmission" && !submissionContext.beginSubmission) {
+    submissionContext.beginSubmission = chatInputCallback("beginSubmission", submissionContext);
+  }
+  submissionContext.consumeSubmission ??= submissionContext.clearInput ?? (() => {});
   const sourceText = readFileSync(new URL("./ChatInput.tsx", import.meta.url), "utf8");
   const source = ts.createSourceFile("ChatInput.tsx", sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   function findCallback(node) {
@@ -648,7 +660,7 @@ function chatInputCallback(name, context) {
   }
   return new Script(ts.transpileModule(findCallback(source).getText(source), {
     compilerOptions: { target: ts.ScriptTarget.ES2020 },
-  }).outputText).runInNewContext(context);
+  }).outputText).runInNewContext(submissionContext);
 }
 
 test("while a run streams, a bare /mcp opens Settings or is queued as before", async () => {
@@ -934,17 +946,21 @@ test("handleSend sends exactly once and routes builtin commands through the pend
     let sends = 0;
     let cleared = 0;
     let builtinCalls = 0;
+    const submissionContextRef = { current: {} };
+    const submissionPendingRef = { current: null };
     const handler = script.runInNewContext({
       value, attachedImages, isStreaming: false, workspaceUnavailable,
+      submissionContextRef, submissionPendingRef,
+      beginSubmission: chatInputCallback("beginSubmission", { value, attachedImages, submissionContextRef, submissionPendingRef }),
       onAudioUnlock() {},
       runBuiltinCommand: async () => {
         builtinCalls += 1;
         return builtinHandled;
       },
       resolveSessionReferences: async (msg) => resolved ?? msg,
-      sessionMentionTargetsRef: { current: [] },
+      sessionMentionTargetsRef: { current: new Map() },
       onSend(message, images) { sends += 1; handler.sent = { message, images }; },
-      clearInput() { cleared += 1; },
+      consumeSubmission() { cleared += 1; },
     });
     return handler().then(() => ({ sends, cleared, builtinCalls, sent: handler.sent }));
   }
@@ -975,6 +991,161 @@ test("handleSend sends exactly once and routes builtin commands through the pend
   assert.equal(blocked.cleared, 0);
   const local = await run({ value: "/copy", builtinHandled: true, workspaceUnavailable: gone });
   assert.equal(local.builtinCalls, 1);
+});
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+function submissionHarness({ value = 'ask #"Reference"', images = [], isStreaming = false, resolveReferences = async (text) => text, onSend, onBuiltinCommand } = {}) {
+  const calls = [];
+  const drafts = new Map();
+  const revoked = [];
+  let imageState = images;
+  const context = {
+    valueRef: { current: value },
+    attachedImagesRef: { current: images },
+    submissionContextRef: { current: {} },
+    submissionPendingRef: { current: null },
+    draftKeyRef: { current: "session-a" },
+    textareaRef: { current: null },
+    sessionMentionTargetsRef: { current: new Map([["Reference", "reference-a"]]) },
+    builtinCommandPendingRef: { current: false },
+    attachedImages: images,
+    isStreaming,
+    workspaceUnavailable: null,
+    onAudioUnlock() {},
+    setAtQuery() {}, setHashQuery() {}, setHistoryMenuOpen() {}, setBuiltinCommandPending() {},
+    setValue(value) { context.valueRef.current = typeof value === "function" ? value(context.valueRef.current) : value; },
+    setAttachedImages(update) {
+      imageState = typeof update === "function" ? update(imageState) : update;
+      context.attachedImagesRef.current = imageState;
+    },
+    setDraft(key, draft) { drafts.set(key, draft); },
+    imageToDraftImage: ({ data, mimeType }) => ({ data, mimeType }),
+    revokeImagePreview(image) { revoked.push(image); },
+    resolveSessionReferences: resolveReferences,
+    offersBuiltinSlashCommandWhileStreaming, canRunBuiltinSlashCommandWhileStreaming, isBareMcpCommand, canClearBuiltinCommandInput,
+    onSend: onSend ?? ((...args) => calls.push(["send", ...args])),
+    onSteer: (...args) => calls.push(["steer", ...args]),
+    onFollowUp: (...args) => calls.push(["followup", ...args]),
+    onBuiltinCommand,
+  };
+  context.beginSubmission = chatInputCallback("beginSubmission", context);
+  context.consumeSubmission = chatInputCallback("consumeSubmission", context);
+  context.runBuiltinCommand = chatInputCallback("runBuiltinCommand", context);
+  return {
+    context, calls, drafts, revoked,
+    send: chatInputCallback("handleSend", context),
+    queue: chatInputCallback("sendQueued", context),
+  };
+}
+
+test("delayed queue resolution submits once across repeated Enter and buttons", async () => {
+  for (const mode of ["steer", "followup"]) {
+    const resolution = deferred();
+    let lookups = 0;
+    const harness = submissionHarness({ isStreaming: true, resolveReferences: () => { lookups += 1; return resolution.promise; } });
+    const first = harness.queue(mode);
+    await harness.queue(mode);
+    await harness.queue(mode === "steer" ? "followup" : "steer");
+    await harness.send();
+    assert.equal(lookups, 1);
+    assert.equal(harness.context.valueRef.current, 'ask #"Reference"');
+    resolution.resolve("expanded reference");
+    await first;
+    assert.deepEqual(harness.calls, [[mode, "expanded reference", undefined]]);
+    assert.equal(harness.context.valueRef.current, "");
+    assert.equal(harness.context.submissionPendingRef.current, null);
+  }
+});
+
+test("delayed send consumes its snapshot and preserves newer text and attachments", async () => {
+  for (const queue of [false, true]) {
+    const resolution = deferred();
+    const started = deferred();
+    const submittedImage = { data: "AQID", mimeType: "image/png", previewUrl: "blob:submitted" };
+    const newImage = { data: "BAUG", mimeType: "image/png", previewUrl: "blob:new" };
+    let selectedTargets;
+    const harness = submissionHarness({ images: [submittedImage], isStreaming: queue,
+      resolveReferences: (_text, targets) => { selectedTargets = targets; started.resolve(); return resolution.promise; } });
+    const pending = queue ? harness.queue("steer") : harness.send();
+    await started.promise;
+    harness.context.valueRef.current = "new draft typed while waiting";
+    harness.context.setAttachedImages([submittedImage, newImage]);
+    harness.context.sessionMentionTargetsRef.current.set("Reference", "reference-b");
+    resolution.resolve("expanded original reference");
+    await pending;
+    assert.equal(selectedTargets.get("Reference"), "reference-a");
+    assert.equal(harness.calls.length, 1);
+    assert.equal(harness.calls[0][1], "expanded original reference");
+    assert.deepEqual([...harness.calls[0][2]], [submittedImage]);
+    assert.equal(harness.context.valueRef.current, "new draft typed while waiting");
+    assert.deepEqual([...harness.context.attachedImagesRef.current], [newImage]);
+    assert.deepEqual(harness.revoked, [submittedImage]);
+    const saved = harness.drafts.get("session-a");
+    assert.equal(saved.value, "new draft typed while waiting");
+    assert.equal(saved.images.length, 1);
+    assert.equal(saved.images[0].data, newImage.data);
+  }
+});
+
+test("switching composer visits or unmounting cancels delayed sends without touching another draft", async () => {
+  for (const queue of [false, true]) {
+    for (const destination of ["session-b", "session-a", null]) {
+      const resolution = deferred();
+      const started = deferred();
+      const harness = submissionHarness({ isStreaming: queue, resolveReferences: () => { started.resolve(); return resolution.promise; } });
+      const pending = queue ? harness.queue("followup") : harness.send();
+      await started.promise;
+      // New visit token even for A -> B -> A; null models the layout cleanup.
+      harness.context.submissionContextRef.current = destination === null ? null : {};
+      harness.context.draftKeyRef.current = destination;
+      harness.context.valueRef.current = "destination draft";
+      harness.context.attachedImagesRef.current = [{ data: "BAUG", mimeType: "image/png" }];
+      resolution.resolve("late reference");
+      await pending;
+      assert.deepEqual(harness.calls, []);
+      assert.equal(harness.context.valueRef.current, "destination draft");
+      assert.equal(harness.context.attachedImagesRef.current.length, 1);
+      assert.equal(harness.drafts.size, 0);
+    }
+  }
+});
+
+test("clear precedes synchronous rejection recovery and a failed lookup unlocks retry", async () => {
+  let harness;
+  harness = submissionHarness({ value: "rejected message", onSend() {
+    assert.equal(harness.context.valueRef.current, "");
+    harness.context.valueRef.current = "restored rejected message";
+  } });
+  await harness.send();
+  assert.equal(harness.context.valueRef.current, "restored rejected message");
+
+  const resolution = deferred();
+  const failing = submissionHarness({ isStreaming: true, resolveReferences: () => resolution.promise });
+  const pending = failing.queue("steer");
+  resolution.reject(new Error("reference failed"));
+  await assert.rejects(pending, /reference failed/);
+  assert.equal(failing.context.submissionPendingRef.current, null);
+  assert.equal(failing.context.valueRef.current, 'ask #"Reference"');
+  assert.deepEqual(failing.calls, []);
+});
+
+test("delayed built-ins cannot clear a different composer containing the same command", async () => {
+  const result = deferred();
+  const harness = submissionHarness({ value: "/copy", onBuiltinCommand: () => result.promise });
+  const pending = harness.send();
+  harness.context.submissionContextRef.current = {};
+  harness.context.draftKeyRef.current = "session-b";
+  result.resolve({ handled: true });
+  await pending;
+  assert.equal(harness.context.valueRef.current, "/copy");
+  assert.equal(harness.drafts.size, 0);
+  assert.deepEqual(harness.calls, []);
 });
 
 test("a missing workspace replaces the model error and disables Send", () => {

@@ -14,9 +14,9 @@ test("keeps the main session first and makes every agent session selectable", ()
   assert.match(source, /aria-selected=\{selected\}/);
 });
 
-test("sorts running subagents first and enables search only for larger families", () => {
+test("sorts running subagents first and keeps an active search clearable as the family shrinks", () => {
   assert.match(source, /if \(aRunning !== bRunning\) return aRunning \? -1 : 1/);
-  assert.match(source, /subagents\.length > 8/);
+  assert.match(source, /subagents\.length > 8 \|\| query\.length > 0/);
   assert.match(source, /relation\?\.description, relation\?\.profile, session\.name, session\.firstMessage/);
   assert.match(source, /maxHeight: "min\(58dvh, 480px\)"/);
 });

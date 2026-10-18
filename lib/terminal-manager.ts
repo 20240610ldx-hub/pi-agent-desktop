@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { homedir } from "os";
+import { join } from "path";
 import type { IPty } from "node-pty";
 import { samePath } from "./paths";
 
@@ -93,7 +94,7 @@ export function createTerminal(cwd: string, cols: number, rows: number, id: stri
     );
   }
   const shell = process.platform === "win32"
-    ? process.env.ComSpec ?? "cmd.exe"
+    ? join(process.env.SystemRoot || "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
     : process.env.SHELL || "/bin/sh";
   const args = process.platform === "win32" ? [] : ["-l"];
   const pty = spawn(shell, args, {
@@ -189,11 +190,11 @@ export function killTerminal(id: string, force = false): boolean {
   if (record.cleanupTimer) clearTimeout(record.cleanupTimer);
   registry().delete(id);
   if (!record.exited) {
-    record.pty.kill(force ? "SIGKILL" : undefined);
+    record.pty.kill(process.platform === "win32" ? undefined : force ? "SIGKILL" : undefined);
     // A shell may trap SIGHUP; explicit close and lease expiry must still finish.
     if (!force) {
       record.cleanupTimer = setTimeout(() => {
-        if (!record.exited) record.pty.kill("SIGKILL");
+        if (!record.exited) record.pty.kill(process.platform === "win32" ? undefined : "SIGKILL");
       }, 2000);
       record.cleanupTimer.unref?.();
     }

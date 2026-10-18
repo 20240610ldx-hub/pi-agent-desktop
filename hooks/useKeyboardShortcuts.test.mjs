@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handleGlobalEscape, handleOpenSettingsShortcut, registerAbortHandler } from "./useKeyboardShortcuts.ts";
+import { handleExpandRightPanelShortcut, handleGlobalEscape, handleOpenSettingsShortcut, registerAbortHandler } from "./useKeyboardShortcuts.ts";
 
 function keydown(key, { tagName = "BUTTON", defaultPrevented = false } = {}) {
   return {
@@ -45,6 +45,20 @@ test("with no run to stop, Escape is left alone", () => {
   const event = keydown("Escape");
   assert.equal(handleGlobalEscape(event), false);
   assert.equal(event.defaultPrevented, false);
+});
+
+test("panel expansion uses the physical backslash key with Ctrl/Cmd+Shift and respects handled events", () => {
+  let expanded = 0;
+  const expand = () => { expanded += 1; };
+  const event = (mods = {}) => ({ code: "Backslash", key: "|", ctrlKey: true, metaKey: false, shiftKey: true, altKey: false, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...mods });
+  assert.equal(handleExpandRightPanelShortcut(event(), expand), true);
+  assert.equal(handleExpandRightPanelShortcut(event({ ctrlKey: false, metaKey: true }), expand), true);
+  assert.equal(expanded, 2);
+  for (const mods of [{ shiftKey: false }, { altKey: true }, { ctrlKey: false }, { code: "KeyA" }, { defaultPrevented: true }]) {
+    assert.equal(handleExpandRightPanelShortcut(event(mods), expand), false);
+  }
+  assert.equal(handleExpandRightPanelShortcut(event(), undefined), false);
+  assert.equal(expanded, 2);
 });
 
 test("Cmd/Ctrl+, opens Settings unless it is already open or the key was taken", () => {

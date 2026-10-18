@@ -129,9 +129,9 @@
     },
     "components/AppShell.tsx": {
       "risk": "high",
-      "drift": 2233,
-      "reason": "The author 0.7.3 shell extraction and Pilaude navigation, desktop chrome and measured Context coexistence differ from the recorded baseline. Preserve high-risk upstream merge review for the interaction and focus boundaries.",
-      "structuralDrift": 1839,
+      "drift": 2414,
+      "reason": "The author 0.7.3 shell extraction, Pilaude navigation and desktop chrome differ from the baseline. Files (including Artifact), Terminal and real session-family tasks now use stable sibling WorkspacePaneDock hosts, with independent file/terminal selection and hidden rather than remounted panes; Context cards remain independent. Preserve high-risk merge review for layout restore, focus, workspace guards and terminal lifecycle boundaries.",
+      "structuralDrift": 2007,
       "disposition": "accepted"
     },
     "components/FileViewer.tsx": {
@@ -148,11 +148,35 @@
       "structuralDrift": 27,
       "disposition": "accepted"
     },
+    "components/TerminalPanel.tsx": {
+      "risk": "medium", "drift": 149, "structuralDrift": 136, "disposition": "accepted",
+      "reason": "Terminal appearance/theme and pane visibility preserve xterm/PTY instances and ordered input. Mounted tabs share the fork-owned terminal-events client/route so HTTP/1 SSE connections cannot starve input; per-ID replay cursors, reconnect leases, explicit-close/restart and the original 15s request deadline must survive upstream changes."
+    },
+    "hooks/useAgentSession.ts": {
+      "risk": "high", "drift": 451, "structuralDrift": 451, "disposition": "accepted",
+      "reason": "Session streaming, navigation generations and request settlement already diverge substantially from upstream. Queue callbacks now bind their source session ID and generation so delayed reference resolution cannot submit into another chat; preserve rejection-only draft recovery and never replay accepted or ambiguous requests."
+    },
+    "hooks/useKeyboardShortcuts.ts": {
+      "risk": "medium", "drift": 64, "structuralDrift": 64, "disposition": "accepted",
+      "reason": "Panel expand and close shortcuts share existing Escape and Settings handling. Preserve handled-event checks and the physical backslash key so terminal input is not sent for expansion."
+    },
+    "lib/terminal-manager.ts": {
+      "risk": "low", "drift": 7, "structuralDrift": 7, "disposition": "accepted",
+      "reason": "New Windows terminals use system PowerShell to match the reference. Windows PTY cleanup omits unsupported signal names for both immediate and fallback kills; Unix shell selection and process ownership remain unchanged."
+    },
+    "components/terminal-tab-state.ts": {
+      "risk": "low", "drift": 5, "structuralDrift": 5, "disposition": "accepted",
+      "reason": "Restoration deduplicates by terminal ID so same-workspace shells survive reload. Resolve selection against the current tab collection so batched close callbacks cannot leave every surviving terminal hidden."
+    },
+    "components/AgentSessionPanel.tsx": {
+      "risk": "medium", "drift": 190, "structuralDrift": 167, "disposition": "accepted",
+      "reason": "Real session-family task controls are reused inside a persistent pane. Keep nonempty filters clearable after the family shrinks, and preserve the parent-root keyed boundary so queries and controls do not leak to another family."
+    },
     "components/TabBar.tsx": {
       "risk": "medium",
-      "drift": 153,
-      "reason": "Accessibility work plus the terminal-tab affordance: role=\"tab\", aria-selected, roving tabIndex, keyboard activation, and a New terminal button. The terminal action is fork interaction design inside an upstream-owned component, so incoming TabBar changes require review.",
-      "structuralDrift": 106,
+      "drift": 168,
+      "reason": "Accessibility, terminal tab labels and same-project terminals retain roving keyboard activation. The New terminal and terminal restart/terminate context menu are fork interaction design inside an upstream-owned component and require merge review.",
+      "structuralDrift": 121,
       "disposition": "accepted"
     },
     "components/ChatWindow.tsx": {
@@ -179,9 +203,9 @@
     },
     "components/ChatInput.tsx": {
       "risk": "high",
-      "drift": 1174,
-      "reason": "Composer chrome restyle. Upstream changed this file in v0.8.1, and components/ChatInput.test.mjs covers it.",
-      "structuralDrift": 885,
+      "drift": 1369,
+      "reason": "Composer chrome restyle retains single-shot sends, IME and drafts. Attachments render inside the neutral hairline card, Send/Stop follows the last text row and model/reasoning/tool controls retain real Pi semantics. Preserve the unique reachable Stop and independent fixed composer typography.",
+      "structuralDrift": 1058,
       "disposition": "accepted"
     },
     "components/MessageView.tsx": {
@@ -325,6 +349,20 @@
     "e2e/pilaude-agent-api.mjs",
     "e2e/pilaude-data.mjs",
     "vendor/open-claude-ui/",
+    "components/WorkspacePaneDock.tsx",
+    "components/WorkspacePaneControls.tsx",
+    "lib/workspace-pane-layout.ts",
+    "lib/workspace-pane-layout.test.mjs",
+    "docs/pilaude-workspace-panes.md",
+    "docs/pilaude-auto-permissions-research.md",
+    "lib/terminal-events-client.ts",
+    "lib/terminal-events-client.test.mjs",
+    "lib/terminal-events-stream.ts",
+    "app/api/terminal/events/",
+    "components/TerminalSettingsMenu.tsx",
+    "lib/terminal-appearance.ts",
+    "lib/terminal-appearance.test.mjs",
+    "components/PilaudeCodeRipple.tsx",
     "components/PilaudeWelcome.tsx",
     "components/PilaudeWelcome.test.mjs",
     "components/PilaudeIcon.tsx",

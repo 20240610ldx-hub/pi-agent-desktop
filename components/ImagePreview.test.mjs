@@ -10,7 +10,7 @@ test("composer attachments open in the shared preview with a separate remove but
   assert.match(inputSource, /import \{ ImagePreview \} from "\.\/ImagePreview"/);
   assert.match(
     inputSource,
-    /<ImagePreview key=\{img\.previewUrl\} src=\{img\.previewUrl\}>[\s\S]*?<img[\s\S]*?src=\{img\.previewUrl\}[\s\S]*?<\/ImagePreview>\s*<button\s*type="button"\s*onClick=\{\(\) => removeImage\(i\)\}/,
+    /<ImagePreview key=\{img\.previewUrl\} src=\{img\.previewUrl\}>[\s\S]*?<img[\s\S]*?src=\{img\.previewUrl\}[\s\S]*?<\/ImagePreview>\s*<button\s*type="button"\s*className="composer-attachment-remove"\s*onClick=\{\(\) => removeImage\(i\)\}/,
   );
 });
 
