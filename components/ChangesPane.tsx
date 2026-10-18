@@ -36,7 +36,8 @@ const copy = {
 };
 type Words = typeof copy.en;
 type MenuName = "comparison" | "settings" | "finder";
-type Selection = { path: string; side: ReviewSide; start: number; end: number };
+type InlineContextAnchor = Record<ReviewSide, number>;
+type Selection = { path: string; side: ReviewSide; start: number; end: number; inlineContextAnchor?: InlineContextAnchor };
 type PatchState = { state: "loading" } | { state: "ready"; data: GitReviewPatch } | { state: "error"; message: string; stale?: boolean };
 
 function Icon({ name, size }: { name: string; size?: number }) {
@@ -338,9 +339,14 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
     requestAnimationFrame(() => { sections.current.get(path)?.scrollIntoView({ block: "start" }); sections.current.get(path)?.querySelector<HTMLElement>(".changes-file-toggle")?.focus({ preventScroll: true }); });
   };
   const toggleFile = (path: string) => setOpen((current) => { const next = new Set(current); if (next.has(path)) next.delete(path); else next.add(path); return next; });
-  const selectLine = (file: GitReviewFile, side: ReviewSide, line: number, extend: boolean) => {
+  const selectLine = (file: GitReviewFile, side: ReviewSide, line: number, extend: boolean, inlineContextAnchor?: InlineContextAnchor) => {
     feedbackGeneration.current++;
-    const next = extend && selection?.path === file.path && selection.side === side ? { ...selection, end: line } : { path: file.path, side, start: line, end: line };
+    // Inline context exists in both revisions. A changed-line endpoint chooses
+    // its revision without losing that context start; split gutters stay explicit.
+    const start = selection?.side === side ? selection.start : !split ? selection?.inlineContextAnchor?.[side] : undefined;
+    const next = extend && selection?.path === file.path && start !== undefined
+      ? { ...selection, side, start, end: line }
+      : { path: file.path, side, start: line, end: line, ...(inlineContextAnchor ? { inlineContextAnchor } : {}) };
     setSelection(next); setFeedback(""); setNotice("");
   };
   const statusLabel = (file: GitReviewFile) => words[({ added: "statusAdded", modified: "statusModified", deleted: "statusDeleted", renamed: "statusRenamed", copied: "statusCopied", untracked: "statusUntracked", conflict: "statusConflict", typechange: "statusTypechange" } as const)[file.status]];
@@ -422,7 +428,7 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
               {isOpen && <div className="changes-file-content">
                 {(!state || state.state === "loading") && <div className="changes-file-state" role="status">{words.loadingPatch}</div>}
                 {state?.state === "error" && <div className="changes-file-state is-error" role="alert"><span>{state.stale ? words.stale : state.message}</span><button type="button" onClick={() => state.stale ? setRefresh((value) => value + 1) : patches.retry(file.path)}>{state.stale ? words.refresh : words.retry}</button></div>}
-                {state?.state === "ready" && <ReviewDiff file={file} data={state.data} words={words} split={split} wrap={wrap} highlight={highlight} context={contexts[file.path] ?? 3} onMore={() => setContexts((current) => ({ ...current, [file.path]: current[file.path] === 20 ? "all" : 20 }))} selection={selection?.path === file.path ? selection : null} onSelectLine={(side, line, extend) => selectLine(file, side, line, extend)} feedback={feedback} pending={feedbackPending} setFeedback={setFeedback} onCancel={() => { feedbackGeneration.current++; setSelection(null); setFeedback(""); }} onSubmit={submitFeedback} />}
+                {state?.state === "ready" && <ReviewDiff file={file} data={state.data} words={words} split={split} wrap={wrap} highlight={highlight} context={contexts[file.path] ?? 3} onMore={() => setContexts((current) => ({ ...current, [file.path]: current[file.path] === 20 ? "all" : 20 }))} selection={selection?.path === file.path ? selection : null} onSelectLine={(side, line, extend, inlineContextAnchor) => selectLine(file, side, line, extend, inlineContextAnchor)} feedback={feedback} pending={feedbackPending} setFeedback={setFeedback} onCancel={() => { feedbackGeneration.current++; setSelection(null); setFeedback(""); }} onSubmit={submitFeedback} />}
               </div>}
             </section>;
           })}
@@ -511,13 +517,14 @@ function ReviewTree({ files, grouped, selected, onSelect, statusLabel }: { files
   return <div>{grouped ? nodes(tree, 0) : files.map((file) => fileRow(file, 0))}</div>;
 }
 
-function ReviewDiff({ file, data, words, split, wrap, highlight, context, onMore, selection, onSelectLine, feedback, pending, setFeedback, onCancel, onSubmit }: { file: GitReviewFile; data: GitReviewPatch; words: Words; split: boolean; wrap: boolean; highlight: boolean; context: GitReviewContext; onMore: () => void; selection: Selection | null; onSelectLine: (side: ReviewSide, line: number, extend: boolean) => void; feedback: string; pending: boolean; setFeedback: (text: string) => void; onCancel: () => void; onSubmit: (rows: SplitDiffRow[]) => Promise<void> }) {
+function ReviewDiff({ file, data, words, split, wrap, highlight, context, onMore, selection, onSelectLine, feedback, pending, setFeedback, onCancel, onSubmit }: { file: GitReviewFile; data: GitReviewPatch; words: Words; split: boolean; wrap: boolean; highlight: boolean; context: GitReviewContext; onMore: () => void; selection: Selection | null; onSelectLine: (side: ReviewSide, line: number, extend: boolean, inlineContextAnchor?: InlineContextAnchor) => void; feedback: string; pending: boolean; setFeedback: (text: string) => void; onCancel: () => void; onSubmit: (rows: SplitDiffRow[]) => Promise<void> }) {
   const rows = useMemo(() => parseUnifiedPatch(data.patch)?.[0]?.rows ?? [], [data.patch]);
   const inline = useMemo(() => inlineReviewRows(rows), [rows]);
+  const lineDigits = useMemo(() => rows.reduce((digits, row) => row.type === "line" ? Math.max(digits, String(row.left.lineNo ?? "").length, String(row.right.lineNo ?? "").length) : digits, 3), [rows]);
   const syntax = useMemo(() => tokenizeReviewCells(rows, file.path, file.oldPath), [rows, file.path, file.oldPath]);
   const selected = selection ? reviewSelection(rows, selection.side, selection.start, selection.end) : null;
   const inSelection = (side: ReviewSide, line: number | null) => selection?.side === side && line !== null && line >= Math.min(selection.start, selection.end) && line <= Math.max(selection.start, selection.end);
-  const lineButton = (side: ReviewSide, line: number | null) => line === null ? <span className="changes-line-number" /> : <button type="button" className={`changes-line-number${inSelection(side, line) ? " is-selected" : ""}`} aria-label={`${words.feedback}: ${side === "old" ? words.old : words.new} ${line}`} title={`${words.feedback} · ${side === "old" ? words.old : words.new} ${line}`} aria-pressed={inSelection(side, line) || false} onClick={(event) => onSelectLine(side, line, event.shiftKey)}>{line}</button>;
+  const lineButton = (side: ReviewSide, line: number | null, inlineContextAnchor?: InlineContextAnchor) => line === null ? <span className="changes-line-number" /> : <button type="button" className={`changes-line-number${inSelection(side, line) ? " is-selected" : ""}`} aria-label={`${words.feedback}: ${side === "old" ? words.old : words.new} ${line}`} title={`${words.feedback} · ${side === "old" ? words.old : words.new} ${line}`} aria-pressed={inSelection(side, line) || false} onClick={(event) => onSelectLine(side, line, event.shiftKey, inlineContextAnchor)}>{line}</button>;
   const text = (cell: SplitDiffCell, paired?: SplitDiffCell) => {
     const tokens = syntax.get(cell) ?? [{ text: cell.text, tone: "plain" as const }];
     if (highlight && paired && cell.type !== "context" && cell.type !== "empty" && paired.type !== "empty") {
@@ -548,7 +555,7 @@ function ReviewDiff({ file, data, words, split, wrap, highlight, context, onMore
     shownEditor = true;
     return true;
   };
-  return <div className={`changes-diff${split ? " is-split" : ""}${wrap ? " is-wrapped" : ""}`}>
+  return <div className={`changes-diff${split ? " is-split" : ""}${wrap ? " is-wrapped" : ""}`} style={{ "--changes-line-digits": lineDigits } as CSSProperties}>
     {data.truncated && <div className="changes-notice">{words.patchTruncated}</div>}
     {split ? <table className="changes-diff-table changes-split-table"><colgroup><col className="changes-number-col" /><col className="changes-code-col" /><col className="changes-number-col" /><col className="changes-code-col" /></colgroup><tbody>
       <tr className="changes-revision-heading"><th colSpan={2}>{words.old}</th><th colSpan={2}>{words.new}</th></tr>
@@ -557,7 +564,8 @@ function ReviewDiff({ file, data, words, split, wrap, highlight, context, onMore
       {inline.map((row, index) => {
         if (row.type === "hunk") return <tr key={index} className="changes-hunk"><td colSpan={3}>{row.text.startsWith("@@") ? expandContext(hunkLabel(row)) : <span>{row.text}</span>}</td></tr>;
         const { side, line } = inlineReviewLine(row, selection?.side);
-        return <ReviewRow key={index} editor={wantsEditor(row.oldLine, row.newLine) ? editor : null} columns={3} className={`is-${row.cell.type}${inSelection(side, line) ? " is-selected" : ""}`}><td className="changes-gutter">{lineButton(side, line)}</td><td className="changes-sign">{row.cell.type === "added" ? "+" : row.cell.type === "removed" ? "−" : ""}</td><td className="changes-code"><code>{text(row.cell, row.paired)}</code></td></ReviewRow>;
+        const inlineContextAnchor = row.cell.type === "context" && row.oldLine !== null && row.newLine !== null ? { old: row.oldLine, new: row.newLine } : undefined;
+        return <ReviewRow key={index} editor={wantsEditor(row.oldLine, row.newLine) ? editor : null} columns={3} className={`is-${row.cell.type}${inSelection(side, line) ? " is-selected" : ""}`}><td className="changes-gutter">{lineButton(side, line, inlineContextAnchor)}</td><td className="changes-sign">{row.cell.type === "added" ? "+" : row.cell.type === "removed" ? "−" : ""}</td><td className="changes-code"><code>{text(row.cell, row.paired)}</code></td></ReviewRow>;
       })}
     </tbody></table>}
     {selection && !shownEditor && editor}

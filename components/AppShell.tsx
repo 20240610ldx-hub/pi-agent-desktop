@@ -188,6 +188,11 @@ export function AppShell() {
   // must not change when the page opens.
   const scheduledOpenRef = useRef(scheduledOpen);
   scheduledOpenRef.current = scheduledOpen;
+  // Home is a navigation surface over the current workspace, like Scheduled.
+  // Keeping the chat mounted preserves its unsent draft and live session state.
+  const [welcomeOpen, setWelcomeOpen] = useState(() => searchParams?.get("view") === "new");
+  const welcomeOpenRef = useRef(welcomeOpen);
+  welcomeOpenRef.current = welcomeOpen;
   const [explorerUploadBusy, setExplorerUploadBusy] = useState(false);
   const fileExplorerRef = useRef<FileExplorerHandle>(null);
   // The panel is a preview surface; keep the file index hidden until asked for.
@@ -212,7 +217,7 @@ export function AppShell() {
   const [changesCount, setChangesCount] = useState(0);
   const [changesCollapsed, setChangesCollapsed] = useState(true);
   const [sessionCatalog, setSessionCatalog] = useState<SessionInfo[]>([]);
-  const [sessionNavigation, setSessionNavigation] = useState<{ items: { key: string; session: SessionInfo | null; cwd: string; projectKey: string | null; draftId: string; scheduled: boolean }[]; index: number }>({ items: [], index: -1 });
+  const [sessionNavigation, setSessionNavigation] = useState<{ items: { key: string; session: SessionInfo | null; cwd: string; projectKey: string | null; draftId: string; scheduled: boolean; welcome: boolean }[]; index: number }>({ items: [], index: -1 });
   const [availableProjectRoots, setAvailableProjectRoots] = useState<string[]>([]);
   const [welcomePickerOpen, setWelcomePickerOpen] = useState(false);
   const [welcomePickerBusy, setWelcomePickerBusy] = useState(false);
@@ -249,7 +254,8 @@ export function AppShell() {
   }, []);
   // The temporary id distinguishes consecutive fresh composers in one cwd.
   const [newSessionCwd, setNewSessionCwd] = useState<string | null>(null);
-  const [newSessionDraftId, setNewSessionDraftId] = useState("initial");
+  const restoredHomeDraftIdRef = useRef(searchParams?.get("view") === "new" ? searchParams.get("draft") : null);
+  const [newSessionDraftId, setNewSessionDraftId] = useState(restoredHomeDraftIdRef.current ?? "initial");
   const activeNewSessionDraftKeyRef = useRef<string | null>(null);
   const [initialCwdStatus, setInitialCwdStatus] = useState<"idle" | "validating" | "ready" | "error">(
     () => initialNavigation.requestedCwd ? "validating" : "idle",
@@ -878,7 +884,7 @@ export function AppShell() {
         // The sidebar will notify us when it adopts this cwd. Avoid remounting
         // the just-created empty chat during that initial synchronization.
         suppressCwdBumpRef.current = true;
-        const draftId = `initial:${requestedCwd}`;
+        const draftId = restoredHomeDraftIdRef.current ?? `initial:${requestedCwd}`;
         setNewSessionDraftId(draftId);
         activeNewSessionDraftKeyRef.current = `new:${draftId}:${data.cwd}`;
         setNewSessionCwd(data.cwd);
@@ -934,7 +940,7 @@ export function AppShell() {
       setSessionKey((k) => k + 1);
       // A direct Scheduled URL can restore its hidden workspace while sessions
       // load. That fills the chat but must not switch the visible page.
-      if (!scheduledOpenRef.current) {
+      if (!scheduledOpenRef.current && !welcomeOpenRef.current) {
         if (new URLSearchParams(window.location.search).get("session") !== s.id) {
           router.replace(`?session=${encodeURIComponent(s.id)}`, { scroll: false });
         }
@@ -1043,14 +1049,14 @@ export function AppShell() {
     // This callback also runs when the sidebar picks its default project on a
     // direct Scheduled URL. There is no explicit navigation away from that
     // page yet, so retain the URL that made it visible.
-    if (!scheduledOpenRef.current) {
+    if (!scheduledOpenRef.current && !welcomeOpenRef.current) {
       router.replace(typeof window !== "undefined" ? window.location.pathname : "/", { scroll: false });
     }
   }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, newSessionCwd, openPanes.terminal, openPanes.tasks, openPanes.changes, router, selectedSession, restoreWorkspaceContext]);
 
   const handleSelectSession = useCallback((session: SessionInfo, isRestore = false, entryId?: string, blockIndex?: number) => {
-    // Picking a session means leaving Scheduled; a cold-start restore must not.
-    if (!isRestore) setScheduledOpen(false);
+    // Explicit session navigation leaves home/Scheduled; background restore does not.
+    if (!isRestore) { setScheduledOpen(false); setWelcomeOpen(false); }
     setSearchTarget(entryId ? { sessionId: session.id, entryId, blockIndex } : null);
     invalidateWorkspaceRestore();
     const activeDraftKey = activeNewSessionDraftKeyRef.current;
@@ -1078,6 +1084,7 @@ export function AppShell() {
       const sameProject =
         workspaceKeyOf(selectedSession) === workspaceKeyOf(session);
       if (selectedSession.id === session.id && sameProject) {
+        if (welcomeOpenRef.current) window.history.replaceState(null, "", `?session=${encodeURIComponent(session.id)}`);
         if (isMobile) setSidebarOpen(false);
         return;
       }
@@ -1109,14 +1116,15 @@ export function AppShell() {
     // replace in production Next.js triggers a Suspense remount loop.
     // Tab-memory restore lands on `/` and must write `?session=` so reload
     // and copy-link keep this session.
-    if (isRestore && scheduledOpenRef.current) {
-      // A cold-start restore behind the Scheduled page leaves `?view=scheduled` alone.
+    if (isRestore && (scheduledOpenRef.current || welcomeOpenRef.current)) {
+      // A cold-start restore behind home/Scheduled leaves its page URL alone.
     } else if (!isRestore || new URLSearchParams(window.location.search).get("session") !== session.id) {
       router.replace(`?session=${encodeURIComponent(session.id)}`, { scroll: false });
     }
   }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, router, isMobile, newSessionCwd, openPanes.terminal, openPanes.tasks, openPanes.changes, selectedSession]);
 
   const handleNewSession = useCallback((sessionId: string, cwd: string, restoreHistory = false) => {
+    setWelcomeOpen(false);
     setScheduledOpen(false);
     invalidateWorkspaceRestore();
     // "New task" is an explicit reset. A cwd-based blank-task draft would
@@ -1246,7 +1254,26 @@ export function AppShell() {
     }
   }, [handleSelectSession, sessionCatalog]);
 
+  const handleOpenWelcome = useCallback(() => {
+    invalidateWorkspaceRestore();
+    setScheduledOpen(false);
+    setWelcomeOpen(true);
+    setActiveTopPanel(null);
+    setTopMoreOpen(false);
+    if (isMobile) setSidebarOpen(false);
+    const params = new URLSearchParams({ view: "new" });
+    if (selectedSession) params.set("session", selectedSession.id);
+    else {
+      const cwd = newSessionCwd ?? activeCwd;
+      if (cwd) { params.set("cwd", cwd); params.set("draft", newSessionDraftId); }
+    }
+    // This is local view state: Next's native-history integration preserves
+    // its router tree without waiting for a new server-component navigation.
+    window.history.replaceState(null, "", `?${params}`);
+  }, [activeCwd, invalidateWorkspaceRestore, isMobile, newSessionCwd, newSessionDraftId, selectedSession]);
+
   const handleOpenScheduled = useCallback(() => {
+    setWelcomeOpen(false);
     setScheduledOpen(true);
     if (isMobile) setSidebarOpen(false);
     // Skip the replace when the URL already says so (see handleSelectSession).
@@ -1569,13 +1596,13 @@ export function AppShell() {
     activeNewSessionDraftKeyRef.current = newSessionDraftKey;
   }, [newSessionDraftKey]);
   const showChat = selectedSession !== null || effectiveNewSessionCwd !== null;
-  const navigationKey = scheduledOpen ? "scheduled" : selectedSession ? `session:${selectedSession.id}` : newSessionDraftKey;
+  const navigationKey = welcomeOpen ? "welcome" : scheduledOpen ? "scheduled" : selectedSession ? `session:${selectedSession.id}` : newSessionDraftKey;
   useEffect(() => {
     if (!initialSessionRestored || !navigationKey) return;
     setSessionNavigation(current => current.items[current.index]?.key === navigationKey ? current : {
-      items: [...current.items.slice(0, current.index + 1), { key: navigationKey, session: selectedSession, cwd: selectedSession?.cwd ?? effectiveNewSessionCwd ?? "", projectKey: selectedSession ? workspaceKeyOf(selectedSession) : activeProjectKeyRef.current, draftId: newSessionDraftId, scheduled: scheduledOpen }], index: current.index + 1,
+      items: [...current.items.slice(0, current.index + 1), { key: navigationKey, session: selectedSession, cwd: selectedSession?.cwd ?? effectiveNewSessionCwd ?? "", projectKey: selectedSession ? workspaceKeyOf(selectedSession) : activeProjectKeyRef.current, draftId: newSessionDraftId, scheduled: scheduledOpen, welcome: welcomeOpen }], index: current.index + 1,
     });
-  }, [navigationKey, initialSessionRestored, selectedSession, effectiveNewSessionCwd, newSessionDraftId, scheduledOpen]);
+  }, [navigationKey, initialSessionRestored, selectedSession, effectiveNewSessionCwd, newSessionDraftId, scheduledOpen, welcomeOpen]);
   const projectTrustCwd = selectedSession?.cwd ?? effectiveNewSessionCwd;
   const changesCwd = selectedSession?.cwd ?? effectiveNewSessionCwd ?? activeCwd ?? "";
   const addChangesFeedback = useCallback((text: string): boolean => {
@@ -1589,9 +1616,9 @@ export function AppShell() {
     changesFeedbackTargetRef.current = crypto.randomUUID();
   }, [changesCwd, navigationKey]);
   useLayoutEffect(() => {
-    if (!changesCwd || !showChat || scheduledOpen || !changesFeedbackTargetRef.current) return;
+    if (!changesCwd || !showChat || scheduledOpen || welcomeOpen || !changesFeedbackTargetRef.current) return;
     return subscribeChangesFeedback({ targetId: changesFeedbackTargetRef.current, cwd: changesCwd, onFeedback: addChangesFeedback });
-  }, [addChangesFeedback, changesCwd, navigationKey, scheduledOpen, showChat]);
+  }, [addChangesFeedback, changesCwd, navigationKey, scheduledOpen, showChat, welcomeOpen]);
   const openChangesPopout = useCallback(() => {
     if (!changesCwd) return;
     changesFeedbackTargetRef.current ??= crypto.randomUUID();
@@ -1719,14 +1746,14 @@ export function AppShell() {
   };
   const activeCwdName = activeCwd ? getFileName(activeCwd) || activeCwd : null;
   const windowTitle = activeCwdName ? `${activeCwdName} - ${PRODUCT_NAME}` : PRODUCT_NAME;
-  const topBarTitle = scheduledOpen
+  const topBarTitle = welcomeOpen ? PRODUCT_NAME : scheduledOpen
     ? translate("scheduled.title")
     : selectedSession
       ? selectedSession.name || selectedSession.firstMessage || translate("appshell.untitledTask")
       : showChat
         ? translate("appshell.newTask")
         : PRODUCT_NAME;
-  const topBarSubtitle = scheduledOpen ? "" : activeCwdName ?? translate("appshell.subtitle");
+  const topBarSubtitle = scheduledOpen || welcomeOpen ? "" : activeCwdName ?? translate("appshell.subtitle");
 
   useEffect(() => {
     const syncWindowTitle = () => {
@@ -1747,8 +1774,10 @@ export function AppShell() {
     const label = translate(direction < 0 ? "pilaude.back" : "pilaude.forward");
     return <button key={direction} type="button" className="sidebar-chrome-button" title={label} aria-label={label} disabled={!available} onClick={() => {
       if (!available) return;
+      if (!target.welcome) setWelcomeOpen(false);
       setSessionNavigation(current => ({ ...current, index: current.index + direction }));
-      if (target.scheduled) handleOpenScheduled();
+      if (target.welcome) handleOpenWelcome();
+      else if (target.scheduled) handleOpenScheduled();
       else if (target.session) handleSelectSession(sessionCatalog.find(session => session.id === target.session?.id)!);
       else {
         handleCwdChange(target.cwd, null, target.projectKey);
@@ -1788,6 +1817,7 @@ export function AppShell() {
         selectedSessionId={selectedSession?.id ?? null}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
+        onOpenWelcome={handleOpenWelcome}
         initialSessionId={initialSessionId}
         skipInitialProjectSelection={initialNavigation.requestedCwd !== null}
         onInitialRestoreDone={handleInitialRestoreDone}
@@ -2073,7 +2103,7 @@ export function AppShell() {
             <small>{topBarSubtitle}</small>
             <PilaudeIcon name="chevron" size={14} />
           </div>
-          {showChat && !scheduledOpen && projectTrust?.requiresTrust && !projectTrust.trusted && (
+          {showChat && !scheduledOpen && !welcomeOpen && projectTrust?.requiresTrust && !projectTrust.trusted && (
             <button
               type="button"
               onClick={() => {
@@ -2109,7 +2139,7 @@ export function AppShell() {
               {!isMobile && <span>{translate("trust.resourcesNotLoaded")}</span>}
             </button>
           )}
-          {showChat && !scheduledOpen && (
+          {showChat && !scheduledOpen && !welcomeOpen && (
             <div className="app-topbar-actions" style={{ display: "flex", alignItems: "stretch", height: "100%" }}>
               <button
                 className="native-toolbar-button"
@@ -2427,7 +2457,7 @@ export function AppShell() {
               containerRef={topBarRef}
               open={activeTopPanel === "branches"}
               onToggle={() => toggleTopPanel("branches")}
-              hasSession={showChat}
+              hasSession={showChat && !welcomeOpen}
               hideInlineButton
             />
           )}
@@ -2676,7 +2706,7 @@ export function AppShell() {
           {/* Windows/Linux controls stay in the chat topbar while the floating
               panel is a separate card; the topbar still owns the visible edge. */}
           {!isMobile && <WorkspacePaneControls openPanes={{ files: rightPanelOpen && openPanes.files, terminal: rightPanelOpen && openPanes.terminal, changes: rightPanelOpen && openPanes.changes, tasks: rightPanelOpen && openPanes.tasks }} onToggle={toggleWorkspacePane} />}
-          {showChat && <button type="button" className="native-icon-button pilaude-context-toggle" title={translate("pilaude.contextPanel")} aria-label={translate("pilaude.contextPanel")} aria-pressed={contextDockOpen} onClick={() => setContextDockOpen(open => !open)}><PilaudeIcon name="context" /></button>}
+          {showChat && !welcomeOpen && <button type="button" className="native-icon-button pilaude-context-toggle" title={translate("pilaude.contextPanel")} aria-label={translate("pilaude.contextPanel")} aria-pressed={contextDockOpen} onClick={() => setContextDockOpen(open => !open)}><PilaudeIcon name="context" /></button>}
           {(!rightPanelOpen || isMobile) && <WindowControls />}
         </div>
         <div className="pilaude-workspace-body" style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
@@ -2685,7 +2715,7 @@ export function AppShell() {
         {isMobile && renderProjectTrustWarning(true)}
 
         {/* Chat content */}
-        <div inert={scheduledOpen} aria-hidden={scheduledOpen || undefined} style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+        <div inert={scheduledOpen || welcomeOpen} aria-hidden={scheduledOpen || welcomeOpen || undefined} style={{ flex: 1, overflow: "hidden", position: "relative", display: welcomeOpen ? "none" : undefined }}>
           {showChat ? (
             <ChatWindow
               key={sessionKey}
@@ -2762,6 +2792,12 @@ export function AppShell() {
           ) : null}
         </div>
 
+        {welcomeOpen && (
+          <PilaudeWelcome
+            onOpenProject={() => desktopMode ? void handleSelectProjectFromComposer() : setWelcomePickerOpen(true)}
+            onOpenModels={() => openSettingsSection("models")}
+          />
+        )}
         {scheduledOpen && (
           <ScheduledView
             projectRoots={availableProjectRoots}
@@ -2780,7 +2816,7 @@ export function AppShell() {
           />
         )}
       </div>
-      {showChat && contextDockOpen && !scheduledOpen && !settingsSection && !projectTrustDialogOpen && !welcomePickerOpen && (
+      {showChat && contextDockOpen && !scheduledOpen && !welcomeOpen && !settingsSection && !projectTrustDialogOpen && !welcomePickerOpen && (
         <PilaudeWorkspaceContext
           session={selectedSession}
           cwd={selectedSession?.cwd ?? effectiveNewSessionCwd ?? activeCwd ?? ""}

@@ -90,6 +90,7 @@ test("New restores the draft after session navigation and workspace auto-restore
         rightPanelOpen: false,
         activeNewSessionDraftKeyRef: { current: `new:initial:${cwd}` },
         scheduledOpenRef: { current: false },
+        welcomeOpenRef: { current: false },
         activeProjectKeyRef: { current: cwd },
         workspaceRestoreTokenRef: { current: 0 },
         suppressCwdBumpRef: { current: false },

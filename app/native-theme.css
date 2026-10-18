@@ -8635,14 +8635,15 @@ html.dark .workspace-control-tooltip { background: #20201f; border-color: #37373
 /* Compact project entry adapts the user's sparse home reference to Pi's real
    project picker. These are layout choices pending same-state pixel capture. */
 .pilaude-welcome.pilaude-welcome--quiet {
-  --pilaude-ripple-opacity: 0.10;
+  --pilaude-ripple-opacity: 0.24;
+  --pilaude-ripple-wave-opacity: 0.86;
   box-sizing: border-box;
   min-width: 0;
   min-height: 0;
   padding: 24px 24px 64px;
   text-align: left;
 }
-html.dark .pilaude-welcome.pilaude-welcome--quiet { --pilaude-ripple-opacity: 0.14; }
+html.dark .pilaude-welcome.pilaude-welcome--quiet { --pilaude-ripple-color: #83b4d5; --pilaude-ripple-opacity: 0.16; --pilaude-ripple-wave-opacity: 0.96; }
 .pilaude-welcome--quiet > .sr-only {
   position: absolute;
   width: 1px;
@@ -9060,19 +9061,34 @@ html.dark .changes-removed { color: #ff2c56; }
 /* Same-text raw-pixel calibration: grow ink without changing the measured row pitch. */
 .changes-pane { font-size: 15.6px; line-height: 20.4px; }
 .changes-diff-table { font-size: 14px; line-height: 20.4px; }
-.changes-inline-table .changes-number-col, .changes-inline-table .changes-gutter { width: 57.6px; }
+.changes-split-table .changes-number-col, .changes-split-table .changes-gutter { width: max(44px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
+.changes-split-table .changes-code-col { width: auto; }
+.changes-inline-table .changes-number-col, .changes-inline-table .changes-gutter { width: max(57.6px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
 html.dark .changes-inline-table .is-removed > .changes-gutter { background: #392221; }
 html.dark .changes-inline-table .is-added > .changes-gutter { background: #233221; }
 .changes-inline-table .is-removed .changes-line-number { color: var(--changes-remove-rail, var(--danger)); }
 .changes-inline-table .is-added .changes-line-number { color: var(--changes-add-rail, var(--success)); }
 .changes-diff-table code, .changes-line-number { min-height: 20.4px; }
 @container (max-width: 480px) {
-  .changes-inline-table .changes-number-col, .changes-inline-table .changes-gutter { width: 44px; }
+  .changes-inline-table .changes-number-col, .changes-inline-table .changes-gutter { width: max(44px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
 }
 @media (hover: none) {
   .changes-tree-row, .changes-tree-folder, .changes-menu-item, .changes-finder-row { min-height: 36px; }
   .changes-line-number { min-height: 24px; }
 }
+
+/* Optional Pi packages use the existing install flow; classification is not install state. */
+.recommended-pi-extensions { width: 100%; margin-top: 20px; }
+.recommended-pi-extensions > p { color: var(--text-dim); font-size: 12px; line-height: 1.5; margin: 6px 0 12px; }
+.recommended-pi-extension-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 10px; }
+.recommended-pi-extension { min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.recommended-pi-extension-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; }
+.recommended-pi-extension-heading > span { color: var(--text-dim); font-size: 11px; }
+.recommended-pi-extension > code { display: block; overflow-wrap: anywhere; color: var(--text-dim); font: 11px/1.5 var(--font-mono); margin-top: 4px; }
+.recommended-pi-extension p { margin: 7px 0 0; font-size: 12px; line-height: 1.5; }
+.recommended-pi-extension-reason { color: var(--text-dim); }
+.recommended-pi-extension-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.recommended-pi-extension-actions > a { color: var(--accent); font-size: 12px; }
 
 /* Review syntax: the installed Prism grammar produces text runs only. Dark YAML
    keys and scalar values follow the archived red/green source reference; light

@@ -125,6 +125,18 @@ YAML plain scalar 的真实 AST 是根文本，adapter 现只对 yaml／yml 根�
 
 迁移前真实 workspace 卡片宽度基线保存在 `changes-reference/yaml-workspace-1792323892533/`：真实主顶栏／外侧拖动把 inner pane 调到 790 CSS px（目标 +0.4），保留真实 1px border／10px radius 卡片；1880×816 device 截图、990×816 整数裁剪均未缩放。真实 cwd 先由未拦截 Git API 预检，再仅替换 review GET 展示夹具；console error／warn、pageErrors、blockedWrites 为空，两个只读 cwd validate POST 明确记录。画布外 inset、leading context、tree compaction 和未见提交内容仍为残差，此记录不表示新的完整视觉通过。
 
+## Pi 扩展补充范围
+
+用户要求的八个 Pi 扩展单独记录于[扩展接入现状](pilaude-pi-extensions.md)：四个固定版本可选来源通过现有 Plugins 表单消费，两项已有桌面能力、两项不兼容状态明确展示。Todo 的实际 SDK／持久化／widget 桥有 9 项证据，Permission／Web 的限定组件契约 17 项、Plannotator 的注入 BrowserSession 契约 8 项分别通过；目录实际 `extension-catalogue/run-1792332119485/` 已通过设置入口、八项／四按钮、选择无安装请求、显式内存 409 与错误提示及 390px 无横向溢出；手机截图在表单顶部，不声称八卡同时在视口内。没有因此声称预装、扩展全 GUI／网络／统一权限通过。这些 npm 扩展不计入本账本的 open-claude-ui 33 模块采用数。
+
+## 单号选区与长行号补验
+
+内联 context 起点现保留 old／new 双坐标，Shift 到明确删除端点时转换到旧侧，转回添加端点时可恢复新侧；added 起点没有旧侧映射时仍重新开始，split 保持显式侧选择。10 项真实 ReviewDiff 叶组件／父 callback 测试和 7 项 display 检查通过。`changes-reference/boundaries-1792326160929/` 实际检查通过跨侧选择和桌面／390px 五位行号：按数字位数计算 gutter，保留约 7 CSS px 右留白，console error／warn、pageErrors、writes 为空。该移动截图中树 overlay 未关闭，只证明数字不越列，不作整屏移动视觉通过。语法 adapter 的 prototype-shaped 后缀另由 RED→GREEN 修复，未知语言保持精确原文，未增加 lexer。
+
+## New 首页导航补验
+
+New 改为现有首页入口，项目旁的 + 保持新建会话。首页通过 Next 集成的 History API 更新本地视图，保留后台 ChatWindow 挂载、会话／空会话 draft 身份，隐藏 Context 和会话操作；project roots 通知用稳定有序路径 key 避免 render loop。`new-welcome/run-1792330694586/` 七组真实页面检查通过 New、返回／刷新草稿、项目／模型入口、reduced-motion 和 390px 无横溢出。所有 API 为显式内存夹具，pageErrors、DOM 嵌套／深度警告和 blockedWrites 为空；console 有检查器 canvas readback 性能提示，不称 console 全空。早前冷加载／导航失败保留，不据此宣称所有开发服务问题已根治。首页流光是产品独立实现，不增加 open-claude-ui 模块采用数；后续重做的水纹以固定暗字／不规则多道亮纹传播为准，最新 `ripple-motion/run-1792334850698/` 五组实际检查及 `presentation-1792334257081/` 连续帧已有证据；控件及 SVG 后代不触发，亮处换字、reduced-motion 与浅色派生通过，pageErrors／console／blockedWrites 为空。145 项受影响回归、类型和 lint 通过；原像素构图、亮度和完整动态参考仍待校准，见[复刻基准](pilaude-ui-parity.md)。
+
 ## 更新条件
 
 每次采用后更新对应行：来源 SHA／函数 → adapter 或 vendor → 真实 consumer → 边界测试 → 实际页面／交互证据 → 尚存差异。纯算法也必须给出调用者；只加导出、复制文件、相似独立实现或通过库自身 build 都不足以升级采用状态。每轮记录须区分实际测试、页面检查与只读审计；本批模型调用为零。尚未完成的功能、原生实物和视觉状态继续保留待验。

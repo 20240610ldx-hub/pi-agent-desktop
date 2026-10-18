@@ -1,38 +1,23 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-
-// Fixed synthetic alphabet: no documents, source files, or user text are sampled.
-const GLYPHS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789{}[]<>:=/+-";
-const TAU = Math.PI * 2;
+import { RIPPLE_GLYPHS as GLYPHS, codeLightCell, codeLightInk, rippleGlyph, rippleLightState, rippleLightEnergy, type CodeLightCell } from "@/lib/code-ripple";
 const FRAME_INTERVAL = 1000 / 30;
 const MAX_RIPPLES = 6;
 const MAX_CELLS = 26_000;
 // Shared by the visible canvas and its isolated character layer.
 const MAX_BACKING_PIXELS = 8_000_000;
 
-type GridAxis = {
-  position: number;
-  unit: number;
-  center: number;
-  breadth: number;
-  strength: number;
-  drift: number;
-  bend: number;
-};
-type Cell = { column: number; row: number; glyph: string; weight: number };
+type GridAxis = { position: number; unit: number };
+type Cell = { column: number; row: number; glyph: string; weight: number; light: CodeLightCell };
 type Ripple = {
   x: number;
   y: number;
   startedAt: number;
   lifetime: number;
-  speed: number;
-  band: number;
-  wavelength: number;
-  phase: number;
-  asymmetry: number;
-  cos: number;
-  sin: number;
+  maxRadius: number;
+  originField: number;
+  seed: number;
 };
 
 function cellNoise(column: number, row: number): number {
@@ -68,7 +53,8 @@ export function PilaudeCodeRipple() {
     const ripples: Ripple[] = [];
     let color = "#536d83";
     let fallbackColor = color;
-    let opacity = 0.12;
+    let opacity = 0.26;
+    let waveOpacity = 0.88;
     let font = "9.5px ui-monospace, Consolas, monospace";
     let frameId: number | null = null;
     let previousTick: number | null = null;
@@ -85,7 +71,9 @@ export function PilaudeCodeRipple() {
       const parsedOpacity = Number.parseFloat(rawOpacity) / (rawOpacity.endsWith("%") ? 100 : 1);
       opacity = Number.isFinite(parsedOpacity)
         ? Math.min(1, Math.max(0, parsedOpacity))
-        : dark ? 0.14 : 0.12;
+        : dark ? 0.32 : 0.24;
+      const rawWaveOpacity = Number.parseFloat(styles.getPropertyValue("--pilaude-ripple-wave-opacity"));
+      waveOpacity = Number.isFinite(rawWaveOpacity) ? Math.min(1, Math.max(0, rawWaveOpacity)) : 0.88;
       const mono = styles.getPropertyValue("--font-mono").trim();
       font = `9.5px ${mono || "ui-monospace, Consolas, monospace"}`;
     }
@@ -94,15 +82,12 @@ export function PilaudeCodeRipple() {
       cells = [];
       columns = [];
       rows = [];
-      // Dense 5.7px character advance / 11px lines at normal window sizes.
+      // Dense 6px character advance / 12px lines at normal window sizes.
       // Larger surfaces spread the sample lattice instead of growing memory forever.
-      const spacing = Math.max(1, Math.sqrt((width * height) / (5.7 * 11 * MAX_CELLS)));
-      const stepX = 5.7 * spacing;
-      const stepY = 11 * spacing;
-      const axis = (position: number, size: number): GridAxis => ({
-        position, unit: position / size, center: 0, breadth: 0,
-        strength: 0, drift: 0, bend: 0,
-      });
+      const spacing = Math.max(1, Math.sqrt((width * height) / (6 * 12 * MAX_CELLS)));
+      const stepX = 6 * spacing;
+      const stepY = 12 * spacing;
+      const axis = (position: number, size: number): GridAxis => ({ position, unit: position / size });
       for (let column = 0; column < Math.floor(width / stepX); column++) {
         columns.push(axis((column + 0.5) * stepX, width));
       }
@@ -119,32 +104,9 @@ export function PilaudeCodeRipple() {
             column, row,
             glyph: GLYPHS[Math.floor(seed * GLYPHS.length)],
             weight: (0.68 + seed * 0.32) * edge,
+            light: codeLightCell(x, y),
           });
         }
-      }
-    }
-
-    function shapeStreams(time: number) {
-      // Shared row/column curves preserve continuous lines instead of per-cell jitter.
-      for (const column of columns) {
-        const u = column.unit;
-        column.center = height * (0.17 + 0.115 * Math.cos((u - 0.48) * 4.5)
-          + 0.018 * Math.sin(u * 6.8 + time * 0.11));
-        column.breadth = Math.max(30, Math.min(74, height * (0.078 + 0.012 * Math.sin(u * 5.3 - time * 0.08))));
-        column.strength = Math.exp(-(((u - 0.69) / 0.31) ** 4))
-          * (0.76 + 0.24 * Math.sin(u * 3.2 + time * 0.07) ** 2);
-        column.drift = Math.cos(u * 6.2 + time * 0.1) * 2.5;
-        column.bend = Math.sin(u * 7.4 - time * 0.13) * 3.2;
-      }
-      for (const row of rows) {
-        const v = row.unit;
-        row.center = width * (0.21 + 0.082 * Math.sin(v * 7.2 - 1.25)
-          + 0.026 * Math.sin(v * 13.2 + 0.8 + time * 0.065)
-          + 0.018 * Math.sin(v * 5.5 - time * 0.12));
-        row.breadth = Math.max(28, Math.min(82, width * (0.062 + 0.009 * Math.sin(v * 6.8 + time * 0.09))));
-        row.strength = Math.exp(-(((v - 0.65) / 0.48) ** 4));
-        row.drift = Math.sin(v * 7.8 + time * 0.12) * 3;
-        row.bend = Math.cos(v * 5.6 - time * 0.1) * 1.3;
       }
     }
 
@@ -163,7 +125,6 @@ export function PilaudeCodeRipple() {
       inkContext!.fillStyle = fallbackColor;
       inkContext!.fillStyle = color;
       const time = reducedMotion ? 0 : elapsed;
-      shapeStreams(time);
       for (let index = ripples.length - 1; index >= 0; index--) {
         if (time - ripples[index].startedAt >= ripples[index].lifetime) ripples.splice(index, 1);
       }
@@ -171,10 +132,10 @@ export function PilaudeCodeRipple() {
         const age = Math.max(0, time - ripple.startedAt);
         return {
           ...ripple,
+          age,
           originX: ripple.x * width,
           originY: ripple.y * height,
-          radius: age * ripple.speed,
-          strength: Math.min(1, age * 4) * (1 - age / ripple.lifetime) ** 2,
+          ...rippleLightState(age, ripple.lifetime, ripple.maxRadius),
         };
       });
 
@@ -183,52 +144,39 @@ export function PilaudeCodeRipple() {
         const row = rows[cell.row];
         const x = column.position;
         const y = row.position;
-        const acrossTop = (y - column.center) / column.breadth;
-        const acrossLeft = (x - row.center) / row.breadth;
-        const top = Math.exp(-(acrossTop * acrossTop)) * column.strength;
-        const left = Math.exp(-(acrossLeft * acrossLeft)) * row.strength * 0.9;
-        const mask = 1 - (1 - top) * (1 - left);
-        // No ambient symbol wall: the space between streams is effectively empty.
-        if (mask < 0.018 || cell.weight === 0) continue;
-        let field = 0;
-        let offsetX = 0;
-        let offsetY = 0;
+        if (cell.weight === 0) continue;
+        const texture = codeLightInk(cell.light, time);
+        const ambientEnergy = texture * (0.18 + cell.light.cloud * 0.82);
+        let waveEnergy = 0;
+        let waveSeed = 0;
         for (const wave of waves) {
           const dx = x - wave.originX;
           const dy = y - wave.originY;
-          const distance = Math.hypot(dx, dy);
-          const unitX = dx / Math.max(1, distance);
-          const unitY = dy / Math.max(1, distance);
-          const nx = unitX * wave.cos + unitY * wave.sin;
-          const ny = -unitX * wave.sin + unitY * wave.cos;
-          const warp = 1 + wave.asymmetry * (nx * (nx * nx - 3 * ny * ny) + nx * ny);
-          const delta = distance * warp - wave.radius;
-          if (Math.abs(delta) > wave.band * 3) continue;
-          const envelope = Math.exp(-(delta * delta) / (2 * wave.band * wave.band));
-          const value = Math.cos(delta / wave.wavelength * TAU + wave.phase) * envelope * wave.strength;
-          field += value;
-          // A tangential component bends the lines instead of drawing perfect rings.
-          offsetX += (unitX - unitY * wave.asymmetry * 3) * value * 7;
-          offsetY += (unitY + unitX * wave.asymmetry * 3) * value * 5;
+          const energy = rippleLightEnergy(cell.light, wave.originField, dx, dy, wave.radius, wave.strength, wave.seed);
+          if (energy > waveEnergy) { waveEnergy = energy; waveSeed = wave.seed; }
         }
-        const topVein = Math.sin(acrossTop * 3.3 + column.unit * 9.5 - time * 0.11);
-        const leftVein = Math.sin(acrossLeft * 3.6 - row.unit * 8.8 + time * 0.09);
-        const filament = (top * topVein + left * leftVein) / Math.max(0.001, top + left);
-        const intensity = Math.min(0.9, (0.64 + filament * 0.16 + Math.abs(field) * 0.45)
-          * mask ** 1.35);
-        inkContext!.globalAlpha = opacity * cell.weight * intensity;
-        inkContext!.fillText(cell.glyph,
-          x + row.drift * left + column.drift * top + offsetX,
-          y + column.bend * top + row.bend * left + offsetY);
+        // A faint full field stays visible beneath the narrow, moving light paths.
+        const ambient = opacity * (0.1 + ambientEnergy * 0.9);
+        const sweep = waveOpacity * waveEnergy;
+        const litEnergy = Math.max(waveEnergy, ambientEnergy >= 0.18 ? ambientEnergy * 0.65 : 0);
+        const glyphRate = waveEnergy >= 0.035 ? 24 : 6;
+        const glyph = reducedMotion ? cell.glyph : rippleGlyph(cell.glyph, cell.column, cell.row, time, litEnergy, waveSeed, glyphRate);
+        // Quiet characters are neutral; only passing click light contributes blue ink.
+        inkContext!.fillStyle = "#929598";
+        inkContext!.globalAlpha = cell.weight * ambient;
+        inkContext!.fillText(glyph, x, y);
+        if (sweep > 0.003) {
+          inkContext!.fillStyle = fallbackColor;
+          inkContext!.fillStyle = color;
+          inkContext!.globalAlpha = cell.weight * Math.min(0.96, sweep);
+          inkContext!.fillText(glyph, x, y);
+        }
       }
       inkContext!.globalAlpha = 1;
       // These are copies of sparse character ink, never a blur of the full page.
       context!.filter = "blur(1.3px)";
       context!.globalAlpha = 0.13;
       context!.drawImage(ink, 0, 0, width, height);
-      context!.filter = "blur(0.5px)";
-      context!.globalAlpha = 0.09;
-      context!.drawImage(ink, 2.4, 3.2, width, height);
       context!.filter = "none";
       context!.globalAlpha = 0.84;
       context!.drawImage(ink, 0, 0, width, height);
@@ -294,23 +242,19 @@ export function PilaudeCodeRipple() {
 
     function onPointerDown(event: PointerEvent) {
       if (event.button !== 0 || reducedMotion || !canPaint() || opacity === 0) return;
+      if (event.target instanceof Element && event.target.closest("button, a, input, textarea, select, [role='button'], [role='tab'], [contenteditable]")) return;
       const bounds = canvas!.getBoundingClientRect();
       if (bounds.width <= 0 || bounds.height <= 0) return;
       const x = (event.clientX - bounds.left) / bounds.width;
       const y = (event.clientY - bounds.top) / bounds.height;
       if (x < 0 || x > 1 || y < 0 || y > 1) return;
-      const rotation = Math.random() * TAU;
-      const speed = 125 + Math.random() * 60;
+      const maxRadius = Math.min(300, Math.min(width, height) * 0.42);
       if (ripples.length >= MAX_RIPPLES) ripples.shift();
       ripples.push({
-        x, y, startedAt: elapsed, speed,
-        lifetime: Math.max(3, Math.min(9, (Math.hypot(width, height) + 160) / speed)),
-        band: 26 + Math.random() * 24,
-        wavelength: 38 + Math.random() * 28,
-        phase: Math.random() * TAU,
-        asymmetry: 0.08 + Math.random() * 0.16,
-        cos: Math.cos(rotation),
-        sin: Math.sin(rotation),
+        x, y, startedAt: elapsed,
+        maxRadius, lifetime: 3.6 + Math.random() * 0.5,
+        originField: codeLightCell(x * width, y * height).field,
+        seed: Math.random(),
       });
     }
 

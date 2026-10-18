@@ -7,6 +7,40 @@ import ts from "typescript";
 const source = await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8");
 const sessionItemSource = source.slice(source.indexOf("function SessionItem("));
 
+test("project-list notifications change only when ordered paths or the receiver change", () => {
+  const ast = ts.createSourceFile("SessionSidebar.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const component = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "SessionSidebar");
+  const effect = component.body.statements.find(node => ts.isExpressionStatement(node) && ts.isCallExpression(node.expression)
+    && node.expression.expression.getText(ast) === "useEffect" && node.expression.arguments[0].getText(ast).includes("onProjectsChange?."));
+  assert.ok(effect);
+  const key = component.body.statements.find(node => ts.isVariableStatement(node) && node.declarationList.declarations.some(declaration => declaration.name.getText(ast) === "projectRootsKey"));
+  const code = ts.transpileModule(`(() => { ${key?.getText(ast) ?? ""}\n${effect.getText(ast)} })()`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const calls = [];
+  let previousDeps;
+  const context = createContext({
+    activeProjects: [], onProjectsChange: roots => calls.push(Array.from(roots)),
+    useEffect(callback, deps) {
+      if (!previousDeps || deps.some((value, index) => !Object.is(value, previousDeps[index]))) { previousDeps = deps; callback(); }
+    },
+  });
+  const render = roots => {
+    context.activeProjects = roots.map(projectRoot => ({ projectRoot }));
+    new Script(code).runInContext(context);
+  };
+  render(["/a", "/b"]);
+  render(["/a", "/b"]);
+  render(["/a", "/b"]);
+  assert.deepEqual(calls, [["/a", "/b"]], "Equal project paths must not schedule another parent update");
+  render(["/b", "/a"]);
+  assert.deepEqual(calls.at(-1), ["/b", "/a"]);
+  context.onProjectsChange = roots => calls.push(["new receiver", ...roots]);
+  render(["/b", "/a"]);
+  assert.deepEqual(calls.at(-1), ["new receiver", "/b", "/a"]);
+  render([]);
+  assert.deepEqual(calls.at(-1), ["new receiver"]);
+  assert.equal(calls.length, 4);
+});
+
 test("only Shift+click bypasses session deletion confirmation", () => {
   // Deleting without Shift must always route through the confirmation step.
   // The handler moved inline into the row's menu item, so match the guard

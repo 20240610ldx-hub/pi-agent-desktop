@@ -56,6 +56,10 @@
       "risk": "medium", "drift": 181, "structuralDrift": 120, "disposition": "accepted",
       "reason": "Encrypted custom-provider credentials stay outside models.json and the generic account list. Saved request headers render empty masked inputs with opaque references; upstream changes must preserve both account membership and secret editing semantics."
     },
+    "components/PluginsConfig.tsx": {
+      "risk": "low", "drift": 4, "structuralDrift": 4, "disposition": "accepted",
+      "reason": "The add-package form mounts the fork-owned reviewed extension catalogue. Choosing a pinned source fills the existing input only; installation, scope, trust, errors and reload still use the upstream package workflow. Unsupported and built-in capability rows must never activate duplicate extensions."
+    },
     "components/DirectoryPicker.tsx": {
       "risk": "low", "drift": 36, "structuralDrift": 18, "disposition": "accepted",
       "reason": "Directory navigation ignores obsolete async responses and blocks selection during loading. An upstream merge must retain these protections against selecting a stale folder."
@@ -122,16 +126,16 @@
     },
     "components/SessionSidebar.tsx": {
       "risk": "high",
-      "drift": 3238,
-      "reason": "Preserve extracted project selection, overflow-only full-name tooltips and accessible rows. Session actions depend on fork-owned pin/group/archive/unread metadata, source-leaf fork_branch semantics and capability-aware destinations. Status precedence must retain authoritative needsInputSessionIds, blue unread and hollow idle without substituting notification history for pending blocking UI.",
-      "structuralDrift": 2704,
+      "drift": 3240,
+      "reason": "New opens the existing home independently of project selection; project + remains a new-session action. Stable project-root notifications avoid render loops. Preserve extracted project selection, overflow-only full-name tooltips and accessible rows. Session actions depend on fork-owned pin/group/archive/unread metadata, source-leaf fork_branch semantics and capability-aware destinations. Status precedence must retain authoritative needsInputSessionIds, blue unread and hollow idle without substituting notification history for pending blocking UI.",
+      "structuralDrift": 2706,
       "disposition": "accepted"
     },
     "components/AppShell.tsx": {
       "risk": "high",
-      "drift": 2425,
-      "reason": "Files (including Artifact), Terminal, real session-family tasks and Changes use stable sibling WorkspacePaneDock hosts with independent selection and hidden rather than remounted panes; Context cards remain independent. Preserve layout restoration, unique responsive controls, focus/workspace guards, terminal lifecycle and scoped acknowledged Changes feedback into drafts without submitting a model request.",
-      "structuralDrift": 2020,
+      "drift": 2466,
+      "reason": "New navigates to the existing welcome view through Next-integrated local history while retaining the session/composer mount and draft identity; view=new survives reload, and home hides session Context and toolbar actions. Files (including Artifact), Terminal, real session-family tasks and Changes use stable sibling WorkspacePaneDock hosts with independent selection and hidden rather than remounted panes; Context cards remain independent. Preserve layout restoration, unique responsive controls, focus/workspace guards, terminal lifecycle and scoped acknowledged Changes feedback into drafts without submitting a model request.",
+      "structuralDrift": 2061,
       "disposition": "accepted"
     },
     "components/FileViewer.tsx": {
@@ -267,8 +271,8 @@
     },
     "tsconfig.json": {
       "risk": "low",
-      "drift": 5,
-      "reason": "resolveJsonModule for branding, plus allowImportingTsExtensions: lib/*.test.mjs load .ts sources through Node's native type stripping, which requires explicit extensions on relative imports.",
+      "drift": 8,
+      "reason": "resolveJsonModule for branding, plus allowImportingTsExtensions: lib/*.test.mjs load .ts sources through Node's native type stripping, which requires explicit extensions on relative imports. Exclude ignored test-results artifacts so downloaded review sources and generated preview files are not compiled as product source.",
       "disposition": "accepted"
     },
     ".gitignore": {
@@ -354,6 +358,7 @@
     "e2e/pilaude-data.mjs",
     "vendor/open-claude-ui/",
     "docs/pilaude-component-adoption.md",
+    "docs/pilaude-ui-parity.md",
     "lib/sidebar-session-metadata.ts",
     "lib/sidebar-session-metadata.test.mjs",
     "components/DomContextMenuHost.tsx",
@@ -384,6 +389,16 @@
     "components/TabBar.test.mjs",
     "components/ContextUsageRing.tsx",
     "components/ContextUsageRing.test.mjs",
+    "components/RecommendedPiExtensions.tsx",
+    "components/RecommendedPiExtensions.test.mjs",
+    "lib/recommended-pi-extensions.ts",
+    "lib/recommended-pi-extensions.test.mjs",
+    "lib/code-ripple.ts",
+    "lib/code-ripple.test.mjs",
+    "e2e/rpiv-todo-compat.mjs",
+    "e2e/plannotator-compat.mjs",
+    "e2e/pi-optional-tools-compat.mjs",
+    "docs/pilaude-pi-extensions.md",
     "lib/cds-motion.ts",
     "lib/cds-motion.test.mjs",
     "components/DomContextMenuHost.motion.test.mjs",
@@ -488,6 +503,7 @@
     "2026-10-18 \u2014 git ls-tree at 6fcd7d4 confirms DomContextMenuHost, desktop-menu-model, dom-menu-store, desktop-native, app-prefs and the running SSE route are absent: record them with new sidebar/Git review/Changes page/feedback/window modules as fork-owned. The existing running snapshot, image-attachments validator and auth proxy remain shared review entries. Locale en/zh-CN/zh-TW files now have zero diff at this baseline and their stale high-risk entries are removed; fork text stays in locale-plugins.",
     "2026-10-18 \u2014 ImagePreview adds source-keyed modal zoom/pan using the attributed MediaLightbox geometry adapter. At the 6fcd7d4 baseline it measures 249 total/226 structural and is explicitly accepted at medium risk. The modified TypeScript measurement is 2116 cosmetic/11713 structural lines. review-syntax, image-view-transform and cds-motion helpers remain fork-owned; unchanged 30/250 thresholds still require review for medium/high incoming overlaps.",
     "2026-10-18 \u2014 TabBar consumes AttachmentCard's filename stem/final-extension split and separate shrinking layout through file-name-display. Full labels, ARIA, paths and callbacks remain authoritative, with no fixed character truncation or terminal/artifact title changes. TabBar measures 172 total/124 structural at 6fcd7d4, remaining medium; measured modified TypeScript totals are 2117 cosmetic/11716 structural.",
-    "2026-10-18 \u2014 ImagePreview portals its existing source-keyed native dialog to body to keep Markdown paragraphs valid. Shared drift is 250 total/227 structural, still medium, and measured modified TypeScript totals are 2117 cosmetic/11717 structural. Changes inline gutter rendering and its presentation-leaf regression remain fork-owned; revision side/text stay authoritative across split-to-inline selection. Risk thresholds remain 30/250."
+    "2026-10-18 \u2014 ImagePreview portals its existing source-keyed native dialog to body to keep Markdown paragraphs valid. Shared drift is 250 total/227 structural, still medium, and measured modified TypeScript totals are 2117 cosmetic/11717 structural. Changes inline gutter rendering and its presentation-leaf regression remain fork-owned; revision side/text stay authoritative across split-to-inline selection. Risk thresholds remain 30/250.",
+    "2026-10-18 \u2014 New is a Next-integrated local home view that retains the chat/draft mount; project + keeps its new-session behavior. Project-root notifications use a stable ordered-path key to avoid render loops. The optional Pi catalogue fills the existing install form without auto-installing packages. Remeasured at 6fcd7d4: AppShell 2466 total/2061 structural, SessionSidebar 3240/2706 remain high; PluginsConfig 4/4 remains low. Modified TypeScript totals are 2117 cosmetic/11764 structural. Thresholds remain 30/250; fixed-grid ripple, revision-aware selection and extension contract checkers are fork-owned."
   ]
 }

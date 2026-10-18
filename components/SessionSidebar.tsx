@@ -58,6 +58,7 @@ interface Props {
   selectedSessionId: string | null;
   onSelectSession: (session: SessionInfo, isRestore?: boolean, entryId?: string, blockIndex?: number) => void;
   onNewSession?: (sessionId: string, cwd: string) => void;
+  onOpenWelcome?: () => void;
   initialSessionId?: string | null;
   skipInitialProjectSelection?: boolean;
   onInitialRestoreDone?: () => void;
@@ -198,7 +199,7 @@ function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
   return roots;
 }
 
-export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, onOpenCustomize, onOpenSettings, onOpenArtifacts, onOpenMore, scheduledOpen = false }: Props) {
+export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, onOpenWelcome, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, onOpenCustomize, onOpenSettings, onOpenArtifacts, onOpenMore, scheduledOpen = false }: Props) {
   const { t } = useI18n();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
   // Tracked in a ref only: the version is compared against the polled value to
@@ -1100,10 +1101,11 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const recentSessions = !trimmedSessionQuery
     ? getRecallSessions(visibleTreeSessions)
     : [];
+  const projectRootsKey = JSON.stringify(activeProjects.map((group) => group.projectRoot));
   useEffect(() => {
-    const projectRoots = activeProjects.map((group) => group.projectRoot);
-    onProjectsChange?.(projectRoots);
-  }, [activeProjects, onProjectsChange]);
+    // Tree groups are rebuilt each render; only changed paths notify the shell.
+    onProjectsChange?.(JSON.parse(projectRootsKey) as string[]);
+  }, [projectRootsKey, onProjectsChange]);
   // Sessions of every worktree in the selected project are shown together
   const selectedProjectObject = projectFor(selectedCwd);
 
@@ -1329,13 +1331,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         )}
       </div>
 
-        {/* Row 1: New Session — full-width flat row, Claude Desktop style */}
+        {/* New opens the home surface; each project's + keeps its new-session action. */}
         <button
           className="sidebar-header-row sidebar-new-row"
           aria-label={t("sidebar.newChat")}
-          onClick={() => handleNewSession()}
-          disabled={!selectedCwd}
-          title={selectedCwd ? `${t("sidebar.newSessionTitle", { path: selectedCwd })} (⌘/Ctrl+N)` : t("sidebar.selectProject")}
+          onClick={onOpenWelcome ?? (() => handleNewSession())}
+          disabled={!onOpenWelcome && !selectedCwd}
+          title={onOpenWelcome ? t("pilaude.new") : selectedCwd ? `${t("sidebar.newSessionTitle", { path: selectedCwd })} (⌘/Ctrl+N)` : t("sidebar.selectProject")}
         >
           <span className="sidebar-new-plus" aria-hidden="true">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

@@ -14,7 +14,8 @@ function languageForPath(path: string): string {
   if (name === "makefile" || name === "gnumakefile") return "makefile";
   if (/^\.(?:bashrc|bash_profile|zshrc)$/.test(name)) return "bash";
   const extension = name.split(".").pop() ?? "";
-  return ({ mjs: "javascript", cjs: "javascript", mts: "typescript", cts: "typescript", cc: "cpp", cxx: "cpp", hpp: "cpp", h: "c", htm: "markup", vue: "markup", svelte: "markup", ps1: "powershell", jsonc: "json", jsonl: "json", gql: "graphql", tf: "hcl" } as Record<string, string>)[extension] ?? extension;
+  const aliases: Record<string, string> = { mjs: "javascript", cjs: "javascript", mts: "typescript", cts: "typescript", cc: "cpp", cxx: "cpp", hpp: "cpp", h: "c", htm: "markup", vue: "markup", svelte: "markup", ps1: "powershell", jsonc: "json", jsonl: "json", gql: "graphql", tf: "hcl" };
+  return Object.hasOwn(aliases, extension) ? aliases[extension] : extension;
 }
 
 function toneFor(classes: string[], parent: ReviewSyntaxTone): ReviewSyntaxTone {

@@ -48,6 +48,7 @@ import {
   ConfigTrustNotice,
 } from "./SettingsUi";
 import { itemsToSwitch, projectTrustReloadKey } from "./settings-ui-helpers";
+import { RecommendedPiExtensions } from "./RecommendedPiExtensions";
 
 type PluginScope = PluginPackageInfo["scope"];
 type PluginAction = "install" | "remove" | "update" | "disable" | "enable";
@@ -269,6 +270,7 @@ function AddPluginPanel({
   const { t } = useI18n();
 
   return (
+    <>
     <ConfigAddSourcePanel
       title={t("i18n.addPlugin")}
       catalogs={[{
@@ -319,6 +321,8 @@ function AddPluginPanel({
         {busy ? t("i18n.installing") : t("i18n.install")}
       </ConfigButton>
     </ConfigAddSourcePanel>
+    <RecommendedPiExtensions busy={busy} onSelectSource={onSourceChange} />
+    </>
   );
 }
 

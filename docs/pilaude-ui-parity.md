@@ -186,6 +186,18 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 
 用户明确要求通用 diff／彩色代码块复用成熟开源渲染库，后续避免重复实现。当前 Prism／refractor 已复用，但自写表格／词差异仍需评估替换；选库与迁移边界见[采用账本](pilaude-component-adoption.md)。新库接入仍须逐项验证视觉与真实反馈、原文、键盘及性能，不把默认库外观当作一致性通过。
 
+## New 入口与内联选择边界补验
+
+`new-welcome/run-1792330694586/` 通过七组真实界面检查：New 显示现有首页／隐藏 Context，返回会话保留未发草稿，首页刷新保留会话与空会话 draft，项目／模型入口、reduced-motion 和 390px 无横溢出。History API 只处理本地 home 切换，真实换会话仍用既有导航。project roots 的稳定有序路径 key 修复重复通知循环。API 均为显式内存夹具，未运行模型或写真实用户设置；pageErrors、markup／update-depth 警告及 blockedWrites 为空，console 保留 canvas readback 性能提示。此轮只证明导航和状态，不证明最新流光视觉通过。
+
+Changes 内联 context 起点保留两侧坐标，Shift 到明确删除／添加端点转换到对应 revision，split 仍保显式侧；无映射起点重新开始。新增叶组件／父 callback 与 display 共 17 项通过。`changes-reference/boundaries-1792326160929/` 通过实际跨侧选择和桌面／390px 五位行号无越列，gutter 按数字位数计算；console error／warn、pageErrors、writes 为空。移动 split 截图中的树 overlay 仍开，不把数字边界检查写成整屏视觉通过。prototype-shaped 文件后缀另有语法回退回归，继续复用既有 refractor，未新增 parser。
+
+## 首页静置／点击两态重新实现
+
+用户后续提供清晰静置／点击两态参考，原字节保留于本机私有 `references/claude-desktop/home-code-ripple/2026-10-18/04-home-idle-light-reference.png`（851×532）与 `05-home-click-light-reference.png`（867×548）。用户否决此前规则圆环、过小短促扩散、过大范围、字面形变及控件触发波纹；这些旧版不能因功能检查而写成视觉通过。
+
+原像素测量显示字符节距约 6.0±0.1×12.0±0.3px，静置为近灰弱字，点击后的净区明显偏蓝，局部可分离亮带半高宽约 19–24px、估计不确定度 ±6px。参考的 DPI／应用缩放／字体身份及动态时序仍未知。实现现重新采用固定字符网格上的连续不规则照明纹理；用户随后指出仅扩大受光区域丢失水纹传播，现恢复从点击点向外推进的多道窄亮纹，用局部纹理改变传播路径，避免规整完整圆周。静置中速局部换字，点击照亮处较快换字；背景点击才入队，项目／模型控件及 SVG 后代不触发。最新实际 `ripple-motion/run-1792334850698/` 五组通过：固定格点的静置照明／换字、控件及 SVG 后代排除、点击传播与亮区换字、reduced-motion、浅色派生状态；pageErrors、console、blockedWrites 为空。`presentation-1792334257081/` 保存 86 个实际 compositor 帧及原时序 GIF，874×560，画布 615×515，无缩放，未写设置或调用模型。145 项受影响回归、类型及 lint 通过，保留既有 TerminalPanel aria 警告。原像素 `reference-comparison-final/` 为参考 100%／actual 50% 整数裁剪叠图：字符节距 actual 约 5.994×11.933 对参考 6.045×12.038，背景 #151515 对 #171717；指定 actual 帧为点击后约 3.046 秒退场，右下蓝光明显弱于未知阶段的参考，不能据此证明峰值相同或完整视觉通过。构图、亮度与原始动态时序仍待校准，不将历史 100px 小圆环检查外推到新版。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。
