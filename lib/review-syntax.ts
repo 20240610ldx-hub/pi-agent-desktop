@@ -21,7 +21,7 @@ function toneFor(classes: string[], parent: ReviewSyntaxTone): ReviewSyntaxTone 
   if (classes.some((name) => ["comment", "prolog", "doctype", "cdata"].includes(name))) return "comment";
   if (classes.some((name) => ["string", "char", "scalar", "heredoc-string", "template-string", "attr-value"].includes(name))) return "string";
   if (classes.some((name) => ["key", "property", "atrule", "attr-name", "tag"].includes(name))) return "property";
-  if (classes.some((name) => ["keyword", "boolean", "important"].includes(name))) return "keyword";
+  if (classes.some((name) => ["keyword", "boolean", "null", "important"].includes(name))) return "keyword";
   if (classes.some((name) => ["function", "function-name", "class-name", "builtin"].includes(name))) return "function";
   // Shell environment variables also carry Prism's "constant" alias.
   if (classes.some((name) => name === "variable" || name === "environment")) return "variable";
@@ -49,7 +49,10 @@ export function tokenizeReviewSource(source: string, path: string): ReviewSyntax
         node.children.forEach((child) => visit(child, tone));
       }
     };
-    refractor.highlight(source, language).children.forEach((node) => visit(node, "plain"));
+    // Prism leaves YAML's unquoted scalars as root text. Give that language a
+    // string base tone; explicit AST tokens still override it without re-lexing.
+    const rootTone = language === "yaml" || language === "yml" ? "string" : "plain";
+    refractor.highlight(source, language).children.forEach((node) => visit(node, rootTone));
     return parts.map((part) => part.text).join("") === source ? parts : plain();
   } catch {
     return plain();

@@ -209,8 +209,8 @@
       "disposition": "accepted"
     },
     "components/ImagePreview.tsx": {
-      "risk": "medium", "drift": 249, "structuralDrift": 226, "disposition": "accepted",
-      "reason": "The shared image trigger mounts a source-keyed native modal whose pure geometry adapter owns cursor zoom and bounded pan. Preserve stale-load isolation, IME/Escape, native focus lifecycle, wheel cleanup, viewport reset and explicit loading errors when merging upstream."
+      "risk": "medium", "drift": 250, "structuralDrift": 227, "disposition": "accepted",
+      "reason": "The shared image trigger portals a source-keyed native modal to document.body so Markdown paragraph content stays valid. Its pure geometry adapter owns cursor zoom and bounded pan. Preserve stale-load isolation, IME/Escape, native focus lifecycle, wheel cleanup, viewport reset and explicit loading errors when merging upstream."
     },
     "components/MessageView.tsx": {
       "risk": "high",
@@ -369,6 +369,7 @@
     "app/api/git/review/",
     "app/changes/",
     "components/ChangesPane.tsx",
+    "components/ChangesPane.test.mjs",
     "lib/git-review.ts",
     "lib/git-review.test.mjs",
     "lib/git-review-types.ts",
@@ -486,6 +487,7 @@
     "2026-10-18 \u2014 Source freeze remeasured against 6fcd7d4: SessionSidebar 3238 total/2704 structural, AppShell 2425/2020, ChatInput 1419/1108, MessageView 549/344 and rpc-manager 323/323 remain high. The measured modified TypeScript scope totals 2093 cosmetic and 11490 structural lines. Preserve needs-input lifecycle, sidebar metadata, natural image bounds and scoped Changes feedback; thresholds remain 30/250 and medium/high still require review.",
     "2026-10-18 \u2014 git ls-tree at 6fcd7d4 confirms DomContextMenuHost, desktop-menu-model, dom-menu-store, desktop-native, app-prefs and the running SSE route are absent: record them with new sidebar/Git review/Changes page/feedback/window modules as fork-owned. The existing running snapshot, image-attachments validator and auth proxy remain shared review entries. Locale en/zh-CN/zh-TW files now have zero diff at this baseline and their stale high-risk entries are removed; fork text stays in locale-plugins.",
     "2026-10-18 \u2014 ImagePreview adds source-keyed modal zoom/pan using the attributed MediaLightbox geometry adapter. At the 6fcd7d4 baseline it measures 249 total/226 structural and is explicitly accepted at medium risk. The modified TypeScript measurement is 2116 cosmetic/11713 structural lines. review-syntax, image-view-transform and cds-motion helpers remain fork-owned; unchanged 30/250 thresholds still require review for medium/high incoming overlaps.",
-    "2026-10-18 \u2014 TabBar consumes AttachmentCard's filename stem/final-extension split and separate shrinking layout through file-name-display. Full labels, ARIA, paths and callbacks remain authoritative, with no fixed character truncation or terminal/artifact title changes. TabBar measures 172 total/124 structural at 6fcd7d4, remaining medium; measured modified TypeScript totals are 2117 cosmetic/11716 structural."
+    "2026-10-18 \u2014 TabBar consumes AttachmentCard's filename stem/final-extension split and separate shrinking layout through file-name-display. Full labels, ARIA, paths and callbacks remain authoritative, with no fixed character truncation or terminal/artifact title changes. TabBar measures 172 total/124 structural at 6fcd7d4, remaining medium; measured modified TypeScript totals are 2117 cosmetic/11716 structural.",
+    "2026-10-18 \u2014 ImagePreview portals its existing source-keyed native dialog to body to keep Markdown paragraphs valid. Shared drift is 250 total/227 structural, still medium, and measured modified TypeScript totals are 2117 cosmetic/11717 structural. Changes inline gutter rendering and its presentation-leaf regression remain fork-owned; revision side/text stay authoritative across split-to-inline selection. Risk thresholds remain 30/250."
   ]
 }

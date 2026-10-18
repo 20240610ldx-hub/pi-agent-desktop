@@ -64,6 +64,12 @@ Changes 已作为独立 pane 接入 [WorkspacePaneDock](../components/WorkspaceP
 
 跨窗口只读专项 `changes-ack-reliability/run-1792319138883/` 通过十次连续提交／三轮 popup 周期、每次一个 ACK／一个插入，以及 A→B→A 旧目标隔离；该轮最后 fresh 因主 document 重载而 partial。补剩余 `fresh-only-1792319508195/` 一次新弹窗交接通过，document 代际不变。失败时订阅器与 live ref 相同，开发刷新更换了目标；未修改 AppShell／超时／重放策略，不把新证据外推成历史所有 ACK 问题根治。设置菜单首次焦点的隐藏布局竞态已单独三次复现；改为可见布局提交后首次 focus，Tab 退出显式关闭、不恢复 trigger。`focus-diag-1792319835972/` 三次通过 resize 不夺焦点、Home／End、Tab 和 Escape；最终 `syntax-keyboard-1792320000380/` 五组通过真实源码／语法与 mark、编辑器／IME／disabled、390px 已加载表格／header／finder、无根横溢出及关闭焦点。可提交专项入口为 `e2e/changes-focus.mjs`，通过现有服务和显式 Git 项目运行，不创建会话或发送模型。
 
+## 单列行号与同文校准补验
+
+内联 Changes 现只显示一列真实行号：删除指向 old，添加指向 new，context 默认 new；从并排视图带回的 old 选区继续显示 old context，并可 Shift 延展。并排双侧入口与反馈原文不变，hunk／反馈行同步改为三列 span。helper／呈现叶组件／YAML 17 项通过；`yaml-visual-1792322634062/` 实际验证旧新 82、split old79→inline→Shift old80→取消恢复 new79，console error／warn／pageerror／writes 为空。`syntax-keyboard-1792322713151/` 再次通过真实 Git 原文、mark、键盘／IME 和 390px 五组检查。
+
+同文原像素证明行距约 25.51px 已准，只将代码／pane 文字校准为 14／15.6 CSS px、固定 20.4px 行高；单号区约 71.99 原像素、table 至代码原点约 94.49，分别接近参考 72／94。参考 sidebar 扣除卡片外框后约 309 原像素，与当前 308.75 接近，未用加宽 sidebar 消除 standalone 的卡片缺失。外框、leading 78 省略入口、tree 结构与部分换行仍待校准；两组六项 before／after 叠图及墨迹数值见[复刻基准](pilaude-ui-parity.md)。
+
 ## 共享终端事件流与既有验证限制
 
 初版独立终端 SSE 在 Files watcher、会话与调度事件流并存时达到 HTTP/1 每 origin 连接上限，第二终端的 resize 请求在原有 15 秒时限内无法抵达服务端。该失败保留在本机 workspace-panes 证据中，不能以单终端通过代替完整多标签验收；现已改为每个窗口一条终端事件流，按标签 ID 分发并维护各自输出游标；隐藏标签继续持有服务端订阅与 PTY lease。初始化重放分段、保留 UTF-16 游标和完整代理对，慢读者队列有界，退出/缺失单标签不关闭其他终端。13 项 client/stream/真实 manager lease 测试通过。最终实际双标签目标检查通过：首/次标签 PID 分别 44952/19536，第二标签 input POST 明确进入其自己的 ID、返回 200，共享 SSE 与 DOM/辅助树均收到第二标签 marker，切回首标签 PID 不变。完整 terminal 脚本已通过首终端、会话切换、刷新同 PID、离线恢复、创建请求不增加、输出不重复与尺寸；其第二标签等待仍曾失败，后续重启/延迟创建/移动场景未全部执行，完整脚本不标为通过。单独多 pane 脚本另遇 Next 开发编译 Manifest file is empty 的 500，失败原始证据保留。

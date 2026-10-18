@@ -135,7 +135,20 @@ test("uses a native modal dialog and restores focus to its trigger", () => {
   assert.match(source, /dialog\.showModal\(\)/);
   assert.match(source, /closeButtonRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(source, /const trigger = triggerRef\.current[\s\S]*?trigger\?\.isConnected[\s\S]*?trigger\.focus\(\{ preventScroll: true \}\)/);
-  assert.doesNotMatch(source, /createPortal/);
+});
+
+test("the open native dialog is portaled to body outside Markdown paragraphs", () => {
+  const file = ts.createSourceFile("ImagePreview.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const portals = [];
+  function visit(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(file) === "createPortal") portals.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(file);
+  assert.equal(portals.length, 1, "One portal owns the existing native dialog lifecycle");
+  assert.equal(portals[0].arguments[1].getText(file), "document.body");
+  assert.match(portals[0].arguments[0].getText(file), /<ImagePreviewDialog key=\{src\}/);
+  assert.match(source, /open && createPortal\(/, "Closed SSR renders only the trigger without touching document");
 });
 
 test("Escape closes image preview without reaching global shortcuts", () => {

@@ -9057,8 +9057,18 @@ html.dark .changes-removed { color: #ff2c56; }
 .changes-header-actions:has(.workspace-pane-mobile-controls) { display: contents; }
 .changes-header .workspace-pane-mobile-controls { display: flex; justify-content: flex-end; flex: 0 0 100%; width: 100%; min-width: 0; }
 .changes-icon-button { flex-basis: 28.8px; width: 28.8px; height: 28.8px; }
-.changes-diff-table { line-height: 20.4px; }
+/* Same-text raw-pixel calibration: grow ink without changing the measured row pitch. */
+.changes-pane { font-size: 15.6px; line-height: 20.4px; }
+.changes-diff-table { font-size: 14px; line-height: 20.4px; }
+.changes-inline-table .changes-number-col, .changes-inline-table .changes-gutter { width: 57.6px; }
+html.dark .changes-inline-table .is-removed > .changes-gutter { background: #392221; }
+html.dark .changes-inline-table .is-added > .changes-gutter { background: #233221; }
+.changes-inline-table .is-removed .changes-line-number { color: var(--changes-remove-rail, var(--danger)); }
+.changes-inline-table .is-added .changes-line-number { color: var(--changes-add-rail, var(--success)); }
 .changes-diff-table code, .changes-line-number { min-height: 20.4px; }
+@container (max-width: 480px) {
+  .changes-inline-table .changes-number-col, .changes-inline-table .changes-gutter { width: 44px; }
+}
 @media (hover: none) {
   .changes-tree-row, .changes-tree-folder, .changes-menu-item, .changes-finder-row { min-height: 36px; }
   .changes-line-number { min-height: 24px; }

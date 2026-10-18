@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "@/hooks/useI18n";
 import { isImeComposing } from "@/lib/ime";
 import {
@@ -41,7 +42,7 @@ export function ImagePreview({ src, alt = "", children, className, style }: Imag
       </button>
       {/* A new source owns a fresh load/transform/drag lifecycle. Late events
           from the old image cannot enter the new preview, even at the same index. */}
-      {open && <ImagePreviewDialog key={src} src={src} alt={alt} triggerRef={triggerRef} onClose={() => setOpen(false)} />}
+      {open && createPortal(<ImagePreviewDialog key={src} src={src} alt={alt} triggerRef={triggerRef} onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }

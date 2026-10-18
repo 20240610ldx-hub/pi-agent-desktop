@@ -109,6 +109,14 @@
 
 `ContextUsageRing` 定向测试先复现 NaN 进入 stroke-dasharray、非法窗口／累计费用进入 tooltip 的两组失败；现只接纳有限非负比例，非法值按未知处理，分母必须有限正数，累计 token／cost 必须有限非负且保持原有大于零才展示的门槛。超过 100% 保留文字原值，圆弧限制到 100%，90% danger 和空 usage 隐藏行为保留。5 项真实组件 SSR 加 8 项统计口径回归、项目类型和完整 lint 通过；保留既有 TerminalPanel aria 警告，实际 `context-usage-ring/run-1792321449859/` 七类状态加正常／未知两次统计开关共九组通过：正常、未知、负比例、零窗口与非法累计值、超容量、无效窗口未知、无 usage；圆环保持 14×14 SVG，点击打开现有统计 popover，Escape 后草稿保留可编辑。writes／pageErrors 为空，JSON 无法表示 NaN／Infinity，浏览器覆盖不冒称这些值；它们由 SSR 单测覆盖。没有修改 SDK、统计聚合或自动重放行为。
 
+## YAML 与图片挂载补验
+
+YAML plain scalar 的真实 AST 是根文本，adapter 现只对 yaml／yml 根文本使用 string tone，明确 token 仍优先；没有新增 lexer 或修改原文。内联单号栏由 `inlineReviewLine` 返回真实 revision／line，删除取旧侧、添加取新侧，既有旧侧 context 选区从 split 切回时仍可 Shift 延展。17 项 helper／实际呈现叶组件／语法测试通过。此为已有 `StreamingDiffViewer` 局部呈现适配的修正，不新增采用计数；代码 14px、pane 15.6px 与固定 20.4px 行高来自原像素同文量测，不冒称源 CSS。
+
+`changes-reference/yaml-visual-1792322634062/` 通过实际单号、scalar 色、旧新反馈侧及 split→inline 的旧选区延展，console error／warn／pageerror／writes 为空；最后行号色采样修正的 `yaml-visual-1792323175159/` 同样通过并断言 computed 增删颜色。真实 Git 的 `syntax-keyboard-1792322713151/` 五组原文／mark／键盘／IME／390px 检查也通过。before／after 六组未缩放叠图和明确残差见[复刻基准](pilaude-ui-parity.md)。
+
+图片旧 `run-1792319488145` 只捕获 pageerror，遗漏了 Markdown `<p>` 内 div／dialog 的 React console error。新 RED `run-1792321866405` 已复现四条；最小修复将 src-keyed native dialog portal 到 body，16 项图片定向测试通过。`image-preview-zoom/run-1792322241886/` 七组实际检查保留 zoom／pan／IME／焦点与加载错误，并验证 body 挂载、有效 Markdown DOM；console error／warn、pageErrors、writes 为空。portal 不增加 `useClaudeSharedElementTransition` 或其他模块采用数。最终受影响 UI／算法与 ownership／提取／CSS 基线组合 93 项通过，项目 TypeScript 和完整 lint 退出 0，既有 TerminalPanel aria 警告保留；完整 npm／terminal E2E 和 Windows 原生实物仍待验。
+
 ## 更新条件
 
 每次采用后更新对应行：来源 SHA／函数 → adapter 或 vendor → 真实 consumer → 边界测试 → 实际页面／交互证据 → 尚存差异。纯算法也必须给出调用者；只加导出、复制文件、相似独立实现或通过库自身 build 都不足以升级采用状态。每轮记录须区分实际测试、页面检查与只读审计；本批模型调用为零。尚未完成的功能、原生实物和视觉状态继续保留待验。

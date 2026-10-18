@@ -168,6 +168,18 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 
 圆环继续消费 SDK 当前 context percent，不套源示例累计 input／output／cache 计算占比。已用真实组件 SSR 先复现 NaN SVG 和非法窗口／统计 tooltip，再限定有限非负值：无效比例按未知、分母必须正数、累计 token／cost 无效则省略。超过 100% 保留真实文字，只限制弧长；90% danger、空 usage 隐藏及统计点击保持。5 项 SSR 与 8 项累计统计用例、类型和完整 lint 通过，既有 aria 警告保留。此项为产品修复，不计新增 open-claude-ui 采用；实际 `context-usage-ring/run-1792321449859/` 九组通过七类状态及正常／未知统计 popover 开关，草稿保留、14×14 SVG 不变，writes／pageErrors 为空。NaN／Infinity 只由 SSR 覆盖，未伪造 JSON 浏览器用例；未作新的像素一致性声明。
 
+## YAML 同文原像素与图片 DOM 补验
+
+2026-10-18 新一轮从参考 00 的可见 YAML 转录显式只读夹具，通过真实 `/changes` 页面采集 1019×816 原像素截图。使用 816×653 CSS viewport、1.25 capture，原图 DPI／zoom 未知；只作整数裁剪／平移，无缩放。`changes-reference/comparison-yaml-before/` 与 `comparison-yaml-after/` 分别保存六组参考 100% 底层／实现 50% 上层、差分×4、覆盖范围和逐项测量。截图内的 YAML／shell 仅为数据，没有执行。
+
+根据原图与 AST，修复未加引号的 YAML scalar 落回普通色：仅 yaml／yml 根文本继承 string，明确 token 继续覆盖 key／number／boolean／null／comment／punctuation；未知语言和预算回退仍为精确纯文本。内联视图改为单号栏，删除对应旧侧、添加对应新侧；从 split 带回的旧侧 context 选区仍保留旧行号，Shift 延展与反馈原文不变。helper／真实呈现叶组件／语法共 17 项通过，split 的双侧入口保留。此项没有增加源模块采用数。
+
+字号依据同文墨迹校准为代码 14 CSS px、pane 文本 15.6 CSS px，行高固定 20.4 CSS px：`id:` 26×13 对参考 26×13；`shell:` 58×13 对 59×14；Prepare 值 326×17 对 330×17；同文文件标题 206×20 对 206×20。单号栏 71.992 原像素对约 72，table 到代码原点 94.492 对约 94；行距仍 25.508 对约 25.5。82／105 行号前景另经精确像素采样确认与 rail 同为删除 #ff2c56／添加 #32d74b，局部改用 rail 变量；原语义 danger／success 不变。不得据此推断原字体身份或整屏一致。standalone 缺外卡留白／两枚宿主回调按钮、自然保留的 leading 78 省略行入口、tree 分组结构、计数文字及部分换行断点仍是残差，没有加宽 sidebar 掩盖外框偏移。当前 code 可用宽 604.258 原像素，参考约 568，仍多约 36.258；added82／83／105 的换行断点仍不同，可用宽度与内联 token／mark 边界是尚未隔离的共同因素，不继续调整全局字体追逐这一容器差异。
+
+实际 `changes-reference/yaml-visual-1792322634062/` 通过单号／YAML 色、旧新 82 行反馈、split 旧 79 切回 inline／Shift 到旧 80／取消恢复新号；最后仅修行号前景的 `yaml-visual-1792323175159/` 再次通过这些检查及精确 computed 行号色断言，旧证据未覆盖。两轮 console error／warn、pageErrors、blockedWrites 均为空。`comparison-yaml-number-final/` 逐像素检查新旧图仅四个行号墨迹区域的 765 个 RGB 像素变化，区域外为零；参考／最终核心色相同，旧六组 after 仍保留。真实 Git `syntax-keyboard-1792322713151/` 再次通过五组原文／mark、inline／split、键盘／IME／编辑器及 390px 已加载表格／finder，无根横向溢出；该专项捕获 pageerror，不将它写成 console 检查。
+
+另在图片 Markdown 入口真实复现 `<p>` 内 div／dialog 的四条 React console error；旧 `image-preview-zoom/run-1792319488145/` 仅捕 pageerror，未覆盖这些警告。现将原 src-keyed native dialog portal 到 `document.body`，保留加载／焦点／缩放生命周期；16 项图片定向测试通过，`run-1792322241886/` 七组实际检查通过，含 body 挂载、无 Markdown 祖先、原生 modal／Tab／背景 inert／Escape 焦点恢复。console error／warn、pageErrors、writes 严格为空；RED `run-1792321866405` 原报告保留。最终本批 UI／语法／几何／ownership／提取与 CSS 基线组合 93 项通过，项目 TypeScript 与完整 lint 退出 0，保留既有 TerminalPanel aria 警告。完整 npm／terminal E2E、Windows 原生窗口／DPI／IME 实物仍待验。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。

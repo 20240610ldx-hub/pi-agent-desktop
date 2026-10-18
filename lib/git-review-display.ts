@@ -51,6 +51,12 @@ export type InlineReviewRow =
   | { type: "hunk"; text: string; omitted: number }
   | { type: "line"; oldLine: number | null; newLine: number | null; cell: SplitDiffCell; paired?: SplitDiffCell };
 
+/** One inline number still identifies its revision; old context stays selectable after switching views. */
+export function inlineReviewLine(row: Extract<InlineReviewRow, { type: "line" }>, contextSide: ReviewSide = "new"): { side: ReviewSide; line: number | null } {
+  const side = row.cell.type === "removed" || (row.cell.type === "context" && contextSide === "old") ? "old" : "new";
+  return { side, line: side === "old" ? row.oldLine : row.newLine };
+}
+
 /** Reconstruct Git's delete-block/add-block order from the parser's aligned rows. */
 export function inlineReviewRows(rows: SplitDiffRow[]): InlineReviewRow[] {
   const result: InlineReviewRow[] = [];

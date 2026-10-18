@@ -7,7 +7,7 @@ import { useI18n } from "@/hooks/useI18n";
 import { parseUnifiedPatch, type SplitDiffCell, type SplitDiffRow } from "@/lib/patch";
 import { filterFileEntries } from "@/lib/file-fuzzy";
 import { buildSearchTree, type SearchTreeNode } from "@/lib/search-tree";
-import { formatReviewFeedback, inlineReviewRows, reviewFileGroup, reviewNavigationIndex, reviewPaneShortcut, reviewSelection, reviewWordParts, shortReviewRef, type ReviewKey, type ReviewSide } from "@/lib/git-review-display";
+import { formatReviewFeedback, inlineReviewLine, inlineReviewRows, reviewFileGroup, reviewNavigationIndex, reviewPaneShortcut, reviewSelection, reviewWordParts, shortReviewRef, type ReviewKey, type ReviewSide } from "@/lib/git-review-display";
 import { markReviewSyntax, renderReviewSyntax, tokenizeReviewCells } from "@/lib/review-syntax";
 import type { GitReviewContext, GitReviewFile, GitReviewOptions, GitReviewPatch, GitReviewScope, GitReviewSnapshot } from "@/lib/git-review-types";
 
@@ -553,8 +553,12 @@ function ReviewDiff({ file, data, words, split, wrap, highlight, context, onMore
     {split ? <table className="changes-diff-table changes-split-table"><colgroup><col className="changes-number-col" /><col className="changes-code-col" /><col className="changes-number-col" /><col className="changes-code-col" /></colgroup><tbody>
       <tr className="changes-revision-heading"><th colSpan={2}>{words.old}</th><th colSpan={2}>{words.new}</th></tr>
       {rows.map((row, index) => row.type === "hunk" ? <tr key={index} className="changes-hunk"><td colSpan={4}>{row.text.startsWith("@@") ? expandContext(hunkLabel(inline.find((item) => item.type === "hunk" && item.text === row.text) as { text: string; omitted: number } ?? { text: row.text, omitted: 0 })) : row.text}</td></tr> : <ReviewRow key={index} editor={wantsEditor(row.left.lineNo, row.right.lineNo) ? editor : null} columns={4}><td className={`changes-gutter is-${row.left.type}`}>{lineButton("old", row.left.lineNo)}</td><td className={`changes-code is-${row.left.type}${inSelection("old", row.left.lineNo) ? " is-selected" : ""}`}><code>{text(row.left, row.right)}</code></td><td className={`changes-gutter changes-split-divider is-${row.right.type}`}>{lineButton("new", row.right.lineNo)}</td><td className={`changes-code is-${row.right.type}${inSelection("new", row.right.lineNo) ? " is-selected" : ""}`}><code>{text(row.right, row.left)}</code></td></ReviewRow>)}
-    </tbody></table> : <table className="changes-diff-table"><colgroup><col className="changes-number-col" /><col className="changes-number-col" /><col className="changes-sign-col" /><col /></colgroup><tbody>
-      {inline.map((row, index) => row.type === "hunk" ? <tr key={index} className="changes-hunk"><td colSpan={4}>{row.text.startsWith("@@") ? expandContext(hunkLabel(row)) : <span>{row.text}</span>}</td></tr> : <ReviewRow key={index} editor={wantsEditor(row.oldLine, row.newLine) ? editor : null} columns={4} className={`is-${row.cell.type}${inSelection(selection?.side ?? "new", selection?.side === "old" ? row.oldLine : row.newLine) ? " is-selected" : ""}`}><td className="changes-gutter">{lineButton("old", row.oldLine)}</td><td className="changes-gutter">{lineButton("new", row.newLine)}</td><td className="changes-sign">{row.cell.type === "added" ? "+" : row.cell.type === "removed" ? "−" : ""}</td><td className="changes-code"><code>{text(row.cell, row.paired)}</code></td></ReviewRow>)}
+    </tbody></table> : <table className="changes-diff-table changes-inline-table"><colgroup><col className="changes-number-col" /><col className="changes-sign-col" /><col /></colgroup><tbody>
+      {inline.map((row, index) => {
+        if (row.type === "hunk") return <tr key={index} className="changes-hunk"><td colSpan={3}>{row.text.startsWith("@@") ? expandContext(hunkLabel(row)) : <span>{row.text}</span>}</td></tr>;
+        const { side, line } = inlineReviewLine(row, selection?.side);
+        return <ReviewRow key={index} editor={wantsEditor(row.oldLine, row.newLine) ? editor : null} columns={3} className={`is-${row.cell.type}${inSelection(side, line) ? " is-selected" : ""}`}><td className="changes-gutter">{lineButton(side, line)}</td><td className="changes-sign">{row.cell.type === "added" ? "+" : row.cell.type === "removed" ? "−" : ""}</td><td className="changes-code"><code>{text(row.cell, row.paired)}</code></td></ReviewRow>;
+      })}
     </tbody></table>}
     {selection && !shownEditor && editor}
     {context !== "all" && !data.truncated && <div className="changes-more-context">{expandContext(context === 20 ? words.fullContext : words.context)}</div>}
