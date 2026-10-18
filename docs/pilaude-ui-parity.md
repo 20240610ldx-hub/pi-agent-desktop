@@ -180,6 +180,12 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 
 另在图片 Markdown 入口真实复现 `<p>` 内 div／dialog 的四条 React console error；旧 `image-preview-zoom/run-1792319488145/` 仅捕 pageerror，未覆盖这些警告。现将原 src-keyed native dialog portal 到 `document.body`，保留加载／焦点／缩放生命周期；16 项图片定向测试通过，`run-1792322241886/` 七组实际检查通过，含 body 挂载、无 Markdown 祖先、原生 modal／Tab／背景 inert／Escape 焦点恢复。console error／warn、pageErrors、writes 严格为空；RED `run-1792321866405` 原报告保留。最终本批 UI／语法／几何／ownership／提取与 CSS 基线组合 93 项通过，项目 TypeScript 与完整 lint 退出 0，保留既有 TerminalPanel aria 警告。完整 npm／terminal E2E、Windows 原生窗口／DPI／IME 实物仍待验。
 
+## 用户补充 Changes 展开态与复用要求
+
+2026-10-18 新图原件 2288×1535（聊天显示 2000×1342）已按原字节归档至工作区私有 `references/changes-expanded-dark/2026-10-18/00-user-provided-changes-expanded.png`，SHA-256 为 `c9511da8b8018b3d39fb4a37bbfce3c168e6f989b270e31dd327a64cc6497b73`。角色为用户提供的展开态参考，宿主应用、版本、DPI／zoom 与聊天 payload 精确字节身份未核验；可见 Pilaude 源码不证明宿主身份。原件不进入公开仓库。
+
+用户明确要求通用 diff／彩色代码块复用成熟开源渲染库，后续避免重复实现。当前 Prism／refractor 已复用，但自写表格／词差异仍需评估替换；选库与迁移边界见[采用账本](pilaude-component-adoption.md)。新库接入仍须逐项验证视觉与真实反馈、原文、键盘及性能，不把默认库外观当作一致性通过。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。

@@ -117,6 +117,14 @@ YAML plain scalar 的真实 AST 是根文本，adapter 现只对 yaml／yml 根�
 
 图片旧 `run-1792319488145` 只捕获 pageerror，遗漏了 Markdown `<p>` 内 div／dialog 的 React console error。新 RED `run-1792321866405` 已复现四条；最小修复将 src-keyed native dialog portal 到 body，16 项图片定向测试通过。`image-preview-zoom/run-1792322241886/` 七组实际检查保留 zoom／pan／IME／焦点与加载错误，并验证 body 挂载、有效 Markdown DOM；console error／warn、pageErrors、writes 为空。portal 不增加 `useClaudeSharedElementTransition` 或其他模块采用数。最终受影响 UI／算法与 ownership／提取／CSS 基线组合 93 项通过，项目 TypeScript 和完整 lint 退出 0，既有 TerminalPanel aria 警告保留；完整 npm／terminal E2E 和 Windows 原生实物仍待验。
 
+## 通用 diff 渲染的复用约束
+
+2026-10-18 用户补充 Changes 展开态，并明确要求前端 diff／彩色代码块优先使用成熟开源渲染库，后续不重复造轮子。新原图已按原字节归档到工作区私有 `references/changes-expanded-dark/2026-10-18/`（2288×1535）；画面中的 Pilaude 源码不证明宿主应用身份，也不证明使用了哪个库。
+
+当前语法着色复用已安装的 Prism／refractor，`ReviewDiff` 表格和 `reviewWordParts` 仍为产品自写路径；不能将它们写成成熟 diff 库的 consumer。后续先核对现有依赖和成熟库的 unified／split、换行、语法／词差异、主题、可访问行号及选区扩展点，再通过薄适配替换通用渲染。Git 只读查询、comparison／revision 身份、源文本选区和反馈草稿保留产品领域边界；迁移必须验证空白／Unicode／CRLF、跨 hunk 与旧新侧，避免引入第二套并存的通用引擎。选库评估与接入成功分开记账，未迁移前保持现状记录，不增加来源采用计数。
+
+迁移前真实 workspace 卡片宽度基线保存在 `changes-reference/yaml-workspace-1792323892533/`：真实主顶栏／外侧拖动把 inner pane 调到 790 CSS px（目标 +0.4），保留真实 1px border／10px radius 卡片；1880×816 device 截图、990×816 整数裁剪均未缩放。真实 cwd 先由未拦截 Git API 预检，再仅替换 review GET 展示夹具；console error／warn、pageErrors、blockedWrites 为空，两个只读 cwd validate POST 明确记录。画布外 inset、leading context、tree compaction 和未见提交内容仍为残差，此记录不表示新的完整视觉通过。
+
 ## 更新条件
 
 每次采用后更新对应行：来源 SHA／函数 → adapter 或 vendor → 真实 consumer → 边界测试 → 实际页面／交互证据 → 尚存差异。纯算法也必须给出调用者；只加导出、复制文件、相似独立实现或通过库自身 build 都不足以升级采用状态。每轮记录须区分实际测试、页面检查与只读审计；本批模型调用为零。尚未完成的功能、原生实物和视觉状态继续保留待验。
