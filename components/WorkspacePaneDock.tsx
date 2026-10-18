@@ -13,8 +13,18 @@ export interface WorkspacePane {
   title: string;
   open: boolean;
   header?: ReactNode;
-  children: ReactNode | ((visible: boolean) => ReactNode);
+  /** A pane with its own toolbar still receives the dock's expansion/chrome state. */
+  customHeader?: boolean;
+  children: ReactNode | ((visible: boolean, chrome: WorkspacePaneChrome) => ReactNode);
   onClose: () => void;
+}
+
+export interface WorkspacePaneChrome {
+  expanded: boolean;
+  onExpand: () => void;
+  overlayControls?: ReactNode;
+  hasWindowControls: boolean;
+  macWindowInset: boolean;
 }
 
 interface Props {
@@ -176,11 +186,11 @@ export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel
           const fraction = index === 0 ? column?.split : 1 - (column?.split ?? .5);
           return (
             <section key={pane.id} id={`workspace-pane-${pane.id}`} data-pane-column={column?.id}
-              className={`workspace-pane workspace-pane--${pane.id}`} hidden={!visible} aria-label={pane.title}
+              className={`workspace-pane workspace-pane--${pane.id}${pane.customHeader && pane.id === chromePaneId && windowControls ? " has-window-controls" : ""}${pane.customHeader && pane.id === overlayPaneId && macWindowInset ? " has-mac-window-inset" : ""}`} hidden={!visible} aria-label={pane.title}
               style={{ gridColumn: expanded ? 1 : columnIndex * 2 + 1, gridRow: 1,
                 alignSelf: index === 0 || expanded ? "start" : "end",
                 height: stacked ? `clamp(${MIN_PANE_HEIGHT}px, calc(${(fraction ?? .5) * 100}% - 4px), calc(100% - ${MIN_PANE_HEIGHT + SEPARATOR_SIZE}px))` : "100%" }}>
-              <header {...headerDragProps} className={`workspace-pane-header${pane.id === chromePaneId && windowControls ? " has-window-controls" : ""}${pane.id === overlayPaneId && macWindowInset ? " has-mac-window-inset" : ""}`}>
+              {!pane.customHeader && <header {...headerDragProps} className={`workspace-pane-header${pane.id === chromePaneId && windowControls ? " has-window-controls" : ""}${pane.id === overlayPaneId && macWindowInset ? " has-mac-window-inset" : ""}`}>
                 {pane.header ?? <span className="workspace-pane-title">{pane.title}</span>}
                 {pane.id === overlayPaneId && overlayControls}
                 <button type="button" className="file-workbench-icon-button workspace-pane-expand"
@@ -192,8 +202,14 @@ export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel
                 <button type="button" className="file-workbench-icon-button workspace-pane-close" title={closeLabel.replace("{name}", pane.title)} aria-label={closeLabel.replace("{name}", pane.title)} onClick={pane.onClose}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
                 </button>
-              </header>
-              <div className="workspace-pane-content">{typeof pane.children === "function" ? pane.children(visible) : pane.children}</div>
+              </header>}
+              <div className="workspace-pane-content">{typeof pane.children === "function" ? pane.children(visible, {
+                expanded: expanded === pane.id,
+                onExpand: () => setSaved(toggleWorkspacePaneExpanded(layout, pane.id)),
+                overlayControls: pane.id === overlayPaneId ? overlayControls : undefined,
+                hasWindowControls: pane.id === chromePaneId && Boolean(windowControls),
+                macWindowInset: pane.id === overlayPaneId && macWindowInset,
+              }) : pane.children}</div>
             </section>
           );
         })}

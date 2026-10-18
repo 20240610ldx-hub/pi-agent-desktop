@@ -28,6 +28,18 @@ test("all pane content remains in keyed sibling hosts when panes are hidden", ()
   assert.doesNotMatch(html, /workspace-pane-toolbar/);
 });
 
+test("a pane's own toolbar receives dock state without a duplicate generic header", () => {
+  let chrome;
+  const html = renderToStaticMarkup(React.createElement(WorkspacePaneDock, {
+    panes: [{ id: "changes", title: "Changes", open: true, customHeader: true, onClose() {}, children: (_visible, value) => { chrome = value; return React.createElement("header", { className: "changes-pane-header" }, "Review"); } }],
+    expandLabel: "Expand", restoreLabel: "Restore", closeLabel: "Hide {name}", resizeColumnLabel: "Resize column", resizeRowsLabel: "Resize rows",
+  }));
+  assert.equal((html.match(/changes-pane-header/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /workspace-pane-header|workspace-pane-expand|workspace-pane-close/);
+  assert.equal(chrome.expanded, false);
+  assert.equal(typeof chrome.onExpand, "function");
+});
+
 test("one stacked column exposes only a row separator and fills the parent width", () => {
   const html = renderToStaticMarkup(React.createElement(WorkspacePaneDock, {
     panes: ["files", "terminal"].map((id) => ({ id, title: id, open: true, onClose() {}, children: id })),

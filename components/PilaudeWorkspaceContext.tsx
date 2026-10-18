@@ -16,6 +16,7 @@ interface Props {
   toolCount: number | null;
   onOpenConnectors: () => void;
   onOpenFiles: () => void;
+  onOpenChanges?: () => void;
   onOpenContext: () => void;
   onOpenTools: () => void;
   onClose: () => void;
@@ -29,7 +30,7 @@ function shortCount(value: number | null | undefined): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toLocaleString();
 }
 
-export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount, onOpenConnectors, onOpenFiles, onOpenContext, onOpenTools, onClose, rightPanelOpen, rightPanelFullWidth }: Props) {
+export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount, onOpenConnectors, onOpenFiles, onOpenChanges, onOpenContext, onOpenTools, onClose, rightPanelOpen, rightPanelFullWidth }: Props) {
   const { t } = useI18n();
   const paneRef = useRef<HTMLElement>(null);
   const [presentation, setPresentation] = useState<ReturnType<typeof getContextPresentation>>("dock");
@@ -152,7 +153,7 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
       <button className="pilaude-context-card pilaude-context-card-action" onClick={() => open(onOpenConnectors)}><span>{t("pilaude.connectors")}</span><PilaudeIcon name="chevron" size={14} /></button>
       <details className="pilaude-context-card" open>
         <summary>{t("pilaude.changes")}<PilaudeIcon name="chevron" size={14} /></summary>
-        <button className="pilaude-environment-row pilaude-changes-link" onClick={() => open(onOpenFiles)}><PilaudeIcon name="branch" /><span>{t("pilaude.reviewFiles")}</span><PilaudeIcon name="chevron" size={14} /></button>
+        <button className="pilaude-environment-row pilaude-changes-link" onClick={() => open(onOpenChanges ?? onOpenFiles)}><PilaudeIcon name="changes" /><span>{t("pilaude.reviewFiles")}</span><PilaudeIcon name="chevron" size={14} /></button>
       </details>
     </aside>
     </>

@@ -35,16 +35,16 @@
 - 桌面示例主要实现 macOS 红绿灯、Vibrancy 与 Electron 工厂。Windows 标题栏、系统菜单、最大化、贴靠、焦点和 WebView2 渲染必须以 Windows 实物补证；不能直接导入 Electron 工厂或绘制 macOS 控件。
 - Storybook HTML 引用了 Tailwind CDN、unpkg、Google Fonts，并包含模拟回复、上传进度和任务数据。它适合浏览组件，不能当离线交付物或 Claude 官方基准截图。
 - 库内仍存在版本冲突：AGENTS 的旧表面/尺寸说明、v2 的 12/14px composer 描述、主题中的 20px composer，以及新按钮组件的整数尺寸与 CHANGELOG 的桌面光学尺寸并不完全一致。发生冲突时记录证据，用当前 Windows 参考裁决，不能挑一个看起来合理的值。
-- 首次审计发现原先接入的旧版主题遗漏了完整灰阶、主品牌色与装饰 Clay 分离、按钮绘景层和弹性曲线等上游修正。现已更新 vendored theme、Button 和 motion presets；其他模块须按下表继续适配，不能把仓库同步等同于所有实现已经采用。
+- 首次审计发现原先接入的旧版主题遗漏了完整灰阶、主品牌色与装饰 Clay 分离、按钮绘景层和弹性曲线等上游修正。现已更新 vendored theme、Button 和 motion presets；其中 theme 全局导入、Button 由数据导入区消费，motion presets 当前仅 vendor、无运行时消费者。欢迎页已改为 quiet 构图，不再消费 Button 或 motion。逐模块与纯算法的 consumer／缺口见[采用账本](pilaude-component-adoption.md)，不能把仓库同步等同于所有实现已经采用。
 
 ## 组件与资源覆盖清单
 
-下表覆盖全部 33 个现有 TS/TSX 源模块及主要 Pilaude 页面。**所有组件的 Windows 2.42304.0 一致性均待实物对照**；“已接入”只描述代码采用，不表示视觉或交互通过。
+下表按目标行为分组覆盖 33 个 TS/TSX 源模块及主要 Pilaude 页面；逐一名称、关键算法、实际 consumer 与演示限制以[采用账本](pilaude-component-adoption.md)为准。**所有组件的 Windows 2.42304.0 一致性均待实物对照**；“已接入”只描述可追踪的代码采用，不表示视觉或交互通过。产品的同类独立实现、仅 vendor 文件和主题 keyframes 不算模块已采用；图片仅适配自然尺寸／contain 几何，Changes 的局部算法已找到 consumer，完整后端与实际页面验收仍待补证。
 
 | 目标组件 / 行为 | 可复用的 open-claude-ui 源模块 | Pilaude 状态与补证项 |
 | --- | --- | --- |
 | 主题、文字、图标 | `cds-theme.css`、`tailwind.config.js`、资产政策 | 已更新主题，本机对照实例加载用户字体；Windows 原生度量、图标轮廓和公开素材仍待验收 |
-| 按钮及各尺寸/状态 | `CdsButton` | 欢迎页/导入动作采用更新后的绘景层和弹性参数；逐状态实物对照尚未通过 |
+| 按钮及各尺寸/状态 | `CdsButton` | 仅数据预览／导入动作直接消费；当前 quiet 欢迎页使用普通按钮。逐状态实物对照尚未通过 |
 | 分段选择 | `SegmentedControl` | 资源可用；实际 Pi 模式/设置状态需适配 |
 | 运行、加载、骨架 | `StatusIndicators` | 资源可用；绑定真实运行状态并核对所有节奏 |
 | 确认与权限对话框 | `ConfirmationDialog`、`McpToolDecisionCard` | 资源可用；后端审批、焦点陷阱、取消/错误状态待融合 |
@@ -53,16 +53,16 @@
 | 消息、操作条、代码 | `ChatMessageBubbles`、`CodeBlock` | 已有 Pi 渲染器；新结构、排版、悬浮操作、复制/重试/编辑待融合 |
 | 思考展开和氛围 | `ThinkingAccordion`、`ReasoningAmbientGlow` | 资源可用；绑定真实流式思考、减少动效与状态切换 |
 | 模型选择、用量、推理强度 | `ModelSwitcherWithTokenGauge`、`ModelSelectorEffort` | 资源可用；使用真实 Pi 模型能力/未知值，不能移植演示额度 |
-| 动效参数与级联 | `ClaudeMotionPresets`、`CdsMotionEngine` | 已采用弹簧预设；后者含示例展示，需提取行为并实测时间序列 |
-| 滚动跟随和渐隐 | `useClaudeScrollPinning`、`ScrollFadeContainer` | 已适配 150ms 输入锁；新滚动渐隐与恢复位置待逐状态对照 |
+| 动效参数与级联 | `ClaudeMotionPresets`、`CdsMotionEngine` | 前者仅 vendor、解析求解器／spring／variants 无运行时 consumer；后者未采用且含演示展示。需落地调用点并实测时间序列 |
+| 滚动跟随和渐隐 | `useClaudeScrollPinning`、`ScrollFadeContainer` | 前者仅 `cds-scroll.ts`→`useAgentSession` 的 150ms 输入锁；后者由 ChangesPane 的 FadedScroll 局部适配 2px 边缘判定，补容器／内容 ResizeObserver。其余阈值、alpha stops 和双轴行为不记采用 |
 | 声音与麦克风 | `ClaudeAudioPlayer`、`LiveMicActivityBars` | 仅有合成方案；不等于原版声音；实际支持能力和许可仍需核实 |
-| 图片灯箱和共享转场 | `MediaLightboxViewer`、`useClaudeSharedElementTransition` | 资源可用；缩放、拖拽、键盘、关闭恢复焦点待融合 |
+| 图片灯箱和共享转场 | `MediaLightboxViewer`、`useClaudeSharedElementTransition` | 仅 MediaLightboxViewer 自然尺寸／contain 几何由 native-theme.css→ChatInput／MessageView 图片实际消费；104 项定向与十二图页面回归通过。光标 zoom／pan 和 SharedElementTransition 未采用；最终 gap 已校准至 9 原像素目标，原始内容比例与绝对 bbox 仍待补证 |
 | 产物分屏与桥接 | `ArtifactsSplitPaneResizer`、`EpitaxyIframeBridge` | 资源可用；保留 Pi 产物真实内容、安全边界与保存流程 |
-| Diff | `StreamingDiffViewer` | 资源可用；Pi 文件/Diff 渲染、长内容、流式增量待融合 |
+| Diff | `StreamingDiffViewer` | ChangesPane 的 ReviewDiff 局部适配 table/gutter、tabular-nums 与增删背景；复用既有 patch parser／split 配对，没有采用源流式引擎。后端／定向检查通过，实际页面待验；当前为纯文本与词差异 mark，语法高亮未实现 |
 | Windows 窗口与顶栏 | `createClaudeMainWindow`、`ClaudeDesktopHeader` | 主要是 Electron/macOS 参考；Tauri Windows 实物行为与精确几何待补 |
 | 侧栏、项目/会话拖放 | `DraggableSessionList` | 资源可用；完整 Windows 导航、搜索、收起/展开/右键状态未覆盖 |
 | 多代理任务视图 | `CoworkAgentCanvas` | 含演示状态；需接真实 Pi 父子任务、队列、审批、取消和失败状态 |
-| 窄容器与键盘焦点 | `ContainerResponsiveBar`、`useClaudeRovingFocus` | 资源可用；系统 DPI 与 WebView2、实际焦点顺序待验证 |
+| 窄容器与键盘焦点 | `ContainerResponsiveBar`、`useClaudeRovingFocus` | ChangesPane 的 rove 局部适配索引／Home/End／单 tabstop，含 IME 过滤；ContainerResponsiveBar 未采用。系统 DPI、WebView2 与实际焦点顺序仍需逐项验收 |
 | 限流/重试反馈 | `useRateLimitBackoff` | 资源可用；遵循 Pi 已接受请求不重发和外部操作不重放的约束 |
 | 设置、模型凭据、MCP、skills、插件、定时任务、数据恢复 | 无完整逐屏实现 | 复用已有原子控件，逐屏补充 Windows 参考；Pi 独有字段保持同一控件语法、显示真实能力 |
 | 托盘、系统通知、文件选择、安装/更新 | 无完整 Windows 参考实现 | 保留 Tauri 系统能力，补系统级参考、生命周期与公开发行验证 |
@@ -88,7 +88,7 @@
 python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 1892 1278 --geometry actual.json --measurements reference-boxes.json --output comparison
 ```
 
-本轮采用的 theme、Button 和 motion presets 已更新至作者提交 `638800b8a4cee4513c8763c3df0ecf8a77b32379`，来源及适配见 vendor README。主框架、搜索、输入器和上下文卡片按参考几何调整；正文默认 16px，保留用户字号/宽度设置。第二轮未缩放的 1880×1255 实测：侧栏宽度比参考大 2 物理像素，搜索框 x/y 偏差 +0.25/−0.25，输入框 x/y 偏差 −1.38/+0.5、高度 67.5（参考约 68）。Environment 卡片少真实 Remote Control 能力而矮 26；这些差异继续保留，不据此标记逐组件通过。
+本轮 vendored theme、Button 和 motion presets 已更新至作者提交 `638800b8a4cee4513c8763c3df0ecf8a77b32379`，来源见 vendor README；当前实际消费为全局 theme 与数据导入区 Button，motion presets 尚无 consumer，不能记作已启用。主框架、搜索、输入器和上下文卡片按参考几何调整；正文默认 16px，保留用户字号/宽度设置。第二轮未缩放的 1880×1255 实测：侧栏宽度比参考大 2 物理像素，搜索框 x/y 偏差 +0.25/−0.25，输入框 x/y 偏差 −1.38/+0.5、高度 67.5（参考约 68）。Environment 卡片少真实 Remote Control 能力而矮 26；这些差异继续保留，不据此标记逐组件通过。
 
 视觉与运行语义分别验收：会话/新建草稿/计划任务导航历史、输入法与多行增高、150ms 用户滚动意图锁、长会话锚点、流式输出、停止与恢复、窄窗口焦点循环/Escape/焦点返回、真实文件/工具/连接器入口、提供商错误持久化与设置入口。调度/工具/API 数据必须来自 Pi；累计输入/输出 token 不能伪装成 Claude 当前上下文的精确分类。Claude 专属的 Remote Control、订阅限额、PR 信息没有对应实现时保留为功能差异，不填假值。
 
@@ -138,6 +138,19 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 - Windows 回归修复已按差异迁入，当前产品分支定向 191 pass / 0 fail / 1 既有 Windows skip，MCP 进程清理自然退出；类型、依赖、lint 和 branding 通过。完整 npm test 未重新运行，详见 [Windows 验证记录](pilaude-windows-regression.md)。
 - 右列已移除重复工作台顶栏和主顶栏第二个新终端入口；单列随外层宽度填充，多列才使用内部保存宽度，常驻图标与浮签按新实测色及几何实现。实际单终端/上下两 pane、300px 最小外宽、伸缩、展开恢复、隐藏重开、第三 pane/窄窗验证通过，PID 与内容节点连续，未新增创建请求，页面错误为 0，详见 [分区记录](pilaude-workspace-panes.md)。用户新增 3p 整屏说明用于整体关系，原文件未定位，单独 pending；两张 actual 和工具栏 reference 三张已原字节归档，不将 actual 当 reference。
 - 下一步继续消息菜单、输入器、按钮、设置和模型选择等逐项实物校准，再扩展到统一授权、产物、受控浏览器、代理和计划任务。每个组件均按上述流程验收后更新记录。
+
+## 2026-10-18 本轮会话、首页、图片与 Changes 证据
+
+- 会话动作及状态共 101 项定向检查通过；实际页面 `test-results/pilaude/session-actions/run-1792313864403/` 通过完整菜单及真实可用性、Pin／分组／移出分组持久化、选中会话显式未读、空心 idle、Archive／恢复。实际黄色是显式 running wire 夹具触发，计算值 `#ffd60a`，参考 RGB 仍待测；真实后端 pending 生命周期另由 105 项测试证明，覆盖创建、响应、取消、超时、Stop、shutdown／destroy 与背景会话。不能将通知事件当作 pending 真值。Fork 从保存的 leaf 调用 `fork_branch`，静态语义核查确认复制 root→leaf 路径、无模型调用，但本轮没有 Fork 实际页面证据，后台忙状态拒绝也不能由 UI disabled 外推。
+- quiet 首页 5 项定向测试通过；实际首轮 `test-results/pilaude/quiet-home/run-1792313790944/` 通过深／浅／390px 布局与真实项目选择／模型设置入口，显式空会话目录夹具，无模型请求。补充 `run-1792313922371` 保留 failed：开发 chunk 错误及移动设置页仍使用桌面 tabs 选择器；已采集的布局和部分入口成功不能合并宣称补充四状态全通过。当前 ripple opacity 深／浅为 0.14／0.10，先前 0.34／0.20 属历史运行；原始首页完整构图／时序仍待参照。
+- 图片 104 项定向测试通过。实际 `test-results/pilaude/image-wrap-reference/run-1792314555476/` 通过十二图的顺序／自然比例、1504／972 CSS 宽下四行三列、390／320 窄窗与短窗口输入区／末图删除、预览焦点／Escape、12→11 与刷新恢复；使用生成 PNG 和显式会话 GET 夹具、真实文件输入，`pageErrors=[]`、`blockedWrites=[]`，零模型调用。首轮 `run-1792314194925` 的按钮 345.59px／图片 288px 真实命中宽度缺陷已修且失败保留。旧运行使用 8 CSS px 间距，相对参考保留 +1 原像素差。最终 `run-1792315159076` 的 18 项实际检查通过 7.2 CSS px 校准（1.25 capture 为 9 原像素，DOM 7.1875–7.203125 CSS px，0.1px 容差），并重验 sent／composer 四行三列、比例／顺序、窄短窗口、预览和删除后刷新，仍无页面错误／模型／API 写入。首次精校 `run-1792315052370` 因 Context 开启使容器从 884px 缩到 538px、仍用三列断言而 failed，保留为 checker 条件问题；最终运行真实关闭 Context 后通过，不改参考图比例或用结果覆盖失败。
+- 图片移出整组灰色 bubble 后，最终 `test-results/pilaude/image-wrap-reference/run-1792316235152/` 的 16 项实际断言通过：图片直接在透明画布排列，image-only 不产生空 bubble，后续普通文字与真实 SDK compact command 各保留一个灰色文字 bubble；长文字实际展开后仍有 300px 滚动上限。十二图顺序、四行三列、自然比例、7.2 CSS px 间距、预览焦点／Escape、390／320 窄屏再次通过，无页面错误或 API 写入。对应 MessageView／ImagePreview 39 项测试及定向 lint 通过，未重复计入先前 104 项。旧 `run-1792315159076` 继续证明未改动的 composer／删除／刷新路径；其中的灰色图片包裹外观由新运行替代。
+- 图片来源采用只限 `MediaLightboxViewer` 的自然尺寸／contain CSS，经 `ChatInput` 与 `MessageView` 消费；光标锚定 zoom／pan、wheel 以及 `useClaudeSharedElementTransition` 均无 consumer。参考上传图含十二个外框、四行三列与统一右边缘；原始 payload 比例、内容 crop／letterbox、绝对 bbox 与 DPI 未核实，功能检查不作像素一致性通过。
+- Changes 已接入独立 pane、只读真实 Git review API、反馈草稿与受限独立窗口。后端真实 Git／API 19 项、UI helper／浮签 23 项（19＋4）、Rust 窗口 4 项、前端命令 5 项、页面 route 5 项与 token 2 项分别通过，父级另有 39 项集成；最终类型与全树 ESLint 退出 0，保留既有 TerminalPanel aria 警告。复查发现的 copy 目标混源 patch 已由真实 Git fixture 复现并用 `--diff-filter=C` 修正，copy／rename／context3 组合 3 项通过；后端现 20 个用例，前轮 19 与本轮重跑 3 不相加计总。延迟 storage event 的 current request ID 校验另有 3 项 helper 通过，拒绝超时取消后的旧事件；实际 `run-1792315635019` 前七组核心流程通过，整轮保留 popout ACK failed；定向 `followup-1792316406830` 已通过浏览器独立页、真实草稿 ACK、浅色重载和 820px 窄窗表格加载，errors／writes 为空。此前 `followup-1792316105640` 无 ACK 的 partial 仍保留，原因未证，不能称间歇问题根治或完整 E2E 一次全绿。当前纯文本和词差异 mark，未实现语法高亮；只在 pane 内绑定 Ctrl+P／Ctrl+Shift+Y，展开／关闭不展示未绑定快捷键。
+- 最新原像素叠图位于本机 `test-results/pilaude/changes-reference/comparison-after-calibrated/`：参考 100% 底层、actual 50% 上层，只整数平移；36×36 原像素按钮框未缩放。五个同状态图标实测 actual/reference：Show files 18×16／18×16、Search 19×19／19×18、Settings 4×15／4×16、New window 21×17／20×17、Close 13×12／12×12。最后一版 Expand 的实际截图处于 Restore 状态，因此未拿 Expand 参考比较。浮签高度 +0.992 原像素，同文四项宽度差约 −9.410 至 −17.805 原像素；Close 没有虚构 Ctrl+反斜杠文案，宽度不作同文比较。顶栏位于窗口上缘时 tooltip 按边界翻到下方，与参考位于 pane 上方的浮签分开记录。会话菜单 root 高 +42 原像素（保留原有元数据），Open in 子菜单高 +105（禁用能力说明），idle 空心点 9×9 和核心色相同，未读边缘仍有 1px 抗锯齿残差。这些不以功能通过抵消。
+- 最终图片 `comparison-aftercanvas/` 的框级比较只对几何：整数平移 [−1,+75] 后公共右缘一致、同行底边散布 0，间距 8.984375 原像素对参考 9，差 −0.015625；第三／四行绝对底边仍差约 +60 原像素，生成图比例和内容不同，未用拉伸消除，也不宣称整图一致。
+- 开发预览服务 `5e387e42` 在约 90 分钟后自行以 134 退出；最后 GC 日志约 6.8GB heap 并明确 heap out of memory。自然退出后通过 preview_start 恢复同一 30142 配置；不把此开发编译限制写成正式产品内存结论，也没有绕过此前停止服务的拒绝。完整 npm／terminal E2E、390px Changes、Windows 原生独立窗口及 DPI／IME 验收仍未完成。
+- 新 Changes 参考 12 个独立状态中已归档 11 个源文件，inline-comment 原件仍 pending；上传 1215×1336 总览的 12 图框另有归档，不代替缺失的 inline 原件。源文件与本地归档原字节／SHA-256 相同，聊天 payload 字节身份与参考版本／DPI 仍未核实，见工作区 `references/claude-desktop/changes-dark/2026-10-18/` 和 `upload-images-dark/2026-10-18/`。详细 pane 范围见[分区记录](pilaude-workspace-panes.md)，33 项来源范围见[采用账本](pilaude-component-adoption.md)。
 
 ## 上游更新规则
 

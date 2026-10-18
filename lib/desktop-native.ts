@@ -153,6 +153,37 @@ export async function openExternal(url: string): Promise<void> {
   await invoke("open_external_url", { url: trimmed });
 }
 
+/** Open Changes from a user click: a dedicated native window, or a same-origin browser tab. */
+export async function openChangesWindow(cwd: string, targetId?: string): Promise<void> {
+  if (!cwd.trim() || cwd.includes("\0") || cwd.length > 32_768) {
+    throw new Error("A project folder is required to open Changes.");
+  }
+  if (targetId && (targetId.length > 256 || targetId.includes("\0"))) {
+    throw new Error("Invalid Changes feedback target.");
+  }
+  if (!isTauriDesktop()) {
+    const url = new URL("/changes", window.location.origin);
+    url.searchParams.set("cwd", cwd);
+    if (targetId) url.searchParams.set("targetId", targetId);
+    // Keep this synchronous, before any await, so browser popup policies see
+    // the original click. No native command is invoked on the web path.
+    window.open(url.href, "_blank", "noopener,noreferrer");
+    return;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("open_changes_window", { cwd, targetId });
+}
+
+/** Close the standalone Changes window; Rust only accepts changes-* callers. */
+export async function closeChangesWindow(): Promise<void> {
+  if (!isTauriDesktop()) {
+    window.close();
+    return;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("close_changes_window");
+}
+
 /** Open a local path with the OS default application. */
 export async function openPathNative(path: string): Promise<void> {
   if (!isTauriDesktop()) {

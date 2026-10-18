@@ -399,17 +399,13 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
   const editTarget = commandText ? replaceUserMessageText(message, commandText) : message;
 
   const imageBlocksNode = imageBlocks.length > 0 && (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: content ? 8 : 0 }}>
+    <div className="message-user-images">
       {imageBlocks.map((img, i) => {
         const src = imageSource(img);
         return (
-          <ImagePreview key={i} src={src}>
+          <ImagePreview key={i} src={src} className="message-user-image-preview">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={src}
-              alt=""
-              style={{ maxWidth: 240, maxHeight: 240, borderRadius: 6, objectFit: "contain", display: "block", border: "var(--hairline) solid rgba(59,130,246,0.15)" }}
-            />
+            <img className="message-user-image" src={src} alt="" />
           </ImagePreview>
         );
       })}
@@ -432,8 +428,12 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 6, maxWidth: "min(78%, 660px)" }}>
-        <div
+      <div
+        className={imageBlocks.length ? "message-user-content has-images" : "message-user-content"}
+        style={{ display: "flex", flexDirection: imageBlocks.length ? "column" : undefined, alignItems: "flex-end", gap: 6, maxWidth: imageBlocks.length ? undefined : "min(78%, 660px)" }}
+      >
+        {imageBlocksNode}
+        {content && <div
           className={`message-user-bubble${isEditing ? " is-editing" : ""}`}
           style={{
             flex: 1,
@@ -444,7 +444,6 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
         >
           {commandText ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-              {imageBlocksNode}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
                 <button
                   onClick={() => setExpanded((prev) => !prev)}
@@ -502,13 +501,9 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
               )}
             </div>
           ) : (
-            <>
-              {imageBlocksNode}
-              {content && <CollapsibleUserText text={content} cwd={cwd} onOpenFile={onOpenFile} />}
-            </>
+            <CollapsibleUserText text={content} cwd={cwd} onOpenFile={onOpenFile} />
           )}
-        </div>
-
+        </div>}
       </div>
 
       {/* Bottom row: action buttons + timestamp */}

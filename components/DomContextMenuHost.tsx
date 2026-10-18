@@ -52,14 +52,14 @@ function MenuPanel({
   place: Place;
   panelRef: React.RefObject<HTMLDivElement | null>;
   label?: string;
-  onItem: (item: Item) => void;
+  onItem: (item: Item, modifiers?: { shiftKey?: boolean }) => void;
   onSubmenu?: (index: number, rect: DOMRect | null, byKeyboard?: boolean) => void;
   openIndex?: number | null;
   /** Take focus once the panel is placed and visible (focus on a hidden element is ignored). */
   autoFocus?: boolean;
   /** Called for ArrowLeft in a submenu. */
   onKeyboardClose?: () => void;
-  appearance?: "terminal";
+  appearance?: "terminal" | "session";
 }) {
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
 
@@ -148,13 +148,16 @@ function MenuPanel({
             type="button"
             role={entry.checked === undefined ? "menuitem" : "menuitemcheckbox"}
             aria-checked={entry.checked}
-            disabled={entry.disabled}
+            disabled={entry.disabled && !entry.disabledReason}
+            aria-disabled={entry.disabled || undefined}
+            title={entry.disabledReason}
+            className={entry.danger ? "is-danger" : undefined}
             // Moving onto a plain item closes an open submenu, as native menus do.
             onMouseEnter={onSubmenu ? () => onSubmenu(-1, null) : undefined}
-            onClick={() => onItem(entry)}
+            onClick={(event) => { if (!entry.disabled) onItem(entry, { shiftKey: event.shiftKey }); }}
           >
             {hasChecks && <span className="dom-context-menu-check" aria-hidden="true">{entry.checked ? "✓" : ""}</span>}
-            <span className="dom-context-menu-label">{entry.label}</span>
+            <span className="dom-context-menu-label">{entry.label}{entry.disabledReason && <small>{entry.disabledReason}</small>}</span>
           </button>
         );
       })}
@@ -214,9 +217,10 @@ function MenuView({ menu }: { menu: DomMenuState }) {
     };
   }, []);
 
-  const onItem = useCallback((item: Item) => {
+  const onItem = useCallback((item: Item, modifiers?: { shiftKey?: boolean }) => {
+    if (item.disabled) return;
     closeDomMenu();
-    item.onSelect?.();
+    item.onSelect?.(modifiers);
   }, []);
 
   const onSubmenu = useCallback((index: number, rect: DOMRect | null, byKeyboard = false) => {

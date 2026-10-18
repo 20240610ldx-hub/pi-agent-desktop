@@ -19,10 +19,12 @@ const { I18nProvider } = await jiti.import("@/hooks/useI18n");
 
 test("pane buttons expose real visibility and action names without invented keybindings", () => {
   const html = renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(WorkspacePaneControls, {
-    openPanes: { files: true, terminal: false, tasks: true }, onToggle() {},
+    openPanes: { files: true, terminal: false, changes: false, tasks: true }, onToggle() {},
   })));
   assert.equal((html.match(/aria-pressed="true"/g) ?? []).length, 2);
-  assert.equal((html.match(/aria-pressed="false"/g) ?? []).length, 1);
+  assert.equal((html.match(/aria-pressed="false"/g) ?? []).length, 2);
+  assert.match(html, /aria-label="Show Changes"/);
+  assert.match(html, /aria-controls="workspace-pane-changes"/);
   assert.match(html, /aria-label="Hide Files"/);
   assert.match(html, /aria-label="Show Terminal"/);
   assert.match(html, /aria-controls="workspace-pane-tasks"/);
@@ -57,7 +59,7 @@ test("tooltip clamp stays in the viewport and shortcut is a separate optional kb
   const context = createContext({
     open: true, buttonRef: { current: { getBoundingClientRect: () => ({ right: 390, bottom: 290 }) } },
     tooltipRef: { current: { getBoundingClientRect: () => ({ width: 225, height: 36 }) } },
-    window: { innerWidth: 400, innerHeight: 300 }, setPosition: (value) => { position = value; },
+    window: { innerWidth: 400, innerHeight: 300 }, placement: "bottom", tooltipGap: 6, setPosition: (value) => { position = value; },
   });
   script(`(${layout.arguments[0].getText(ast)})()`).runInContext(context);
   assert.equal(position.left, 165);
@@ -65,4 +67,23 @@ test("tooltip clamp stays in the viewport and shortcut is a separate optional kb
   assert.match(source, /createPortal\([\s\S]*className="workspace-control-tooltip"/);
   assert.match(source, /shortcut && <kbd>\{shortcut\}<\/kbd>/);
   assert.match(source, /document\.body/);
+});
+
+test("top tooltip uses the requested gap and flips below when near the window edge", () => {
+  const layout = nodes.find((node) => ts.isCallExpression(node) && node.expression.getText(ast) === "useLayoutEffect");
+  let position;
+  let top = 200;
+  const context = createContext({
+    open: true, buttonRef: { current: { getBoundingClientRect: () => ({ right: 200, top, bottom: top + 28.8 }) } },
+    tooltipRef: { current: { getBoundingClientRect: () => ({ width: 150, height: 28.8 }) } },
+    window: { innerWidth: 800, innerHeight: 600 }, placement: "top", tooltipGap: 4.8,
+    setPosition: (value) => { position = value; },
+  });
+  const update = script(`(${layout.arguments[0].getText(ast)})` ).runInContext(context);
+  update();
+  assert.ok(Math.abs(position.top - 166.4) < 0.001);
+  assert.equal(position.left, 50);
+  top = 10;
+  update();
+  assert.ok(Math.abs(position.top - 43.6) < 0.001);
 });

@@ -158,6 +158,13 @@ test("read-images returns image payloads and rejects non-images and relative pat
   assert.equal(file.mimeType, "image/png");
   assert.equal(Buffer.from(file.data, "base64").equals(PNG), true);
 
+  const twelve = await readImages.POST(jsonRequest("/api/desktop/read-images", { paths: Array(12).fill(image) }));
+  assert.equal(twelve.status, 200);
+  assert.equal((await twelve.json()).files.length, 12);
+  const thirteen = await readImages.POST(jsonRequest("/api/desktop/read-images", { paths: Array(13).fill(image) }));
+  assert.equal(thirteen.status, 400);
+  assert.match((await thirteen.json()).error, /at most 12 images/);
+
   assert.equal((await readImages.POST(jsonRequest("/api/desktop/read-images", { paths: [text] }))).status, 400);
   assert.equal((await readImages.POST(jsonRequest("/api/desktop/read-images", { paths: ["a.png"] }))).status, 400);
   assert.equal((await readImages.POST(jsonRequest("/api/desktop/read-images", { paths: [] }))).status, 400);

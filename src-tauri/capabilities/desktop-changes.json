@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-changes",
+  "description": "Allow dedicated Changes windows only token bootstrap, clipboard copy, and self-close. Local access supports Tauri devUrl; Rust navigation restricts each window to the Changes route.",
+  "windows": ["changes-*"],
+  "local": true,
+  "remote": {
+    "urls": ["http://127.0.0.1:*/changes"]
+  },
+  "permissions": [
+    "allow-get-desktop-api-token",
+    "clipboard-manager:allow-write-text",
+    "allow-close-changes-window"
+  ]
+}

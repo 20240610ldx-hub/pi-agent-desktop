@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type Ref } from "react";
 import { createPortal } from "react-dom";
 import { isImeComposing } from "@/lib/ime";
 import { useI18n } from "@/hooks/useI18n";
 import { PilaudeIcon } from "./PilaudeIcon";
 
-export type WorkspacePaneId = "files" | "terminal" | "tasks";
+export type WorkspacePaneId = "files" | "terminal" | "changes" | "tasks";
 
 interface Props {
   openPanes: Record<WorkspacePaneId, boolean>;
@@ -16,11 +16,12 @@ interface Props {
 const controls = [
   { id: "files", icon: "folder" },
   { id: "terminal", icon: "terminal" },
+  { id: "changes", icon: "changes" },
   { id: "tasks", icon: "branch" },
 ] as const;
 
 /** A local portal avoids clipping by the shell's overflow-hidden topbar. */
-export function WorkspaceControlButton({ label, shortcut, onClick, ...props }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title" | "aria-label"> & { label: string; shortcut?: string }) {
+export function WorkspaceControlButton({ label, shortcut, onClick, triggerRef, placement = "bottom", tooltipGap = 6, ...props }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title" | "aria-label"> & { label: string; shortcut?: string; triggerRef?: Ref<HTMLButtonElement>; placement?: "top" | "bottom"; tooltipGap?: number }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,11 +50,11 @@ export function WorkspaceControlButton({ label, shortcut, onClick, ...props }: O
     const tooltip = tooltipRef.current.getBoundingClientRect();
     setPosition({
       left: Math.max(8, Math.min(button.right - tooltip.width, window.innerWidth - tooltip.width - 8)),
-      top: Math.max(8, Math.min(button.bottom + 6, window.innerHeight - tooltip.height - 8)),
+      top: Math.max(8, Math.min(placement === "top" && button.top - tooltip.height - tooltipGap >= 8 ? button.top - tooltip.height - tooltipGap : button.bottom + tooltipGap, window.innerHeight - tooltip.height - 8)),
     });
-  }, [label, open, shortcut]);
+  }, [label, open, shortcut, placement, tooltipGap]);
   return <>
-    <button {...props} ref={buttonRef} type="button" aria-label={label} aria-describedby={open ? tooltipId : undefined}
+    <button {...props} ref={(element) => { buttonRef.current = element; if (typeof triggerRef === "function") triggerRef(element); else if (triggerRef) triggerRef.current = element; }} type="button" aria-label={label} aria-describedby={open ? tooltipId : undefined}
       onPointerEnter={(event) => {
         if (event.pointerType === "touch") return;
         clearTimer();

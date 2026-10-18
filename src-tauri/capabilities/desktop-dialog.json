@@ -16,6 +16,7 @@
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
+    "allow-open-changes-window",
     "allow-open-external-url",
     "allow-open-path",
     "allow-open-log-dir",

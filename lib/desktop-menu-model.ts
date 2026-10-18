@@ -4,8 +4,10 @@ export type NativeMenuEntry =
   | {
       kind?: "item";
       label: string;
-      onSelect?: () => void;
+      onSelect?: (modifiers?: { shiftKey?: boolean }) => void;
       disabled?: boolean;
+      disabledReason?: string;
+      danger?: boolean;
       /** Renders a check mark; `true`/`false` both make it a check item. */
       checked?: boolean;
     }
@@ -60,7 +62,7 @@ export function toPopupSpec(entries: NativeMenuEntry[]): {
           out.push({
             kind: "item",
             id,
-            text: entry.label,
+            text: entry.disabledReason ? `${entry.label} — ${entry.disabledReason}` : entry.label,
             enabled: !entry.disabled,
             ...(entry.checked !== undefined ? { checked: entry.checked } : {}),
           });

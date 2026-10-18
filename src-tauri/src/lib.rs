@@ -17,12 +17,14 @@ use std::os::windows::process::CommandExt as _;
 
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Url};
 
+mod changes_window;
 mod logging;
 #[cfg(windows)]
 pub mod credential_helper;
 mod native_prefs;
 mod shell;
 
+use changes_window::{close_changes_window, open_changes_window, ChangesWindowOrigin};
 use logging::{desktop_log, install_panic_hook};
 use native_prefs::{
     clear_app_cache, reconcile_webview_cache_for_version, set_ui_theme, write_last_version,
@@ -1016,6 +1018,9 @@ pub fn run() {
         // would fight the custom window chrome.
         .plugin(
             tauri_plugin_window_state::Builder::default()
+                // Popouts have one-use labels; do not retain dead entries in
+                // the persisted main-window geometry file.
+                .with_filter(|label| !label.starts_with("changes-"))
                 .with_state_flags(
                     tauri_plugin_window_state::StateFlags::SIZE
                         | tauri_plugin_window_state::StateFlags::POSITION
@@ -1050,6 +1055,8 @@ pub fn run() {
         .manage(PopupMenuSelection::default())
         .manage(DesktopApiToken(desktop_api_token))
         .invoke_handler(tauri::generate_handler![
+            open_changes_window,
+            close_changes_window,
             get_desktop_api_token,
             open_external_url,
             open_path,
@@ -1095,6 +1102,7 @@ pub fn run() {
             let (url, server) = start_development_server(app.handle())?;
 
             desktop_log(app.handle(), &format!("server ready at {url}"));
+            app.manage(ChangesWindowOrigin(url.clone()));
             app.manage(server);
             #[cfg(feature = "custom-protocol")]
             if let Some(port) = url.port() {

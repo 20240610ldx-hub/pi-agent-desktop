@@ -13,7 +13,7 @@ test("only Shift+click bypasses session deletion confirmation", () => {
   // itself rather than a named function, and tolerate either brace style.
   assert.match(
     sessionItemSource,
-    /if \(e\.shiftKey\)\s*\{?\s*void performDelete\(\);\s*\}?\s*else\s*\{?\s*setConfirmDelete\(true\);/,
+    /if \(modifiers\?\.shiftKey\)\s*\{?\s*void performDelete\(\);\s*\}?\s*else\s*\{?\s*setConfirmDelete\(true\);/,
   );
 });
 
@@ -205,7 +205,7 @@ test("shows a cross-project recent section above the project tree", () => {
 test("the row menu shows the compaction count only when the session was compacted", () => {
   assert.match(
     sessionItemSource,
-    /\{\(session\.compactionCount \?\? 0\) > 0 && \(\s*<div>\{t\("sidebar\.compactionCount", \{ count: session\.compactionCount \?\? 0 \}\)\}<\/div>/,
+    /\(session\.compactionCount \?\? 0\) > 0 \? \[\{ label: t\("sidebar\.compactionCount", \{ count: session\.compactionCount \?\? 0 \}\)/,
   );
 });
 
@@ -243,4 +243,77 @@ test("running, unread and neutral states use one leading dot with static reduced
   assert.match(referenceCss, /\.session-activity-dot\.is-running \{ animation: scheduled-pulse 1\.4s ease-in-out infinite;/);
   assert.match(referenceCss, /@media \(prefers-reduced-motion: reduce\) \{\s*\.session-activity-dot\.is-running \{ animation: none;/);
   assert.match(referenceCss, /\.sidebar-title\.is-overflowing \{ mask-image: linear-gradient\(to right, #000 calc\(100% - 28\.8px\), transparent\)/);
+});
+
+const sidebarAst = ts.createSourceFile("SessionSidebar.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const declarations = [];
+const collect = (node) => { if (ts.isVariableDeclaration(node)) declarations.push(node); ts.forEachChild(node, collect); };
+collect(sidebarAst);
+const expressionFor = (name) => declarations.find((node) => node.name.getText(sidebarAst) === name).initializer.getText(sidebarAst);
+const compileExpression = (text) => new Script(ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ESNext } }).outputText);
+
+function menuFixture(overrides = {}) {
+  const calls = [];
+  const session = { id: "source", modified: "now", messageCount: 4 };
+  const actions = {
+    metadata: { pinnedIds: [], archivedIds: [], groups: [], memberships: [] }, canReveal: true, revealLabel: "Explorer",
+    onPin: (...args) => calls.push(["pin", ...args]), onMarkUnread: (...args) => calls.push(["unread", ...args]),
+    onMoveGroup: (...args) => calls.push(["group", ...args]), onNewGroup: (...args) => calls.push(["newGroup", ...args]),
+    onArchive: (...args) => calls.push(["archive", ...args]),
+  };
+  const context = createContext({ session, actions, t: (key) => key, formatRelativeTime: () => "now", locale: "en", isRunning: false, needsInput: false, forking: false,
+    startRename: () => calls.push(["rename"]), forkSession: () => calls.push(["fork"]), revealSession: () => calls.push(["reveal"]), performDelete: () => calls.push(["delete"]), setConfirmDelete: () => calls.push(["confirm"]), ...overrides });
+  const entries = compileExpression(`(${expressionFor("sessionMenuEntries")})()`).runInContext(context);
+  return { entries, calls };
+}
+
+test("menu actions call real handlers and unimplemented open targets remain disabled", () => {
+  const { entries, calls } = menuFixture();
+  const open = entries.find((entry) => entry.kind === "submenu" && entry.label === "sidebar.openIn");
+  for (const label of ["sidebar.openSplitView", "sidebar.openNewWindow", "VS Code"]) {
+    const item = open.items.find((entry) => entry.label === label);
+    assert.equal(item.disabled, true);
+    assert.ok(item.disabledReason);
+    assert.equal(item.onSelect, undefined);
+  }
+  open.items.find((entry) => entry.label === "Explorer").onSelect();
+  entries.find((entry) => entry.label === "sidebar.pin").onSelect();
+  entries.find((entry) => entry.label === "sidebar.markUnread").onSelect();
+  entries.find((entry) => entry.label === "sidebar.archiveSession").onSelect();
+  entries.find((entry) => entry.label === "sidebar.delete").onSelect();
+  entries.find((entry) => entry.label === "sidebar.delete").onSelect({ shiftKey: true });
+  assert.deepEqual(calls, [["reveal"], ["pin", "source", true], ["unread", "source"], ["archive", "source", true], ["confirm"], ["delete"]]);
+  assert.equal(menuFixture({ isRunning: true }).entries.find((entry) => entry.label === "sidebar.fork").disabled, true);
+  assert.equal(menuFixture({ needsInput: true }).entries.find((entry) => entry.label === "sidebar.fork").disabled, true);
+});
+
+test("Fork reads the saved leaf and only sends fork_branch before selecting child info", async () => {
+  const calls = [];
+  const child = { id: "child", cwd: "/repo" };
+  const context = createContext({
+    session: { id: "source" }, isRunning: false, needsInput: false, forking: false, setForking() {},
+    fetch: async (url) => { calls.push(url); return { ok: true, json: async () => url.includes("source") ? { leafId: "leaf" } : { info: child } }; },
+    sendAgentCommand: async (...args) => { calls.push(args); return { newSessionId: "child" }; },
+    actions: { onForked: (info) => calls.push(info) }, onRenamed() {}, reportActionError(error) { throw new Error(error); }, t: (key) => key,
+  });
+  await compileExpression(`(${expressionFor("forkSession")})()`).runInContext(context);
+  assert.equal(calls[0], "/api/sessions/source?tree=summary");
+  assert.equal(calls[1][0], "source");
+  assert.equal(calls[1][1].type, "fork_branch");
+  assert.equal(calls[1][1].entryId, "leaf");
+  assert.equal(calls[2], "/api/sessions/child?tree=summary");
+  assert.equal(calls[3], child);
+  assert.doesNotMatch(JSON.stringify(calls), /prompt|auto-name/);
+});
+
+test("manual unread waits for a real select and authoritative SSE replaces needs-input ids", () => {
+  assert.match(source, /onMarkUnread: \(id\) => setUnreadSessionIds\(\(current\) => new Set\(current\)\.add\(id\)\)/);
+  const select = expressionFor("handleSelectSessionFromList");
+  assert.match(select, /setUnreadSessionIds/);
+  assert.match(select, /next\.delete\(id\)/);
+  assert.match(source, /setNeedsInputSessionIds\(new Set\(data\.needsInputSessionIds \?\? \[\]\)\)/);
+  assert.match(source, /familySessions\.some\(\(session\) => needsInputSessionIds\.has\(session\.id\)\)/);
+  assert.match(source, /sseAuthoritativeRef\.current = true/);
+  assert.match(source, /window\.addEventListener\("storage", sync\)/);
+  assert.match(source, /sidebar\.archivedSessions/);
 });

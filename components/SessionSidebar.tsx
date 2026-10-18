@@ -31,7 +31,7 @@ import { getRecallSessions, hasRecallSessionsToday } from "@/lib/recent-sessions
 import { notifyDesktop } from "@/lib/desktop-notify";
 import { revealItemInDirNative } from "@/lib/desktop-native";
 import { isTauriDesktop } from "@/lib/desktop-updater";
-import { canUseNativeMenu, menuPointBelow, showNativeMenu, type NativeMenuPoint } from "@/lib/desktop-menu";
+import { canUseNativeMenu, menuPointBelow, showNativeMenu, type NativeMenuPoint, type NativeMenuEntry } from "@/lib/desktop-menu";
 import { getDesktopPlatform, type DesktopPlatform } from "@/lib/desktop-window";
 import { useWindowDrag } from "./desktop";
 import { SessionSearch } from "./SessionSearch";
@@ -41,6 +41,13 @@ import { prefetchSessionData } from "@/lib/session-data-cache";
 import { isImeComposing } from "@/lib/ime";
 import { PilaudeIcon } from "./PilaudeIcon";
 import { SidebarTitle } from "./SidebarTitle";
+import { sendAgentCommand } from "@/lib/agent-client";
+import { openDomMenu, getDomMenu, subscribeDomMenu } from "@/lib/dom-menu-store";
+import {
+  SIDEBAR_SESSION_METADATA_KEY, normalizeSidebarSessionMetadata, setSidebarSessionFlag,
+  moveSidebarSessionsToGroup, addSidebarSessionGroup, sidebarSessionFamilyIds,
+  orderSidebarSessions, sidebarSessionStatus, type SidebarSessionMetadata,
+} from "@/lib/sidebar-session-metadata";
 
 function sessionListUrl(summary: boolean, force: boolean): string {
   if (summary) return "/api/sessions?summary=1";
@@ -126,6 +133,17 @@ function saveUnreadSessionIds(ids: Set<string>): void {
 interface SessionTreeNode {
   session: SessionInfo;
   children: SessionTreeNode[];
+}
+interface SidebarSessionActions {
+  metadata: SidebarSessionMetadata;
+  onPin: (id: string, pinned: boolean) => void;
+  onArchive: (id: string, archived: boolean) => void;
+  onMarkUnread: (id: string) => void;
+  onMoveGroup: (id: string, groupId: string | null) => void;
+  onNewGroup: (id: string) => void;
+  onForked: (session: SessionInfo) => void;
+  canReveal: boolean;
+  revealLabel: string;
 }
 
 const MAX_VISIBLE_PROJECT_SESSIONS = 5;
@@ -314,7 +332,14 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
   const [runningSessionIds, setRunningSessionIds] = useState<Set<string>>(() => new Set());
+  const [needsInputSessionIds, setNeedsInputSessionIds] = useState<Set<string>>(() => new Set());
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => loadUnreadSessionIds());
+  const [sessionMetadata, setSessionMetadata] = useState<SidebarSessionMetadata>(() => normalizeSidebarSessionMetadata(null));
+  const [metadataHydrated, setMetadataHydrated] = useState(false);
+  const [archivedSessionsOpen, setArchivedSessionsOpen] = useState(false);
+  const [newGroupSessionId, setNewGroupSessionId] = useState<string | null>(null);
+  const [newGroupName, setNewGroupName] = useState("");
+  const groupInputRef = useRef<HTMLInputElement>(null);
   const previousRunningSessionIdsRef = useRef<Set<string>>(new Set());
   const previousSuppressedCompletionSessionIdsRef = useRef<Set<string>>(new Set());
   // Once polling has delivered a snapshot it is the source of truth for
@@ -350,6 +375,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         sessions: SessionInfo[];
         sessionListVersion: number;
         runningSessionIds?: string[];
+        needsInputSessionIds?: string[];
         completionNotificationSuppressedSessionIds?: string[];
       };
       if (loadId !== sessionLoadIdRef.current) return;
@@ -359,6 +385,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       // live SSE stream is connected, a slow session-list fetch cannot overwrite it.
       if (!sseAuthoritativeRef.current) {
         setRunningSessionIds(new Set(data.runningSessionIds ?? []));
+        setNeedsInputSessionIds(new Set(data.needsInputSessionIds ?? []));
       }
       // Drop markers for deleted sessions and for subagents, whose completion
       // is intentionally silent even if an older client marked them unread.
@@ -410,6 +437,32 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     };
   }, [loadSessions, refreshKey]);
 
+  useEffect(() => {
+    try { setSessionMetadata(normalizeSidebarSessionMetadata(JSON.parse(window.localStorage.getItem(SIDEBAR_SESSION_METADATA_KEY) ?? "null"))); } catch { /* Corrupt storage starts empty. */ }
+    setMetadataHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!metadataHydrated) return;
+    try { window.localStorage.setItem(SIDEBAR_SESSION_METADATA_KEY, JSON.stringify(sessionMetadata)); } catch { /* Storage may be unavailable. */ }
+  }, [metadataHydrated, sessionMetadata]);
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key === SIDEBAR_SESSION_METADATA_KEY) {
+        try { setSessionMetadata(normalizeSidebarSessionMetadata(JSON.parse(event.newValue ?? "null"))); }
+        catch { setSessionMetadata(normalizeSidebarSessionMetadata(null)); }
+      }
+      if (event.key === APP_PREF_KEYS.unreadSessionIds) setUnreadSessionIds(loadUnreadSessionIds());
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
+  useEffect(() => {
+    if (!newGroupSessionId) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    groupInputRef.current?.focus();
+    return () => previousFocus?.focus({ preventScroll: true });
+  }, [newGroupSessionId]);
+
   // Persist unread markers so they survive a browser refresh before the user
   // has actually opened the completed session.
   useEffect(() => {
@@ -443,10 +496,11 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       source = new EventSource("/api/agent/running/events");
       source.onmessage = async (e) => {
         try {
-          const data = JSON.parse(e.data) as { type?: string; runningSessionIds?: string[]; sessionListVersion?: number };
+          const data = JSON.parse(e.data) as { type?: string; runningSessionIds?: string[]; needsInputSessionIds?: string[]; sessionListVersion?: number };
           if (data.type === "running") {
             sseAuthoritativeRef.current = true;
             setRunningSessionIds(new Set(data.runningSessionIds ?? []));
+            setNeedsInputSessionIds(new Set(data.needsInputSessionIds ?? []));
           }
           if (typeof data.sessionListVersion === "number"
             && data.sessionListVersion !== sessionListVersionRef.current) {
@@ -861,9 +915,10 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   // open session after manually switching worktrees.
   const handleSelectSessionFromList = useCallback((s: SessionInfo, entryId?: string, blockIndex?: number) => {
     setAllSessions((current) => current.some((session) => session.id === s.id) ? current : [s, ...current]);
+    setUnreadSessionIds((current) => { const next = new Set(current); sidebarSessionFamilyIds(allSessions, s.id).forEach((id) => next.delete(id)); return next; });
     if (s.cwd) setSelectedCwd(s.cwd);
     onSelectSession(s, false, entryId, blockIndex);
-  }, [onSelectSession]);
+  }, [allSessions, onSelectSession]);
 
   const handleNewSession = useCallback((cwdOverride?: string) => {
     const cwd = cwdOverride ?? selectedCwd;
@@ -996,23 +1051,54 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     setProjectRevealError(null);
   }, [closeProjectMenu, projectMenu, resetWorktreeActions, showNativeProjectMenu]);
 
+  const updateSessionFlag = (sessionId: string, flag: "pinnedIds" | "archivedIds", enabled: boolean) => {
+    const ids = sidebarSessionFamilyIds(allSessions, sessionId);
+    setSessionMetadata((current) => setSidebarSessionFlag(current, flag, ids, enabled));
+  };
+  const moveSessionGroup = (sessionId: string, groupId: string | null) => {
+    const ids = sidebarSessionFamilyIds(allSessions, sessionId);
+    setSessionMetadata((current) => moveSidebarSessionsToGroup(current, ids, groupId));
+  };
+  const commitNewGroup = () => {
+    if (!newGroupSessionId || !newGroupName.trim()) return;
+    const ids = sidebarSessionFamilyIds(allSessions, newGroupSessionId);
+    const id = crypto.randomUUID();
+    setSessionMetadata((current) => addSidebarSessionGroup(current, id, newGroupName, ids));
+    setNewGroupSessionId(null);
+    setNewGroupName("");
+  };
+  const sidebarActions: SidebarSessionActions = {
+    metadata: sessionMetadata,
+    onPin: (id, pinned) => updateSessionFlag(id, "pinnedIds", pinned),
+    onArchive: (id, archived) => updateSessionFlag(id, "archivedIds", archived),
+    onMarkUnread: (id) => setUnreadSessionIds((current) => new Set(current).add(id)),
+    onMoveGroup: moveSessionGroup,
+    onNewGroup: (id) => { setNewGroupName(""); setNewGroupSessionId(id); },
+    onForked: handleSelectSessionFromList,
+    canReveal: isTauriDesktop() || fileManagerAvailability?.supported === true,
+    revealLabel: revealProjectLabel,
+  };
+
   // Phase A: project tree — groups sessions by project root. Sorting is
   const trimmedSessionQuery = sessionQuery.trim().toLowerCase();
   // Runs of scheduled tasks live under Scheduled, not in the project tree: an
   // hourly task would otherwise bury the sessions the user started themselves.
   const treeSessions = allSessions.filter((session) => session.relation?.kind !== "scheduled");
+  const archivedSessionIds = new Set(sessionMetadata.archivedIds);
+  const archivedSessions = treeSessions.filter((session) => archivedSessionIds.has(session.id));
+  const visibleTreeSessions = treeSessions.filter((session) => !archivedSessionIds.has(session.id));
   const filteredSessions = trimmedSessionQuery
-    ? treeSessions.filter((session) =>
+    ? visibleTreeSessions.filter((session) =>
         (session.name ?? "").toLowerCase().includes(trimmedSessionQuery)
         || session.firstMessage.toLowerCase().includes(trimmedSessionQuery))
-    : treeSessions;
+    : visibleTreeSessions;
   const sessionFamilies = listSessionFamilies(filteredSessions);
   const allProjects = groupByProject(filteredSessions, { runningIds: runningSessionIds, unreadIds: unreadSessionIds });
   const activeProjects = allProjects.filter((group) => !archivedProjectRoots.has(group.projectRoot));
   const projectDisplayNames = getProjectDisplayNames(activeProjects.map((group) => group.projectRoot));
-  const hasTodaySessions = !trimmedSessionQuery && hasRecallSessionsToday(treeSessions);
+  const hasTodaySessions = !trimmedSessionQuery && hasRecallSessionsToday(visibleTreeSessions);
   const recentSessions = !trimmedSessionQuery
-    ? getRecallSessions(treeSessions)
+    ? getRecallSessions(visibleTreeSessions)
     : [];
   useEffect(() => {
     const projectRoots = activeProjects.map((group) => group.projectRoot);
@@ -1026,7 +1112,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     const isActive = group.projectRoot === projectRootFor(selectedCwd);
     const runningCount = group.runningIds.size;
     const unreadCount = group.unreadIds.size;
-    const groupTree = buildSessionTree(group.sessions);
+    const groupTree = orderSidebarSessions(buildSessionTree(group.sessions).map((node) => ({ ...node, id: node.session.id })), sessionMetadata.pinnedIds);
     const showSessionOverflow = groupTree.length > MAX_VISIBLE_PROJECT_SESSIONS;
     const isSessionOverflowExpanded = Boolean(trimmedSessionQuery) || expandedProjectSessions.has(group.projectRoot);
     let visibleGroupTree = isSessionOverflowExpanded
@@ -1040,6 +1126,10 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         visibleGroupTree = [...visibleGroupTree.slice(0, -1), selectedRoot];
       }
     }
+    const sessionBuckets = [
+      { id: "", name: "", nodes: visibleGroupTree.filter((node) => !sessionMetadata.memberships.some((item) => item.sessionId === node.session.id)) },
+      ...sessionMetadata.groups.map((localGroup) => ({ ...localGroup, nodes: visibleGroupTree.filter((node) => sessionMetadata.memberships.some((item) => item.sessionId === node.session.id && item.groupId === localGroup.id)) })),
+    ];
     const branchSubtitle = isActive && currentWt?.branch
       ? currentWt.branch
       : group.branches.length === 1
@@ -1133,27 +1223,20 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         </div>
         {!isCollapsed && (
           <div className="sidebar-project-tree-children">
-            {visibleGroupTree.map((node) => {
-              const nodeFamily = sessionFamilies.find(
-                (family) => family.root.id === node.session.id,
-              );
-              return (
-              <SessionFamilyItem
-                key={node.session.id}
-                node={node}
-                familySessions={nodeFamily ? [nodeFamily.root, ...nodeFamily.subagents] : undefined}
-                selectedSessionId={selectedSessionId}
-                runningSessionIds={runningSessionIds}
-                unreadSessionIds={unreadSessionIds}
-                onSelectSession={handleSelectSessionFromList}
-                onRenamed={loadSessions}
-                onSessionDeleted={(id) => {
-                  onSessionDeleted?.(id);
-                  loadSessions();
-                }}
-              />
-              );
-            })}
+            {sessionBuckets.filter((bucket) => bucket.nodes.length).map((bucket) => <div key={bucket.id || "ungrouped"} className="sidebar-session-group">
+              {bucket.name && <div className="sidebar-session-group-name">{bucket.name}</div>}
+              {bucket.nodes.map((node) => {
+                const nodeFamily = sessionFamilies.find((family) => family.root.id === node.session.id);
+                return <SessionFamilyItem
+                  key={node.session.id} node={node}
+                  familySessions={nodeFamily ? [nodeFamily.root, ...nodeFamily.subagents] : undefined}
+                  selectedSessionId={selectedSessionId} runningSessionIds={runningSessionIds}
+                  unreadSessionIds={unreadSessionIds} needsInputSessionIds={needsInputSessionIds}
+                  actions={sidebarActions} onSelectSession={handleSelectSessionFromList}
+                  onRenamed={loadSessions} onSessionDeleted={(id) => { onSessionDeleted?.(id); loadSessions(); }}
+                />;
+              })}
+            </div>)}
             {showSessionOverflow && (
               <button
                 type="button"
@@ -1278,7 +1361,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           Clicking a project header toggles collapse; the ⋯ menu offers sort
           and collapse/expand-all; the + button opens the project picker to
           add a new project. The FileExplorer has moved to the right panel. */}
-      {allProjects.length === 0 ? (
+      {allProjects.length === 0 && archivedSessions.length === 0 ? (
         <div className="sidebar-project-tree-empty">
           {loading
             ? t("sidebar.loading")
@@ -1343,6 +1426,8 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                       isSelected={session.id === selectedSessionId}
                       isRunning={runningSessionIds.has(session.id)}
                       isUnread={unreadSessionIds.has(session.id)}
+                      needsInput={needsInputSessionIds.has(session.id)}
+                      actions={sidebarActions}
                       onClick={() => handleSelectSessionFromList(session)}
                       subtitle={projectName}
                     />
@@ -1387,6 +1472,15 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
             </div>
           </div>
           {activeProjects.map((group) => renderProjectGroup(group))}
+          {archivedSessions.length > 0 && <section className="sidebar-archived-sessions">
+            <button type="button" className="sidebar-archived-toggle" aria-expanded={archivedSessionsOpen} onClick={() => setArchivedSessionsOpen((open) => !open)}>{t("sidebar.archivedSessions", { count: archivedSessions.length })}</button>
+            {archivedSessionsOpen && archivedSessions.filter((session) => !archivedSessionIds.has(session.parentSessionId ?? "")).map((session) => <SessionItem
+              key={session.id} session={session} isSelected={session.id === selectedSessionId}
+              isRunning={runningSessionIds.has(session.id)} isUnread={unreadSessionIds.has(session.id)} needsInput={needsInputSessionIds.has(session.id)}
+              actions={sidebarActions} onClick={() => handleSelectSessionFromList(session)} onRenamed={loadSessions}
+              onDeleted={(id) => { onSessionDeleted?.(id); loadSessions(); }}
+            />)}
+          </section>}
         </div>
         </SessionSearch>
       )}
@@ -1434,6 +1528,22 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           onCreateWorktree={() => void worktreeActions.create(projectMenu.root)}
         />
       )}
+      {newGroupSessionId && createPortal(<div className="sidebar-group-dialog-backdrop" onClick={() => setNewGroupSessionId(null)}>
+        <form className="sidebar-group-dialog native-popover" role="dialog" aria-modal="true" aria-label={t("sidebar.newGroup")} onClick={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); commitNewGroup(); }} onKeyDown={(event) => {
+          if (isImeComposing(event)) return;
+          if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setNewGroupSessionId(null); }
+          if (event.key === "Tab") {
+            const fields = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("input, button:not(:disabled)"));
+            const first = fields[0], last = fields[fields.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+          }
+        }}>
+          <label htmlFor="sidebar-group-name">{t("sidebar.newGroup")}</label>
+          <input id="sidebar-group-name" ref={groupInputRef} value={newGroupName} maxLength={80} onChange={(event) => setNewGroupName(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape" && !isImeComposing(event)) { event.stopPropagation(); setNewGroupSessionId(null); } }} />
+          <div><button type="button" onClick={() => setNewGroupSessionId(null)}>{t("sidebar.cancel")}</button><button type="submit" disabled={!newGroupName.trim()}>{t("sidebar.createGroup")}</button></div>
+        </form>
+      </div>, document.body)}
       {projectPickerOpen && (
         <div className="project-picker-modal-overlay" role="dialog" aria-modal="true" onClick={() => setProjectPickerOpen(false)}>
           <div className="project-picker-modal-shell" onClick={(e) => e.stopPropagation()}>
@@ -1461,6 +1571,8 @@ function SessionFamilyItem({
   selectedSessionId,
   runningSessionIds,
   unreadSessionIds,
+  needsInputSessionIds,
+  actions,
   onSelectSession,
   onRenamed,
   onSessionDeleted,
@@ -1472,6 +1584,8 @@ function SessionFamilyItem({
   selectedSessionId: string | null;
   runningSessionIds: Set<string>;
   unreadSessionIds: Set<string>;
+  needsInputSessionIds: ReadonlySet<string>;
+  actions: SidebarSessionActions;
   onSelectSession: (s: SessionInfo) => void;
   onRenamed?: () => void;
   onSessionDeleted?: (id: string) => void;
@@ -1496,7 +1610,9 @@ function SessionFamilyItem({
           isRunning={familySessions
             ? familySessions.some((session) => runningSessionIds.has(session.id))
             : runningSessionIds.has(node.session.id)}
-          isUnread={unreadSessionIds.has(node.session.id)}
+          isUnread={familySessions ? familySessions.some((session) => unreadSessionIds.has(session.id)) : unreadSessionIds.has(node.session.id)}
+          needsInput={familySessions ? familySessions.some((session) => needsInputSessionIds.has(session.id)) : needsInputSessionIds.has(node.session.id)}
+          actions={actions}
           onClick={() => onSelectSession(node.session)}
           onRenamed={onRenamed}
           onDeleted={(id) => onSessionDeleted?.(id)}
@@ -1515,6 +1631,8 @@ function SessionFamilyItem({
               selectedSessionId={selectedSessionId}
               runningSessionIds={runningSessionIds}
               unreadSessionIds={unreadSessionIds}
+              needsInputSessionIds={needsInputSessionIds}
+              actions={actions}
               onSelectSession={onSelectSession}
               onRenamed={onRenamed}
               onSessionDeleted={onSessionDeleted}
@@ -1579,6 +1697,8 @@ function SessionItem({
   isSelected,
   isRunning,
   isUnread,
+  needsInput = false,
+  actions,
   onClick,
   onRenamed,
   onDeleted,
@@ -1592,6 +1712,8 @@ function SessionItem({
   isSelected: boolean;
   isRunning?: boolean;
   isUnread?: boolean;
+  needsInput?: boolean;
+  actions: SidebarSessionActions;
   onClick: () => void;
   onRenamed?: () => void;
   onDeleted?: (id: string) => void;
@@ -1618,8 +1740,9 @@ function SessionItem({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [forking, setForking] = useState(false);
+  const status = sidebarSessionStatus(needsInput, Boolean(isRunning), Boolean(isUnread));
 
   // Select the whole name once the rename input is mounted (startRename's
   // immediate setTimeout can fire before the input exists).
@@ -1692,32 +1815,75 @@ function SessionItem({
     }
   }, [session.id, session.transient, onDeleted, reportActionError, t]);
 
-  // "…" menu: fixed-position portal so the sidebar's overflow/backdrop-filter can't clip it
-  const MENU_WIDTH = 190;
-  // Desktop shell: the same actions as the DOM menu below, as a native popup.
-  // `menuOpen` stays true while it is up so the trailing "…" button does not
-  // swap back to the timestamp; `menuPos` stays null, so no DOM menu renders.
-  const showNativeSessionMenu = useCallback(async (at: NativeMenuPoint): Promise<boolean> => {
+  const forkSession = async () => {
+    if (session.transient || isRunning || needsInput || forking) return;
+    setForking(true);
+    try {
+      const response = await fetch(`/api/sessions/${encodeURIComponent(session.id)}?tree=summary`, { cache: "no-store" });
+      const data = await response.json() as { leafId?: string; error?: string };
+      if (!response.ok || !data.leafId) throw new Error(data.error ?? t("sidebar.forkUnavailable"));
+      const result = await sendAgentCommand<{ cancelled?: boolean; newSessionId?: string }>(session.id, { type: "fork_branch", entryId: data.leafId });
+      if (result?.cancelled || !result?.newSessionId) throw new Error(t("sidebar.forkUnavailable"));
+      const childResponse = await fetch(`/api/sessions/${encodeURIComponent(result.newSessionId)}?tree=summary`, { cache: "no-store" });
+      const child = await childResponse.json() as { info?: SessionInfo; error?: string };
+      if (!childResponse.ok || !child.info) throw new Error(child.error ?? t("sidebar.forkUnavailable"));
+      onRenamed?.();
+      actions.onForked(child.info);
+    } catch (error) { reportActionError(t("sidebar.actionFailed", { error: error instanceof Error ? error.message : String(error) })); }
+    finally { setForking(false); }
+  };
+  const revealSession = async () => {
+    try {
+      if (isTauriDesktop()) await revealItemInDirNative(session.cwd);
+      else {
+        const response = await fetch("/api/open-in-explorer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cwd: session.cwd }) });
+        if (!response.ok) { const data = await response.json() as { error?: string }; throw new Error(data.error ?? `HTTP ${response.status}`); }
+      }
+    } catch (error) { reportActionError(t("sidebar.actionFailed", { error: error instanceof Error ? error.message : String(error) })); }
+  };
+  const sessionMenuEntries = (): NativeMenuEntry[] => [
+    { kind: "submenu", label: t("sidebar.openIn"), items: [
+      { label: t("sidebar.openSplitView"), disabled: true, disabledReason: t("sidebar.openUnavailable") },
+      { label: t("sidebar.openNewWindow"), disabled: true, disabledReason: t("sidebar.openUnavailable") },
+      { kind: "separator" },
+      { label: "VS Code", disabled: true, disabledReason: t("sidebar.editorUnavailable") },
+      { label: actions.revealLabel, disabled: !actions.canReveal, disabledReason: actions.canReveal ? undefined : t("sidebar.fileManagerUnavailable"), onSelect: () => void revealSession() },
+    ] },
+    { kind: "separator" },
+    { label: t(actions.metadata.pinnedIds.includes(session.id) ? "sidebar.unpin" : "sidebar.pin"), onSelect: () => actions.onPin(session.id, !actions.metadata.pinnedIds.includes(session.id)) },
+    { label: t("sidebar.markUnread"), onSelect: () => actions.onMarkUnread(session.id) },
+    { label: t("sidebar.rename"), onSelect: startRename },
+    { label: t("sidebar.fork"), disabled: isRunning || needsInput || forking, disabledReason: isRunning || needsInput ? t("sidebar.forkBusy") : undefined, onSelect: () => void forkSession() },
+    { kind: "separator" },
+    { kind: "submenu", label: t("sidebar.moveToGroup"), items: [
+      { label: t("sidebar.newGroup"), onSelect: () => actions.onNewGroup(session.id) },
+      ...actions.metadata.groups.map((group) => ({ label: group.name, checked: actions.metadata.memberships.some((item) => item.sessionId === session.id && item.groupId === group.id), onSelect: () => actions.onMoveGroup(session.id, group.id) })),
+      ...(actions.metadata.memberships.some((item) => item.sessionId === session.id) ? [{ label: t("sidebar.removeFromGroup"), onSelect: () => actions.onMoveGroup(session.id, null) }] : []),
+    ] },
+    { kind: "separator" },
+    { label: t(actions.metadata.archivedIds.includes(session.id) ? "sidebar.restoreSession" : "sidebar.archiveSession"), onSelect: () => actions.onArchive(session.id, !actions.metadata.archivedIds.includes(session.id)) },
+    { label: t("sidebar.delete"), danger: true, onSelect: (modifiers) => { if (modifiers?.shiftKey) void performDelete(); else setConfirmDelete(true); } },
+    { kind: "separator" },
+    { label: `${formatRelativeTime(session.modified, locale)} · ${t("sidebar.messagesCount", { count: session.messageCount })}`, disabled: true },
+    ...((session.compactionCount ?? 0) > 0 ? [{ label: t("sidebar.compactionCount", { count: session.compactionCount ?? 0 }), disabled: true }] : []),
+    ...(session.worktreeBranch ? [{ label: session.worktreeBranch, disabled: true }] : []),
+  ];
+  const showNativeSessionMenu = async (at: NativeMenuPoint): Promise<boolean> => {
     if (session.transient || !canUseNativeMenu()) return false;
     setMenuOpen(true);
-    const shown = await showNativeMenu([
-      { label: t("sidebar.rename"), onSelect: startRename },
-      { label: t("sidebar.delete"), onSelect: () => setConfirmDelete(true) },
-      { kind: "separator" },
-      {
-        label: `${formatRelativeTime(session.modified, locale)} · ${t("sidebar.messagesCount", { count: session.messageCount })}`,
-        disabled: true,
-      },
-      ...((session.compactionCount ?? 0) > 0
-        ? [{ label: t("sidebar.compactionCount", { count: session.compactionCount ?? 0 }), disabled: true }]
-        : []),
-      ...(session.worktreeBranch ? [{ label: session.worktreeBranch, disabled: true }] : []),
-    ], at);
+    const shown = await showNativeMenu(sessionMenuEntries(), at);
     setMenuOpen(false);
     return shown;
-  }, [locale, session.compactionCount, session.messageCount, session.modified, session.transient, session.worktreeBranch, startRename, t]);
+  };
+  const openSessionMenu = async (at: NativeMenuPoint) => {
+    if (session.transient) return;
+    if (await showNativeSessionMenu(at)) return;
+    openDomMenu(sessionMenuEntries(), at, "session");
+    setMenuPos({ top: at.y, left: at.x });
+    setMenuOpen(true);
+  };
 
-  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     const handled = dispatchSessionRowContextMenu({
       id: session.id,
       path: session.path,
@@ -1738,52 +1904,26 @@ function SessionItem({
       // natively only while native popups are on, otherwise via the "…" button.
       e.preventDefault();
       e.stopPropagation();
-      void showNativeSessionMenu({ x: e.clientX, y: e.clientY });
+      void openSessionMenu({ x: e.clientX, y: e.clientY });
     }
-  }, [onRenamed, session.cwd, session.id, session.name, session.path, session.transient, showNativeSessionMenu]);
+  };
 
-  const toggleMenu = useCallback((e: React.MouseEvent) => {
+  const toggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (menuOpen) { setMenuOpen(false); return; }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const openDomMenu = () => {
-      const estHeight = 124;
-      const left = Math.max(8, Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8));
-      let top = rect.bottom + 4;
-      if (top + estHeight > window.innerHeight - 8) top = rect.top - estHeight - 4;
-      setMenuPos({ top, left });
-      setMenuOpen(true);
-    };
-    if (canUseNativeMenu()) {
-      void showNativeSessionMenu(menuPointBelow(e.currentTarget)).then((shown) => {
-        if (!shown) openDomMenu();
-      });
-      return;
-    }
-    openDomMenu();
-  }, [menuOpen, showNativeSessionMenu]);
+    void openSessionMenu(menuPointBelow(e.currentTarget));
+  };
 
   useEffect(() => {
-    if (!menuOpen) return;
-    const onPointerDown = (ev: MouseEvent) => {
-      const target = ev.target as Node;
-      if (menuRef.current?.contains(target)) return;
-      if (menuButtonRef.current?.contains(target)) return;
-      setMenuOpen(false);
-    };
-    const onKeyDown = (ev: KeyboardEvent) => { if (ev.key === "Escape" && !isImeComposing(ev)) setMenuOpen(false); };
-    const onScrollOrResize = () => setMenuOpen(false);
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    window.addEventListener("scroll", onScrollOrResize, true);
-    window.addEventListener("resize", onScrollOrResize);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("scroll", onScrollOrResize, true);
-      window.removeEventListener("resize", onScrollOrResize);
-    };
-  }, [menuOpen]);
+    if (!menuOpen || !menuPos) return;
+    const menuId = getDomMenu()?.id;
+    return subscribeDomMenu(() => {
+      if (getDomMenu()?.id !== menuId) {
+        setMenuOpen(false);
+        setMenuPos(null);
+        menuButtonRef.current?.focus({ preventScroll: true });
+      }
+    });
+  }, [menuOpen, menuPos]);
 
   const handleDeleteConfirm = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1909,7 +2049,7 @@ function SessionItem({
           >
             {/* Real running / unread state shares the reference's leading dot.
                 Idle is neutral; only running breathes. */}
-            {isRunning ? <RunningSessionIndicator /> : isUnread ? <UnreadSessionIndicator /> : <span className="session-activity-dot" aria-hidden="true" />}
+            {status === "needs-input" ? <span className="session-activity-dot is-needs-input" aria-label={t("sidebar.needsInput")} title={t("sidebar.needsInput")} /> : status === "running" ? <RunningSessionIndicator /> : status === "unread" ? <UnreadSessionIndicator /> : <span className="session-activity-dot is-idle" aria-hidden="true" />}
             <SidebarTitle className="session-item-title" text={title} />
           </button>
           {subtitle && (
@@ -1962,83 +2102,6 @@ function SessionItem({
                 </svg>
               </button>
             </div>
-          )}
-
-          {menuOpen && menuPos && createPortal(
-            <div
-              ref={menuRef}
-              className="native-popover session-item-menu"
-              role="menu"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: "fixed", top: menuPos.top, left: menuPos.left,
-                width: MENU_WIDTH, zIndex: 800, padding: 5,
-                display: "flex", flexDirection: "column", gap: 1,
-              }}
-            >
-              <button
-                role="menuitem"
-                onClick={() => { setMenuOpen(false); startRename(); }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  width: "100%", height: 30, padding: "0 8px",
-                  background: "transparent", border: 0, borderRadius: 7,
-                  color: "var(--text)", cursor: "pointer",
-                  fontSize: 13, textAlign: "left",
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                </svg>
-                {t("sidebar.rename")}
-              </button>
-              <button
-                role="menuitem"
-                className="is-danger"
-                title={t("sidebar.deleteWithShiftClick")}
-                onClick={(e) => {
-                  setMenuOpen(false);
-                  if (e.shiftKey) void performDelete();
-                  else setConfirmDelete(true);
-                }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  width: "100%", height: 30, padding: "0 8px",
-                  background: "transparent", border: 0, borderRadius: 7,
-                  color: "var(--danger)", cursor: "pointer",
-                  fontSize: 13, textAlign: "left",
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                  <path d="M10 11v6M14 11v6" />
-                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                </svg>
-                {t("sidebar.delete")}
-              </button>
-              <div style={{ height: 1, margin: "4px 3px", background: "var(--border)" }} />
-              <div style={{ padding: "3px 8px 5px", color: "var(--text-dim)", fontSize: 11, lineHeight: 1.6 }}>
-                <div title={session.created}>
-                  {formatRelativeTime(session.modified, locale)} · {t("sidebar.messagesCount", { count: session.messageCount })}
-                </div>
-                {(session.compactionCount ?? 0) > 0 && (
-                  <div>{t("sidebar.compactionCount", { count: session.compactionCount ?? 0 })}</div>
-                )}
-                {session.worktreeBranch && (
-                  <div title={`Worktree: ${session.cwd}`} style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--accent)", minWidth: 0 }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <line x1="6" y1="3" x2="6" y2="15" />
-                      <circle cx="18" cy="6" r="3" />
-                      <circle cx="6" cy="18" r="3" />
-                      <path d="M18 9a9 9 0 0 1-9 9" />
-                    </svg>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session.worktreeBranch}</span>
-                  </div>
-                )}
-              </div>
-            </div>,
-            document.body,
           )}
 
           {actionError && createPortal(

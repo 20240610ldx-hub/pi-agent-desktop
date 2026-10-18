@@ -409,6 +409,9 @@ export class AgentSessionWrapper {
     return this.suppressCompletionNotifications;
   }
 
+  hasPendingExtensionUi(): boolean {
+    return this.isAlive() && (this.pendingUiResponses.size > 0 || this.activeCustomUis.size > 0);
+  }
 
   start(): void {
     this.unsubscribe = this.inner.subscribe((event: AgentEvent) => {
@@ -1337,6 +1340,7 @@ export class AgentSessionWrapper {
     for (const id of Array.from(this.activeCustomUis.keys())) this.closeCustomUi(id, undefined);
     this.pendingUiResponses.clear();
     this.pendingUiRequests.clear();
+    notifyRunningChange();
     this.activeToolEvents.clear();
     this.clearExtensionWidgets(false);
 
@@ -1380,6 +1384,7 @@ export class AgentSessionWrapper {
     // Closing starts before the first await, so a request that arrives while
     // extensions shut down starts a fresh wrapper instead of prompting this one.
     this.closing = true;
+    notifyRunningChange();
 
     this.shutdownPromise = (async () => {
       try {
@@ -1693,6 +1698,7 @@ export class AgentSessionWrapper {
       lines,
     } as ExtensionUiRequest as AgentEvent;
     this.pendingUiRequests.set(id, event);
+    notifyRunningChange();
     this.emit(event);
   }
 
@@ -1702,6 +1708,7 @@ export class AgentSessionWrapper {
     custom.settled = true;
     this.activeCustomUis.delete(id);
     this.pendingUiRequests.delete(id);
+    notifyRunningChange();
     try {
       custom.component.dispose?.();
     } catch {
@@ -1837,6 +1844,7 @@ export class AgentSessionWrapper {
         abortSignal.removeEventListener("abort", onAbort);
         this.pendingUiRequests.delete(id);
         this.pendingUiResponses.delete(id);
+        notifyRunningChange();
         this.emit({ type: "extension_ui_closed", id });
       };
       const settle = (value: T) => {
@@ -1856,6 +1864,7 @@ export class AgentSessionWrapper {
         resolve: (response) => settle(parseResponse(response)),
         cancel: () => settle(defaultValue),
       });
+      notifyRunningChange();
       this.emit(fullRequest as AgentEvent);
     });
   }
@@ -2375,8 +2384,8 @@ export function subscribeRunningSessions(listener: (ids: string[]) => void): () 
 let lastRunningSnapshot = "";
 
 /**
- * Recompute the running-session-id set and, if it changed since the last
- * notification, broadcast it to subscribers.
+ * Recompute running ids, blocking-UI ids and the catalogue version; broadcast
+ * when any changes, including a dialog opening while a run stays active.
  */
 export function notifyRunningChange(): void {
   const listeners = getRunningListeners();
@@ -2389,7 +2398,11 @@ export function notifyRunningChange(): void {
   const ids = getRunningRpcSessionIds();
   // List changes (including an unpersisted prompt appearing/disappearing)
   // must reach every window even when the running id set stays unchanged.
-  const snapshot = JSON.stringify({ ids: [...ids].sort(), version: getSessionListVersion() });
+  const snapshot = JSON.stringify({
+    ids: [...ids].sort(),
+    needsInputIds: getNeedsInputRpcSessionIds().sort(),
+    version: getSessionListVersion(),
+  });
   if (snapshot === lastRunningSnapshot) return;
   lastRunningSnapshot = snapshot;
   for (const listener of listeners) {
@@ -2401,6 +2414,15 @@ export function getRunningRpcSessionIds(): string[] {
   const ids = new Set<string>();
   for (const [sessionId, session] of getRegistry()) {
     if (session.isRunning()) ids.add(session.sessionId || sessionId);
+  }
+  return [...ids];
+}
+
+/** Pending blocking extension UI in every live session, including background sessions. */
+export function getNeedsInputRpcSessionIds(): string[] {
+  const ids = new Set<string>();
+  for (const [sessionId, session] of getRegistry()) {
+    if (session.hasPendingExtensionUi?.()) ids.add(session.sessionId || sessionId);
   }
   return [...ids];
 }

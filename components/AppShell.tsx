@@ -26,6 +26,7 @@ import { normalizeWorkspacePaneLayout } from "@/lib/workspace-pane-layout";
 // config modals may never be opened at all; FileViewer drags in markdown +
 // syntax highlighting a second time and only matters once a file tab opens.
 const FileViewer = dynamic(() => import("./FileViewer").then((m) => m.FileViewer), { ssr: false });
+const ChangesPane = dynamic(() => import("./ChangesPane").then((m) => m.ChangesPane), { ssr: false });
 const FileExplorer = dynamic(() => import("./FileExplorer").then((m) => m.FileExplorer), { ssr: false });
 // Only mounted once opened; xterm alone is a large share of the page bundle.
 const TerminalPanel = dynamic(() => import("./TerminalPanel").then((m) => m.TerminalPanel), { ssr: false });
@@ -43,7 +44,8 @@ import { APP_PREF_KEYS, getPrefBool, getPrefJson, setPref, setPrefJson } from "@
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import { useResizablePanel } from "@/hooks/useResizablePanel";
 import { useDesktopConnection } from "@/lib/desktop-connection";
-import { isTauriDesktop, setCloseQuitsNative } from "@/lib/desktop-native";
+import { isTauriDesktop, openChangesWindow, setCloseQuitsNative } from "@/lib/desktop-native";
+import { subscribeChangesFeedback } from "@/lib/changes-feedback";
 import { canUseNativeMenu, menuPointBelow, showNativeMenu } from "@/lib/desktop-menu";
 import { useNativeContextMenu } from "@/hooks/useNativeContextMenu";
 import { DomContextMenuHost } from "./DomContextMenuHost";
@@ -688,13 +690,15 @@ export function AppShell() {
   const [requestedActiveTerminalTabId, setActiveTerminalTabId] = useState<string | null>(null);
   const activeTerminalTabId = resolveActiveTerminalTabId(terminalTabs, requestedActiveTerminalTabId);
   const [terminalsRestored, setTerminalsRestored] = useState(false);
-  const [openPanes, setOpenPanes] = useState<Record<WorkspacePaneId, boolean>>({ files: true, terminal: false, tasks: false });
+  const [openPanes, setOpenPanes] = useState<Record<WorkspacePaneId, boolean>>({ files: true, terminal: false, changes: false, tasks: false });
+  const changesFeedbackTargetRef = useRef<string | null>(null);
+  const [changesWindowError, setChangesWindowError] = useState<string | null>(null);
   const [paneRevealRequest, setPaneRevealRequest] = useState<{ id: WorkspacePaneId } | null>(null);
   const [workspacePanesRestored, setWorkspacePanesRestored] = useState(false);
   useEffect(() => {
     const layout = normalizeWorkspacePaneLayout(getPrefJson(APP_PREF_KEYS.workspacePaneLayout));
     const ids = layout.columns.flatMap((column) => column.paneIds);
-    if (ids.length) setOpenPanes({ files: ids.includes("files"), terminal: ids.includes("terminal"), tasks: ids.includes("tasks") });
+    if (ids.length) setOpenPanes({ files: ids.includes("files"), terminal: ids.includes("terminal"), changes: ids.includes("changes"), tasks: ids.includes("tasks") });
     const visibility = getPrefJson(APP_PREF_KEYS.workspacePaneVisibility);
     if (visibility === true && ids.length) setRightPanelOpen(true);
     setWorkspacePanesRestored(true);
@@ -1030,7 +1034,7 @@ export function AppShell() {
       setFileTabs([]);
       if (!activeFileTabId || activeFileTabId.startsWith("file:")) {
         setActiveFileTabId(null);
-        if (!openPanes.terminal && !openPanes.tasks) setRightPanelOpen(false);
+        if (!openPanes.terminal && !openPanes.tasks && !openPanes.changes) setRightPanelOpen(false);
       }
       // Restore the workspace we switched to: its last open session, or keep
       // the default welcome page when none is remembered.
@@ -1042,7 +1046,7 @@ export function AppShell() {
     if (!scheduledOpenRef.current) {
       router.replace(typeof window !== "undefined" ? window.location.pathname : "/", { scroll: false });
     }
-  }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, newSessionCwd, openPanes.terminal, openPanes.tasks, router, selectedSession, restoreWorkspaceContext]);
+  }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, newSessionCwd, openPanes.terminal, openPanes.tasks, openPanes.changes, router, selectedSession, restoreWorkspaceContext]);
 
   const handleSelectSession = useCallback((session: SessionInfo, isRestore = false, entryId?: string, blockIndex?: number) => {
     // Picking a session means leaving Scheduled; a cold-start restore must not.
@@ -1061,7 +1065,7 @@ export function AppShell() {
       setFileTabs([]);
       if (!activeFileTabId || activeFileTabId.startsWith("file:")) {
         setActiveFileTabId(null);
-        if (!openPanes.terminal && !openPanes.tasks) setRightPanelOpen(false);
+        if (!openPanes.terminal && !openPanes.tasks && !openPanes.changes) setRightPanelOpen(false);
       }
       setActiveTopPanel(null);
     }
@@ -1110,7 +1114,7 @@ export function AppShell() {
     } else if (!isRestore || new URLSearchParams(window.location.search).get("session") !== session.id) {
       router.replace(`?session=${encodeURIComponent(session.id)}`, { scroll: false });
     }
-  }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, router, isMobile, newSessionCwd, openPanes.terminal, openPanes.tasks, selectedSession]);
+  }, [activeCwd, activeFileTabId, invalidateWorkspaceRestore, router, isMobile, newSessionCwd, openPanes.terminal, openPanes.tasks, openPanes.changes, selectedSession]);
 
   const handleNewSession = useCallback((sessionId: string, cwd: string, restoreHistory = false) => {
     setScheduledOpen(false);
@@ -1573,6 +1577,29 @@ export function AppShell() {
     });
   }, [navigationKey, initialSessionRestored, selectedSession, effectiveNewSessionCwd, newSessionDraftId, scheduledOpen]);
   const projectTrustCwd = selectedSession?.cwd ?? effectiveNewSessionCwd;
+  const changesCwd = selectedSession?.cwd ?? effectiveNewSessionCwd ?? activeCwd ?? "";
+  const addChangesFeedback = useCallback((text: string): boolean => {
+    if (!chatInputRef.current || !text.trim()) return false;
+    chatInputRef.current.insertText(`\n${text}\n`);
+    if (isMobile) { setRightPanelOpen(false); setSidebarOpen(false); }
+    return true;
+  }, [isMobile]);
+  useLayoutEffect(() => {
+    // A popout belongs to the draft it came from, including A → B → A visits.
+    changesFeedbackTargetRef.current = crypto.randomUUID();
+  }, [changesCwd, navigationKey]);
+  useLayoutEffect(() => {
+    if (!changesCwd || !showChat || scheduledOpen || !changesFeedbackTargetRef.current) return;
+    return subscribeChangesFeedback({ targetId: changesFeedbackTargetRef.current, cwd: changesCwd, onFeedback: addChangesFeedback });
+  }, [addChangesFeedback, changesCwd, navigationKey, scheduledOpen, showChat]);
+  const openChangesPopout = useCallback(() => {
+    if (!changesCwd) return;
+    changesFeedbackTargetRef.current ??= crypto.randomUUID();
+    setChangesWindowError(null);
+    void openChangesWindow(changesCwd, changesFeedbackTargetRef.current).catch((error: unknown) => {
+      setChangesWindowError(error instanceof Error ? error.message : String(error));
+    });
+  }, [changesCwd]);
   // While restoring initial session from URL, don't show the placeholder
   const showPlaceholder = initialSessionRestored && !showChat;
 
@@ -2648,7 +2675,7 @@ export function AppShell() {
 
           {/* Windows/Linux controls stay in the chat topbar while the floating
               panel is a separate card; the topbar still owns the visible edge. */}
-          {!isMobile && <WorkspacePaneControls openPanes={{ files: rightPanelOpen && openPanes.files, terminal: rightPanelOpen && openPanes.terminal, tasks: rightPanelOpen && openPanes.tasks }} onToggle={toggleWorkspacePane} />}
+          {!isMobile && <WorkspacePaneControls openPanes={{ files: rightPanelOpen && openPanes.files, terminal: rightPanelOpen && openPanes.terminal, changes: rightPanelOpen && openPanes.changes, tasks: rightPanelOpen && openPanes.tasks }} onToggle={toggleWorkspacePane} />}
           {showChat && <button type="button" className="native-icon-button pilaude-context-toggle" title={translate("pilaude.contextPanel")} aria-label={translate("pilaude.contextPanel")} aria-pressed={contextDockOpen} onClick={() => setContextDockOpen(open => !open)}><PilaudeIcon name="context" /></button>}
           {(!rightPanelOpen || isMobile) && <WindowControls />}
         </div>
@@ -2767,6 +2794,7 @@ export function AppShell() {
           onOpenConnectors={() => openSettingsSection("mcp")}
           onClose={handleContextDockClose}
           onOpenFiles={() => { revealWorkspacePane("files"); setFileTreeOpen(true); setFileTreeNarrowOverride(true); }}
+          onOpenChanges={() => revealWorkspacePane("changes")}
         />
       )}
         </div>
@@ -3023,6 +3051,20 @@ export function AppShell() {
                     {terminalCwd && <button type="button" className="right-panel-empty-action" onClick={() => handleOpenTerminal(terminalCwd)}>{translate("terminal.newTerminal")}</button>}
                   </div>}
                 </div>
+              </>,
+            },
+            {
+              id: "changes", title: translate("workspace.pane.changes"), open: openPanes.changes,
+              customHeader: true,
+              onClose: () => hideWorkspacePane("changes"),
+              children: (changesVisible, chrome) => <>
+                {changesWindowError && <div className="changes-window-error" role="alert">{changesWindowError}</div>}
+                <ChangesPane cwd={changesCwd} visible={rightPanelOpen && changesVisible}
+                  onAddFeedback={addChangesFeedback} onOpenWindow={openChangesPopout}
+                  expanded={rightPanelFullWidth || chrome.expanded}
+                  onExpand={rightPanelFullWidth ? handleRightPanelExpandToggle : chrome.onExpand}
+                  onClose={() => hideWorkspacePane("changes")} headerExtra={chrome.overlayControls}
+                  headerDragProps={{ ...desktopChrome.dragRegionProps, ...windowDrag }} />
               </>,
             },
             {

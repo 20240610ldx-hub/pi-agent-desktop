@@ -390,6 +390,40 @@ test("renders user-message images as buttons that open a larger preview", () => 
   assert.match(html, /<img[^>]+src="data:image\/png;base64,YWJj"/);
 });
 
+test("sent images retain upload order and use an uncapped wrapping image message", () => {
+  const images = Array.from({ length: 12 }, (_, index) => ({
+    type: "image", data: Buffer.from(`image-${index}`).toString("base64"), mimeType: "image/png",
+  }));
+  const html = renderMessage({ role: "user", content: images, timestamp: Date.now() });
+  const rendered = [...html.matchAll(/<img[^>]*class="message-user-image"[^>]*src="data:image\/png;base64,([^"]+)"/g)];
+  assert.deepEqual(rendered.map((match) => match[1]), images.map((image) => image.data));
+  assert.match(html, /class="message-user-content has-images"/);
+  assert.match(html, /class="message-user-images"/);
+  assert.doesNotMatch(html, /class="message-user-bubble/);
+  assert.doesNotMatch(html, /max-height:\d+px|overflow-y:auto/);
+  const textOnly = renderMessage({ role: "user", content: "long text", timestamp: Date.now() });
+  assert.doesNotMatch(textOnly, /class="message-user-content has-images"/);
+  assert.match(textOnly, /max-height:300px;overflow-y:auto/);
+});
+
+test("mixed text and compact commands render one text bubble beside the image grid", () => {
+  const image = { type: "image", data: "YWJj", mimeType: "image/png" };
+  for (const text of ["Text following the images", COMPLETE_SKILL_EXPANSION]) {
+    const html = renderMessage({ role: "user", content: [image, { type: "text", text }] });
+    assert.equal([...html.matchAll(/class="message-user-images"/g)].length, 1);
+    assert.equal([...html.matchAll(/class="message-user-bubble"/g)].length, 1);
+    assert.match(html, /<div class="message-user-images">[\s\S]*?<\/button><\/div><div class="message-user-bubble"/);
+    assert.match(html, /max-height:300px;overflow-y:auto/);
+    if (text === COMPLETE_SKILL_EXPANSION) {
+      assert.match(html, /\/skill:review/);
+      assert.match(html, /aria-expanded="false"/);
+    } else {
+      assert.match(html, /Text following the images/);
+    }
+  }
+  assert.doesNotMatch(renderMessage({ role: "user", content: [] }), /class="message-user-bubble/);
+});
+
 test("marks apply_patch returned failures as errors even when isError is unset", () => {
   const block = {
     type: "toolCall",

@@ -8,7 +8,7 @@
 
 后续默认采用每列两个面板连续分配；第三/第四面板放在第二列，第五/第六面板进入第三列。第三个之后的完整排列、自动补位、窄屏回退和最大化语义是实现选择，仍需更多实物交互验证，不能反称已从截图证明。
 
-Context/环境/更改卡片属于会话旁的附着卡片，完全独立于右扩展区 pane；浮动时容器透明、只有卡片命中，不占满上下矩形，不能遮住输入栏。它们不参与每列两个 pane 的分配。
+Context/环境卡片属于会话旁的附着卡片，完全独立于右扩展区 pane；浮动时容器透明、只有卡片命中，不占满上下矩形，不能遮住输入栏。它们不参与每列两个 pane 的分配。早期附着的更改摘要与本轮完整 Changes 审阅 pane 是不同层级；Changes 已进入 pane 注册与布局，后端和实际页面验收状态见下方本轮记录。
 
 关闭显示面板、关闭标签、终止任务和终止 PTY 是不同操作。面板布局变更不得重建 Shell、重发模型请求或重新执行任务。展开只改变可见布局，恢复回到先前尺寸。
 
@@ -45,6 +45,18 @@ Context/环境/更改卡片属于会话旁的附着卡片，完全独立于右�
 最终定向组合 144 项通过，类型与 ESLint 通过。实际页面检查覆盖真正单 Terminal、Terminal/Files 上下堆叠、最小外宽、外侧键盘伸缩、纵向调整与 Escape 回滚、pane 展开/恢复、隐藏/重开、第三 pane 开列及 1100px 窄窗；单列 `clientWidth === scrollWidth`，没有多余横滚。终端 PID 31420 在这些操作后保持，未新增创建请求，清理 DELETE 返回 200，页面错误为 0。截图和几何保留在本机 `test-results/pilaude/workspace-integration/run-1792310827421/`。随后补移动标题行唯一控制组：在 390px 实际页面中，Files → Terminal → Tasks、关闭 Files 后控制组转移、关闭工作台均可达，切换不创建 PTY，根页面无横向溢出。桌面保持唯一主顶栏控制组。原 terminal e2e 的旧工作台/项目 title 选择器已迁移到真实响应式入口，原 hide/reopen 和 PID 断言保留，但未重新运行完整脚本。
 
 另一次新增鼠标拖动/xterm fit 的检查在到达拖动前遇开发热重载和终端连接 error，保留失败，不能将此前键盘伸缩成功写成该新增项目通过。测试范围内的布局/生命周期通过；字体、图标、浅色实物及 Windows 原生控件仍待逐项核验，完整 terminal e2e 不据此追认通过。
+
+## 2026-10-18 Changes 审阅 pane 与证据状态
+
+Changes 已作为独立 pane 接入 [WorkspacePaneDock](../components/WorkspacePaneDock.tsx)，由 [ChangesPane](../components/ChangesPane.tsx) 消费只读 `/api/git/review`。Files／Artifact、Terminal、Tasks 与 Changes 保留独立内容 hosts；Context／环境卡片仍在会话旁，不参与 pane 排列。新增 Changes 不使终端布局操作重建 PTY，也不把更改反馈直接发送给模型。
+
+已实现分支比较、未提交／单提交范围、文件树和提交列表、搜索、inline／split、换行、词差异、忽略空白、上下文展开与选行反馈。`ReviewDiff` 仅局部借鉴 open-claude-ui 表格／gutter／增删背景；`rove` 借索引、Home/End 与单 tabstop，过滤 IME；`FadedScroll` 借 2px 边缘判断，用 ResizeObserver 观察容器及首个内容子元素，并在 children 改变时重算，未使用 MutationObserver。完整语法高亮未实现，当前是纯文本加词差异 mark；源示例 parser、split 占位算法与流式 worker 未采用。
+
+只读 Git 后端有真实临时仓库与 API 的 19 项通过；UI helper／toolbar 浮签共 23 项（19＋4）通过；独立窗口 Rust 单测 4 项、前端命令 5 项、页面 route 5 项与 token 2 项分别通过，另有父级 39 项集成与类型检查通过。最终全树 ESLint 退出 0，保留既有 TerminalPanel aria 警告。这些组不是全量测试总数。复查发现 copy 目标 patch 混入已修改源文件的真实缺陷，已用真实 Git fixture 复现并通过 `--diff-filter=C` 修正；新增 copy 用例与 rename／context3 组合 3 项通过，后端现有 20 个用例，但未把前轮 19 与重跑 3 相加。延迟 storage event 也已要求当前 request ID 仍匹配，拒绝 sender 超时取消后才到达的旧事件，相关 helper 3 项通过。实际页面 `run-1792315635019` 的前七组检查通过：范围／base／commit、finder、inline／split／wrap／word、上下文 3→20→all、真实草稿反馈、忽略空白／分组、binary／large、刷新与单例关闭恢复；整轮在 popout ACK 失败，保留 failed。定向 `followup-1792316406830` 通过同源新窗口、真实反馈到原草稿、浅色偏好重载及 820px 窄窗加载，errors／writes 均为空；request 当毫秒到达、次毫秒确认，popup 12ms 内收到 ACK。此前 `followup-1792316105640` 无 ACK 的 partial 记录保留，未证明具体成因，不声称间歇问题已根治；显式复制回退和原评论保留有效。元数据缓存最多 8 项、30 秒，文件 patch 按需加载并执行体积、路径、ref 和参数边界检查；截断／binary／过大状态明确显示，不把不完整内容当完整 diff。
+
+独立窗口由 Rust 固定可信 origin 的 `/changes` 创建，renderer 只能传 cwd 与反馈目标；专用 capability 限定窗口能力，token 不进入 URL。反馈要求目标与 cwd 匹配、限时确认、单次消费；主会话不可达时提供复制回退，只进入草稿。浏览器回退和草稿交接已有上述实际通过及失败记录；Windows 原生开窗和原生窗口关闭交接仍待实际验证；不能用 Rust／route 单测替代实物。
+
+本轮参考位于工作区 `references/claude-desktop/changes-dark/2026-10-18/`：12 个独立状态已归档 11 个原文件，`02-inline-comment` 仍缺独立原件，上传总览不能代替它。另有 `upload-images-dark/2026-10-18/` 的 1215×1336 原图，包含按上传顺序四行三列的 12 个缩略图框。来源文件与归档原字节／哈希相同，聊天 payload 身份、客户端版本、DPI／缩放与 CSS 字体仍待核实。完整像素和原生行为继续按 [复刻基准](pilaude-ui-parity.md) 验收。
 
 ## 共享终端事件流与既有验证限制
 

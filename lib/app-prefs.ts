@@ -26,6 +26,9 @@ export const APP_PREF_KEYS = {
   terminalAppearance: "pi-terminal-appearance",
   workspacePaneLayout: "pi-workspace-pane-layout-v1",
   workspacePaneVisibility: "pi-workspace-pane-visibility-v1",
+  /** Short-lived, explicitly addressed feedback from a Changes popout. */
+  changesFeedbackRequest: "pi-changes-feedback-request-v1",
+  changesFeedbackAck: "pi-changes-feedback-ack-v1",
   /** Last open session / cwd / file tabs for desktop cold-start restore. */
   workspace: "pi-workspace-v1",
 } as const;

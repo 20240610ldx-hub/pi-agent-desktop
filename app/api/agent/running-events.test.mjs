@@ -11,6 +11,7 @@ test("running SSE frames carry the session-list version for cross-window refresh
   assert.ok(frames.length >= 2, "expected initial + subscriber frames");
   for (const frame of frames) {
     assert.match(frame, /sessionListVersion: getSessionListVersion\(\)/, frame);
+    assert.match(frame, /needsInputSessionIds: getNeedsInputRpcSessionIds\(\)/, frame);
   }
 });
 

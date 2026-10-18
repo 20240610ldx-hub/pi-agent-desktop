@@ -1,4 +1,14 @@
 [[permission]]
+identifier = "allow-open-changes-window"
+description = "Allows the main window to open only the same-origin Changes page in a dedicated window."
+commands.allow = ["open_changes_window"]
+
+[[permission]]
+identifier = "allow-close-changes-window"
+description = "Allows a Changes window to close only itself."
+commands.allow = ["close_changes_window"]
+
+[[permission]]
 identifier = "allow-open-external-url"
 description = "Allows opening http/https/mailto URLs in the system default handler."
 commands.allow = ["open_external_url"]

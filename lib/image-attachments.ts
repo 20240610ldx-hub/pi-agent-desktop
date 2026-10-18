@@ -1,5 +1,5 @@
 export const MAX_ATTACHED_IMAGE_BYTES = 10 * 1024 * 1024;
-export const MAX_ATTACHED_IMAGES = 10;
+export const MAX_ATTACHED_IMAGES = 12;
 
 export interface Base64ImageAttachment {
   data: string;

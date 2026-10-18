@@ -893,6 +893,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const valueRef = useRef(value);
   const attachedImagesRef = useRef(attachedImages);
   const pendingImageCountRef = useRef(0);
+  const imageReadQueueRef = useRef<Promise<void>>(Promise.resolve());
   const submissionContextRef = useRef<object | null>(null);
   const submissionPendingRef = useRef<ComposerSubmission | null>(null);
   // A -> B -> A is a new composer visit too. Invalidate pending reference
@@ -901,6 +902,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     const context = {};
     submissionContextRef.current = context;
     submissionPendingRef.current = null;
+    pendingImageCountRef.current = 0;
+    imageReadQueueRef.current = Promise.resolve();
     return () => {
       if (submissionContextRef.current === context) {
         submissionContextRef.current = null;
@@ -1115,15 +1118,18 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   }, [autoFocus, isMobile, draftKey]);
 
   const appendAttachedImages = useCallback((newImages: AttachedImage[]) => {
-    setAttachedImages((prev) => {
-      const accepted = newImages.slice(0, Math.max(0, MAX_ATTACHED_IMAGES - prev.length));
-      newImages.slice(accepted.length).forEach(revokeImagePreview);
-      return [...prev, ...accepted];
-    });
+    const current = attachedImagesRef.current;
+    const accepted = newImages.slice(0, Math.max(0, MAX_ATTACHED_IMAGES - current.length));
+    newImages.slice(accepted.length).forEach(revokeImagePreview);
+    const next = [...current, ...accepted];
+    // Keep a send in the same tick in sync with the visible attachment order.
+    attachedImagesRef.current = next;
+    setAttachedImages(next);
   }, []);
 
   const processImageFiles = useCallback(async (files: File[]) => {
-    if (compact) return;
+    const context = submissionContextRef.current;
+    if (compact || !context) return;
     const remaining = Math.max(
       0,
       MAX_ATTACHED_IMAGES - attachedImagesRef.current.length - pendingImageCountRef.current,
@@ -1133,27 +1139,35 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       .slice(0, remaining);
     if (!imageFiles.length) return;
     pendingImageCountRef.current += imageFiles.length;
-    try {
-      const newImages = await Promise.all(
-        imageFiles.map(async (file) => ({
-          ...await compressImageFile(file),
-          previewUrl: URL.createObjectURL(file),
-        }))
-      );
-      appendAttachedImages(newImages);
-    } finally {
-      pendingImageCountRef.current -= imageFiles.length;
-    }
+    // Read in parallel, then commit batches in selection order. A slow first
+    // drop must not move behind a later paste; one failed file need not lose
+    // the rest of its batch. allSettled retains each file's original position.
+    const reads = Promise.allSettled(imageFiles.map(compressImageFile));
+    const previousRead = imageReadQueueRef.current;
+    const pending = (async () => {
+      try {
+        await previousRead;
+        const results = await reads;
+        if (submissionContextRef.current !== context) return;
+        const newImages = results.flatMap((result, index) => result.status === "fulfilled"
+          ? [{ ...result.value, previewUrl: URL.createObjectURL(imageFiles[index]) }]
+          : []);
+        appendAttachedImages(newImages);
+      } finally {
+        // A different visit owns its own queue and reservations, including A -> B -> A.
+        if (submissionContextRef.current === context) pendingImageCountRef.current -= imageFiles.length;
+      }
+    })();
+    imageReadQueueRef.current = pending.catch(() => {});
+    await pending;
   }, [appendAttachedImages, compact]);
 
   const removeImage = useCallback((index: number) => {
-    setAttachedImages((prev) => {
-      const next = [...prev];
-      const [removed] = next.splice(index, 1);
-      if (removed) revokeImagePreview(removed);
-      attachedImagesRef.current = next;
-      return next;
-    });
+    const next = [...attachedImagesRef.current];
+    const [removed] = next.splice(index, 1);
+    if (removed) revokeImagePreview(removed);
+    attachedImagesRef.current = next;
+    setAttachedImages(next);
   }, []);
 
   const beginSubmission = useCallback((): ComposerSubmission | null => {

@@ -752,6 +752,151 @@ test("restores legacy flat image entries when editing a user message", () => {
   ]);
 });
 
+function imageReadHarness() {
+  const reads = new Map();
+  const created = [];
+  const revoked = [];
+  const context = {
+    compact: false,
+    MAX_ATTACHED_IMAGES: 12,
+    MAX_ATTACHED_IMAGE_BYTES: 10 * 1024 * 1024,
+    attachedImagesRef: { current: [] },
+    pendingImageCountRef: { current: 0 },
+    imageReadQueueRef: { current: Promise.resolve() },
+    submissionContextRef: { current: {} },
+    compressImageFile(file) {
+      const read = deferred();
+      reads.set(file.name, read);
+      return read.promise;
+    },
+    URL: { createObjectURL(file) { created.push(file.name); return `blob:${file.name}`; } },
+    revokeImagePreview(image) { revoked.push(image.previewUrl); },
+    setAttachedImages(images) { context.images = images; },
+  };
+  context.appendAttachedImages = chatInputCallback("appendAttachedImages", context);
+  return {
+    context, reads, created, revoked,
+    process: chatInputCallback("processImageFiles", context),
+    resolve(name) { reads.get(name).resolve({ data: name, mimeType: "image/png" }); },
+    order() { return Array.from(context.attachedImagesRef.current, (image) => image.data); },
+    visit() {
+      context.submissionContextRef.current = {};
+      context.pendingImageCountRef.current = 0;
+      context.imageReadQueueRef.current = Promise.resolve();
+      context.attachedImagesRef.current = [];
+    },
+  };
+}
+
+function imageFiles(...names) {
+  return names.map((name) => ({ name, type: "image/png", size: 100 }));
+}
+
+test("image reads keep file and batch selection order despite reversed completion", async () => {
+  const harness = imageReadHarness();
+  const first = harness.process(imageFiles("one", "two", "three"));
+  const second = harness.process(imageFiles("four", "five"));
+  assert.equal(harness.context.pendingImageCountRef.current, 5);
+  for (const name of ["five", "four", "three", "two"]) harness.resolve(name);
+  await Promise.resolve();
+  assert.deepEqual(harness.order(), []);
+  harness.resolve("one");
+  await Promise.all([first, second]);
+  assert.deepEqual(harness.order(), ["one", "two", "three", "four", "five"]);
+  assert.deepEqual(harness.created, harness.order());
+  assert.equal(harness.context.pendingImageCountRef.current, 0);
+});
+
+test("a failed image read releases its slot and retains the remaining selected order", async () => {
+  const harness = imageReadHarness();
+  const pending = harness.process(imageFiles("one", "bad", "three"));
+  harness.resolve("three");
+  harness.reads.get("bad").reject(new Error("unreadable file"));
+  harness.resolve("one");
+  await pending;
+  assert.deepEqual(harness.order(), ["one", "three"]);
+  assert.equal(harness.context.pendingImageCountRef.current, 0);
+  const next = harness.process(imageFiles("four"));
+  harness.resolve("four");
+  await next;
+  assert.deepEqual(harness.order(), ["one", "three", "four"]);
+  assert.deepEqual(harness.revoked, []);
+});
+
+test("old image reads cannot enter another visit, return visit, or unmounted composer", async () => {
+  for (const unmount of [false, true]) {
+    const harness = imageReadHarness();
+    const old = harness.process(imageFiles("old"));
+    harness.visit();
+    harness.visit(); // A -> B -> A must also use a fresh visit token.
+    const current = harness.process(imageFiles("current"));
+    harness.resolve("current");
+    await current; // The new visit never waits for the obsolete queue.
+    assert.deepEqual(harness.order(), ["current"]);
+    const newer = harness.process(imageFiles("newer"));
+    if (unmount) harness.context.submissionContextRef.current = null;
+    harness.resolve("old");
+    await old;
+    assert.deepEqual(harness.order(), ["current"]);
+    assert.deepEqual(harness.created, ["current"]);
+    assert.equal(harness.context.pendingImageCountRef.current, 1);
+    harness.resolve("newer");
+    await newer;
+    assert.deepEqual(harness.order(), unmount ? ["current"] : ["current", "newer"]);
+  }
+});
+
+test("overlapping image batches reserve at most twelve slots before React flushes", async () => {
+  const harness = imageReadHarness();
+  const names = Array.from({ length: 14 }, (_, index) => `image-${index}`);
+  const first = harness.process(imageFiles(...names.slice(0, 8)));
+  const second = harness.process(imageFiles(...names.slice(8)));
+  assert.equal(harness.context.pendingImageCountRef.current, 12);
+  assert.equal(harness.reads.size, 12);
+  for (const name of names.slice(0, 12).reverse()) harness.resolve(name);
+  await Promise.all([first, second]);
+  assert.deepEqual(harness.order(), names.slice(0, 12));
+  assert.equal(harness.context.pendingImageCountRef.current, 0);
+  await harness.process(imageFiles("over-cap"));
+  assert.equal(harness.reads.has("over-cap"), false);
+});
+
+test("removing an image keeps its neighbors ordered before the next upload or send", async () => {
+  const harness = imageReadHarness();
+  const pending = harness.process(imageFiles("one", "two", "three"));
+  for (const name of ["one", "two", "three"]) harness.resolve(name);
+  await pending;
+  chatInputCallback("removeImage", harness.context)(1);
+  assert.deepEqual(harness.order(), ["one", "three"]);
+  assert.deepEqual(harness.revoked, ["blob:two"]);
+  const later = harness.process(imageFiles("four"));
+  harness.resolve("four");
+  await later;
+  assert.deepEqual(harness.order(), ["one", "three", "four"]);
+  const submission = chatInputCallback("beginSubmission", {
+    ...harness.context, valueRef: { current: "" }, submissionPendingRef: { current: null },
+  })();
+  assert.deepEqual(Array.from(submission.images, (image) => image.data), ["one", "three", "four"]);
+});
+
+test("composer markup preserves all twelve draft images in their original order", () => {
+  const key = "new:/tmp/attachment-order";
+  const images = Array.from({ length: 12 }, (_, index) => ({
+    data: Buffer.from(`image-${index}`).toString("base64"), mimeType: "image/png",
+  }));
+  setDraft(key, { value: "", images });
+  try {
+    const html = renderWithI18n(React.createElement(ChatInput, {
+      draftKey: key, onSend() {}, onAbort() {}, isStreaming: false,
+    }));
+    const rendered = [...html.matchAll(/<img[^>]*class="composer-attachment-image"[^>]*src="data:image\/png;base64,([^"]+)"/g)];
+    assert.deepEqual(rendered.map((match) => match[1]), images.map((image) => image.data));
+    assert.equal([...html.matchAll(/class="composer-attachment-remove"/g)].length, 12);
+  } finally {
+    clearDraft(key);
+  }
+});
+
 test("does not restore a historical message over a pending image attachment", () => {
   assert.equal(canRestoreUserMessage("", 0, 0), true);
   assert.equal(canRestoreUserMessage("", 1, 0), false);
