@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { NativeMenuEntry } from "@/lib/desktop-menu-model";
 import { closeDomMenu, getDomMenu, subscribeDomMenu, type DomMenuState } from "@/lib/dom-menu-store";
 import { isImeComposing } from "@/lib/ime";
+import { CDS_MENU_ENTER } from "@/lib/cds-motion";
 
 /**
  * The in-app context menu: the DOM counterpart of `showNativeMenu`, drawn from
@@ -105,14 +106,19 @@ function MenuPanel({
   return (
     <div
       ref={panelRef}
-      className={`dom-context-menu native-popover${appearance ? ` dom-context-menu--${appearance}` : ""}`}
+      className={`dom-context-menu native-popover cds-menu-motion${appearance ? ` dom-context-menu--${appearance}` : ""}`}
+      data-menu-placed={position ? true : undefined}
       role="menu"
       aria-label={label}
       tabIndex={-1}
       onKeyDown={onKeyDown}
       onContextMenu={(event) => event.preventDefault()}
       style={position
-        ? { left: position.left, top: position.top, maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)` }
+        ? {
+          left: position.left, top: position.top, maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
+          "--cds-menu-enter-duration": `${CDS_MENU_ENTER.durationMs}ms`,
+          "--cds-menu-enter-easing": CDS_MENU_ENTER.easing,
+        } as CSSProperties
         : { left: -9999, top: -9999, visibility: "hidden" }}
     >
       {entries.map((entry, index) => {

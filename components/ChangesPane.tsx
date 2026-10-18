@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { WorkspaceControlButton } from "./WorkspacePaneControls";
 import { useI18n } from "@/hooks/useI18n";
 import { parseUnifiedPatch, type SplitDiffCell, type SplitDiffRow } from "@/lib/patch";
 import { filterFileEntries } from "@/lib/file-fuzzy";
 import { buildSearchTree, type SearchTreeNode } from "@/lib/search-tree";
-import { formatReviewFeedback, inlineReviewRows, reviewFileGroup, reviewSelection, reviewWordParts, shortReviewRef, type ReviewSide } from "@/lib/git-review-display";
+import { formatReviewFeedback, inlineReviewRows, reviewFileGroup, reviewNavigationIndex, reviewPaneShortcut, reviewSelection, reviewWordParts, shortReviewRef, type ReviewKey, type ReviewSide } from "@/lib/git-review-display";
+import { markReviewSyntax, renderReviewSyntax, tokenizeReviewCells } from "@/lib/review-syntax";
 import type { GitReviewContext, GitReviewFile, GitReviewOptions, GitReviewPatch, GitReviewScope, GitReviewSnapshot } from "@/lib/git-review-types";
 
 export interface ChangesPaneProps {
@@ -163,14 +164,22 @@ function useLazyPatches(snapshot: GitReviewSnapshot | undefined, options: GitRev
   };
 }
 
+function reviewKey(event: KeyboardEvent<HTMLElement>): ReviewKey {
+  const target = event.target;
+  return {
+    key: event.key, keyCode: event.keyCode, isComposing: event.nativeEvent.isComposing,
+    ctrlKey: event.ctrlKey, metaKey: event.metaKey, altKey: event.altKey, shiftKey: event.shiftKey,
+    defaultPrevented: event.defaultPrevented,
+    editable: target instanceof Element && Boolean(target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], .monaco-editor, .cm-editor')),
+  };
+}
+
 /** Adapted from useClaudeRovingFocus: one tab stop, arrows/Home/End, Tab exits. */
 function rove(event: KeyboardEvent<HTMLElement>) {
-  if (event.nativeEvent.isComposing || event.keyCode === 229 || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
-  const items = [...event.currentTarget.querySelectorAll<HTMLElement>("[data-roving]:not(:disabled)")];
-  if (!items.length) return;
+  const items = [...event.currentTarget.querySelectorAll<HTMLElement>('[data-roving]:not(:disabled):not([aria-disabled="true"])')];
   const index = items.indexOf(document.activeElement as HTMLElement);
-  if (index < 0) return;
-  const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : Math.max(0, Math.min(items.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)));
+  const next = reviewNavigationIndex(reviewKey(event), index, items.length);
+  if (next === null) return;
   event.preventDefault();
   event.stopPropagation();
   items.forEach((item, i) => { item.tabIndex = i === next ? 0 : -1; });
@@ -201,7 +210,8 @@ function FadedScroll({ children, className = "", ...props }: HTMLAttributes<HTML
 function Popover({ anchor, width, label, onClose, children, role = "menu" }: { anchor: RefObject<HTMLButtonElement | null>; width: number; label: string; onClose: (restore?: boolean) => void; children: ReactNode; role?: "menu" | "dialog" }) {
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<CSSProperties>({ visibility: "hidden" });
-  useEffect(() => {
+  const initiallyFocused = useRef(false);
+  useLayoutEffect(() => {
     const update = () => {
       const rect = anchor.current?.getBoundingClientRect();
       if (!rect) return;
@@ -212,17 +222,26 @@ function Popover({ anchor, width, label, onClose, children, role = "menu" }: { a
       setPosition({ left: Math.max(8, Math.min(rect.left, window.innerWidth - actualWidth - 8)), top, width: actualWidth, maxHeight: Math.max(80, window.innerHeight - top - 8) });
     };
     update();
-    const frame = requestAnimationFrame(() => { update(); ref.current?.querySelector<HTMLElement>("input, [data-roving]:not(:disabled)")?.focus({ preventScroll: true }); });
     const outside = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node) && !anchor.current?.contains(event.target as Node)) onClose(false); };
     const focusOut = (event: FocusEvent) => { if (!ref.current?.contains(event.target as Node) && !anchor.current?.contains(event.target as Node)) onClose(false); };
     window.addEventListener("resize", update);
     document.addEventListener("pointerdown", outside, true);
     document.addEventListener("focusin", focusOut);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("resize", update); document.removeEventListener("pointerdown", outside, true); document.removeEventListener("focusin", focusOut); };
+    return () => { window.removeEventListener("resize", update); document.removeEventListener("pointerdown", outside, true); document.removeEventListener("focusin", focusOut); };
   }, [anchor, onClose, width]);
+  useLayoutEffect(() => {
+    // Focus only after React has committed the visible position. Focusing in the
+    // measuring callback races that commit and silently fails on a hidden menu.
+    if (position.visibility === "hidden" || initiallyFocused.current) return;
+    const first = ref.current?.querySelector<HTMLElement>('input, [data-roving]:not(:disabled):not([aria-disabled="true"])');
+    if (!first) return;
+    initiallyFocused.current = true;
+    first.focus({ preventScroll: true });
+  }, [position]);
   return createPortal(<div ref={ref} className="changes-popover" style={position} role={role} aria-label={label} onKeyDown={(event) => {
     if (event.nativeEvent.isComposing || event.keyCode === 229) return;
     if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); }
+    else if (event.key === "Tab") onClose(false);
     else rove(event);
   }}>{children}</div>, document.body);
 }
@@ -351,16 +370,16 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
     }
   };
 
-  const headerButton = (name: string, label: string, onClick: () => void, ref?: RefObject<HTMLButtonElement | null>, pressed?: boolean, shortcut?: string) => <WorkspaceControlButton triggerRef={ref} placement="top" tooltipGap={4.8} label={label} shortcut={shortcut} className={`changes-icon-button${pressed ? " is-active" : ""}`} aria-pressed={pressed} aria-haspopup={ref ? "menu" : undefined} aria-expanded={ref ? menu === (ref === comparisonButton ? "comparison" : ref === finderButton ? "finder" : "settings") : undefined} onClick={onClick}><Icon name={name} /></WorkspaceControlButton>;
+  const headerButton = (name: string, label: string, onClick: () => void, ref?: RefObject<HTMLButtonElement | null>, pressed?: boolean, shortcut?: string) => <WorkspaceControlButton triggerRef={ref} placement="top" tooltipGap={4.8} tooltipClassName="changes-control-tooltip" label={label} shortcut={shortcut} className={`changes-icon-button${pressed ? " is-active" : ""}`} aria-pressed={pressed} aria-haspopup={ref ? "menu" : undefined} aria-expanded={ref ? menu === (ref === comparisonButton ? "comparison" : ref === finderButton ? "finder" : "settings") : undefined} onClick={onClick}><Icon name={name} /></WorkspaceControlButton>;
 
   if (!visible) return null;
   return <div ref={root} className="changes-pane" data-show-files={showFiles || undefined} tabIndex={-1} aria-label={words.changes} onKeyDown={(event) => {
-    if (event.nativeEvent.isComposing || event.keyCode === 229 || event.altKey || !(event.ctrlKey || event.metaKey)) return;
-    const target = event.target as HTMLElement;
     // Shortcuts belong to pane chrome. Embedded editors and feedback inputs keep their keys.
-    if (target.closest("input, textarea, [contenteditable=true]")) return;
-    if (!event.shiftKey && event.key.toLowerCase() === "p") { event.preventDefault(); event.stopPropagation(); openMenu("finder"); }
-    if (event.shiftKey && event.key.toLowerCase() === "y") { event.preventDefault(); event.stopPropagation(); setShowFiles((value) => !value); }
+    const shortcut = reviewPaneShortcut(reviewKey(event));
+    if (!shortcut) return;
+    event.preventDefault(); event.stopPropagation();
+    if (shortcut === "finder") openMenu("finder");
+    else setShowFiles((value) => !value);
   }}>
     <header {...headerDragProps} className={`changes-header changes-pane-header ${headerDragProps?.className ?? ""}`}>
       {headerButton("tree", words.showFiles, () => setShowFiles((value) => !value), undefined, showFiles, "Ctrl+Shift+Y")}
@@ -458,7 +477,7 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
         if (event.key === "Enter" && visibleFinderFiles[finderIndex]) { event.preventDefault(); selectFile(visibleFinderFiles[finderIndex].path); }
       }} />
       <FadedScroll className="changes-finder-list"><div id={`${id}-finder`} role="listbox" aria-label={words.finder}>
-        {visibleFinderFiles.map((entry, index) => { const file = fileMap.get(entry.path)!; return <button type="button" key={entry.path} id={`${id}-file-${index}`} className={`changes-finder-row${finderIndex === index ? " is-selected" : ""}`} role="option" aria-selected={finderIndex === index} title={file.path} onPointerMove={() => setFinderIndex(index)} onClick={() => selectFile(file.path)}><FileLabel file={file} /><Counts file={file} /></button>; })}
+        {visibleFinderFiles.map((entry, index) => { const file = fileMap.get(entry.path)!; return <button type="button" key={entry.path} id={`${id}-file-${index}`} className={`changes-finder-row${finderIndex === index ? " is-selected" : ""}`} role="option" data-roving tabIndex={finderIndex === index ? 0 : -1} aria-selected={finderIndex === index} title={file.path} onFocus={() => setFinderIndex(index)} onPointerMove={() => setFinderIndex(index)} onClick={() => selectFile(file.path)}><FileLabel file={file} /><Counts file={file} /></button>; })}
         {!finderFiles.length && <p className="changes-file-state">{words.emptySearch}</p>}
       </div></FadedScroll>
       {finderFiles.length > 12 && <div className="changes-finder-footer">{finderFiles.length - 12} {words.more}</div>}
@@ -495,15 +514,17 @@ function ReviewTree({ files, grouped, selected, onSelect, statusLabel }: { files
 function ReviewDiff({ file, data, words, split, wrap, highlight, context, onMore, selection, onSelectLine, feedback, pending, setFeedback, onCancel, onSubmit }: { file: GitReviewFile; data: GitReviewPatch; words: Words; split: boolean; wrap: boolean; highlight: boolean; context: GitReviewContext; onMore: () => void; selection: Selection | null; onSelectLine: (side: ReviewSide, line: number, extend: boolean) => void; feedback: string; pending: boolean; setFeedback: (text: string) => void; onCancel: () => void; onSubmit: (rows: SplitDiffRow[]) => Promise<void> }) {
   const rows = useMemo(() => parseUnifiedPatch(data.patch)?.[0]?.rows ?? [], [data.patch]);
   const inline = useMemo(() => inlineReviewRows(rows), [rows]);
+  const syntax = useMemo(() => tokenizeReviewCells(rows, file.path, file.oldPath), [rows, file.path, file.oldPath]);
   const selected = selection ? reviewSelection(rows, selection.side, selection.start, selection.end) : null;
   const inSelection = (side: ReviewSide, line: number | null) => selection?.side === side && line !== null && line >= Math.min(selection.start, selection.end) && line <= Math.max(selection.start, selection.end);
   const lineButton = (side: ReviewSide, line: number | null) => line === null ? <span className="changes-line-number" /> : <button type="button" className={`changes-line-number${inSelection(side, line) ? " is-selected" : ""}`} aria-label={`${words.feedback}: ${side === "old" ? words.old : words.new} ${line}`} title={`${words.feedback} · ${side === "old" ? words.old : words.new} ${line}`} aria-pressed={inSelection(side, line) || false} onClick={(event) => onSelectLine(side, line, event.shiftKey)}>{line}</button>;
   const text = (cell: SplitDiffCell, paired?: SplitDiffCell) => {
+    const tokens = syntax.get(cell) ?? [{ text: cell.text, tone: "plain" as const }];
     if (highlight && paired && cell.type !== "context" && cell.type !== "empty" && paired.type !== "empty") {
       const parts = cell.type === "removed" ? reviewWordParts(cell.text, paired.text).old : reviewWordParts(paired.text, cell.text).new;
-      return parts.map((part, index) => part.changed ? <mark key={index}>{part.text}</mark> : part.text);
+      return renderReviewSyntax(markReviewSyntax(tokens, parts));
     }
-    return cell.text || " ";
+    return renderReviewSyntax(tokens);
   };
   const editor = <div className="changes-feedback" role="group" aria-label={words.feedback}>
     <div className="changes-feedback-label">{words.selectedLines}: {selection?.side === "old" ? words.old : words.new} {selection && Math.min(selection.start, selection.end)}{selection && selection.start !== selection.end ? `–${Math.max(selection.start, selection.end)}` : ""}<span>{file.path}</span></div>

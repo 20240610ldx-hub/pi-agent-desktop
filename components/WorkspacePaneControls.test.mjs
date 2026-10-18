@@ -64,7 +64,11 @@ test("tooltip clamp stays in the viewport and shortcut is a separate optional kb
   script(`(${layout.arguments[0].getText(ast)})()`).runInContext(context);
   assert.equal(position.left, 165);
   assert.equal(position.top, 256);
-  assert.match(source, /createPortal\([\s\S]*className="workspace-control-tooltip"/);
+  const tooltipClass = nodes.find((node) => ts.isJsxAttribute(node) && node.name.getText(ast) === "className" && node.initializer?.getText(ast).includes("workspace-control-tooltip"));
+  assert.ok(tooltipClass);
+  const expression = script(tooltipClass.initializer.expression.getText(ast));
+  assert.equal(expression.runInContext(createContext({ tooltipClassName: undefined })), "workspace-control-tooltip");
+  assert.equal(expression.runInContext(createContext({ tooltipClassName: "changes-control-tooltip" })), "workspace-control-tooltip changes-control-tooltip");
   assert.match(source, /shortcut && <kbd>\{shortcut\}<\/kbd>/);
   assert.match(source, /document\.body/);
 });

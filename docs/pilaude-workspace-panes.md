@@ -50,13 +50,19 @@ Context/环境卡片属于会话旁的附着卡片，完全独立于右扩展区
 
 Changes 已作为独立 pane 接入 [WorkspacePaneDock](../components/WorkspacePaneDock.tsx)，由 [ChangesPane](../components/ChangesPane.tsx) 消费只读 `/api/git/review`。Files／Artifact、Terminal、Tasks 与 Changes 保留独立内容 hosts；Context／环境卡片仍在会话旁，不参与 pane 排列。新增 Changes 不使终端布局操作重建 PTY，也不把更改反馈直接发送给模型。
 
-已实现分支比较、未提交／单提交范围、文件树和提交列表、搜索、inline／split、换行、词差异、忽略空白、上下文展开与选行反馈。`ReviewDiff` 仅局部借鉴 open-claude-ui 表格／gutter／增删背景；`rove` 借索引、Home/End 与单 tabstop，过滤 IME；`FadedScroll` 借 2px 边缘判断，用 ResizeObserver 观察容器及首个内容子元素，并在 children 改变时重算，未使用 MutationObserver。完整语法高亮未实现，当前是纯文本加词差异 mark；源示例 parser、split 占位算法与流式 worker 未采用。
+已实现分支比较、未提交／单提交范围、文件树和提交列表、搜索、inline／split、换行、词差异、忽略空白、上下文展开与选行反馈。`ReviewDiff` 仅局部借鉴 open-claude-ui 表格／gutter／增删背景；`rove` 借索引、Home/End 与单 tabstop，过滤 IME；`FadedScroll` 借 2px 边缘判断，用 ResizeObserver 观察容器及首个内容子元素，并在 children 改变时重算，未使用 MutationObserver。新增语法高亮复用产品既有 Prism／refractor 注册表：按 hunk／revision 独立着色，并与词差异 mark 作无损交集，反馈继续读取原始行；源示例 parser、split 占位算法与流式 worker 未采用。
 
 只读 Git 后端有真实临时仓库与 API 的 19 项通过；UI helper／toolbar 浮签共 23 项（19＋4）通过；独立窗口 Rust 单测 4 项、前端命令 5 项、页面 route 5 项与 token 2 项分别通过，另有父级 39 项集成与类型检查通过。最终全树 ESLint 退出 0，保留既有 TerminalPanel aria 警告。这些组不是全量测试总数。复查发现 copy 目标 patch 混入已修改源文件的真实缺陷，已用真实 Git fixture 复现并通过 `--diff-filter=C` 修正；新增 copy 用例与 rename／context3 组合 3 项通过，后端现有 20 个用例，但未把前轮 19 与重跑 3 相加。延迟 storage event 也已要求当前 request ID 仍匹配，拒绝 sender 超时取消后才到达的旧事件，相关 helper 3 项通过。实际页面 `run-1792315635019` 的前七组检查通过：范围／base／commit、finder、inline／split／wrap／word、上下文 3→20→all、真实草稿反馈、忽略空白／分组、binary／large、刷新与单例关闭恢复；整轮在 popout ACK 失败，保留 failed。定向 `followup-1792316406830` 通过同源新窗口、真实反馈到原草稿、浅色偏好重载及 820px 窄窗加载，errors／writes 均为空；request 当毫秒到达、次毫秒确认，popup 12ms 内收到 ACK。此前 `followup-1792316105640` 无 ACK 的 partial 记录保留，未证明具体成因，不声称间歇问题已根治；显式复制回退和原评论保留有效。元数据缓存最多 8 项、30 秒，文件 patch 按需加载并执行体积、路径、ref 和参数边界检查；截断／binary／过大状态明确显示，不把不完整内容当完整 diff。
 
 独立窗口由 Rust 固定可信 origin 的 `/changes` 创建，renderer 只能传 cwd 与反馈目标；专用 capability 限定窗口能力，token 不进入 URL。反馈要求目标与 cwd 匹配、限时确认、单次消费；主会话不可达时提供复制回退，只进入草稿。浏览器回退和草稿交接已有上述实际通过及失败记录；Windows 原生开窗和原生窗口关闭交接仍待实际验证；不能用 Rust／route 单测替代实物。
 
 本轮参考位于工作区 `references/claude-desktop/changes-dark/2026-10-18/`：12 个独立状态已归档 11 个原文件，`02-inline-comment` 仍缺独立原件，上传总览不能代替它。另有 `upload-images-dark/2026-10-18/` 的 1215×1336 原图，包含按上传顺序四行三列的 12 个缩略图框。来源文件与归档原字节／哈希相同，聊天 payload 身份、客户端版本、DPI／缩放与 CSS 字体仍待核实。完整像素和原生行为继续按 [复刻基准](pilaude-ui-parity.md) 验收。
+
+## 后续语法、键盘与反馈专项
+
+语法 adapter 使用现有 Prism 注册表，按连续 hunk 的旧／新侧独立着色；最多 1000 行／64000 字符／单行 4096 字符，超出保留精确纯文本。token 与词差异只是呈现，选行反馈仍使用原始 Git 字符串。浮签文字／快捷键分字号校准后的三组原像素叠图已保存，外高约 36 原像素，残差继续记入复刻基准。
+
+跨窗口只读专项 `changes-ack-reliability/run-1792319138883/` 通过十次连续提交／三轮 popup 周期、每次一个 ACK／一个插入，以及 A→B→A 旧目标隔离；该轮最后 fresh 因主 document 重载而 partial。补剩余 `fresh-only-1792319508195/` 一次新弹窗交接通过，document 代际不变。失败时订阅器与 live ref 相同，开发刷新更换了目标；未修改 AppShell／超时／重放策略，不把新证据外推成历史所有 ACK 问题根治。设置菜单首次焦点的隐藏布局竞态已单独三次复现；改为可见布局提交后首次 focus，Tab 退出显式关闭、不恢复 trigger。`focus-diag-1792319835972/` 三次通过 resize 不夺焦点、Home／End、Tab 和 Escape；最终 `syntax-keyboard-1792320000380/` 五组通过真实源码／语法与 mark、编辑器／IME／disabled、390px 已加载表格／header／finder、无根横溢出及关闭焦点。可提交专项入口为 `e2e/changes-focus.mjs`，通过现有服务和显式 Git 项目运行，不创建会话或发送模型。
 
 ## 共享终端事件流与既有验证限制
 

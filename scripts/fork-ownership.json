@@ -208,6 +208,10 @@
       "structuralDrift": 1108,
       "disposition": "accepted"
     },
+    "components/ImagePreview.tsx": {
+      "risk": "medium", "drift": 249, "structuralDrift": 226, "disposition": "accepted",
+      "reason": "The shared image trigger mounts a source-keyed native modal whose pure geometry adapter owns cursor zoom and bounded pan. Preserve stale-load isolation, IME/Escape, native focus lifecycle, wheel cleanup, viewport reset and explicit loading errors when merging upstream."
+    },
     "components/MessageView.tsx": {
       "risk": "high",
       "drift": 549,
@@ -370,6 +374,13 @@
     "lib/git-review-types.ts",
     "lib/git-review-display.ts",
     "lib/git-review-display.test.mjs",
+    "lib/review-syntax.ts",
+    "lib/review-syntax.test.mjs",
+    "lib/image-view-transform.ts",
+    "lib/image-view-transform.test.mjs",
+    "lib/cds-motion.ts",
+    "lib/cds-motion.test.mjs",
+    "components/DomContextMenuHost.motion.test.mjs",
     "lib/changes-feedback.ts",
     "lib/changes-feedback.test.mjs",
     "lib/changes-window.test.mjs",
@@ -404,6 +415,7 @@
     "lib/cds-scroll.ts",
     "lib/cds-scroll.test.mjs",
     "e2e/pilaude-ui.mjs",
+    "e2e/changes-focus.mjs",
     "src-tauri/",
     "desktop/",
     "scripts/",
@@ -467,6 +479,7 @@
     "2026-10-17 \u2014 lib/i18n/messages/{en,zh-CN,zh-TW}.ts: restored to upstream shape; fork additions, replacements, and deliberate deletions moved to lib/i18n/locale-plugins.ts. Runtime message maps are unchanged, but future upstream locale edits no longer conflict with a rewritten fork pack.",
     "2026-10-18 \u2014 Pilaude merged desktop 0.7.3 and measured drift against the recorded 6fcd7d4 baseline. FileViewer retains 375 structural lines, so its high-risk review entry is restored. FileExplorer measures 27 structural lines after removing unused code and is classified low by the unchanged 30/250 thresholds.",
     "2026-10-18 \u2014 Source freeze remeasured against 6fcd7d4: SessionSidebar 3238 total/2704 structural, AppShell 2425/2020, ChatInput 1419/1108, MessageView 549/344 and rpc-manager 323/323 remain high. The measured modified TypeScript scope totals 2093 cosmetic and 11490 structural lines. Preserve needs-input lifecycle, sidebar metadata, natural image bounds and scoped Changes feedback; thresholds remain 30/250 and medium/high still require review.",
-    "2026-10-18 \u2014 git ls-tree at 6fcd7d4 confirms DomContextMenuHost, desktop-menu-model, dom-menu-store, desktop-native, app-prefs and the running SSE route are absent: record them with new sidebar/Git review/Changes page/feedback/window modules as fork-owned. The existing running snapshot, image-attachments validator and auth proxy remain shared review entries. Locale en/zh-CN/zh-TW files now have zero diff at this baseline and their stale high-risk entries are removed; fork text stays in locale-plugins."
+    "2026-10-18 \u2014 git ls-tree at 6fcd7d4 confirms DomContextMenuHost, desktop-menu-model, dom-menu-store, desktop-native, app-prefs and the running SSE route are absent: record them with new sidebar/Git review/Changes page/feedback/window modules as fork-owned. The existing running snapshot, image-attachments validator and auth proxy remain shared review entries. Locale en/zh-CN/zh-TW files now have zero diff at this baseline and their stale high-risk entries are removed; fork text stays in locale-plugins.",
+    "2026-10-18 \u2014 ImagePreview adds source-keyed modal zoom/pan using the attributed MediaLightbox geometry adapter. At the 6fcd7d4 baseline it measures 249 total/226 structural and is explicitly accepted at medium risk. The modified TypeScript measurement is 2116 cosmetic/11713 structural lines. review-syntax, image-view-transform and cds-motion helpers remain fork-owned; unchanged 30/250 thresholds still require review for medium/high incoming overlaps."
   ]
 }

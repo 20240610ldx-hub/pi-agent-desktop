@@ -8614,6 +8614,9 @@ html.dark .app-shell .workspace-pane-controls .workspace-pane-toggle[aria-presse
 .workspace-control-tooltip { position: fixed; z-index: 850; display: flex; align-items: center; gap: 9px; box-sizing: border-box; max-width: calc(100vw - 16px); min-height: 28.8px; padding: 4px 8.8px; border: 0.8px solid var(--border); border-radius: 6.4px; background: var(--bg-panel); color: var(--text); box-shadow: 0 2px 8px #0002; font: 400 14px/1.4 var(--font-ui); pointer-events: none; }
 .workspace-control-tooltip > kbd { color: var(--text-dim); font: inherit; white-space: nowrap; }
 html.dark .workspace-control-tooltip { background: #20201f; border-color: #373736; color: #f0efec; }
+/* Changes reference: label and shortcut have distinct measured type sizes. */
+.workspace-control-tooltip.changes-control-tooltip { height: 28.8px; min-height: 28.8px; padding: 3.2px 8px; font-size: 15.6px; line-height: 20px; }
+.workspace-control-tooltip.changes-control-tooltip > kbd { font-size: 14.4px; line-height: 20px; }
 .workspace-pane-mobile-controls { display: flex; align-items: center; gap: 2px; flex: 1 1 auto; min-width: 0; }
 @media (max-width: 640px) {
   .app-shell .workspace-pane-dock { padding-top: env(safe-area-inset-top); }
@@ -8722,6 +8725,25 @@ html.dark .app-shell .session-activity-dot.is-idle { border-color: #4d4c49; }
 html.dark .dom-context-menu--session { background: #20201f !important; border-color: #373736 !important; color: #f0efec; }
 html.dark .dom-context-menu--session > button:is(:hover, :focus-visible):not([aria-disabled="true"]) { background: #30302e !important; }
 @media (hover: none) { .dom-context-menu--session > button { min-height: 36px; } }
+
+/* CDS sampled context-menu entry: source SNAPPY 320/28/1 drives opacity after
+   prepaint placement. Adapt only the fade; keep menu/submenu hit geometry fixed.
+   Opacity clamps physical overshoot, so this does not claim a visible bounce. */
+.dom-context-menu.native-popover.cds-menu-motion {
+  animation: none;
+}
+.dom-context-menu.native-popover.cds-menu-motion[data-menu-placed] {
+  animation: cds-menu-spring-enter var(--cds-menu-enter-duration) var(--cds-menu-enter-easing) both;
+}
+@keyframes cds-menu-spring-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dom-context-menu.native-popover.cds-menu-motion[data-menu-placed] {
+    animation: none !important;
+  }
+}
 
 /* Changes dock integration: native controls remain fixed outside the pane scroller. */
 .workspace-pane--changes.has-window-controls .changes-pane-header { padding-right: 143px; }
@@ -9034,4 +9056,104 @@ html.dark .changes-removed { color: #ff2c56; }
 @media (hover: none) {
   .changes-tree-row, .changes-tree-folder, .changes-menu-item, .changes-finder-row { min-height: 36px; }
   .changes-line-number { min-height: 24px; }
+}
+
+/* Review syntax: the installed Prism grammar produces text runs only. Dark YAML
+   keys and scalar values follow the archived red/green source reference; light
+   tones use darker equivalents so both remain legible on diff backgrounds. */
+.changes-pane {
+  --review-syntax-property: #a31515;
+  --review-syntax-string: #397515;
+  --review-syntax-keyword: #8b2455;
+  --review-syntax-function: #675311;
+  --review-syntax-comment: #62665c;
+  --review-syntax-number: #76520c;
+  --review-syntax-variable: #765b0a;
+  --review-syntax-operator: #72539b;
+  --review-syntax-punctuation: var(--text-muted);
+}
+html.dark .changes-pane {
+  --review-syntax-property: #f47b85;
+  --review-syntax-string: #9be963;
+  --review-syntax-keyword: #ff81a0;
+  --review-syntax-function: #e8d593;
+  --review-syntax-comment: #92958b;
+  --review-syntax-number: #d9ba79;
+  --review-syntax-variable: #e2ca76;
+  --review-syntax-operator: #c2a0e5;
+  --review-syntax-punctuation: #c6b6d7;
+}
+.changes-code .changes-syntax-property { color: var(--review-syntax-property); }
+.changes-code .changes-syntax-string { color: var(--review-syntax-string); }
+.changes-code .changes-syntax-keyword { color: var(--review-syntax-keyword); }
+.changes-code .changes-syntax-function { color: var(--review-syntax-function); }
+.changes-code .changes-syntax-comment { color: var(--review-syntax-comment); }
+.changes-code .changes-syntax-number { color: var(--review-syntax-number); }
+.changes-code .changes-syntax-variable { color: var(--review-syntax-variable); }
+.changes-code .changes-syntax-operator { color: var(--review-syntax-operator); }
+.changes-code .changes-syntax-punctuation { color: var(--review-syntax-punctuation); }
+
+/* Image viewer interactions. Uses the existing modal/close-button vocabulary;
+   controls are local product affordances, not a claim of reference parity. */
+.image-preview-dialog[open] { display: block; }
+.image-preview-viewport {
+  position: absolute;
+  inset: max(56px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(64px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+.image-preview-viewport .image-preview-image {
+  flex: none;
+  max-width: none;
+  max-height: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
+  transform-origin: center;
+  transition: none;
+  animation: none;
+}
+.image-preview-viewport .image-preview-image:active { cursor: grabbing !important; }
+.image-preview-controls {
+  position: absolute;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(-50%);
+}
+.image-preview-controls > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: 400 14px/1.3 var(--font-ui);
+  cursor: pointer;
+}
+.image-preview-controls > button:hover:not(:disabled) { background: var(--bg-hover); }
+.image-preview-controls > button:disabled { opacity: .4; cursor: default; }
+.image-preview-controls > button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.image-preview-error { max-width: 100%; padding: 16px; color: var(--text-muted); text-align: center; overflow-wrap: anywhere; }
+.image-preview-error > span { display: block; margin-top: 8px; }
+@media (pointer: coarse) { .image-preview-controls > button { min-width: 44px; min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) {
+  .image-preview-viewport .image-preview-image, .image-preview-controls > button { transition: none; animation: none; }
 }
