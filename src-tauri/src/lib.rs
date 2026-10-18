@@ -18,6 +18,8 @@ use std::os::windows::process::CommandExt as _;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Url};
 
 mod logging;
+#[cfg(windows)]
+pub mod credential_helper;
 mod native_prefs;
 mod shell;
 
@@ -640,6 +642,8 @@ fn start_packaged_server(
     if let Some(path) = server_process_path(&node_path) {
         command.env("PATH", path);
     }
+    #[cfg(windows)]
+    command.env("PILAUDE_CREDENTIAL_HELPER", std::env::current_exe()?);
     if std::env::var_os("PI_CODING_AGENT_DIR").is_none() {
         command.env(
             "PI_CODING_AGENT_DIR",

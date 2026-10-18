@@ -4,6 +4,10 @@
 
 Windows 提供商 API Key 和 OAuth 凭据存储在 `credentials.json`，磁盘格式为 `{ "format": "pilaude-dpapi-v1", "ciphertext": "…" }`。DPAPI CurrentUser 加密只在后端进行，系统调用隐藏窗口，秘密经 stdin/stdout 传递；命令行和状态响应不包含秘密。文件不能直接复制到另一台电脑或 Windows 账号使用，需要重新登录。其他平台目前支持环境凭据，原生凭据适配尚未完成。
 
+Windows 桌面由原生宿主直接调用系统 DPAPI。宿主在启动网页服务时指定自身的绝对路径，`--pilaude-credential Protect/Unprotect` 在创建窗口之前处理有界二进制 stdin/stdout；Node 层转换 base64，旧密文格式和 entropy 保持不变。配置的原生助手不可用时直接失败，保留密文，不回退保存明文。单独运行的网页/CLI 仍保留原 PowerShell 适配，桌面开发脚本指定 debug 宿主。`node scripts/check-native-credentials.mjs` 检查新旧适配互读、旧文件兼容、缺失助手、坏数据、输入上限及含空格安装路径；可用 `PILAUDE_CREDENTIAL_HELPER` 指向 release 二进制复查，不能用 debug 通过替代正式安装验收。
+
+2026-10-18，本机 debug 与优化 release 宿主均通过上述六项检查，release GUI 子系统下的 stdio 与含空格路径已验证。正式安装包、干净系统和跨 Windows 账号行为仍需另行验收。
+
 MCP OAuth 的访问/刷新令牌、客户端注册信息、PKCE 和未完成授权状态保存在独立的 `mcp-credentials.json`，格式为 `{ "format": "pilaude-mcp-dpapi-v1", "ciphertext": "…" }`。SDK 的连接、登录、刷新和登出共用这个后端，保留按服务器名/URL 区分及刷新锁的语义；状态页只读取是否已登录，不创建文件或改写记录。没有自动读取或迁移旧 `mcp-auth.json`，包括早期 Pilaude 开发数据中的同名文件：原文件保留，需要重新登录。加密文件内部仍支持 SDK 旧 URL 键向服务器专属键的迁移。
 
 Pi 的 MCP 存储接口包含同步回调，因此此适配层提供同步 DPAPI 调用，以密文内容缓存解密结果；文件变化后重新解密。调用隐藏系统窗口，不把秘密放进参数。首次解密和写入在当前开发环境需要数百毫秒，正式性能验收尚未通过；后续性能优化不能退回明文存储或省略刷新/登出保护。

@@ -42,6 +42,9 @@ objc2-foundation = { version = "0.3", default-features = false, features = ["std
 # Avoid libappindicator's GTK menu bridge, which can render blank labels under GNOME.
 ksni = "0.2.2"
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security_Cryptography"] }
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
