@@ -80,7 +80,7 @@
 python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 1892 1278 --geometry actual.json --measurements reference-boxes.json --output comparison
 ```
 
-本轮已经实际采用最新作者提交 `ddf3aea1711db62fd6d24343bbab500a5ae69f64` 的 theme、Button 和 motion presets。主框架、搜索、输入器和上下文卡片按参考几何调整；正文默认 16px，保留用户字号/宽度设置。第一轮实测输入器从 90 物理像素高修至 67.5（参考约 68），侧栏宽度仍差约 2；坐标微调与最终复测尚在进行，不能据此标记逐组件通过。
+本轮采用的 theme、Button 和 motion presets 已更新至作者提交 `638800b8a4cee4513c8763c3df0ecf8a77b32379`，来源及适配见 vendor README。主框架、搜索、输入器和上下文卡片按参考几何调整；正文默认 16px，保留用户字号/宽度设置。第二轮未缩放的 1880×1255 实测：侧栏宽度比参考大 2 物理像素，搜索框 x/y 偏差 +0.25/−0.25，输入框 x/y 偏差 −1.38/+0.5、高度 67.5（参考约 68）。Environment 卡片少真实 Remote Control 能力而矮 26；这些差异继续保留，不据此标记逐组件通过。
 
 视觉与运行语义分别验收：会话/新建草稿/计划任务导航历史、输入法与多行增高、150ms 用户滚动意图锁、长会话锚点、流式输出、停止与恢复、窄窗口焦点循环/Escape/焦点返回、真实文件/工具/连接器入口、提供商错误持久化与设置入口。调度/工具/API 数据必须来自 Pi；累计输入/输出 token 不能伪装成 Claude 当前上下文的精确分类。Claude 专属的 Remote Control、订阅限额、PR 信息没有对应实现时保留为功能差异，不填假值。
 
@@ -91,8 +91,16 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 ## 当前重新验收清单
 
 - 用户原图共 10 张已逐字节归档并核验 SHA-256，本机路径为 `D:\pilaude\references\claude-desktop\windows-2.42304.0\2026-10-17`。`README.md`、`manifest.json` 索引尺寸和状态。原始 PNG 不随公开代码或安装包发布；派生裁剪与叠图不覆盖原件。
-- 新增参考显示：Context 可与 Browser/Git dock 同时存在，也可在 Files 左侧浮出；Background tasks 和 Terminal 可垂直共存。当前“文件面板打开便隐藏 Context”的临时实现不满足该参考，须改为明确的面板/浮层布局状态后复测。
-- 新增回复局部图明确区分 rest 与 hover，操作栏在 rest 隐藏；现已改为静止隐藏、hover/focus 显示、触屏可达和相对时间；回答分叉接入真实 Pi。复制/分叉截图及实际交互仍须逐状态对照，Pin/朗读尚未实现，不能以可点击作为复刻通过。
+- 新增参考显示：Context 可与 Browser/Git dock 同时存在，也可在 Files 左侧浮出；Background tasks 和 Terminal 可垂直共存。Files 共存已改为测量主区实际宽度：保留至少 420px 聊天宽度后可并列，空间不足时使用非模态浮层；全宽/窄窗口文件覆盖层让 Context 暂时隐藏，保留其显示偏好。实际界面通过并列、浮出后文件键盘焦点、全宽让位、关闭恢复，以及 Context Escape/Settings 关闭后焦点返回。浏览器/Git、双任务列、文件栏外观及逐状态像素一致性仍待完成。
+- 新增回复局部图明确区分 rest 与 hover，操作栏在 rest 隐藏；现已改为静止隐藏、hover/focus 显示、触屏可达和相对时间。本机实际界面检查通过静止/悬停/键盘可见性、复制/分叉提示、分叉包含当前回答且源会话内容不变；原始截图、DOM 几何、叠图和结果保存在本机 `test-results/pilaude/ui-reference/`。Pin/朗读尚未实现，字体/图标仍有差异，不能以可点击作为复刻通过。
+- 实际 Pi 会话加本地 HTTP 提供商完成了历史前进/后退、独立新任务草稿、Context/文件入口、Connectors 设置入口、受控 401 刷新保留、错误设置按钮、窄窗口遮罩与设置焦点交接检查，页面运行错误为 0。这些为功能证据，测试夹具显式标注且没有模型费用，不冒充正式服务或原生 DPI 验收。
+- 跨项目历史检查通过：从第一项目的未发送草稿进入第二项目并打开文件，返回后原草稿保留，第二项目的文件标签不进入第一项目。开发路由预热单独记录，不纳入启动性能结论。
+
+### 用户提供的本地字体（2026-10-18）
+
+用户指定的本地项目中已找到 Sans/Serif 正体和斜体、Mono，以及图标字体，共六个原始 WOFF2。原字节、SHA-256、family/version、字重/光学轴、字形数与垂直度量归档在公开仓库之外。用户说明已有个人用途授权；补充来源 [anthropic-fonts](https://github.com/matthieuhuguet/anthropic-fonts) 的 README 同样只说明个人使用且不主张拥有字体权利。本轮未下载该仓库字体，没有将字体二进制或含字体数据的 CSS 加入 Git/public 资源。
+
+对照实例复用已有 `<agentDir>/desktop/custom.css`，以内嵌字体数据覆盖 UI/展示/代码字体变量，无新增字体 API。浏览器 FontFaceSet 与实际消息 computed font 均确认使用本地 Sans，Serif/Mono 加载通过；第三轮截图和原像素叠图在本机 `test-results/pilaude/ui-reference/comparison-pass-3-fonts/`。这一实例位于隔离测试数据根；公开默认资源、图标字形映射、中文回退与 Windows 原生渲染仍未验收，不能据此声称公开包已经携带相同字体。
 
 - 原 Task 2 的四档截图、输入/面板测试仅证明相应功能可操作，缺少同版本 Claude 参考图和差异图，状态改为“功能已测、一致性未验”。
 - 欢迎页为 Pilaude 原先自建构图，尚未证明符合 Claude 当前首页；系统字体、Lucide 图标和深色文字的旧 Clay 按钮均待重新对照。

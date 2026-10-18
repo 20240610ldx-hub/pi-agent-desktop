@@ -6,6 +6,7 @@ import type { SessionInfo } from "@/lib/types";
 import { useI18n } from "@/hooks/useI18n";
 import { PilaudeIcon } from "./PilaudeIcon";
 import { focusModalPanel } from "@/lib/stacked-dialog";
+import { getContextPresentation } from "@/lib/panel-layout";
 
 interface Props {
   session: SessionInfo | null;
@@ -18,6 +19,8 @@ interface Props {
   onOpenContext: () => void;
   onOpenTools: () => void;
   onClose: () => void;
+  rightPanelOpen: boolean;
+  rightPanelFullWidth: boolean;
 }
 
 function shortCount(value: number | null | undefined): string {
@@ -26,29 +29,42 @@ function shortCount(value: number | null | undefined): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toLocaleString();
 }
 
-export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount, onOpenConnectors, onOpenFiles, onOpenContext, onOpenTools, onClose }: Props) {
+export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount, onOpenConnectors, onOpenFiles, onOpenContext, onOpenTools, onClose, rightPanelOpen, rightPanelFullWidth }: Props) {
   const { t } = useI18n();
   const paneRef = useRef<HTMLElement>(null);
-  const [isOverlay, setIsOverlay] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 1199px)");
-    const update = () => setIsOverlay(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
+  const [presentation, setPresentation] = useState<ReturnType<typeof getContextPresentation>>("dock");
+  const isModal = presentation === "modal";
+  useLayoutEffect(() => {
+    const pane = paneRef.current;
+    return () => {
+      if (pane?.dataset.presentation === "floating" && pane.contains(document.activeElement)) {
+        document.querySelector<HTMLElement>(".pilaude-context-toggle")?.focus({ preventScroll: true });
+      }
+    };
   }, []);
   useLayoutEffect(() => {
-    if (!isOverlay) return;
-    const restoreFocus = focusModalPanel(document, paneRef.current, { restoreTextEntry: false });
+    const container = paneRef.current?.parentElement;
+    if (!container) return;
+    const update = () => setPresentation(getContextPresentation({ availableWidth: container.clientWidth, viewportWidth: window.innerWidth, rightPanelOpen, rightPanelFullWidth }));
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(container);
+    window.addEventListener("resize", update);
+    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
+  }, [rightPanelOpen, rightPanelFullWidth]);
+  useLayoutEffect(() => {
+    if (presentation !== "modal" && presentation !== "floating") return;
+    const restoreFocus = isModal ? focusModalPanel(document, paneRef.current, { restoreTextEntry: false }) : () => {};
     const focusable = () => [...(paneRef.current?.querySelectorAll<HTMLElement>('summary,button:not([disabled]),a[href],input:not([disabled]),[tabindex]:not([tabindex="-1"])') ?? [])].filter(element => element.getClientRects().length > 0);
-    (focusable()[0] ?? paneRef.current)?.focus();
+    if (isModal) (focusable()[0] ?? paneRef.current)?.focus();
     const keydown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (event.isComposing || event.keyCode === 229) return;
+        if (!isModal && !paneRef.current?.contains(document.activeElement) && !document.activeElement?.closest(".pilaude-context-toggle")) return;
         event.preventDefault();
         event.stopImmediatePropagation();
         onClose();
-      } else if (event.key === "Tab") {
+      } else if (isModal && event.key === "Tab") {
         const elements = focusable();
         const index = elements.indexOf(document.activeElement as HTMLElement);
         if (index < 0 || (event.shiftKey ? index === 0 : index === elements.length - 1)) {
@@ -62,8 +78,8 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
       document.removeEventListener("keydown", keydown, true);
       restoreFocus();
     };
-  }, [isOverlay, onClose]);
-  const open = (action: () => void) => { if (isOverlay) onClose(); action(); };
+  }, [presentation, isModal, onClose]);
+  const open = (action: () => void) => { if (isModal) onClose(); action(); };
   const [machine, setMachine] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -83,7 +99,9 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
   ];
   const projectName = cwd.split(/[\\/]/).filter(Boolean).at(-1) || cwd;
   return (
-    <aside ref={paneRef} tabIndex={-1} role={isOverlay ? "dialog" : undefined} aria-modal={isOverlay || undefined} className="pilaude-context-dock" aria-label={t("pilaude.contextPanel")}>
+    <>
+    {isModal && <button type="button" className="pilaude-context-backdrop" aria-label={t("i18n.close")} onClick={onClose} />}
+    <aside ref={paneRef} tabIndex={-1} hidden={presentation === "hidden"} role={isModal ? "dialog" : undefined} aria-modal={isModal || undefined} data-presentation={presentation} className={`pilaude-context-dock${presentation === "modal" || presentation === "floating" ? " is-overlay" : ""}`} aria-label={t("pilaude.contextPanel")}>
       <details className="pilaude-context-card" open>
         <summary>{t("pilaude.environment")}<PilaudeIcon name="chevron" size={14} /></summary>
         <div className="pilaude-context-card-body">
@@ -113,5 +131,6 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
         <button className="pilaude-environment-row pilaude-changes-link" onClick={() => open(onOpenFiles)}><PilaudeIcon name="branch" /><span>{t("pilaude.reviewFiles")}</span><PilaudeIcon name="chevron" size={14} /></button>
       </details>
     </aside>
+    </>
   );
 }

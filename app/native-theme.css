@@ -7966,7 +7966,7 @@ html.native-desktop :is(
 .pilaude-local-profile small { color: var(--text-dim); font-size: 14px; }
 .pilaude-profile-avatar { width: 25px; height: 25px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: #bd6687; color: white; font-size: 15px; }
 .pilaude-workspace-body { position: relative; }
-.pilaude-context-backdrop { display: none; }
+.pilaude-context-backdrop { display: block; position: absolute; inset: 0; border: 0; background: #00000020; z-index: 40; }
 .pilaude-context-dock { width: 350px; flex: 0 0 350px; padding: 16px 14px 24px 0; overflow-y: auto; scrollbar-width: thin; background: var(--bg); }
 .pilaude-context-card { border: 1px solid var(--border); border-radius: 15px; background: var(--bg); margin-bottom: 10px; overflow: hidden; font-size: 16px; color: var(--text); }
 .pilaude-context-card > summary { list-style: none; display: flex; align-items: center; gap: 6px; min-height: 42px; padding: 12px 15px 8px; cursor: pointer; font-weight: 400; }
@@ -8035,10 +8035,7 @@ button.pilaude-environment-row:hover { background: var(--bg-hover); }
 .app-shell .conversation-navigator { opacity: 0; transition: opacity 150ms; }
 .app-shell .conversation-navigator:hover, .app-shell .conversation-navigator:focus-within { opacity: 1; }
 .app-shell .composer-send-button { width: 28px !important; height: 28px !important; }
-@media (max-width: 1199px) {
-  .pilaude-context-dock { position: absolute; right: 0; top: 0; bottom: 0; z-index: 41; width: min(350px, 94%); padding-left: 14px; box-shadow: -8px 0 24px #0000000a; }
-  .pilaude-context-backdrop { display: block; position: absolute; inset: 0; border: 0; background: #00000020; z-index: 40; }
-}
+.pilaude-context-dock.is-overlay { position: absolute; right: 0; top: 0; bottom: 0; z-index: 41; width: min(350px, 94%); padding-left: 14px; box-shadow: -8px 0 24px #0000000a; }
 @media (max-width: 640px) {
   .app-shell .chat-input-shell { padding-left: 12px !important; padding-right: 12px !important; }
   .app-shell .chat-scroll-container > div { padding-left: 16px !important; padding-right: 16px !important; }

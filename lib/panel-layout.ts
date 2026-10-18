@@ -12,6 +12,17 @@ export const RIGHT_PANEL_MAX_WIDTH = 1200;
 const COMPACT_CHAT_MIN_WIDTH = 320;
 const DESKTOP_CHAT_MIN_WIDTH = 420;
 
+export function getContextPresentation(options: {
+  availableWidth: number;
+  viewportWidth: number;
+  rightPanelOpen: boolean;
+  rightPanelFullWidth: boolean;
+}): "hidden" | "dock" | "floating" | "modal" {
+  if (options.rightPanelFullWidth || (options.rightPanelOpen && options.viewportWidth < SPLIT_PANEL_MIN_WIDTH)) return "hidden";
+  if (options.availableWidth >= DESKTOP_CHAT_MIN_WIDTH + 350) return "dock";
+  return options.rightPanelOpen ? "floating" : "modal";
+}
+
 export function clampPanelWidth(width: number, minWidth: number, maxWidth: number): number {
   const finiteWidth = Number.isFinite(width) ? width : minWidth;
   const effectiveMax = Math.max(minWidth, maxWidth);

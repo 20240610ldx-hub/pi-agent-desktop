@@ -2714,19 +2714,21 @@ export function AppShell() {
           />
         )}
       </div>
-      {showChat && contextDockOpen && !rightPanelOpen && !scheduledOpen && !settingsSection && !projectTrustDialogOpen && !welcomePickerOpen && (
-        <><button type="button" className="pilaude-context-backdrop" aria-label={translate("i18n.close")} onClick={() => setContextDockOpen(false)} /><PilaudeWorkspaceContext
+      {showChat && contextDockOpen && !scheduledOpen && !settingsSection && !projectTrustDialogOpen && !welcomePickerOpen && (
+        <PilaudeWorkspaceContext
           session={selectedSession}
           cwd={selectedSession?.cwd ?? effectiveNewSessionCwd ?? activeCwd ?? ""}
           stats={sessionStats}
           usage={contextUsage}
           toolCount={systemTools?.length ?? null}
+          rightPanelOpen={rightPanelOpen}
+          rightPanelFullWidth={rightPanelFullWidth}
           onOpenContext={openSessionStatsPanel}
           onOpenTools={() => handleSystemInfoToggle("tools")}
           onOpenConnectors={() => openSettingsSection("mcp")}
           onClose={handleContextDockClose}
           onOpenFiles={() => { setRightPanelOpen(true); setFileTreeOpen(true); setFileTreeNarrowOverride(true); }}
-        /></>
+        />
       )}
         </div>
       </div>
