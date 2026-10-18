@@ -8,6 +8,10 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 /** High-risk red threshold (fixed, Claude-convention). Single accent below it. */
 const CTX_DANGER_PCT = 90;
 
+function isFiniteNonnegative(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
 function fmtWindow(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
@@ -35,8 +39,11 @@ export function ContextUsageRing({ contextUsage, sessionStats, onOpenStats }: Co
   const { t } = useI18n();
 
   const hasUsage = contextUsage != null;
-  const percent = contextUsage?.percent ?? null;
-  const windowSize = contextUsage?.contextWindow ?? 0;
+  const percent = isFiniteNonnegative(contextUsage?.percent) ? contextUsage.percent : null;
+  const rawWindowSize = contextUsage?.contextWindow;
+  const windowSize = isFiniteNonnegative(rawWindowSize) && rawWindowSize > 0 ? rawWindowSize : 0;
+  const totalTokens = sessionStats?.tokens?.total;
+  const cost = sessionStats?.cost;
   // A context window object always carries the denominator; percent may be
   // unknown (null) right after a compaction until the next LLM response.
   const showTooltip = hasUsage && (percent !== null || windowSize > 0);
@@ -51,13 +58,13 @@ export function ContextUsageRing({ contextUsage, sessionStats, onOpenStats }: Co
   const tooltipParts: string[] = [];
   if (showTooltip) {
     tooltipParts.push(percent !== null ? `${percent.toFixed(1)}% ctx` : `— / ${fmtWindow(windowSize)}`);
-    if (sessionStats && sessionStats.tokens.total > 0) {
-      tooltipParts.push(`${fmtWindow(sessionStats.tokens.total)} tok`);
+    if (isFiniteNonnegative(totalTokens) && totalTokens > 0) {
+      tooltipParts.push(`${fmtWindow(totalTokens)} tok`);
     } else if (percent !== null && windowSize > 0) {
       tooltipParts[0] += ` / ${fmtWindow(windowSize)}`;
     }
-    if (sessionStats && sessionStats.cost > 0) {
-      tooltipParts.push(`$${sessionStats.cost.toFixed(3)}`);
+    if (isFiniteNonnegative(cost) && cost > 0) {
+      tooltipParts.push(`$${cost.toFixed(3)}`);
     }
   }
   const title = tooltipParts.length > 0 ? tooltipParts.join(" · ") : t("chat.ctxUsage");

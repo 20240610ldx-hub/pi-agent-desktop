@@ -164,6 +164,10 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 
 `AttachmentCard` 的文件名前缀／最后扩展名分离及双 span 收缩已局部适配到 TabBar，不采用固定字符数截断。`file-tab-filename/run-1792321054232/` 九组实际检查通过六类文件名、390px 中文标签、阅读状态恢复与关闭活动标签；.tsx 在移动 label 69.594 CSS px 内仍完整，异常长后缀限制为 label 的 50%。完整路径 title／ARIA 保留，wrap=true／scrollTop=420 切回恢复。PNG、会话与 Files GET 为明确夹具，apiWrites／pageErrors 为空；16 项定向、类型与完整 lint 通过，既有 aria 警告保留。首轮虚拟 cwd 不存在的 checker 失败单独保存。没有对应官方长文件名状态图，功能结果不标为像素一致；Terminal／Artifact 标题与文件路径身份保持原有语义。
 
+## 上下文圆环数值专项
+
+圆环继续消费 SDK 当前 context percent，不套源示例累计 input／output／cache 计算占比。已用真实组件 SSR 先复现 NaN SVG 和非法窗口／统计 tooltip，再限定有限非负值：无效比例按未知、分母必须正数、累计 token／cost 无效则省略。超过 100% 保留真实文字，只限制弧长；90% danger、空 usage 隐藏及统计点击保持。5 项 SSR 与 8 项累计统计用例、类型和完整 lint 通过，既有 aria 警告保留。此项为产品修复，不计新增 open-claude-ui 采用；实际 `context-usage-ring/run-1792321449859/` 九组通过七类状态及正常／未知统计 popover 开关，草稿保留、14×14 SVG 不变，writes／pageErrors 为空。NaN／Infinity 只由 SSR 覆盖，未伪造 JSON 浏览器用例；未作新的像素一致性声明。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。

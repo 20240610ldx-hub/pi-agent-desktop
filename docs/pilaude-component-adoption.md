@@ -103,6 +103,12 @@
 
 实际 `file-tab-filename/run-1792321054232/` 九组通过：六类文件名（.tsx、.tar.gz→.gz、CJK／emoji、异常长扩展名、dotfile、尾点）、390px 中文标签、阅读状态切回和活动标签关闭。桌面 label 217px 时 .tsx／.gz 分别 22.375／17.297px 完整可见，异常后缀 108.5px 为 50%；390px label 69.594px 时 .tsx 仍完整。wrap=true／scrollTop=420 在切换后恢复。会话和 Files GET 为显式夹具，Markdown 链接实际打开 TabBar／FileViewer，没有创建虚拟路径文件，apiWrites／pageErrors 为空。首轮虚拟 cwd 不存在造成 workspace unavailable 的 checker 失败保留，最终用已有 cwd 后通过；未调整产品生命周期。缺少对应官方长文件名状态参考，不做像素一致性声明。
 
+## 上下文圆环的产品边界修复
+
+核对源 TokenGauge 后没有机械替换：它把 input／output／cache 累加到窗口比例，与产品 SDK `contextUsage.percent` 的当前占用含义不同。会话累计还包含不进入 context 的 cache warming 账单，不能反推圆弧。该项是产品自身修复，不增加源模块采用数。
+
+`ContextUsageRing` 定向测试先复现 NaN 进入 stroke-dasharray、非法窗口／累计费用进入 tooltip 的两组失败；现只接纳有限非负比例，非法值按未知处理，分母必须有限正数，累计 token／cost 必须有限非负且保持原有大于零才展示的门槛。超过 100% 保留文字原值，圆弧限制到 100%，90% danger 和空 usage 隐藏行为保留。5 项真实组件 SSR 加 8 项统计口径回归、项目类型和完整 lint 通过；保留既有 TerminalPanel aria 警告，实际 `context-usage-ring/run-1792321449859/` 七类状态加正常／未知两次统计开关共九组通过：正常、未知、负比例、零窗口与非法累计值、超容量、无效窗口未知、无 usage；圆环保持 14×14 SVG，点击打开现有统计 popover，Escape 后草稿保留可编辑。writes／pageErrors 为空，JSON 无法表示 NaN／Infinity，浏览器覆盖不冒称这些值；它们由 SSR 单测覆盖。没有修改 SDK、统计聚合或自动重放行为。
+
 ## 更新条件
 
 每次采用后更新对应行：来源 SHA／函数 → adapter 或 vendor → 真实 consumer → 边界测试 → 实际页面／交互证据 → 尚存差异。纯算法也必须给出调用者；只加导出、复制文件、相似独立实现或通过库自身 build 都不足以升级采用状态。每轮记录须区分实际测试、页面检查与只读审计；本批模型调用为零。尚未完成的功能、原生实物和视觉状态继续保留待验。

@@ -381,6 +381,8 @@
     "lib/file-name-display.ts",
     "lib/file-name-display.test.mjs",
     "components/TabBar.test.mjs",
+    "components/ContextUsageRing.tsx",
+    "components/ContextUsageRing.test.mjs",
     "lib/cds-motion.ts",
     "lib/cds-motion.test.mjs",
     "components/DomContextMenuHost.motion.test.mjs",
