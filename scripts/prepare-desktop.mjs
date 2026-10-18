@@ -52,6 +52,7 @@ async function assembleServer() {
   await rm(serverResourcesDir, { recursive: true, force: true });
   await mkdir(dirname(serverResourcesDir), { recursive: true });
   await cp(standaloneDir, serverResourcesDir, { recursive: true });
+  await copyFile(join(rootDir, "THIRD_PARTY_NOTICES.md"), join(serverResourcesDir, "THIRD_PARTY_NOTICES.md"));
 
   // Next's file tracer follows normal imports but intentionally omits files
   // reached through dynamic provider/export/plugin paths. These packages are

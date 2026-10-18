@@ -58,7 +58,7 @@
 | 声音与麦克风 | `ClaudeAudioPlayer`、`LiveMicActivityBars` | 仅有合成方案；不等于原版声音；实际支持能力和许可仍需核实 |
 | 图片灯箱和共享转场 | `MediaLightboxViewer`、`useClaudeSharedElementTransition` | MediaLightboxViewer 自然尺寸／contain 由 native-theme.css→ChatInput／MessageView 消费；新增 image-view-transform→ImagePreview 适配光标 zoom／pan／wheel，保留原生 dialog，定向单测通过、实际页面分轮记录。SharedElementTransition 未采用；最终缩略图 gap 已校准至 9 原像素目标，原始内容比例与绝对 bbox 仍待补证 |
 | 产物分屏与桥接 | `ArtifactsSplitPaneResizer`、`EpitaxyIframeBridge` | 资源可用；保留 Pi 产物真实内容、安全边界与保存流程 |
-| Diff | `StreamingDiffViewer` | ChangesPane 的 ReviewDiff 局部适配 table/gutter、tabular-nums 与增删背景；复用既有 patch parser／split 配对，没有采用源流式引擎。后端与核心页面有分轮证据；新增 Prism 语法色按 hunk／revision 无损产出，与词差异 mark 相交，源码反馈继续来自原始 Git 行。完整键盘／窄窗证据随本批补充 |
+| Diff | `StreamingDiffViewer` | Changes 的 tabular-nums／增删背景保留源组件的局部样式适配；当前通用 parser、unified／split 表格、替换行配对、词差异和 token 树已迁移到 MIT `react-diff-view@3.3.3`，真实消费点为独立 ReviewDiff。产品保留 revision／连续选区／反馈 ACK；既有 Prism 按 hunk 和两侧隔离，原文继续来自 Git 行。未采用源流式引擎，不增加 open-claude-ui 采用数；最新运行与视觉残差另记 |
 | Windows 窗口与顶栏 | `createClaudeMainWindow`、`ClaudeDesktopHeader` | 主要是 Electron/macOS 参考；Tauri Windows 实物行为与精确几何待补 |
 | 侧栏、项目/会话拖放 | `DraggableSessionList` | 资源可用；完整 Windows 导航、搜索、收起/展开/右键状态未覆盖 |
 | 多代理任务视图 | `CoworkAgentCanvas` | 含演示状态；需接真实 Pi 父子任务、队列、审批、取消和失败状态 |
@@ -184,7 +184,7 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 
 2026-10-18 新图原件 2288×1535（聊天显示 2000×1342）已按原字节归档至工作区私有 `references/changes-expanded-dark/2026-10-18/00-user-provided-changes-expanded.png`，SHA-256 为 `c9511da8b8018b3d39fb4a37bbfce3c168e6f989b270e31dd327a64cc6497b73`。角色为用户提供的展开态参考，宿主应用、版本、DPI／zoom 与聊天 payload 精确字节身份未核验；可见 Pilaude 源码不证明宿主身份。原件不进入公开仓库。
 
-用户明确要求通用 diff／彩色代码块复用成熟开源渲染库，后续避免重复实现。当前 Prism／refractor 已复用，但自写表格／词差异仍需评估替换；选库与迁移边界见[采用账本](pilaude-component-adoption.md)。新库接入仍须逐项验证视觉与真实反馈、原文、键盘及性能，不把默认库外观当作一致性通过。
+用户明确要求通用 diff／彩色代码块复用成熟开源渲染库，后续避免重复实现。本轮已固定采用 MIT `react-diff-view@3.3.3`，通过真实 ReviewDiff 消费库 parser／表格／替换行配对／词差异／token 树，并删除原 Changes 自写表格、词差异与 review-syntax 适配器；FileViewer 仍消费原上游 patch helper。选库与迁移边界见[采用账本](pilaude-component-adoption.md)。新库接入仍须逐项验证视觉与真实反馈、原文、键盘及性能，不把默认库外观当作一致性通过。
 
 ## New 入口与内联选择边界补验
 
@@ -196,7 +196,23 @@ Changes 内联 context 起点保留两侧坐标，Shift 到明确删除／添加
 
 用户后续提供清晰静置／点击两态参考，原字节保留于本机私有 `references/claude-desktop/home-code-ripple/2026-10-18/04-home-idle-light-reference.png`（851×532）与 `05-home-click-light-reference.png`（867×548）。用户否决此前规则圆环、过小短促扩散、过大范围、字面形变及控件触发波纹；这些旧版不能因功能检查而写成视觉通过。
 
-原像素测量显示字符节距约 6.0±0.1×12.0±0.3px，静置为近灰弱字，点击后的净区明显偏蓝，局部可分离亮带半高宽约 19–24px、估计不确定度 ±6px。参考的 DPI／应用缩放／字体身份及动态时序仍未知。实现现重新采用固定字符网格上的连续不规则照明纹理；用户随后指出仅扩大受光区域丢失水纹传播，现恢复从点击点向外推进的多道窄亮纹，用局部纹理改变传播路径，避免规整完整圆周。静置中速局部换字，点击照亮处较快换字；背景点击才入队，项目／模型控件及 SVG 后代不触发。最新实际 `ripple-motion/run-1792334850698/` 五组通过：固定格点的静置照明／换字、控件及 SVG 后代排除、点击传播与亮区换字、reduced-motion、浅色派生状态；pageErrors、console、blockedWrites 为空。`presentation-1792334257081/` 保存 86 个实际 compositor 帧及原时序 GIF，874×560，画布 615×515，无缩放，未写设置或调用模型。145 项受影响回归、类型及 lint 通过，保留既有 TerminalPanel aria 警告。原像素 `reference-comparison-final/` 为参考 100%／actual 50% 整数裁剪叠图：字符节距 actual 约 5.994×11.933 对参考 6.045×12.038，背景 #151515 对 #171717；指定 actual 帧为点击后约 3.046 秒退场，右下蓝光明显弱于未知阶段的参考，不能据此证明峰值相同或完整视觉通过。构图、亮度与原始动态时序仍待校准，不将历史 100px 小圆环检查外推到新版。
+原像素测量显示字符节距约 6.0±0.1×12.0±0.3px，静置为近灰弱字，点击后的净区明显偏蓝，局部可分离亮带半高宽约 19–24px、估计不确定度 ±6px。参考的 DPI／应用缩放／字体身份及动态时序仍未知。实现现重新采用固定字符网格上的连续不规则照明纹理；用户随后指出仅扩大受光区域丢失水纹传播，现从点击点向外推进一道完整的不规则窄亮纹，保留细亮边与柔尾；只有连续点击时才叠加来自独立起点、寿命与随机种子的波纹。局部纹理只改变照明传播路径，字符格点保持固定。静置中速局部换字，点击照亮处较快换字；背景点击才入队，项目／模型控件及 SVG 后代不触发。前轮实际 `ripple-motion/run-1792334850698/` 五组通过：固定格点的静置照明／换字、控件及 SVG 后代排除、点击传播与亮区换字、reduced-motion、浅色派生状态；pageErrors、console、blockedWrites 为空。`presentation-1792334257081/` 保存 86 个实际 compositor 帧及原时序 GIF，874×560，画布 615×515，无缩放，未写设置或调用模型。145 项受影响回归、类型及 lint 通过，保留既有 TerminalPanel aria 警告。原像素 `reference-comparison-final/` 为参考 100%／actual 50% 整数裁剪叠图：字符节距 actual 约 5.994×11.933 对参考 6.045×12.038，背景 #151515 对 #171717；指定 actual 帧为点击后约 3.046 秒退场，右下蓝光明显弱于未知阶段的参考，不能据此证明峰值相同或完整视觉通过。构图、亮度与原始动态时序仍待校准，不将历史 100px 小圆环检查外推到新版。
+
+单击曾人为生成三道波前，导致一次点击也出现类似多次碰撞的样式。针对公开 `rippleLightEnergy` 空间输出先 RED 复现两个独立亮峰，再最小删除追加波前，保留原有不规则路径、亮边／柔尾、范围／时长与静置 6Hz／点击 24Hz 换字。最终 helper 共 7 项测试、定向 lint 和 diff 检查通过。真实 `ripple-motion/single-double-1792336146500/single.gif` 保存单次点击 38 帧，该单次分组通过；同 run 后续双次的 observer 亮度阈值断言失败，整体状态仍为 failed，不覆盖或改称整轮通过。补充 `ripple-motion/single-double-1792336369255/double.gif` 与 `results.json` 通过两次独立背景点击，实际间隔约 679ms，38 帧保留两起点扩散；另验项目／模型控件及 SVG 后代不触发、reduced-motion 静态。单次／双次记录的格点位移均为 0，绘制约 30Hz，亮区多位置持续换字；最终双次补验的 pageErrors、console 和 API 写入为空。两组实际关键帧已人工读取核对，单次不再人为复制三道波前；这些行为及记录不代表与参考完整视觉一致。
+
+## 成熟 diff 渲染库迁移验收
+
+`ChangesPane → ReviewDiff → react-diff-view@3.3.3` 为当前真实路径；库负责 patch 解析、统一／并排表格、替换行配对、词差异及 token 树，产品保留比较身份、原文选区和反馈 ACK。旧 Changes 手写 table／词差异与 review-syntax 路径已删除。分 hunk 重基后再调用 tokenizer，避免高绝对行号形成大量空白源码；空行薄适配避免库回退插入一个视觉空格。文件末尾无换行提示已提供三语言文案并标明受影响版本，完整新增／删除的 split 标题只显示真实存在的一侧；浅色 gutter 保留语义色回退。跨后缀 rename 按旧／新路径分别着色，前导空行只从库的词差异发现输入中省略、原始 token／反馈文本保留；已验证两侧空行数量不同时的真实行号、内部空行、Tab／尾空格和不修改 hunk。最终一次受影响组合回归共 171 项通过、0 失败／跳过，包含真实 Git／API、源文本与渲染、空行／预算、EOF、选区、水纹、ownership／上游提取／CSS 基线及许可／分发契约；项目类型检查通过，完整 lint 退出 0，保留既有 TerminalPanel aria 警告。完整 npm test／terminal E2E 与 Windows 原生验收未据此追认通过。主库 MIT 与依赖中 Apache-2.0 等许可原文另见 THIRD_PARTY_NOTICES，并加入 npm 文件清单和桌面 server resource 复制；尚未运行发行打包。
+
+最终显式内存夹具 `diff-library/run-1792338085844/` 八组实际检查通过：Unicode／Tab／源码样 HTML／空行、词差异开关、跨侧选区、IME／Escape、原文与 comparison 身份经现有反馈通道确认、split→inline 旧侧身份与语法、连续替换行配对、单侧 context 选中且仅一个编辑器、桌面／390px 长行号和浅色轨道。反馈接收页是同源合成 ACK fixture，不当作实际 ChatWindow 或模型提交；页面 errors／console／writes 为空。初轮字面转义 Tab 断言错误、开发 HMR 重载与随后接收页监听丢失、浅色检查误选零宽空 gutter 的 failed 报告均保留；最终接收页改为显式静态 fixture，未延长产品超时、自动重放或修改反馈生命周期。
+
+独立复查随后复现并修复四个边界：旧／新版本无最终 LF 的呈现不再完全相同，完整新增／删除的 split 标题与库单侧布局一致，跨后缀 rename 保留旧侧语法，前导空行不再把后续数字词差异错位。最终 `diff-library/run-1792339340071/` 九组实际检查全部通过，包含这四项及前述原文／选区／ACK／主题／390px 目标，errors／console／writes 为空；两轮扩展 checker 曾未展开第九／第十文件而失败，已保留，最终通过真实文件 toggle 展开，不修改产品八文件默认展开上限。
+
+真实 Git 工作区 `changes-reference/syntax-keyboard-1792338708381/` 五组通过：实际 API patch 与统一／并排 DOM 精确一致、语法／词差异开关、finder 和菜单键盘／IME、反馈编辑器按键，以及 390px 真实加载／关闭焦点；errors、console error／warn、blockedWrites 为空。首轮 `syntax-keyboard-1792338590581/` 在窗口切换后仍按 5 秒等待 table 而失败，保留原报告；最终增加 per-file network 记录及 30 秒测试等待，文件请求成功，没有改产品超时。另 `changes-focus-1792338623869.json` 对同一真实 Git fixture 通过三组菜单／禁用项／焦点检查。以上均未发送模型。
+
+同文 YAML `changes-reference/library-yaml-visual-1792337932938/` 实际呈现及选区检查通过，console error／warn、pageErrors、blockedWrites 为空；DPR 1.25、816×653 CSS，截图整数裁剪为 1019×816 原像素。新 comparison 目录按参考 100% 底层／actual 50% 上层，只整数裁剪和平移，缺覆盖透明，不拉伸或重采样。原像素行距 25.5078 对 25.5、号栏 71.9922 对 72、table 到文本原点 94.4922 对 94。standalone 的 code 内容宽仍为 604.2578 对参考 568，多 36.2578；首行 y 多 28.5078，提交分隔线 y 多 26.0781；外卡、leading context、换行及部分语法颜色继续登记差异。runtime custom CSS 使用既有本地字体别名，这不是公开默认字体或 Windows 原生 DPI 验收。成熟库采用已实现，完整视觉一致性尚未通过。
+
+实际 workspace 补验 `changes-reference/library-yaml-workspace-1792338305434/` 先通过真实 Git API 预检，再仅替换展示 GET，使用真实顶栏和 resize 控件将 pane 调到 790 CSS px（目标 789.6，差 +0.4）；990 原像素整数裁剪包含真实 1px border／10px radius 卡片。代码内容宽变为 571.7578 对参考 568，差约 +3.7578 原像素；参考 padding 未知，该内容宽为近似比较。参考另有约 15 原像素右滚动条带，当前 table 则延伸到卡片内缘；行距、gutter 和 table 内文本偏移保持。DOM Range 实测删除／添加 82、两侧 105 和 107 的换行与参考接近或吻合，83 的 `echo` 仍在 `>>` 之后而非之前换行，部分字形／标点与外层 canvas 留白仍有差异。只有两次既有只读 cwd validate POST，console error／warn、pageErrors、blockedWrites 为空。此补验说明 standalone 容器状态解释了大部分宽度残差，不改字体追逐不同容器。
 
 ## 上游更新规则
 

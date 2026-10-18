@@ -4,6 +4,7 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 import "./settings.css";
+import "react-diff-view/style/index.css";
 import "../vendor/open-claude-ui/cds-theme.css";
 // Fork-local restyle layer — must come after the upstream stylesheets so its
 // equal-specificity rules win the cascade. See app/native-theme.css.

@@ -252,6 +252,47 @@ test("desktop staging ships the Amazon Bedrock SDK the file tracer cannot see", 
   assert.match(prepareSource, /https-proxy-agent/);
 });
 
+test("the diff renderer notice retains exact installed licenses and its Apache source header", async () => {
+  const notices = await readFile(join(root, "THIRD_PARTY_NOTICES.md"), "utf8");
+  const licensePaths = [...notices.matchAll(/\| `([^`]+\/LICENSE(?:\.md)?)` \|/g)].map(match => match[1]);
+  assert.ok(licensePaths.includes("node_modules/react-diff-view/LICENSE"));
+  assert.ok(licensePaths.includes("node_modules/diff-match-patch/LICENSE"));
+  const blocks = [...notices.matchAll(/From `([^`]+)`[^\n]*\n\n```text\n([\s\S]*?)\n```/g)];
+  assert.deepEqual(blocks.map(match => match[1]).sort(), [...licensePaths, "node_modules/diff-match-patch/index.js"].sort(), "Every recorded dependency license and the Apache attribution header must be reproduced once");
+  for (const [, path, copied] of blocks) {
+    assert.match(path, /^node_modules\/[a-z0-9-]+\/(?:LICENSE(?:\.md)?|index\.js)$/);
+    const source = await readFile(join(root, path), "utf8");
+    if (path.endsWith("/index.js")) {
+      const header = source.match(/^\/\*\*[\s\S]*?\*\//)?.[0];
+      assert.ok(header);
+      assert.equal(copied, header, "The actual diff-match-patch copyright header must survive separately from the generic Apache appendix");
+    } else {
+      // A fenced block supplies its own closing LF; preserve every other byte,
+      // including indentation, copyright text, and Lodash's additional terms.
+      assert.equal(copied, source.endsWith("\n") ? source.slice(0, -1) : source, `${path} was changed or truncated in the distribution notice`);
+    }
+  }
+});
+
+test("desktop staging provisions the root third-party notice inside every bundled server", async () => {
+  // Read source only: importing prepare-desktop runs a full build and staging.
+  const prepareSource = await readFile(new URL("./prepare-desktop.mjs", import.meta.url), "utf8");
+  const { default: ts } = await import("typescript");
+  const source = ts.createSourceFile("prepare-desktop.mjs", prepareSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const assemble = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "assembleServer");
+  assert.ok(assemble?.body, "The server assembly path must exist");
+  const copies = assemble.body.statements.filter(node => ts.isExpressionStatement(node) && ts.isAwaitExpression(node.expression) && ts.isCallExpression(node.expression.expression) && node.expression.expression.expression.getText(source) === "copyFile");
+  assert.ok(copies.some(node => {
+    const args = node.expression.expression.arguments;
+    return args.length === 2 && args[0].getText(source) === 'join(rootDir, "THIRD_PARTY_NOTICES.md")' && args[1].getText(source) === 'join(serverResourcesDir, "THIRD_PARTY_NOTICES.md")';
+  }), "Server assembly must await a verbatim copy of the root notice; a comment or unused reference does not provision the package");
+  assert.match(prepareSource, /const serverResourcesDir = join\(rootDir, "src-tauri", "resources", "server"\)/);
+  for (const name of ["tauri.conf.json", "tauri.linux.conf.json", "tauri.windows.conf.json"]) {
+    const config = JSON.parse(await readFile(join(root, "src-tauri", name), "utf8"));
+    assert.ok(config.bundle.resources.includes("resources/server"), `${name} must bundle the server directory containing the notice`);
+  }
+});
+
 test("the Tauri crates stay on the npm packages' major/minor", async () => {
   // `tauri build` aborts six minutes into every platform of a signed release
   // with "Found version mismatched Tauri packages" when a `tauri-plugin-*`

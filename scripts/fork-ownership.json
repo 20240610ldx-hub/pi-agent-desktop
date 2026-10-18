@@ -238,9 +238,9 @@
     },
     "app/layout.tsx": {
       "risk": "low",
-      "drift": 27,
-      "reason": "native-theme.css import, branding title, dark-mode bootstrap script.",
-      "structuralDrift": 24,
+      "drift": 28,
+      "reason": "Preserve react-diff-view's base CSS before the fork theme, the CDS and native-theme imports, branding title and dark-mode bootstrap script. The renderer stylesheet must not silently disappear or override the product theme after an upstream merge.",
+      "structuralDrift": 25,
       "disposition": "accepted"
     },
     "eslint.config.mjs": {
@@ -264,9 +264,10 @@
       "disposition": "accepted"
     },
     "package.json": {
-      "risk": "low",
-      "drift": 13,
-      "reason": "Desktop scripts and Tauri deps. Name stays @agegr/pi-web on purpose \u2014 see docs/ownership-boundaries.md.",
+      "risk": "medium",
+      "drift": 69,
+      "structuralDrift": 69,
+      "reason": "Desktop scripts and runtime dependencies include the exact react-diff-view 3.3.3 renderer and npm distribution of THIRD_PARTY_NOTICES.md. Preserve the pinned renderer, license notice and Tauri compatibility when merging upstream package changes; package name stays @agegr/pi-web on purpose. Current nonblank changed JSON lines are measured against 6fcd7d4, so the unchanged 30/250 thresholds require review.",
       "disposition": "accepted"
     },
     "tsconfig.json": {
@@ -357,6 +358,7 @@
     "e2e/pilaude-agent-api.mjs",
     "e2e/pilaude-data.mjs",
     "vendor/open-claude-ui/",
+    "THIRD_PARTY_NOTICES.md",
     "docs/pilaude-component-adoption.md",
     "docs/pilaude-ui-parity.md",
     "lib/sidebar-session-metadata.ts",
@@ -375,13 +377,15 @@
     "app/changes/",
     "components/ChangesPane.tsx",
     "components/ChangesPane.test.mjs",
+    "components/ReviewDiff.tsx",
+    "components/ReviewDiff.test.mjs",
     "lib/git-review.ts",
     "lib/git-review.test.mjs",
     "lib/git-review-types.ts",
     "lib/git-review-display.ts",
     "lib/git-review-display.test.mjs",
-    "lib/review-syntax.ts",
-    "lib/review-syntax.test.mjs",
+    "lib/review-diff-renderer.ts",
+    "lib/review-diff-renderer.test.mjs",
     "lib/image-view-transform.ts",
     "lib/image-view-transform.test.mjs",
     "lib/file-name-display.ts",
@@ -504,6 +508,7 @@
     "2026-10-18 \u2014 ImagePreview adds source-keyed modal zoom/pan using the attributed MediaLightbox geometry adapter. At the 6fcd7d4 baseline it measures 249 total/226 structural and is explicitly accepted at medium risk. The modified TypeScript measurement is 2116 cosmetic/11713 structural lines. review-syntax, image-view-transform and cds-motion helpers remain fork-owned; unchanged 30/250 thresholds still require review for medium/high incoming overlaps.",
     "2026-10-18 \u2014 TabBar consumes AttachmentCard's filename stem/final-extension split and separate shrinking layout through file-name-display. Full labels, ARIA, paths and callbacks remain authoritative, with no fixed character truncation or terminal/artifact title changes. TabBar measures 172 total/124 structural at 6fcd7d4, remaining medium; measured modified TypeScript totals are 2117 cosmetic/11716 structural.",
     "2026-10-18 \u2014 ImagePreview portals its existing source-keyed native dialog to body to keep Markdown paragraphs valid. Shared drift is 250 total/227 structural, still medium, and measured modified TypeScript totals are 2117 cosmetic/11717 structural. Changes inline gutter rendering and its presentation-leaf regression remain fork-owned; revision side/text stay authoritative across split-to-inline selection. Risk thresholds remain 30/250.",
-    "2026-10-18 \u2014 New is a Next-integrated local home view that retains the chat/draft mount; project + keeps its new-session behavior. Project-root notifications use a stable ordered-path key to avoid render loops. The optional Pi catalogue fills the existing install form without auto-installing packages. Remeasured at 6fcd7d4: AppShell 2466 total/2061 structural, SessionSidebar 3240/2706 remain high; PluginsConfig 4/4 remains low. Modified TypeScript totals are 2117 cosmetic/11764 structural. Thresholds remain 30/250; fixed-grid ripple, revision-aware selection and extension contract checkers are fork-owned."
+    "2026-10-18 \u2014 New is a Next-integrated local home view that retains the chat/draft mount; project + keeps its new-session behavior. Project-root notifications use a stable ordered-path key to avoid render loops. The optional Pi catalogue fills the existing install form without auto-installing packages. Remeasured at 6fcd7d4: AppShell 2466 total/2061 structural, SessionSidebar 3240/2706 remain high; PluginsConfig 4/4 remains low. Modified TypeScript totals are 2117 cosmetic/11764 structural. Thresholds remain 30/250; fixed-grid ripple, revision-aware selection and extension contract checkers are fork-owned.",
+    "2026-10-18 — Changes adopts exact react-diff-view 3.3.3 through the fork-owned ReviewDiff consumer and review-diff-renderer parse/tokenize/markEdits adapter; git-review-display retains product selection and feedback policy. Remove deleted review-syntax paths and register the new renderer, tests and root third-party notices. At baseline 6fcd7d4, layout measures 28 total/25 structural and remains low; package.json has 69 nonblank changed lines, including npm notice inclusion, and now records 69 structural at medium rather than retaining its stale 13-line low entry. The already fork-owned prepare-desktop script copies the root notice into resources/server for all desktop platforms. Modified TypeScript totals are 2117 cosmetic/11765 structural. Preserve the 30/250 thresholds and reviewed medium/high overlaps. Runtime-library attribution and acceptance are separate from open-claude-ui adoption counts; targeted renderer and domain regressions pass, while full visual/native acceptance remains pending."
   ]
 }

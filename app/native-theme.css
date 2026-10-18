@@ -8971,37 +8971,13 @@ html.dark .changes-removed { color: #ff2c56; }
 .changes-state button, .changes-file-state button { padding: 4px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); cursor: pointer; }
 .changes-notice { margin: 6px 10px; padding: 8px; border-radius: 5px; background: var(--bg-hover); color: var(--text-muted); font-size: 12px; }
 .changes-diff { overflow-x: auto; }
-.changes-diff-table { border-collapse: collapse; border-spacing: 0; table-layout: fixed; width: 100%; min-width: 250px; font: 400 12px/20px var(--font-mono); color: var(--text); }
-.changes-number-col { width: 37px; }
-.changes-sign-col { width: 16px; }
-.changes-diff-table td, .changes-diff-table th { border: 0; padding: 0; vertical-align: top; }
-.changes-diff-table .changes-code { padding: 0 10px 0 2px; }
-.changes-diff-table code { display: block; min-height: 20px; font: inherit; white-space: pre; tab-size: 4; }
-.changes-diff.is-wrapped .changes-code code { white-space: pre-wrap; overflow-wrap: anywhere; }
-.changes-diff:not(.is-wrapped) .changes-diff-table { table-layout: auto; }
 .changes-gutter { width: 37px; user-select: none; }
 .changes-line-number { display: block; width: 100%; min-height: 20px; padding: 0 7px 0 2px; border: 0; border-radius: 0; background: transparent; color: var(--text-dim); font: inherit !important; font-variant-numeric: tabular-nums; text-align: right; cursor: pointer; }
 .changes-line-number:hover, .changes-line-number.is-selected { color: var(--text); background: var(--bg-selected); }
-.changes-sign { width: 16px; text-align: center; user-select: none; color: var(--text-dim); }
-.changes-code-row.is-added, .changes-code-row .is-added { background: var(--changes-add-bg); }
-.changes-code-row.is-removed, .changes-code-row .is-removed { background: var(--changes-remove-bg); }
-.changes-code-row.is-added .changes-sign { color: var(--success); }
-.changes-code-row.is-removed .changes-sign { color: var(--danger); }
-.changes-code-row.is-added > td:first-child { box-shadow: inset 3.2px 0 var(--changes-add-rail, var(--success)); }
-.changes-code-row.is-removed > td:first-child { box-shadow: inset 3.2px 0 var(--changes-remove-rail, var(--danger)); }
-.changes-code-row.is-selected .changes-code, .changes-code-row .changes-code.is-selected { outline: 1px solid var(--focus-ring, Highlight); outline-offset: -1px; }
-.changes-code-row mark { border-radius: 2px; background: transparent; color: inherit; }
-.changes-code-row.is-added mark, .changes-code-row .is-added mark { background: var(--changes-add-word); }
-.changes-code-row.is-removed mark, .changes-code-row .is-removed mark { background: var(--changes-remove-word); }
-.changes-code-row .is-empty { background: color-mix(in srgb, var(--text) 3%, transparent); }
-.changes-diff-table .changes-hunk td { height: 26px; padding: 4px 12px; color: var(--text-dim); font: 400 11px/20px var(--font-ui, system-ui); }
 .changes-context-button { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--text-dim); text-align: left; font: 400 11px/20px var(--font-ui, system-ui) !important; cursor: pointer; }
 .changes-context-button:not(:disabled):hover { color: var(--text); }
 .changes-context-button:disabled { cursor: default; }
 .changes-more-context { padding: 7px 12px 14px; }
-.changes-code-col { width: calc((100% - 74px) / 2); }
-.changes-split-table .changes-split-divider { border-left: 1px solid var(--border); }
-.changes-revision-heading th { padding: 4px 12px; font: 400 11px/20px var(--font-ui, system-ui); color: var(--text-dim); text-align: left; background: var(--bg-hover); }
 .changes-feedback { margin: 8px 12px 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: 400 12px/1.4 var(--font-ui, system-ui); }
 .changes-feedback-label { display: flex; gap: 8px; margin-bottom: 8px; color: var(--text-muted); }
 .changes-feedback-label span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); }
@@ -9050,8 +9026,7 @@ html.dark .changes-removed { color: #ff2c56; }
   .changes-comparison-button > span:nth-of-type(2) { flex-shrink: 2; }
   .changes-file-toggle { padding-inline: 8px; gap: 5px; }
   .changes-file-toggle .changes-file-directory { display: none; }
-  .changes-number-col, .changes-gutter { width: 29px; }
-  .changes-code-col { width: calc((100% - 58px) / 2); }
+  .changes-gutter { width: 29px; }
 }
 /* Native mobile pane controls get their own reachable row within this header. */
 .changes-header:has(.workspace-pane-mobile-controls) { flex-wrap: wrap; flex-basis: auto; min-height: 40px; }
@@ -9060,18 +9035,7 @@ html.dark .changes-removed { color: #ff2c56; }
 .changes-icon-button { flex-basis: 28.8px; width: 28.8px; height: 28.8px; }
 /* Same-text raw-pixel calibration: grow ink without changing the measured row pitch. */
 .changes-pane { font-size: 15.6px; line-height: 20.4px; }
-.changes-diff-table { font-size: 14px; line-height: 20.4px; }
-.changes-split-table .changes-number-col, .changes-split-table .changes-gutter { width: max(44px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
-.changes-split-table .changes-code-col { width: auto; }
-.changes-inline-table .changes-number-col, .changes-inline-table .changes-gutter { width: max(57.6px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
-html.dark .changes-inline-table .is-removed > .changes-gutter { background: #392221; }
-html.dark .changes-inline-table .is-added > .changes-gutter { background: #233221; }
-.changes-inline-table .is-removed .changes-line-number { color: var(--changes-remove-rail, var(--danger)); }
-.changes-inline-table .is-added .changes-line-number { color: var(--changes-add-rail, var(--success)); }
-.changes-diff-table code, .changes-line-number { min-height: 20.4px; }
-@container (max-width: 480px) {
-  .changes-inline-table .changes-number-col, .changes-inline-table .changes-gutter { width: max(44px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
-}
+.changes-line-number { min-height: 20.4px; }
 @media (hover: none) {
   .changes-tree-row, .changes-tree-folder, .changes-menu-item, .changes-finder-row { min-height: 36px; }
   .changes-line-number { min-height: 24px; }
@@ -9089,6 +9053,56 @@ html.dark .changes-inline-table .is-added > .changes-gutter { background: #23322
 .recommended-pi-extension-reason { color: var(--text-dim); }
 .recommended-pi-extension-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
 .recommended-pi-extension-actions > a { color: var(--accent); font-size: 12px; }
+
+/* Mature diff renderer: layout and edit marks come from react-diff-view. */
+.changes-library-diff {
+  --diff-background-color: transparent;
+  --diff-text-color: var(--text);
+  --diff-font-family: var(--font-mono);
+  --diff-gutter-insert-background-color: var(--changes-add-bg);
+  --diff-gutter-delete-background-color: var(--changes-remove-bg);
+  --diff-gutter-insert-text-color: var(--changes-add-rail, var(--success));
+  --diff-gutter-delete-text-color: var(--changes-remove-rail, var(--danger));
+  --diff-code-insert-background-color: var(--changes-add-bg);
+  --diff-code-delete-background-color: var(--changes-remove-bg);
+  --diff-code-insert-edit-background-color: var(--changes-add-word);
+  --diff-code-delete-edit-background-color: var(--changes-remove-word);
+  --diff-code-selected-background-color: var(--bg-selected);
+  --diff-gutter-selected-background-color: var(--bg-selected);
+  font: 400 14px/20.4px var(--font-mono);
+}
+.changes-library-table { min-width: 250px; font: inherit; }
+.changes-library-table .diff-line { font: inherit; line-height: 20.4px; }
+.changes-library-table .diff-gutter-col { width: max(44px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
+.changes-library-table .changes-gutter { width: auto; padding: 0; }
+.changes-library-table .changes-code { position: relative; padding: 0 10px 0 18px; white-space: pre; word-break: normal; overflow-wrap: normal; tab-size: 4; }
+.changes-library-diff.is-wrapped .changes-code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.changes-library-diff:not(.is-wrapped) .changes-library-table { table-layout: auto; }
+.changes-library-table.diff-unified col:first-child, .changes-library-table.diff-unified .diff-line > td:first-child { width: 0; min-width: 0; max-width: 0; padding: 0; border: 0; }
+.changes-library-table.diff-unified .diff-gutter-col:nth-child(2) { width: max(57.6px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
+.changes-library-table.diff-unified .diff-code-insert::before { content: "+"; }
+.changes-library-table.diff-unified .diff-code-delete::before { content: "−"; }
+.changes-library-table.diff-unified .diff-code-insert::before, .changes-library-table.diff-unified .diff-code-delete::before { position: absolute; left: 2px; color: var(--text-dim); user-select: none; }
+.changes-library-table .diff-gutter-insert .changes-line-number { color: var(--changes-add-rail, var(--success)); }
+.changes-library-table .diff-gutter-delete .changes-line-number { color: var(--changes-remove-rail, var(--danger)); }
+.changes-library-table.diff-unified .diff-gutter-insert { box-shadow: inset 3.2px 0 var(--changes-add-rail, var(--success)); }
+.changes-library-table.diff-unified .diff-gutter-delete { box-shadow: inset 3.2px 0 var(--changes-remove-rail, var(--danger)); }
+html.dark .changes-library-table.diff-unified .diff-gutter-insert { background: #233221; }
+html.dark .changes-library-table.diff-unified .diff-gutter-delete { background: #392221; }
+.changes-library-table .diff-code-edit { border-radius: 2px; }
+.changes-library-table .changes-empty-line { display: inline-block; height: 20.4px; width: 0; vertical-align: top; }
+.changes-library-table .diff-code-selected, .changes-library-table.diff-split .review-selected-old > td:nth-child(2), .changes-library-table.diff-split .review-selected-new > td:nth-child(4) { outline: 1px solid var(--focus-ring, Highlight); outline-offset: -1px; }
+.changes-library-table.diff-split .review-selected-old > td:nth-child(-n+2), .changes-library-table.diff-split .review-selected-new > td:nth-child(n+3) { background: var(--bg-selected); }
+.changes-library-table.diff-split .diff-line > td:nth-child(3) { border-left: 1px solid var(--border); }
+.changes-library-table .diff-gutter-omit::before { display: none; }
+.changes-library-table .changes-library-hunk td { height: 26px; padding: 4px 12px; color: var(--text-dim); font: 400 11px/20px var(--font-ui, system-ui); }
+.changes-library-revisions { display: flex; color: var(--text-dim); background: var(--bg-hover); font: 400 11px/20px var(--font-ui, system-ui); }
+.changes-library-revisions > span { flex: 1; padding: 4px 12px; }
+.changes-eof-note { padding: 4px 12px; color: var(--text-dim); font: 400 11px/20px var(--font-ui, system-ui); }
+.changes-library-diff .changes-feedback { font-family: var(--font-ui, system-ui); }
+@container (max-width: 480px) {
+  .changes-library-table.diff-unified .diff-gutter-col:nth-child(2) { width: max(44px, calc(var(--changes-line-digits, 3) * 1ch + 10px)); }
+}
 
 /* Review syntax: the installed Prism grammar produces text runs only. Dark YAML
    keys and scalar values follow the archived red/green source reference; light
@@ -9115,15 +9129,15 @@ html.dark .changes-pane {
   --review-syntax-operator: #c2a0e5;
   --review-syntax-punctuation: #c6b6d7;
 }
-.changes-code .changes-syntax-property { color: var(--review-syntax-property); }
-.changes-code .changes-syntax-string { color: var(--review-syntax-string); }
-.changes-code .changes-syntax-keyword { color: var(--review-syntax-keyword); }
-.changes-code .changes-syntax-function { color: var(--review-syntax-function); }
-.changes-code .changes-syntax-comment { color: var(--review-syntax-comment); }
-.changes-code .changes-syntax-number { color: var(--review-syntax-number); }
-.changes-code .changes-syntax-variable { color: var(--review-syntax-variable); }
-.changes-code .changes-syntax-operator { color: var(--review-syntax-operator); }
-.changes-code .changes-syntax-punctuation { color: var(--review-syntax-punctuation); }
+.changes-library-diff .token.key, .changes-library-diff .token.property, .changes-library-diff .token.atrule, .changes-library-diff .token.attr-name, .changes-library-diff .token.tag { color: var(--review-syntax-property); }
+.changes-library-diff .token.string, .changes-library-diff .token.scalar, .changes-library-diff .token.heredoc-string, .changes-library-diff .token.char, .changes-library-diff .token.attr-value { color: var(--review-syntax-string); }
+.changes-library-diff .token.keyword, .changes-library-diff .token.boolean, .changes-library-diff .token.null { color: var(--review-syntax-keyword); }
+.changes-library-diff .token.function, .changes-library-diff .token.function-name, .changes-library-diff .token.class-name, .changes-library-diff .token.builtin { color: var(--review-syntax-function); }
+.changes-library-diff .token.comment, .changes-library-diff .token.prolog { color: var(--review-syntax-comment); }
+.changes-library-diff .token.number, .changes-library-diff .token.constant { color: var(--review-syntax-number); }
+.changes-library-diff .token.variable, .changes-library-diff .token.environment { color: var(--review-syntax-variable); }
+.changes-library-diff .token.operator { color: var(--review-syntax-operator); }
+.changes-library-diff .token.punctuation { color: var(--review-syntax-punctuation); }
 
 /* Image viewer interactions. Uses the existing modal/close-button vocabulary;
    controls are local product affordances, not a claim of reference parity. */

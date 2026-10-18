@@ -70,6 +70,12 @@ Changes 已作为独立 pane 接入 [WorkspacePaneDock](../components/WorkspaceP
 
 同文原像素证明行距约 25.51px 已准，只将代码／pane 文字校准为 14／15.6 CSS px、固定 20.4px 行高；单号区约 71.99 原像素、table 至代码原点约 94.49，分别接近参考 72／94。参考 sidebar 扣除卡片外框后约 309 原像素，与当前 308.75 接近，未用加宽 sidebar 消除 standalone 的卡片缺失。外框、leading 78 省略入口、tree 结构与部分换行仍待校准；两组六项 before／after 叠图及墨迹数值见[复刻基准](pilaude-ui-parity.md)。
 
+## Changes 通用渲染迁移
+
+2026-10-18 按用户要求，当前 `ChangesPane → ReviewDiff → react-diff-view@3.3.3` 接管 parser、统一／并排表格、替换行配对、词差异及 token 树；本页前述手写表格／语法 mark 证据只属于历史实现。旧 Changes 通用引擎和 `review-syntax` 已删除，FileViewer 的上游 patch helper 保留。产品仍负责 Git comparison／revision、500 行连续选区、精确 source snippet 与反馈草稿／ACK。每 hunk 重基着色，不跨缺失源码传播语法状态；当前 token 预算为 2000 个 change、128000 字符、单行 4096，超预算精确纯文本，空行 sentinel 防库回退插空格。
+
+`diff-library/run-1792338085844/` 八组实际检查通过两种布局／主题、原文、词差异开关、选区、IME／Escape、反馈通道、长行号、连续替换配对和单侧 context 选中；反馈接收端是显式同源 ACK fixture，未发送模型。实际 YAML workspace 的真实控件匹配宽度与原像素双图层另有 `changes-reference/library-yaml-workspace-1792338305434/`；功能与几何残差详见[复刻基准](pilaude-ui-parity.md)。Windows 原生窗口／DPI／IME 和完整视觉一致性仍待验，成熟库接入不新增 open-claude-ui 来源采用数。
+
 ## 共享终端事件流与既有验证限制
 
 初版独立终端 SSE 在 Files watcher、会话与调度事件流并存时达到 HTTP/1 每 origin 连接上限，第二终端的 resize 请求在原有 15 秒时限内无法抵达服务端。该失败保留在本机 workspace-panes 证据中，不能以单终端通过代替完整多标签验收；现已改为每个窗口一条终端事件流，按标签 ID 分发并维护各自输出游标；隐藏标签继续持有服务端订阅与 PTY lease。初始化重放分段、保留 UTF-16 游标和完整代理对，慢读者队列有界，退出/缺失单标签不关闭其他终端。13 项 client/stream/真实 manager lease 测试通过。最终实际双标签目标检查通过：首/次标签 PID 分别 44952/19536，第二标签 input POST 明确进入其自己的 ID、返回 200，共享 SSE 与 DOM/辅助树均收到第二标签 marker，切回首标签 PID 不变。完整 terminal 脚本已通过首终端、会话切换、刷新同 PID、离线恢复、创建请求不增加、输出不重复与尺寸；其第二标签等待仍曾失败，后续重启/延迟创建/移动场景未全部执行，完整脚本不标为通过。单独多 pane 脚本另遇 Next 开发编译 Manifest file is empty 的 500，失败原始证据保留。

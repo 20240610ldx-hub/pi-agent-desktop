@@ -14,12 +14,14 @@
 
 截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；7 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，`ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样，以及 `AttachmentCard` 的文件名前缀／最后扩展名分离与分段收缩布局。新增 consumer 与单测已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 25 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
 
+`react-diff-view@3.3.3` 是另行记录的 npm 运行时库，不属于上面的 open-claude-ui 33 个模块。它在本轮接入 Changes 的通用 diff 呈现；上面的 1 项直接采用／7 项局部适配／25 项未确认采用计数不变。既有 `StreamingDiffViewer` 记录只保留 table／gutter 的局部呈现借鉴，不能把新库的 parser、split 配对、tokenize 或词差异能力归入该来源。新渲染路径的最终功能／视觉验收仍待完成，见下方独立记录。
+
 目前的直接消费链：
 
 1. [PilaudeDataSection.tsx](../components/PilaudeDataSection.tsx) 导入 `CdsButton`，用于 `pilaude.data.preview` 和 `pilaude.data.import` 两个动作；[SettingsPanel.tsx](../components/SettingsPanel.tsx) 挂载该区域。
 2. [lib/cds-scroll.ts](../lib/cds-scroll.ts) 明确署名适配 `useClaudeScrollPinning`，导出 `canFollowStream(lastUserInputAt, now)`；[useAgentSession.ts](../hooks/useAgentSession.ts) 的流式滚动跟随和重新贴底路径调用它。
 3. [native-theme.css](../app/native-theme.css) 的图片样式明确署名 `MediaLightboxViewer` 自然尺寸／contain 几何，经 `.composer-attachment-image` 与 `.message-user-image` 消费到 [ChatInput.tsx](../components/ChatInput.tsx) 和 [MessageView.tsx](../components/MessageView.tsx)。新增 [image-view-transform.ts](../lib/image-view-transform.ts) 适配光标锚定 zoom、近 fit 平移约束与 wheel 指数缩放，由 [ImagePreview.tsx](../components/ImagePreview.tsx) 的真实灯箱消费；共享元素 inset／圆角追溯和 ViewTransition 仍未采用。
-4. [ChangesPane.tsx](../components/ChangesPane.tsx) 的 `rove` 与 `FadedScroll` 分别适配 roving 索引／Home/End／单 tabstop 和 2px 边缘判定；`ReviewDiff` 的 HTML table／tabular-nums gutter 与增删背景借鉴 `StreamingDiffViewer`。既有 [patch.ts](../lib/patch.ts) 的解析／配对继续复用，不能算成该源 parser 的采用。
+4. [ChangesPane.tsx](../components/ChangesPane.tsx) 的 `rove` 与 `FadedScroll` 分别适配 roving 索引／Home/End／单 tabstop 和 2px 边缘判定；[ReviewDiff.tsx](../components/ReviewDiff.tsx) 与 [native-theme.css](../app/native-theme.css) 保留 `StreamingDiffViewer` 的 table／tabular-nums gutter 与语义增删背景借鉴。通用表格、unified／split、解析／配对与 token／词差异已由独立的 `react-diff-view` 消费链负责，不计为该源算法采用。既有 [patch.ts](../lib/patch.ts) 仍供 FileViewer／MessageView 的其他路径使用；Changes 不再消费它。
 5. [file-name-display.ts](../lib/file-name-display.ts) 与 [TabBar.tsx](../components/TabBar.tsx) 分别消费 `AttachmentCard` 最后扩展名分离与 prefix／extension 双 span 布局，CSS 按宽度省略，无字符硬切；普通文件标签路径／ARIA／开关动作不改。
 6. [cds-motion.ts](../lib/cds-motion.ts) 导入 [vendored ClaudeMotionPresets.ts](../vendor/open-claude-ui/ClaudeMotionPresets.ts) 的求解器和实际 `SPRING_SNAPPY`（320／28／1），补参数域、近临界与重阻尼数值边界，以 120Hz 生成 CSS `linear()` 采样；[DomContextMenuHost.tsx](../components/DomContextMenuHost.tsx) 的 `MenuPanel` 放置后实际消费曲线作 opacity 进入。没有搬 scale／y、退出延迟或其他 variants；opacity 会钳制物理超调，不能称为可见回弹。quiet [PilaudeWelcome.tsx](../components/PilaudeWelcome.tsx) 仍不消费这些 presets。
 
@@ -55,7 +57,7 @@
 | 24 | `ScrollFadeContainer.tsx` | 2px 触边阈值、0/28px 羽化、非线性 alpha stops、双轴边缘传感 | **局部适配**。[ChangesPane.tsx](../components/ChangesPane.tsx) 的 `FadedScroll` 使用 2px 上／下边缘判定，消费于文件树、提交和 finder 列表；使用 ResizeObserver 观察容器及首个内容子元素，并随 children 改变重算。树与提交列表已随核心实际页面验证，精确动态边界／RTL 仍待专项。 | 产品采用 16px 羽化，未搬源非线性 alpha stops 或双轴 `both`；未使用 MutationObserver。源 `both` 返回空 mask 的缺口不能写成产品已采用的能力；RTL／实物仍待检验。 |
 | 25 | `SegmentedControl.tsx` | 等分指示器公式、controlled/uncontrolled、CSS／layoutId 双模式 | **未采用**，无该组件 consumer；现设置／工具菜单各自实现。 | 可统一受控原子；固定 layoutId 多实例会串，缺 roving 键盘与空 tabs／无匹配值防御。依赖 CDS theme／Framer Motion，CSS 模式可单独采用。 |
 | 26 | `StatusIndicators.tsx` | status dot、三点 phase、105° skeleton、数据到样式映射 | **未采用模块**。[SessionSidebar.tsx](../components/SessionSidebar.tsx) 的 needs-input/running/unread/idle 由真实状态驱动，不是该组件导入。 | 借 loading／skeleton，不覆盖用户明确的黄／蓝／hollow 状态。动画需 reduce-motion 和实际状态生命周期；不能把主题 keyframes 可用视为 status component 已采用。 |
-| 27 | `StreamingDiffViewer.tsx` | `parseGitDiff`、行号对齐、unified/split、流式滚动／复制衰减 | **局部适配**。[ChangesPane.tsx](../components/ChangesPane.tsx) 的 `ReviewDiff` 与 [native-theme.css](../app/native-theme.css) 消费 HTML table 的共享行高、tabular-nums gutter 与语义增删背景；UI helper／toolbar 23 项通过；核心实际页面已检查 inline／split、context、word mark，见下方分轮证据。 | 既有 `parseUnifiedPatch`／split 替换配对继续来自产品 `patch.ts`，不是源 parser／占位 split 算法的采用。无 streaming／worker／增量引擎采用证据。新增语法色使用产品既有 Prism 注册表，由 review-syntax adapter 分 hunk／revision 产出无损 React 文本，与词差异 mark 相交；这不是源 StreamingDiffViewer 的 lexer 采用。 |
+| 27 | `StreamingDiffViewer.tsx` | `parseGitDiff`、行号对齐、unified/split、流式滚动／复制衰减 | **局部适配，仅呈现借鉴**。[ReviewDiff.tsx](../components/ReviewDiff.tsx) 与 [native-theme.css](../app/native-theme.css) 保留 HTML table 的共享行高、tabular-nums gutter 与语义增删背景；ChangesPane 挂载该 renderer。下方早期 inline／split、context、word mark 证据对应迁移前实现；新运行路径单独记录，最终验收待补。 | 通用 renderer、parser、split 配对、tokenize 和 markEdits 来自另行采用的 `react-diff-view@3.3.3`；语法仍用产品既有 Prism／refractor 注册表，由 `review-diff-renderer` 薄适配分 hunk／revision 调用库接口。旧 `review-syntax` 已删除，`patch.ts` 仅留在其他 consumer；以上均不是该源 parser／占位 split／lexer 的采用。无 streaming／worker／增量引擎采用证据，不增加本来源计数。 |
 | 28 | `ThinkingAccordion.tsx` | live-or-user-open 互斥、Grid 0fr↔1fr、引用复制、计时 | **未采用／独立实现**。[MessageView.tsx](../components/MessageView.tsx) 的 `ThinkingBlock` 有自身偏好与延迟加载。 | 借稳定高度展开，保留 deferred fetch／用户偏好／真实 streaming；无 Framer 依赖的 Grid 部分可单独采用，补键盘与 clipboard 错误。 |
 | 29 | `createClaudeMainWindow.ts` | Electron host/view 分层、主题底色、状态圆角、traffic-light zoom 补偿 | **未采用**。产品 host 为 [src-tauri](../src-tauri)，无 Electron factory consumer。 | 仅作为 native 几何／白闪控制参考；依赖 Electron、preload 和 `__dirname`，不能从 renderer 总入口导入。Windows 窗口状态以 Tauri 与实物为准。 |
 | 30 | `useClaudeRovingFocus.ts` | 方向／RTL／Home/End、循环索引、单 tabindex、preventScroll | **局部适配**。[ChangesPane.tsx](../components/ChangesPane.tsx) 的 `rove` 明确署名，菜单／文件树／提交列表消费索引移动、Home/End、单 tabstop 与 preventScroll；过滤 disabled、空列表、非当前子项及 IME／229；核心菜单与文件查找已有实际证据，新增键盘意图函数明确区分 pane chrome、编辑器、修饰键和 IME；实际焦点专项及其修复状态见后续记录。其他菜单／目录仍为独立实现。 | 产品采用边界 clamp，未搬源循环／RTL／水平模式；避开源 `-1` 哨兵导致首项 Up/Left 不回绕的缺口。无需声称采用二维 grid；动态焦点、窄窗仍应实际验证。 |
@@ -121,9 +123,25 @@ YAML plain scalar 的真实 AST 是根文本，adapter 现只对 yaml／yml 根�
 
 2026-10-18 用户补充 Changes 展开态，并明确要求前端 diff／彩色代码块优先使用成熟开源渲染库，后续不重复造轮子。新原图已按原字节归档到工作区私有 `references/changes-expanded-dark/2026-10-18/`（2288×1535）；画面中的 Pilaude 源码不证明宿主应用身份，也不证明使用了哪个库。
 
-当前语法着色复用已安装的 Prism／refractor，`ReviewDiff` 表格和 `reviewWordParts` 仍为产品自写路径；不能将它们写成成熟 diff 库的 consumer。后续先核对现有依赖和成熟库的 unified／split、换行、语法／词差异、主题、可访问行号及选区扩展点，再通过薄适配替换通用渲染。Git 只读查询、comparison／revision 身份、源文本选区和反馈草稿保留产品领域边界；迁移必须验证空白／Unicode／CRLF、跨 hunk 与旧新侧，避免引入第二套并存的通用引擎。选库评估与接入成功分开记账，未迁移前保持现状记录，不增加来源采用计数。
+迁移前语法着色复用已安装的 Prism／refractor，`ReviewDiff` 表格和 `reviewWordParts` 为产品自写路径；此前的检查只证明这一路径，不能回填为成熟 diff 库的消费证据。本轮已将 Changes 的通用呈现接入 `react-diff-view`，实际调用及待验范围见下方；Git 只读查询、comparison／revision 身份、源文本选区和反馈草稿继续保留产品领域边界。空白／Unicode／CRLF、跨 hunk、旧新侧及选区扩展仍是迁移验收要求，选库、源码接入、定向测试、实际页面和完整功能／视觉通过须分别记账。
 
 迁移前真实 workspace 卡片宽度基线保存在 `changes-reference/yaml-workspace-1792323892533/`：真实主顶栏／外侧拖动把 inner pane 调到 790 CSS px（目标 +0.4），保留真实 1px border／10px radius 卡片；1880×816 device 截图、990×816 整数裁剪均未缩放。真实 cwd 先由未拦截 Git API 预检，再仅替换 review GET 展示夹具；console error／warn、pageErrors、blockedWrites 为空，两个只读 cwd validate POST 明确记录。画布外 inset、leading context、tree compaction 和未见提交内容仍为残差，此记录不表示新的完整视觉通过。
+
+## react-diff-view 运行时库接入（独立记账）
+
+2026-10-18 接入 [otakustay/react-diff-view](https://github.com/otakustay/react-diff-view) 的 npm `3.3.3` 精确版本，`package.json` 与 lockfile 均记录该版本。installed `LICENSE` 为 MIT，原文版权是 `Copyright (c) 2017 Gray Zhang`；作者字段不替代许可中的版权声明。主库及其依赖的实际安装版本、来源、许可和完整原文见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)，其中 `diff-match-patch@1.0.5` 为 Apache-2.0，不能一概写为 MIT。notice 已加入 npm `files` 清单，desktop preparation 明确复制到各平台已有的 `resources/server` 打包目录；这是打包配置证据，尚未声称实际发行产物已验。它不属于 Caho1/open-claude-ui，不增加其 33 模块的采用计数。
+
+实际消费链为 [ChangesPane.tsx](../components/ChangesPane.tsx) → [ReviewDiff.tsx](../components/ReviewDiff.tsx) → 库 `Diff`／`Hunk`／`Decoration`，负责 unified／split 表格和 widget 挂载；[review-diff-renderer.ts](../lib/review-diff-renderer.ts) 调用库 `parseDiff`、行号计算、`tokenize` 与 `markEdits`，split 使用库的 `nearbySequences: "zip"` 配对。产品没有保留并行的 Changes 通用表格／`reviewWordParts` 引擎；旧 `lib/review-syntax.ts` 及其测试已删除。已有 `patch.ts` 的 FileViewer／MessageView 消费不在本次迁移范围内。
+
+薄适配只补 Git 裸头的中性 envelope、旧／新文件路径到既有 Prism／refractor 语法的映射、YAML plain scalar tone、逐 hunk／revision 重基 tokenization、预算回退与空行呈现。库 block 编辑发现会丢前导空行，现只为其编辑发现省略该侧前导空 change，原始 tokenization／坐标／反馈不变；已覆盖两侧空行数不同、内部空行、Tab／尾空格和原 hunk 不变。它保持 Git 返回的文本和 revision／line 坐标；source snippet 从库 change 数据按真实侧取出，缺行或超出范围拒绝生成。`git-review-display.ts` 继续负责产品选区转换、键盘意图、文件分组与反馈格式，`ChangesPane` 保留 comparison／revision 身份、选择和反馈草稿／目标交接。库不拥有这些领域状态，也不因此获得写入仓库或发送模型的行为。
+
+库基础 CSS 由 `app/layout.tsx` 在 `native-theme.css` 前导入，产品颜色、单号 gutter、换行和选择样式在 fork theme 中覆盖。`diff-library/run-1792338085844/` 八组实际检查通过精确原文／空行、词差异开关、跨侧选区与旧 context 语法、IME／Escape、连续替换行配对、只高亮所选侧且一个编辑器、桌面／390px 长行号和浅色轨道。反馈经现有 storage 通道并由同源合成 ACK 页确认，不当作真实 ChatWindow／模型发送；errors／console／writes 为空。最初 raw HTML 整句断言因高亮 span 拆分而失败，后改逐 code cell 原文精确比较，不放宽结果。最终一次受影响组合 171 项通过，包含源文本、渲染／EOF／空行／预算、真实 Git／API、选区、水纹、上游边界和许可／分发契约；项目类型及完整 lint 通过，保留既有 TerminalPanel aria 警告，不冒称完整 npm／terminal E2E 或原生验收通过。
+
+独立复查的四项边界已 RED→GREEN：EOF 提示标明受影响侧，完整增删文件标题对应库实际单侧布局，rename 分别使用旧／新语法，前导空行后词差异保留真实坐标。最终 `diff-library/run-1792339340071/` 九组实际检查通过，errors／console／writes 为空；此前扩展 checker 没有展开第九／第十文件的 failed 报告保留，最终经产品 toggle 展开。
+
+真实 Git 工作区 `changes-reference/syntax-keyboard-1792338708381/` 五组通过 API→两种布局原文、语法／词差异、finder／菜单／编辑器键盘及 390px 加载／焦点，errors／console error／warn／blockedWrites 为空；首轮 per-file 5 秒测试等待失败保留，补网络证据和 30 秒测试等待后通过，未改产品超时。`changes-focus-1792338623869.json` 另通过三组真实菜单焦点检查。
+
+同文参考 `changes-reference/library-yaml-visual-1792337932938/` 与新 comparison 以参考 100% 底层／actual 50% 上层、原像素整数裁剪和平移核对：行距 25.5078 对 25.5、号栏 71.9922 对 72、table 到文本原点 94.4922 对 94。standalone 的可用代码宽多 36.2578 原像素、leading context 和外卡状态仍不同；当前记录只证明该状态。实际 workspace `library-yaml-workspace-1792338305434/` 经真实控件匹配 pane 宽度后，代码内容宽差降为 +3.7578 原像素，多数长行断点吻合，仍有 echo 换行、外层 canvas 和标点差异。运行时允许既有本地字体 CSS，不是公开默认字体或 Windows 原生验收；完整视觉一致性尚未通过，实际 workspace 匹配条件另在[复刻基准](pilaude-ui-parity.md)记录。
 
 ## Pi 扩展补充范围
 
@@ -135,7 +153,7 @@ YAML plain scalar 的真实 AST 是根文本，adapter 现只对 yaml／yml 根�
 
 ## New 首页导航补验
 
-New 改为现有首页入口，项目旁的 + 保持新建会话。首页通过 Next 集成的 History API 更新本地视图，保留后台 ChatWindow 挂载、会话／空会话 draft 身份，隐藏 Context 和会话操作；project roots 通知用稳定有序路径 key 避免 render loop。`new-welcome/run-1792330694586/` 七组真实页面检查通过 New、返回／刷新草稿、项目／模型入口、reduced-motion 和 390px 无横溢出。所有 API 为显式内存夹具，pageErrors、DOM 嵌套／深度警告和 blockedWrites 为空；console 有检查器 canvas readback 性能提示，不称 console 全空。早前冷加载／导航失败保留，不据此宣称所有开发服务问题已根治。首页流光是产品独立实现，不增加 open-claude-ui 模块采用数；后续重做的水纹以固定暗字／不规则多道亮纹传播为准，最新 `ripple-motion/run-1792334850698/` 五组实际检查及 `presentation-1792334257081/` 连续帧已有证据；控件及 SVG 后代不触发，亮处换字、reduced-motion 与浅色派生通过，pageErrors／console／blockedWrites 为空。145 项受影响回归、类型和 lint 通过；原像素构图、亮度和完整动态参考仍待校准，见[复刻基准](pilaude-ui-parity.md)。
+New 改为现有首页入口，项目旁的 + 保持新建会话。首页通过 Next 集成的 History API 更新本地视图，保留后台 ChatWindow 挂载、会话／空会话 draft 身份，隐藏 Context 和会话操作；project roots 通知用稳定有序路径 key 避免 render loop。`new-welcome/run-1792330694586/` 七组真实页面检查通过 New、返回／刷新草稿、项目／模型入口、reduced-motion 和 390px 无横溢出。所有 API 为显式内存夹具，pageErrors、DOM 嵌套／深度警告和 blockedWrites 为空；console 有检查器 canvas readback 性能提示，不称 console 全空。早前冷加载／导航失败保留，不据此宣称所有开发服务问题已根治。首页流光是产品独立实现，不增加 open-claude-ui 模块采用数；最新按用户要求，单次点击只推进一道完整不规则亮纹，多次点击才产生独立起点／寿命／随机种子的波纹。最终 helper 7 项通过；`ripple-motion/single-double-1792336146500/single.gif` 的单次分组通过，整 run 后续 observer 阈值失败仍保留；独立 `single-double-1792336369255/double.gif` 及报告通过双次点击、控件／SVG 排除与 reduced-motion，两组格点位移均为 0、绘制约 30Hz。旧 `run-1792334850698` 和 `presentation-1792334257081` 只证明前轮版本，不当最新单波视觉证据；原像素构图、亮度和完整动态参考仍待校准，见[复刻基准](pilaude-ui-parity.md)。
 
 ## 更新条件
 

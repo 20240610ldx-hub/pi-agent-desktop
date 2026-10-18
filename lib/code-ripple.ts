@@ -44,7 +44,7 @@ export function codeLightInk(cell: CodeLightCell, seconds: number, phase = 0): n
   return Math.min(1, (folds + shoulder) * (0.5 + cell.cloud * 0.5));
 }
 
-/** Several thin, uneven light fronts travel outwards over the stationary texture. */
+/** One click carries one uneven light front; independent clicks compose in the renderer. */
 export function rippleLightEnergy(cell: CodeLightCell, originField: number, dx: number, dy: number, radius: number, strength: number, seed: number): number {
   const angle = seed * Math.PI * 2;
   const nx = dx * Math.cos(angle) + dy * Math.sin(angle);
@@ -55,15 +55,11 @@ export function rippleLightEnergy(cell: CodeLightCell, originField: number, dx: 
     + spread * ((cell.field - originField) * 92
       + radius * (0.08 * Math.sin(direction * 3 + angle) + 0.035 * Math.sin(direction * 5 - angle)));
   const arcs = 0.22 + 0.78 * smooth((Math.sin(direction * 2 + angle) + cell.cloud * 0.7 + 0.7) / 2);
-  let light = 0;
-  for (let front = 0; front < 3; front++) {
-    const frontRadius = radius - front * 38;
-    if (frontRadius <= 0) continue;
-    const delta = distance - frontRadius;
-    const core = Math.exp(-(delta * delta) / (2 * 7.5 ** 2));
-    const tail = Math.exp(-((delta + 12) ** 2) / (2 * 15 ** 2)) * 0.14;
-    light += (core + tail) * (front === 0 ? 0.9 : front === 1 ? 0.48 : 0.22) * smooth(frontRadius / 22);
-  }
+  if (radius <= 0) return 0;
+  const delta = distance - radius;
+  const core = Math.exp(-(delta * delta) / (2 * 7.5 ** 2));
+  const tail = Math.exp(-((delta + 12) ** 2) / (2 * 15 ** 2)) * 0.14;
+  const light = (core + tail) * 0.9 * smooth(radius / 22);
   return Math.min(1, light * strength * arcs);
 }
 

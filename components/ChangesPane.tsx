@@ -4,11 +4,10 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { createPortal } from "react-dom";
 import { WorkspaceControlButton } from "./WorkspacePaneControls";
 import { useI18n } from "@/hooks/useI18n";
-import { parseUnifiedPatch, type SplitDiffCell, type SplitDiffRow } from "@/lib/patch";
+import { ReviewDiff } from "./ReviewDiff";
 import { filterFileEntries } from "@/lib/file-fuzzy";
 import { buildSearchTree, type SearchTreeNode } from "@/lib/search-tree";
-import { formatReviewFeedback, inlineReviewLine, inlineReviewRows, reviewFileGroup, reviewNavigationIndex, reviewPaneShortcut, reviewSelection, reviewWordParts, shortReviewRef, type ReviewKey, type ReviewSide } from "@/lib/git-review-display";
-import { markReviewSyntax, renderReviewSyntax, tokenizeReviewCells } from "@/lib/review-syntax";
+import { formatReviewFeedback, nextReviewSelection, reviewFileGroup, reviewNavigationIndex, reviewPaneShortcut, shortReviewRef, type ReviewKey, type ReviewSelectionState, type ReviewSide } from "@/lib/git-review-display";
 import type { GitReviewContext, GitReviewFile, GitReviewOptions, GitReviewPatch, GitReviewScope, GitReviewSnapshot } from "@/lib/git-review-types";
 
 export interface ChangesPaneProps {
@@ -25,19 +24,18 @@ export interface ChangesPaneProps {
 
 const copy = {
   en: {
-    changes: "Changes", showFiles: "Show files", find: "Go to file", settings: "Changes settings", openWindow: "Open in new window", expand: "Expand", restore: "Restore", close: "Close", all: "All changes", uncommitted: "Uncommitted changes", compare: "Compare against", commits: "Commits", branches: "Search branches", default: "default", group: "Group files by folder", separate: "Separate test, build, and generated files", collapseAll: "Collapse all files", expandAll: "Expand all files", split: "Side by side", wrap: "Word wrap", words: "Highlight changed words", whitespace: "Hide whitespace changes", refresh: "Refresh", large: "Files are collapsed for large diffs. Select a file to expand it.", largeExpand: "Expand all is unavailable for large diffs. Expand individual files to keep the review responsive.", finder: "Search changed files", more: "more files. Keep typing to narrow.", emptySearch: "No matching files", noBranches: "No matching branches", noCommits: "No commits in this comparison", loading: "Loading changes…", loadingPatch: "Loading diff…", empty: "No changes in this comparison", retry: "Try again", stale: "The repository changed. Refresh to review the current comparison.", binary: "Binary file. A text diff is unavailable.", tooLarge: "This file is too large to display.", metadata: "Only file metadata changed; there is no text diff.", noPatch: "No text changes to display.", truncated: "Some results were omitted because this comparison reached the review limit.", patchTruncated: "This diff is incomplete. Only the available lines are shown.", context: "Show more lines", fullContext: "Show all unchanged lines", unchanged: "unchanged lines", feedback: "Add feedback", feedbackHint: "Describe the change you want on these lines…", addDraft: "Add to draft", cancel: "Cancel", selectedLines: "Selected lines", old: "Old", new: "New", source: "Source files", tests: "Test files", generated: "Build and generated files", back: "Back", files: "files", statusAdded: "Added", statusModified: "Modified", statusDeleted: "Deleted", statusRenamed: "Renamed", statusCopied: "Copied", statusUntracked: "Untracked", statusConflict: "Conflict", statusTypechange: "File type changed", selectionGap: "Select up to 500 consecutive displayed lines on one side.", feedbackAdded: "Feedback added to draft", feedbackFailed: "Feedback could not be added. Your text is kept here so you can try again.", sendingFeedback: "Adding to draft…", workingTree: "Working tree", expandFile: "Expand file", collapseFile: "Collapse file",
+    changes: "Changes", showFiles: "Show files", find: "Go to file", settings: "Changes settings", openWindow: "Open in new window", expand: "Expand", restore: "Restore", close: "Close", all: "All changes", uncommitted: "Uncommitted changes", compare: "Compare against", commits: "Commits", branches: "Search branches", default: "default", group: "Group files by folder", separate: "Separate test, build, and generated files", collapseAll: "Collapse all files", expandAll: "Expand all files", split: "Side by side", wrap: "Word wrap", words: "Highlight changed words", whitespace: "Hide whitespace changes", refresh: "Refresh", large: "Files are collapsed for large diffs. Select a file to expand it.", largeExpand: "Expand all is unavailable for large diffs. Expand individual files to keep the review responsive.", finder: "Search changed files", more: "more files. Keep typing to narrow.", emptySearch: "No matching files", noBranches: "No matching branches", noCommits: "No commits in this comparison", loading: "Loading changes…", loadingPatch: "Loading diff…", empty: "No changes in this comparison", retry: "Try again", stale: "The repository changed. Refresh to review the current comparison.", binary: "Binary file. A text diff is unavailable.", tooLarge: "This file is too large to display.", metadata: "Only file metadata changed; there is no text diff.", noPatch: "No text changes to display.", truncated: "Some results were omitted because this comparison reached the review limit.", patchTruncated: "This diff is incomplete. Only the available lines are shown.", context: "Show more lines", fullContext: "Show all unchanged lines", unchanged: "unchanged lines", noFinalNewline: "No newline at end of file", feedback: "Add feedback", feedbackHint: "Describe the change you want on these lines…", addDraft: "Add to draft", cancel: "Cancel", selectedLines: "Selected lines", old: "Old", new: "New", source: "Source files", tests: "Test files", generated: "Build and generated files", back: "Back", files: "files", statusAdded: "Added", statusModified: "Modified", statusDeleted: "Deleted", statusRenamed: "Renamed", statusCopied: "Copied", statusUntracked: "Untracked", statusConflict: "Conflict", statusTypechange: "File type changed", selectionGap: "Select up to 500 consecutive displayed lines on one side.", feedbackAdded: "Feedback added to draft", feedbackFailed: "Feedback could not be added. Your text is kept here so you can try again.", sendingFeedback: "Adding to draft…", workingTree: "Working tree", expandFile: "Expand file", collapseFile: "Collapse file",
   },
   "zh-CN": {
-    changes: "更改", showFiles: "显示文件", find: "转到文件", settings: "更改设置", openWindow: "在新窗口中打开", expand: "展开", restore: "还原", close: "关闭", all: "所有更改", uncommitted: "未提交的更改", compare: "比较分支", commits: "提交", branches: "搜索分支", default: "默认", group: "按文件夹分组", separate: "分开显示测试、构建和生成的文件", collapseAll: "折叠所有文件", expandAll: "展开所有文件", split: "并排显示", wrap: "自动换行", words: "突出显示更改的单词", whitespace: "隐藏空白更改", refresh: "刷新", large: "大型差异的文件已折叠。选择文件以展开。", largeExpand: "大型差异无法一次展开所有文件。请逐个展开文件以保持流畅。", finder: "搜索更改的文件", more: "个其他文件。继续输入以缩小范围。", emptySearch: "没有匹配的文件", noBranches: "没有匹配的分支", noCommits: "此比较中没有提交", loading: "正在加载更改…", loadingPatch: "正在加载差异…", empty: "此比较中没有更改", retry: "重试", stale: "仓库已更改。请刷新以查看当前比较。", binary: "二进制文件，无法显示文本差异。", tooLarge: "此文件过大，无法显示。", metadata: "仅文件元数据发生更改，没有文本差异。", noPatch: "没有可显示的文本更改。", truncated: "此比较已达到查看上限，部分结果已省略。", patchTruncated: "此差异不完整，仅显示可用行。", context: "显示更多行", fullContext: "显示所有未更改的行", unchanged: "行未更改", feedback: "添加反馈", feedbackHint: "描述你希望对这些行进行的更改…", addDraft: "添加到草稿", cancel: "取消", selectedLines: "所选行", old: "旧版本", new: "新版本", source: "源文件", tests: "测试文件", generated: "构建和生成的文件", back: "返回", files: "个文件", statusAdded: "已添加", statusModified: "已修改", statusDeleted: "已删除", statusRenamed: "已重命名", statusCopied: "已复制", statusUntracked: "未跟踪", statusConflict: "冲突", statusTypechange: "文件类型已更改", selectionGap: "请选择同一侧已显示的连续行，最多 500 行。", feedbackAdded: "反馈已添加到草稿", feedbackFailed: "无法添加反馈。文本已保留，你可以重试。", sendingFeedback: "正在添加到草稿…", workingTree: "工作区", expandFile: "展开文件", collapseFile: "折叠文件",
+    changes: "更改", showFiles: "显示文件", find: "转到文件", settings: "更改设置", openWindow: "在新窗口中打开", expand: "展开", restore: "还原", close: "关闭", all: "所有更改", uncommitted: "未提交的更改", compare: "比较分支", commits: "提交", branches: "搜索分支", default: "默认", group: "按文件夹分组", separate: "分开显示测试、构建和生成的文件", collapseAll: "折叠所有文件", expandAll: "展开所有文件", split: "并排显示", wrap: "自动换行", words: "突出显示更改的单词", whitespace: "隐藏空白更改", refresh: "刷新", large: "大型差异的文件已折叠。选择文件以展开。", largeExpand: "大型差异无法一次展开所有文件。请逐个展开文件以保持流畅。", finder: "搜索更改的文件", more: "个其他文件。继续输入以缩小范围。", emptySearch: "没有匹配的文件", noBranches: "没有匹配的分支", noCommits: "此比较中没有提交", loading: "正在加载更改…", loadingPatch: "正在加载差异…", empty: "此比较中没有更改", retry: "重试", stale: "仓库已更改。请刷新以查看当前比较。", binary: "二进制文件，无法显示文本差异。", tooLarge: "此文件过大，无法显示。", metadata: "仅文件元数据发生更改，没有文本差异。", noPatch: "没有可显示的文本更改。", truncated: "此比较已达到查看上限，部分结果已省略。", patchTruncated: "此差异不完整，仅显示可用行。", context: "显示更多行", fullContext: "显示所有未更改的行", unchanged: "行未更改", noFinalNewline: "文件末尾没有换行符", feedback: "添加反馈", feedbackHint: "描述你希望对这些行进行的更改…", addDraft: "添加到草稿", cancel: "取消", selectedLines: "所选行", old: "旧版本", new: "新版本", source: "源文件", tests: "测试文件", generated: "构建和生成的文件", back: "返回", files: "个文件", statusAdded: "已添加", statusModified: "已修改", statusDeleted: "已删除", statusRenamed: "已重命名", statusCopied: "已复制", statusUntracked: "未跟踪", statusConflict: "冲突", statusTypechange: "文件类型已更改", selectionGap: "请选择同一侧已显示的连续行，最多 500 行。", feedbackAdded: "反馈已添加到草稿", feedbackFailed: "无法添加反馈。文本已保留，你可以重试。", sendingFeedback: "正在添加到草稿…", workingTree: "工作区", expandFile: "展开文件", collapseFile: "折叠文件",
   },
   "zh-TW": {
-    changes: "變更", showFiles: "顯示檔案", find: "前往檔案", settings: "變更設定", openWindow: "在新視窗中開啟", expand: "展開", restore: "還原", close: "關閉", all: "所有變更", uncommitted: "未提交的變更", compare: "比較分支", commits: "提交", branches: "搜尋分支", default: "預設", group: "依資料夾分組", separate: "分開顯示測試、建置與產生的檔案", collapseAll: "摺疊所有檔案", expandAll: "展開所有檔案", split: "並排顯示", wrap: "自動換行", words: "醒目顯示變更的單字", whitespace: "隱藏空白變更", refresh: "重新整理", large: "大型差異的檔案已摺疊。選擇檔案以展開。", largeExpand: "大型差異無法一次展開所有檔案。請逐一展開檔案以保持流暢。", finder: "搜尋變更的檔案", more: "個其他檔案。繼續輸入以縮小範圍。", emptySearch: "沒有符合的檔案", noBranches: "沒有符合的分支", noCommits: "此比較中沒有提交", loading: "正在載入變更…", loadingPatch: "正在載入差異…", empty: "此比較中沒有變更", retry: "重試", stale: "儲存庫已變更。請重新整理以檢視目前的比較。", binary: "二進位檔案，無法顯示文字差異。", tooLarge: "此檔案過大，無法顯示。", metadata: "僅檔案中繼資料變更，沒有文字差異。", noPatch: "沒有可顯示的文字變更。", truncated: "此比較已達到檢視上限，部分結果已省略。", patchTruncated: "此差異不完整，僅顯示可用行。", context: "顯示更多行", fullContext: "顯示所有未變更的行", unchanged: "行未變更", feedback: "新增回饋", feedbackHint: "描述你希望對這些行進行的變更…", addDraft: "加入草稿", cancel: "取消", selectedLines: "所選行", old: "舊版本", new: "新版本", source: "原始檔", tests: "測試檔案", generated: "建置與產生的檔案", back: "返回", files: "個檔案", statusAdded: "已新增", statusModified: "已修改", statusDeleted: "已刪除", statusRenamed: "已重新命名", statusCopied: "已複製", statusUntracked: "未追蹤", statusConflict: "衝突", statusTypechange: "檔案類型已變更", selectionGap: "請選擇同一側已顯示的連續行，最多 500 行。", feedbackAdded: "回饋已加入草稿", feedbackFailed: "無法加入回饋。文字已保留，你可以重試。", sendingFeedback: "正在加入草稿…", workingTree: "工作區", expandFile: "展開檔案", collapseFile: "摺疊檔案",
+    changes: "變更", showFiles: "顯示檔案", find: "前往檔案", settings: "變更設定", openWindow: "在新視窗中開啟", expand: "展開", restore: "還原", close: "關閉", all: "所有變更", uncommitted: "未提交的變更", compare: "比較分支", commits: "提交", branches: "搜尋分支", default: "預設", group: "依資料夾分組", separate: "分開顯示測試、建置與產生的檔案", collapseAll: "摺疊所有檔案", expandAll: "展開所有檔案", split: "並排顯示", wrap: "自動換行", words: "醒目顯示變更的單字", whitespace: "隱藏空白變更", refresh: "重新整理", large: "大型差異的檔案已摺疊。選擇檔案以展開。", largeExpand: "大型差異無法一次展開所有檔案。請逐一展開檔案以保持流暢。", finder: "搜尋變更的檔案", more: "個其他檔案。繼續輸入以縮小範圍。", emptySearch: "沒有符合的檔案", noBranches: "沒有符合的分支", noCommits: "此比較中沒有提交", loading: "正在載入變更…", loadingPatch: "正在載入差異…", empty: "此比較中沒有變更", retry: "重試", stale: "儲存庫已變更。請重新整理以檢視目前的比較。", binary: "二進位檔案，無法顯示文字差異。", tooLarge: "此檔案過大，無法顯示。", metadata: "僅檔案中繼資料變更，沒有文字差異。", noPatch: "沒有可顯示的文字變更。", truncated: "此比較已達到檢視上限，部分結果已省略。", patchTruncated: "此差異不完整，僅顯示可用行。", context: "顯示更多行", fullContext: "顯示所有未變更的行", unchanged: "行未變更", noFinalNewline: "檔案結尾沒有換行符號", feedback: "新增回饋", feedbackHint: "描述你希望對這些行進行的變更…", addDraft: "加入草稿", cancel: "取消", selectedLines: "所選行", old: "舊版本", new: "新版本", source: "原始檔", tests: "測試檔案", generated: "建置與產生的檔案", back: "返回", files: "個檔案", statusAdded: "已新增", statusModified: "已修改", statusDeleted: "已刪除", statusRenamed: "已重新命名", statusCopied: "已複製", statusUntracked: "未追蹤", statusConflict: "衝突", statusTypechange: "檔案類型已變更", selectionGap: "請選擇同一側已顯示的連續行，最多 500 行。", feedbackAdded: "回饋已加入草稿", feedbackFailed: "無法加入回饋。文字已保留，你可以重試。", sendingFeedback: "正在加入草稿…", workingTree: "工作區", expandFile: "展開檔案", collapseFile: "摺疊檔案",
   },
 };
-type Words = typeof copy.en;
 type MenuName = "comparison" | "settings" | "finder";
 type InlineContextAnchor = Record<ReviewSide, number>;
-type Selection = { path: string; side: ReviewSide; start: number; end: number; inlineContextAnchor?: InlineContextAnchor };
+type Selection = ReviewSelectionState;
 type PatchState = { state: "loading" } | { state: "ready"; data: GitReviewPatch } | { state: "error"; message: string; stale?: boolean };
 
 function Icon({ name, size }: { name: string; size?: number }) {
@@ -341,12 +339,7 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
   const toggleFile = (path: string) => setOpen((current) => { const next = new Set(current); if (next.has(path)) next.delete(path); else next.add(path); return next; });
   const selectLine = (file: GitReviewFile, side: ReviewSide, line: number, extend: boolean, inlineContextAnchor?: InlineContextAnchor) => {
     feedbackGeneration.current++;
-    // Inline context exists in both revisions. A changed-line endpoint chooses
-    // its revision without losing that context start; split gutters stay explicit.
-    const start = selection?.side === side ? selection.start : !split ? selection?.inlineContextAnchor?.[side] : undefined;
-    const next = extend && selection?.path === file.path && start !== undefined
-      ? { ...selection, side, start, end: line }
-      : { path: file.path, side, start: line, end: line, ...(inlineContextAnchor ? { inlineContextAnchor } : {}) };
+    const next = nextReviewSelection(selection, { path: file.path, side, line, extend, inlineContextAnchor }, split);
     setSelection(next); setFeedback(""); setNotice("");
   };
   const statusLabel = (file: GitReviewFile) => words[({ added: "statusAdded", modified: "statusModified", deleted: "statusDeleted", renamed: "statusRenamed", copied: "statusCopied", untracked: "statusUntracked", conflict: "statusConflict", typechange: "statusTypechange" } as const)[file.status]];
@@ -355,11 +348,10 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
   const comparisonLabel = scope === "commit" ? snapshot?.commits.find((item) => item.oid === commit)?.subject ?? commit.slice(0, 8) : scope === "uncommitted" ? words.uncommitted : shortReviewRef(snapshot?.baseRef || base) || words.all;
   const branchLabel = snapshot?.currentBranch || snapshot?.headOid.slice(0, 8) || "";
 
-  const submitFeedback = async (rows: SplitDiffRow[]) => {
+  const submitFeedback = async (selected: { start: number; end: number; snippet: string }) => {
     if (!selection || !snapshot || !feedback.trim() || feedbackPendingRef.current) return;
     const file = fileMap.get(selection.path);
-    const selected = reviewSelection(rows, selection.side, selection.start, selection.end);
-    if (!file || !selected) { setNotice(words.selectionGap); return; }
+    if (!file || selected.start !== Math.min(selection.start, selection.end) || selected.end !== Math.max(selection.start, selection.end)) { setNotice(words.selectionGap); return; }
     const version = feedbackGeneration.current;
     feedbackPendingRef.current = true;
     setFeedbackPending(true);
@@ -515,64 +507,4 @@ function ReviewTree({ files, grouped, selected, onSelect, statusLabel }: { files
     }} onClick={() => setClosed((current) => { const next = new Set(current); if (next.has(path)) next.delete(path); else next.add(path); return next; })}><Icon name={isClosed ? "right" : "down"} size={12} /><span>{label}</span></button>{!isClosed && nodes(compact.children, depth + 1)}</div>;
   });
   return <div>{grouped ? nodes(tree, 0) : files.map((file) => fileRow(file, 0))}</div>;
-}
-
-function ReviewDiff({ file, data, words, split, wrap, highlight, context, onMore, selection, onSelectLine, feedback, pending, setFeedback, onCancel, onSubmit }: { file: GitReviewFile; data: GitReviewPatch; words: Words; split: boolean; wrap: boolean; highlight: boolean; context: GitReviewContext; onMore: () => void; selection: Selection | null; onSelectLine: (side: ReviewSide, line: number, extend: boolean, inlineContextAnchor?: InlineContextAnchor) => void; feedback: string; pending: boolean; setFeedback: (text: string) => void; onCancel: () => void; onSubmit: (rows: SplitDiffRow[]) => Promise<void> }) {
-  const rows = useMemo(() => parseUnifiedPatch(data.patch)?.[0]?.rows ?? [], [data.patch]);
-  const inline = useMemo(() => inlineReviewRows(rows), [rows]);
-  const lineDigits = useMemo(() => rows.reduce((digits, row) => row.type === "line" ? Math.max(digits, String(row.left.lineNo ?? "").length, String(row.right.lineNo ?? "").length) : digits, 3), [rows]);
-  const syntax = useMemo(() => tokenizeReviewCells(rows, file.path, file.oldPath), [rows, file.path, file.oldPath]);
-  const selected = selection ? reviewSelection(rows, selection.side, selection.start, selection.end) : null;
-  const inSelection = (side: ReviewSide, line: number | null) => selection?.side === side && line !== null && line >= Math.min(selection.start, selection.end) && line <= Math.max(selection.start, selection.end);
-  const lineButton = (side: ReviewSide, line: number | null, inlineContextAnchor?: InlineContextAnchor) => line === null ? <span className="changes-line-number" /> : <button type="button" className={`changes-line-number${inSelection(side, line) ? " is-selected" : ""}`} aria-label={`${words.feedback}: ${side === "old" ? words.old : words.new} ${line}`} title={`${words.feedback} · ${side === "old" ? words.old : words.new} ${line}`} aria-pressed={inSelection(side, line) || false} onClick={(event) => onSelectLine(side, line, event.shiftKey, inlineContextAnchor)}>{line}</button>;
-  const text = (cell: SplitDiffCell, paired?: SplitDiffCell) => {
-    const tokens = syntax.get(cell) ?? [{ text: cell.text, tone: "plain" as const }];
-    if (highlight && paired && cell.type !== "context" && cell.type !== "empty" && paired.type !== "empty") {
-      const parts = cell.type === "removed" ? reviewWordParts(cell.text, paired.text).old : reviewWordParts(paired.text, cell.text).new;
-      return renderReviewSyntax(markReviewSyntax(tokens, parts));
-    }
-    return renderReviewSyntax(tokens);
-  };
-  const editor = <div className="changes-feedback" role="group" aria-label={words.feedback}>
-    <div className="changes-feedback-label">{words.selectedLines}: {selection?.side === "old" ? words.old : words.new} {selection && Math.min(selection.start, selection.end)}{selection && selection.start !== selection.end ? `–${Math.max(selection.start, selection.end)}` : ""}<span>{file.path}</span></div>
-    {!selected && <p className="changes-feedback-error">{words.selectionGap}</p>}
-    <textarea autoFocus disabled={pending} value={feedback} aria-label={words.feedback} placeholder={words.feedbackHint} rows={3} onChange={(event) => setFeedback(event.target.value)} onKeyDown={(event) => {
-      if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onCancel(); }
-      if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && selected && feedback.trim()) { event.preventDefault(); onSubmit(rows); }
-    }} />
-    <div className="changes-feedback-actions"><button type="button" onClick={onCancel}>{words.cancel}</button><button type="button" disabled={pending || !selected || !feedback.trim()} onClick={() => void onSubmit(rows)}>{pending ? words.sendingFeedback : words.addDraft}</button></div>
-  </div>;
-  if (!data.supported) return <div className="changes-file-state">{data.reason === "binary" ? words.binary : data.reason === "too-large" ? words.tooLarge : words.metadata}</div>;
-  if (!rows.length) return <div className="changes-file-state">{words.noPatch}</div>;
-  const hunkLabel = (row: { text: string; omitted: number }) => row.omitted > 0 ? `${row.omitted} ${words.unchanged}` : row.text;
-  const expandContext = (label: string) => <button type="button" className="changes-context-button" disabled={context === "all" || data.truncated} onClick={onMore} title={context === 20 ? words.fullContext : words.context}><Icon name="down" size={12} />{label}</button>;
-  let shownEditor = false;
-  const wantsEditor = (oldLine: number | null, newLine: number | null) => {
-    if (shownEditor || !selection) return false;
-    const line = selection.side === "old" ? oldLine : newLine;
-    if (line !== Math.max(selection.start, selection.end)) return false;
-    shownEditor = true;
-    return true;
-  };
-  return <div className={`changes-diff${split ? " is-split" : ""}${wrap ? " is-wrapped" : ""}`} style={{ "--changes-line-digits": lineDigits } as CSSProperties}>
-    {data.truncated && <div className="changes-notice">{words.patchTruncated}</div>}
-    {split ? <table className="changes-diff-table changes-split-table"><colgroup><col className="changes-number-col" /><col className="changes-code-col" /><col className="changes-number-col" /><col className="changes-code-col" /></colgroup><tbody>
-      <tr className="changes-revision-heading"><th colSpan={2}>{words.old}</th><th colSpan={2}>{words.new}</th></tr>
-      {rows.map((row, index) => row.type === "hunk" ? <tr key={index} className="changes-hunk"><td colSpan={4}>{row.text.startsWith("@@") ? expandContext(hunkLabel(inline.find((item) => item.type === "hunk" && item.text === row.text) as { text: string; omitted: number } ?? { text: row.text, omitted: 0 })) : row.text}</td></tr> : <ReviewRow key={index} editor={wantsEditor(row.left.lineNo, row.right.lineNo) ? editor : null} columns={4}><td className={`changes-gutter is-${row.left.type}`}>{lineButton("old", row.left.lineNo)}</td><td className={`changes-code is-${row.left.type}${inSelection("old", row.left.lineNo) ? " is-selected" : ""}`}><code>{text(row.left, row.right)}</code></td><td className={`changes-gutter changes-split-divider is-${row.right.type}`}>{lineButton("new", row.right.lineNo)}</td><td className={`changes-code is-${row.right.type}${inSelection("new", row.right.lineNo) ? " is-selected" : ""}`}><code>{text(row.right, row.left)}</code></td></ReviewRow>)}
-    </tbody></table> : <table className="changes-diff-table changes-inline-table"><colgroup><col className="changes-number-col" /><col className="changes-sign-col" /><col /></colgroup><tbody>
-      {inline.map((row, index) => {
-        if (row.type === "hunk") return <tr key={index} className="changes-hunk"><td colSpan={3}>{row.text.startsWith("@@") ? expandContext(hunkLabel(row)) : <span>{row.text}</span>}</td></tr>;
-        const { side, line } = inlineReviewLine(row, selection?.side);
-        const inlineContextAnchor = row.cell.type === "context" && row.oldLine !== null && row.newLine !== null ? { old: row.oldLine, new: row.newLine } : undefined;
-        return <ReviewRow key={index} editor={wantsEditor(row.oldLine, row.newLine) ? editor : null} columns={3} className={`is-${row.cell.type}${inSelection(side, line) ? " is-selected" : ""}`}><td className="changes-gutter">{lineButton(side, line, inlineContextAnchor)}</td><td className="changes-sign">{row.cell.type === "added" ? "+" : row.cell.type === "removed" ? "−" : ""}</td><td className="changes-code"><code>{text(row.cell, row.paired)}</code></td></ReviewRow>;
-      })}
-    </tbody></table>}
-    {selection && !shownEditor && editor}
-    {context !== "all" && !data.truncated && <div className="changes-more-context">{expandContext(context === 20 ? words.fullContext : words.context)}</div>}
-  </div>;
-}
-
-function ReviewRow({ children, editor, columns, className = "" }: { children: ReactNode; editor: ReactNode; columns: number; className?: string }) {
-  return <><tr className={`changes-code-row ${className}`}>{children}</tr>{editor && <tr className="changes-feedback-row"><td colSpan={columns}>{editor}</td></tr>}</>;
 }
