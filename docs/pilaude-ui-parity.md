@@ -1,6 +1,6 @@
 # Pilaude 与 Claude Desktop 的逐组件复刻基准
 
-审计日期：2026-10-17。用户明确要求每个组件实现后的视觉和交互与 Claude Desktop 一模一样；已选择 **Windows 当前稳定版**。本文件记录证据、缺口和验收方法，不声明已经复刻完成。
+首次审计：2026-10-17；实现及同步证据更新：2026-10-18。用户明确要求每个组件实现后的视觉和交互与 Claude Desktop 一模一样；已选择 **Windows 当前稳定版**。本文件记录证据、缺口和验收方法，不声明已经复刻完成。
 
 ## 固定参考版本
 
@@ -11,8 +11,8 @@
 | 当前桌面参考版本 | `@ant/desktop 2.42304.0`；本机 MSIX `Claude_2.42304.0.0_x64__pzs8sxrjxfjjc`，与官方稳定入口一致 |
 | 安装包清单 SHA-256 | `93417dbed430d92545db5c12cd0e16211c642388b8002b977e372ef76a86dd1b` |
 | 已安装 app.asar SHA-256 | `8f4d3dec5e4f3ddffb150321060b18807d83a40f3a65618fe4f29325379da9db` |
-| open-claude-ui 作者 main | `ddf3aea1711db62fd6d24343bbab500a5ae69f64` |
-| 本地 UI fork main | `cfc0efedf53e5b9e49502d31b20991b55ee61574`；包含上述作者提交，作者侧落后数为 0 |
+| open-claude-ui 作者 main | `638800b8a4cee4513c8763c3df0ecf8a77b32379` |
+| 本地 UI fork main | `7490e105e418adf2b94c55ff716bb0973d44fb85`；2026-10-18 同步检查包含上述作者提交，作者侧落后数为 0 |
 | UI 库自身的取证版本 | macOS `/Applications/Claude.app`，`@ant/desktop 2.37337.1`，构建 `2026-10-13T22:16:06Z`；见其 CHANGELOG 与主题文件头 |
 
 官方 EXE latest 的 HEAD/GET 在本次环境返回 403，不能作为版本证据；MSIX GET 已成功核实。只读取了本机安装元数据、ASAR 目录及 package.json；未提取或提交专有字体、图标字体、音频、账号数据或完整应用代码。
@@ -29,7 +29,7 @@
 - 桌面示例主要实现 macOS 红绿灯、Vibrancy 与 Electron 工厂。Windows 标题栏、系统菜单、最大化、贴靠、焦点和 WebView2 渲染必须以 Windows 实物补证；不能直接导入 Electron 工厂或绘制 macOS 控件。
 - Storybook HTML 引用了 Tailwind CDN、unpkg、Google Fonts，并包含模拟回复、上传进度和任务数据。它适合浏览组件，不能当离线交付物或 Claude 官方基准截图。
 - 库内仍存在版本冲突：AGENTS 的旧表面/尺寸说明、v2 的 12/14px composer 描述、主题中的 20px composer，以及新按钮组件的整数尺寸与 CHANGELOG 的桌面光学尺寸并不完全一致。发生冲突时记录证据，用当前 Windows 参考裁决，不能挑一个看起来合理的值。
-- 最新作者提交修正了 18 个代码/配置文件，包括完整灰阶、主品牌色与装饰 Clay 分离、按钮绘景层和弹性曲线、消息、思考、模型选择和授权卡片。Pilaude 原先接入的旧版主题不等于已经采用这些修正。
+- 首次审计发现原先接入的旧版主题遗漏了完整灰阶、主品牌色与装饰 Clay 分离、按钮绘景层和弹性曲线等上游修正。现已更新 vendored theme、Button 和 motion presets；其他模块须按下表继续适配，不能把仓库同步等同于所有实现已经采用。
 
 ## 组件与资源覆盖清单
 
@@ -37,8 +37,8 @@
 
 | 目标组件 / 行为 | 可复用的 open-claude-ui 源模块 | Pilaude 状态与补证项 |
 | --- | --- | --- |
-| 主题、文字、图标 | `cds-theme.css`、`tailwind.config.js`、资产政策 | 已接入旧主题；需更新、核对 Windows 字体度量和图标轮廓，补齐授权素材 |
-| 按钮及各尺寸/状态 | `CdsButton` | 欢迎页/导入动作已采用旧适配；新绘景层、hover/pressed/focus/loading/disabled 待接入和对照 |
+| 主题、文字、图标 | `cds-theme.css`、`tailwind.config.js`、资产政策 | 已更新主题，本机对照实例加载用户字体；Windows 原生度量、图标轮廓和公开素材仍待验收 |
+| 按钮及各尺寸/状态 | `CdsButton` | 欢迎页/导入动作采用更新后的绘景层和弹性参数；逐状态实物对照尚未通过 |
 | 分段选择 | `SegmentedControl` | 资源可用；实际 Pi 模式/设置状态需适配 |
 | 运行、加载、骨架 | `StatusIndicators` | 资源可用；绑定真实运行状态并核对所有节奏 |
 | 确认与权限对话框 | `ConfirmationDialog`、`McpToolDecisionCard` | 资源可用；后端审批、焦点陷阱、取消/错误状态待融合 |
@@ -74,7 +74,9 @@
 
 用户补充的 Windows 主窗口截图为本轮主参考，尺寸 1911×1294。测量时裁出 `[12,23,1892,1278]` 的 1880×1255 窗口区域；运行截图使用 1504×1004 CSS 像素、1.25 capture scale 得到相同尺寸。该 capture scale 是本组浏览器测量条件，不冒充已完成 OS DPI/WebView2 一致性验证。参考边缘由人工取点，初步不确定度约 1–2 物理像素；不缩放任一图层，不以不同聊天内容计算整屏“相似度”。参考截图含用户私人项目名称，保留在本机验收目录，不提交仓库。
 
-`scripts/compare-ui-reference.py` 生成 50% 叠图、4 倍增强差分、红色参考/蓝色实现的边界图，以及 x/y/width/height 偏差 JSON。参数包括参考裁剪、DOM 几何输出和参考矩形表，不会自动拉伸图像。依赖 Pillow，仅用于本地验收。运行示例（所有图片/测量数据均为本地文件）：
+**用户指定的双图层测量法（2026-10-18 再确认）：官方参考原图为 100% 不透明底层，项目当前运行截图为 50% 不透明上层，像 Photoshop 双图层一样按原像素对齐。** 官方图中的位置、宽高、间距和边界逐项测量到像素，明确记录裁剪、DPI、应用缩放与 capture scale；不缩放任一图层凑齐，不以全局相似度掩盖局部偏差。官方原生窗口不可用时使用项目已保存参考图。
+
+`scripts/compare-ui-reference.py` 已使用上述图层顺序，生成 50% 叠图、4 倍增强差分、红色参考/蓝色实现的边界图，以及 x/y/width/height 偏差 JSON。参数包括参考裁剪、DOM 几何输出和参考矩形表，不会自动拉伸图像。依赖 Pillow，仅用于本地验收。运行示例（所有图片/测量数据均为本地文件）：
 
 ```powershell
 python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 1892 1278 --geometry actual.json --measurements reference-boxes.json --output comparison
@@ -100,12 +102,16 @@ python scripts/compare-ui-reference.py reference.png actual.png --crop 12 23 189
 
 用户指定的本地项目中已找到 Sans/Serif 正体和斜体、Mono，以及图标字体，共六个原始 WOFF2。原字节、SHA-256、family/version、字重/光学轴、字形数与垂直度量归档在公开仓库之外。用户说明已有个人用途授权；补充来源 [anthropic-fonts](https://github.com/matthieuhuguet/anthropic-fonts) 的 README 同样只说明个人使用且不主张拥有字体权利。本轮未下载该仓库字体，没有将字体二进制或含字体数据的 CSS 加入 Git/public 资源。
 
-对照实例复用已有 `<agentDir>/desktop/custom.css`，以内嵌字体数据覆盖 UI/展示/代码字体变量，无新增字体 API。浏览器 FontFaceSet 与实际消息 computed font 均确认使用本地 Sans，Serif/Mono 加载通过；第三轮截图和原像素叠图在本机 `test-results/pilaude/ui-reference/comparison-pass-3-fonts/`。这一实例位于隔离测试数据根；公开默认资源、图标字形映射、中文回退与 Windows 原生渲染仍未验收，不能据此声称公开包已经携带相同字体。
+对照实例复用已有 `<agentDir>/desktop/custom.css`，以内嵌字体数据覆盖 UI/展示/代码字体变量，无新增字体 API。浏览器 FontFaceSet 与实际消息 computed font 均确认使用本地 Sans，Serif/Mono 加载通过；第三轮截图和原像素叠图在本机 `test-results/pilaude/ui-reference/comparison-pass-3-fonts/`。这一实例位于隔离测试数据根；公开默认资源、307 码位图谱已在本机生成，图标字形映射、中文回退与 Windows 原生渲染仍未验收，不能据此声称公开包已经携带相同字体。
 
 - 原 Task 2 的四档截图、输入/面板测试仅证明相应功能可操作，缺少同版本 Claude 参考图和差异图，状态改为“功能已测、一致性未验”。
 - 欢迎页为 Pilaude 原先自建构图，尚未证明符合 Claude 当前首页；系统字体、Lucide 图标和深色文字的旧 Clay 按钮均待重新对照。
 - MCP Sign in 的实际小号主按钮对比度测得 3.12:1；这是现有样式问题，尚未证明参考也如此。OAuth 加密端到端通过不能作为视觉通过；等待参考裁决并修正。
-- 下一步优先补齐 Windows 主窗口/侧栏、输入器、消息、按钮、设置和模型选择的基准，再扩展到授权卡片、产物、浏览器、代理和计划任务。每个组件均按上述流程验收后更新记录。
+- 2026-10-18 用户追加 9 张深色终端参考，原始字节和哈希清单永久保存于工作区 `references/claude-desktop/terminal/2026-10-18/`。覆盖标题栏/多标签/新建、Cursor style（Block/Bar/Underline）、Blink cursor、Copy on select、Scrollback（1,000/5,000/10,000）、独立窗口、展开快捷键和关闭。光标“一秒闪烁一次”为用户明确确认；浅色允许沿语义令牌转换布局/交互，尚无浅色实物验收。图片版本未独立确认，不混作 2.42304.0 的版本证据。
+- 用户同时指出默认窗口偏宽、字号偏大：左右栏固定小字号，只有对话记录可选小/中/大。实施校准值为默认窗口 1200×840、两栏正文 14px/次级数字 12px、对话 13/14/16px 默认中档，输入框独立 14px（移动端 16px 防缩放）。这些数值为本轮校准，必须按双图层法继续测量，不能由用户反馈推导出官方字号已测定；已保存窗口大小及旧字号选择保留，重置字号回到中档。
+- 两张新增暗色工作区参考已按原字节保存于 `references/claude-desktop/workspace-dark/2026-10-18/`，完整整屏为 2559×1526。原像素测量、实现截图与双图层位于本机 `test-results/pilaude/dark-calibration/`，未缩放参考图。实现采样为 2047×1221 CSS、capture scale 1.25，不当作官方 DPI 证据；该组设置内容宽度为 922px，仅用于匹配已测 1152px 输入框，不覆盖用户默认 820px。
+- 本轮修正暗色侧栏与画布表面、搜索几何、右卡水平位置、宽屏对话/输入框靠右轴线。物理像素 x/y/w/h 偏差：侧栏 0/0/−0.25/+0.25，搜索 0/+0.25/0/−0.25，输入框 +0.25/+0.12/+0.5/+0.25；Environment x/y/w 为 0/+0.25/−0.75，高差 −26.5px（缺真实 Remote Control）。Context 展开内容、Connectors 状态、图标/字体与原生窗口仍有差异，不标为逐组件通过。
+- 下一步继续主窗口/侧栏、消息、按钮、设置和模型选择，并按已归档终端参考补齐终端菜单与交互，再扩展到授权卡片、产物、浏览器、代理和计划任务。每个组件均按上述流程验收后更新记录。
 
 ## 上游更新规则
 

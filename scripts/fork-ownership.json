@@ -49,7 +49,7 @@
       "reason": "Server shutdown stream listeners are replaced by their owned Symbol during hot reload rather than accumulating one listener per registration."
     },
     "components/SettingsPanel.tsx": {
-      "risk": "high", "drift": 544, "structuralDrift": 439, "disposition": "accepted",
+      "risk": "high", "drift": 553, "structuralDrift": 446, "disposition": "accepted",
       "reason": "Pilaude mounts its app-owned data import section beside the existing desktop update section. Preserve this mount and existing settings behavior when merging upstream."
     },
     "components/ModelsConfig.tsx": {
@@ -170,18 +170,18 @@
       "disposition": "accepted"
     },
     "hooks/useChatAppearance.ts": {
-      "risk": "low", "drift": 2, "structuralDrift": 2, "disposition": "accepted",
-      "reason": "The Windows reference uses a 16px default reading size. Preserve the existing stored user preference and width/font reset behavior when merging."
+      "risk": "low", "drift": 15, "structuralDrift": 15, "disposition": "accepted",
+      "reason": "Conversation typography uses small/medium/large presets with a 14px default; preserve legacy preference normalization, independent width/font reset, and fixed composer/sidebar typography when merging."
     },
     "e2e/chat-appearance.mjs": {
       "risk": "low", "drift": 8, "structuralDrift": 8, "disposition": "accepted",
-      "reason": "Appearance reset assertions track the 16px Windows default; persistence, independent width/font reset and multiline resizing assertions remain unchanged. Drift is measured against origin/main because this file postdates the baseline."
+      "reason": "Appearance assertions cover three transcript sizes while chrome and composer stay fixed, plus persistence, independent resets and draft width resizing. Drift is measured against origin/main because this file postdates the baseline."
     },
     "components/ChatInput.tsx": {
       "risk": "high",
-      "drift": 1168,
+      "drift": 1174,
       "reason": "Composer chrome restyle. Upstream changed this file in v0.8.1, and components/ChatInput.test.mjs covers it.",
-      "structuralDrift": 881,
+      "structuralDrift": 885,
       "disposition": "accepted"
     },
     "components/MessageView.tsx": {

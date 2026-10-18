@@ -1283,7 +1283,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
           }}
         >
           <div style={{ minWidth: 0, padding: `0 ${CHAT_COLUMN_PADDING}px` }}>
-            <div ref={messageContentRef} onPointerUp={captureQuotedSelection} style={{ width: "100%", minWidth: 0, maxWidth: "var(--chat-content-max-width, 820px)", margin: "0 auto" }}>
+            <div className="chat-transcript-column" ref={messageContentRef} onPointerUp={captureQuotedSelection} style={{ width: "100%", minWidth: 0, maxWidth: "var(--chat-content-max-width, 820px)", margin: "0 auto" }}>
             {loading ? (
               <div className="chat-loading-hint">{t("chat.loadingSession")}</div>
             ) : (() => {

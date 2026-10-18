@@ -16,6 +16,10 @@ const FORK_MESSAGE_PATCHES: Record<Locale, {
 }> = {
   "en": {
     "set": {
+      "settings.chatContentFontSize": "Conversation font size",
+      "settings.chatFontSmall": "Small",
+      "settings.chatFontMedium": "Medium",
+      "settings.chatFontLarge": "Large",
       "pilaude.forkFromHere": "Fork from here",
       "pilaude.forkDescription": "Starts a new session from this point. This one stays as it is.",
       // Pilaude product, credential and Windows reference strings.
@@ -576,6 +580,10 @@ const FORK_MESSAGE_PATCHES: Record<Locale, {
   },
   "zh-CN": {
     "set": {
+      "settings.chatContentFontSize": "对话记录字号",
+      "settings.chatFontSmall": "小",
+      "settings.chatFontMedium": "中",
+      "settings.chatFontLarge": "大",
       "pilaude.forkFromHere": "从此处分叉",
       "pilaude.forkDescription": "从这里创建新会话。当前会话保持原样。",
       // Pilaude product, credential and Windows reference strings.
@@ -1139,6 +1147,10 @@ const FORK_MESSAGE_PATCHES: Record<Locale, {
   },
   "zh-TW": {
     "set": {
+      "settings.chatContentFontSize": "對話記錄字級",
+      "settings.chatFontSmall": "小",
+      "settings.chatFontMedium": "中",
+      "settings.chatFontLarge": "大",
       "pilaude.forkFromHere": "從此處分支",
       "pilaude.forkDescription": "從這裡建立新工作階段。目前的工作階段保持原樣。",
       // Pilaude product, credential and Windows reference strings.

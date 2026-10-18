@@ -16,14 +16,14 @@ async function fixture(t, { releases = [], newline = "\n", validLock = true } = 
   for (const name of ["bump-pi-agent-desktop-version.mjs", "release-components.mjs"]) {
     await copyFile(join(root, "scripts", name), join(directory, "scripts", name));
   }
-  const product = { name: "pilaude", version: "0.1.0", repository: "20240610ldx-hub/pi-agent-desktop" };
+  const product = { name: "pilaude", version: "0.1.0", repository: "20240610ldx-hub/pilaude" };
   await writeFile(join(directory, "src-tauri", "pilaude-package.json"), JSON.stringify(product));
   await writeFile(join(directory, "src-tauri", "pi-agent-desktop-package.json"), '{"version":"0.7.1"}');
   await writeFile(join(directory, "src-tauri", "Cargo.toml"), `[package]${newline}name = "pi-agent-desktop"${newline}version = "0.1.0"${newline}`);
   await writeFile(join(directory, "src-tauri", "Cargo.lock"), `[[package]]${newline}name = "${validLock ? "pi-agent-desktop" : "other-crate"}"${newline}version = "0.1.0"${newline}`);
   const preload = join(directory, "fetch-fixture.mjs");
   await writeFile(preload, `globalThis.fetch = async (url) => {
-    if (url !== "https://api.github.com/repos/20240610ldx-hub/pi-agent-desktop/releases?per_page=100") throw new Error("Unexpected release source: " + url);
+    if (url !== "https://api.github.com/repos/20240610ldx-hub/pilaude/releases?per_page=100") throw new Error("Unexpected release source: " + url);
     return new Response(JSON.stringify(${JSON.stringify(releases)}), {status: 200});
   };`);
   return {
@@ -48,7 +48,7 @@ test("advances the product patch even when there are no published releases", asy
 test("advances past development prereleases and updates a CRLF Cargo lock", async (t) => {
   const files = await fixture(t, {
     newline: "\r\n",
-    releases: [{ tag_name: "v0.1.2-test.1", html_url: "https://github.com/20240610ldx-hub/pi-agent-desktop/releases/tag/v0.1.2-test.1", prerelease: true, draft: false }],
+    releases: [{ tag_name: "v0.1.2-test.1", html_url: "https://github.com/20240610ldx-hub/pilaude/releases/tag/v0.1.2-test.1", prerelease: true, draft: false }],
   });
   files.run();
   assert.equal(JSON.parse(await files.read("pilaude-package.json")).version, "0.1.3");

@@ -6,9 +6,14 @@ export const CHAT_CONTENT_WIDTH_DEFAULT = 820;
 export const CHAT_CONTENT_WIDTH_MIN = 820;
 export const CHAT_CONTENT_WIDTH_MAX = 2000;
 export const CHAT_CONTENT_WIDTH_STORAGE_KEY = "pi-chat-content-width";
-export const CHAT_CONTENT_FONT_SIZE_DEFAULT = 16;
-export const CHAT_CONTENT_FONT_SIZE_MIN = 12;
-export const CHAT_CONTENT_FONT_SIZE_MAX = 24;
+export const CHAT_CONTENT_FONT_SIZE_PRESETS = [
+  { value: 13, label: "settings.chatFontSmall" },
+  { value: 14, label: "settings.chatFontMedium" },
+  { value: 16, label: "settings.chatFontLarge" },
+] as const;
+export const CHAT_CONTENT_FONT_SIZE_DEFAULT = 14;
+export const CHAT_CONTENT_FONT_SIZE_MIN = 13;
+export const CHAT_CONTENT_FONT_SIZE_MAX = 16;
 export const CHAT_CONTENT_FONT_SIZE_STORAGE_KEY = "pi-chat-content-font-size";
 
 interface ChatAppearance {
@@ -30,9 +35,11 @@ export function clampChatContentWidth(value: unknown): number {
 }
 
 export function clampChatContentFontSize(value: unknown): number {
-  const size = Number(value ?? CHAT_CONTENT_FONT_SIZE_DEFAULT);
+  const size = value == null || value === "" ? CHAT_CONTENT_FONT_SIZE_DEFAULT : Number(value);
   if (!Number.isFinite(size)) return CHAT_CONTENT_FONT_SIZE_DEFAULT;
-  return Math.max(CHAT_CONTENT_FONT_SIZE_MIN, Math.min(CHAT_CONTENT_FONT_SIZE_MAX, Math.round(size)));
+  return CHAT_CONTENT_FONT_SIZE_PRESETS.reduce<number>((nearest, preset) =>
+    Math.abs(preset.value - size) < Math.abs(nearest - size) ? preset.value : nearest,
+  CHAT_CONTENT_FONT_SIZE_DEFAULT);
 }
 
 function readStoredPreference(key: string): string | null {

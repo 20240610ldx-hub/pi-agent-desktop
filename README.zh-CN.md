@@ -1,3 +1,38 @@
+# Pilaude
+
+[English](./README.md) | **简体中文**
+
+> **开发状态：Pilaude 0.1.0 是正在开发中的未完成桌面应用。** 产品仓库为 [20240610ldx-hub/pilaude](https://github.com/20240610ldx-hub/pilaude)。本轮不发布 Pilaude 安装包或签名自动更新。全量测试、界面与交互一致性、安装及正式发行尚未完成验收；局部检查通过不代表已达到发行门槛。
+
+Pilaude 将 Pi 智能体及桌面基础与参考 open-claude-ui 的界面工作相结合。当前请从源码运行开发版。应用使用独立数据目录；导入现有 Pi 数据前请阅读 [Pilaude 本地数据与迁移](./docs/pilaude-data.md)。
+
+## 从源码运行
+
+需要 Node.js 22.19 或更高版本与 npm。原生桌面开发还需要 Rust 和下方来源记录中的平台依赖（Windows 需要 Microsoft C++ Build Tools 与 WebView2）。
+
+```bash
+git clone https://github.com/20240610ldx-hub/pilaude.git
+cd pilaude
+npm ci
+npm run dev
+```
+
+浏览器访问 [http://127.0.0.1:30141](http://127.0.0.1:30141) 使用 Web 开发界面。如需原生桌面窗口，停止该服务后在仓库根目录运行 `npm run desktop:dev`。这两个命令均不生成安装包。日常开发期间不要运行 `next build` / `npm run build`，以免干扰 `.next/`。
+
+## 来源与开发流程
+
+- 桌面基础：[abcwyc/pi-agent-desktop](https://github.com/abcwyc/pi-agent-desktop)。
+- 智能体内核：[earendil-works/pi](https://github.com/earendil-works/pi)；Web 基础：[agegr/pi-web](https://github.com/agegr/pi-web)。
+- 界面参考与部分复用资产：[Caho1/open-claude-ui](https://github.com/Caho1/open-claude-ui)。来源记录不能独立证明视觉或交互已经完全一致。
+- [Pilaude 开发说明](./docs/pilaude-development.md) 记录两个跟进上游的 fork、独立产品 remote、验证后 commit/push，以及私人证据的保存边界。
+
+保留原项目的版权和许可声明。产品版本及仓库身份独立于保留的上游包名和组件名。
+
+<details>
+<summary>上游 Pi Agent README — 保留的来源记录</summary>
+
+> 本节完整保留上游 Pi Agent 的说明。其截图、下载链接、安装方式、升级行为、发布声明及链接的上游文档均描述来源项目，不代表 Pilaude 已发布或通过验收。本仓库的运行方式以上方 Pilaude 开发说明为准。
+
 # Pi Agent
 
 [English](./README.md) | **简体中文**
@@ -234,3 +269,5 @@ instrumentation.ts     Next.js 服务端 HTTP 代理初始化
 Pi Agent 的桌面集成由 `pi-agent-desktop` 提供，核心能力和 Web 界面分别来自 [earendil-works/pi](https://github.com/earendil-works/pi) 与 [agegr/pi-web](https://github.com/agegr/pi-web)。感谢这些项目及其贡献者。
 
 本仓库根目录代码遵循 [`LICENSE`](./LICENSE) 中的 MIT License。三个组成项目的代码和依赖同时受各自仓库许可证约束；复制、修改或重新分发时请保留相应版权与许可声明。
+
+</details>

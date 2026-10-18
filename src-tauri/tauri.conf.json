@@ -39,7 +39,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/20240610ldx-hub/pi-agent-desktop/releases/latest/download/latest.json"
+        "https://github.com/20240610ldx-hub/pilaude/releases/latest/download/latest.json"
       ],
       "pubkey": ""
     }

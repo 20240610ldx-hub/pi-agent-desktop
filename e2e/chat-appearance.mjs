@@ -1,43 +1,45 @@
 import assert from "node:assert/strict";
 
-// The fork's sidebar gear opens a section menu (General / Models / Skills /
-// Sub-agents / Plugins / Desktop) instead of landing on the appearance
-// controls, so every "open settings" step goes through it.
+// The sidebar profile opens General directly, including from the mobile drawer.
 async function openGeneralSettings(page) {
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  const general = page.locator(".settings-entry-menu button", { hasText: "General" });
-  await general.waitFor();
-  await general.click();
+  const showSidebar = page.getByRole("button", { name: "Show sidebar", exact: true });
+  if (await showSidebar.isVisible()) await showSidebar.click();
+  await page.locator(".pilaude-local-profile").click();
   await page.locator(".settings-general").waitFor();
 }
 
 export async function checkChatAppearanceReset(page) {
   const width = page.getByRole("slider", { name: "Chat content width", exact: true });
-  const fontSize = page.getByRole("slider", { name: "Chat font size", exact: true });
+  const fontSize = page.getByRole("group", { name: "Conversation font size", exact: true });
+  const small = fontSize.getByRole("radio", { name: "Small", exact: true });
+  const medium = fontSize.getByRole("radio", { name: "Medium", exact: true });
+  const large = fontSize.getByRole("radio", { name: "Large", exact: true });
   const resetWidth = page.getByRole("button", { name: "Reset chat content width", exact: true });
   const resetFontSize = page.getByRole("button", { name: "Reset chat font size", exact: true });
   await width.press("End");
-  await fontSize.press("End");
+  await large.check();
   await resetWidth.click();
   assert.equal(await width.inputValue(), "820");
-  assert.equal(await fontSize.inputValue(), "24", "Resetting width must preserve font size");
+  assert.equal(await large.isChecked(), true, "Resetting width must preserve Large font size");
   await width.press("End");
   await resetFontSize.click();
-  assert.equal(await fontSize.inputValue(), "16");
+  assert.equal(await medium.isChecked(), true);
   assert.equal(await width.inputValue(), "2000", "Resetting font size must preserve width");
+  await small.check();
+  await resetFontSize.click();
+  assert.equal(await medium.isChecked(), true, "Resetting Small must restore Medium");
+  assert.equal(await width.inputValue(), "2000", "Resetting Small must preserve width");
   await resetWidth.click();
   assert.deepEqual(await page.evaluate(() => ({
     width: localStorage.getItem("pi-chat-content-width"),
     fontSize: localStorage.getItem("pi-chat-content-font-size"),
     appliedWidth: document.documentElement.style.getPropertyValue("--chat-content-max-width"),
     appliedFontSize: document.documentElement.style.getPropertyValue("--chat-content-font-size"),
-  })), { width: "820", fontSize: "16", appliedWidth: "820px", appliedFontSize: "16px" });
+  })), { width: "820", fontSize: "14", appliedWidth: "820px", appliedFontSize: "14px" });
   await page.reload({ waitUntil: "networkidle" });
-  const showSidebar = page.getByRole("button", { name: "Show sidebar", exact: true });
-  if (await showSidebar.isVisible()) await showSidebar.click();
   await openGeneralSettings(page);
   assert.equal(await width.inputValue(), "820");
-  assert.equal(await fontSize.inputValue(), "16");
+  assert.equal(await medium.isChecked(), true);
   assert.equal(await resetWidth.isDisabled(), true);
   assert.equal(await resetFontSize.isDisabled(), true);
 }
@@ -46,52 +48,127 @@ export async function checkChatAppearance(page) {
   await page.setViewportSize({ width: 2560, height: 1100 });
   const textarea = page.locator(".chat-input-textarea");
   const openSettings = () => openGeneralSettings(page);
-  const closeSettings = () => page.keyboard.press("Escape");
+  const closeSettings = async () => {
+    await page.keyboard.press("Escape");
+    await page.locator(".settings-general").waitFor({ state: "detached" });
+    if (page.viewportSize().width <= 640) {
+      const contextDock = page.locator('.pilaude-context-dock[data-presentation="modal"]');
+      if (await contextDock.isVisible()) {
+        await page.keyboard.press("Escape");
+        await contextDock.waitFor({ state: "detached" });
+      }
+      const hideSidebar = page.getByRole("button", { name: "Hide sidebar", exact: true });
+      const bounds = await hideSidebar.boundingBox();
+      if (bounds && bounds.x >= 0 && bounds.x + bounds.width <= page.viewportSize().width) await hideSidebar.click();
+    }
+  };
   const width = page.getByRole("slider", { name: "Chat content width", exact: true });
-  const fontSize = page.getByRole("slider", { name: "Chat font size", exact: true });
+  const fontSize = page.getByRole("group", { name: "Conversation font size", exact: true });
+  const small = fontSize.getByRole("radio", { name: "Small", exact: true });
+  const medium = fontSize.getByRole("radio", { name: "Medium", exact: true });
+  const large = fontSize.getByRole("radio", { name: "Large", exact: true });
+  const userMessage = page.locator(".markdown-user-message");
+  const code = page.locator(".markdown-code-block pre");
   const font = (locator) => locator.evaluate((el) => getComputedStyle(el).fontSize);
   const fittedHeight = async () => {
+    // Width changes are observed and fitted on a later frame; let layout settle
+    // before checking shrinkage as well as growth.
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.waitForFunction(() => {
       const input = document.querySelector(".chat-input-textarea");
       return input && (input.scrollHeight <= input.clientHeight + 1 || input.clientHeight >= 199);
     });
     return textarea.evaluate((el) => el.clientHeight);
   };
+  const checkFixedTypography = async () => {
+    assert.equal(await font(textarea), "14px", "Desktop composer font must stay fixed");
+    for (const [selector, size] of [
+      [".session-item-title", "14px"],
+      [".pilaude-local-profile small", "12px"],
+      [".pilaude-context-card > summary", "14px"],
+      [".pilaude-context-usage > small", "12px"],
+    ]) {
+      assert.equal(await font(page.locator(selector).first()), size, `${selector} must keep its chrome font size`);
+    }
+  };
 
+  // A missing preference uses Medium; stored 16 still means Large on reload.
+  await page.evaluate(() => localStorage.removeItem("pi-chat-content-font-size"));
+  await page.reload({ waitUntil: "networkidle" });
+  await code.waitFor();
+  const showSidebar = page.getByRole("button", { name: "Show sidebar", exact: true });
+  if (await showSidebar.isVisible()) await showSidebar.click();
+  const contextToggle = page.locator(".pilaude-context-toggle");
+  if (await contextToggle.getAttribute("aria-pressed") !== "true") await contextToggle.click();
   await openSettings();
   assert.equal(await width.inputValue(), "820");
-  assert.equal(await fontSize.inputValue(), "16");
+  assert.equal(await width.getAttribute("min"), "820");
+  assert.equal(await width.getAttribute("max"), "2000");
+  assert.deepEqual(await fontSize.getByRole("radio").evaluateAll((inputs) => inputs.map((input) => ({
+    type: input.type, value: input.value,
+  }))), [
+    { type: "radio", value: "13" },
+    { type: "radio", value: "14" },
+    { type: "radio", value: "16" },
+  ]);
+  assert.equal(await medium.isChecked(), true, "A missing font preference must default to Medium");
+  assert.equal(await page.evaluate(() => localStorage.getItem("pi-chat-content-font-size")), null);
   await width.press("End");
   await closeSettings();
-  const draft = "Existing drafts resize when the available width or the reading font changes. ".repeat(6);
+  assert.equal(await font(userMessage), "14px");
+  await checkFixedTypography();
+  const mediumCodeSize = Number.parseFloat(await font(code));
+  const draft = "Existing drafts resize when the available width changes, while the composer font stays fixed. ".repeat(6);
   await textarea.fill(draft);
   const wideHeight = await fittedHeight();
   await openSettings();
   await width.press("Home");
   await closeSettings();
   const narrowHeight = await fittedHeight();
+  assert.equal(await textarea.inputValue(), draft);
   assert.ok(narrowHeight > wideHeight, "Narrowing must grow the draft without another keystroke");
 
-  await openSettings();
-  await fontSize.press("End");
-  await closeSettings();
-  assert.ok(await fittedHeight() > narrowHeight, "Increasing the font must grow the draft");
+  let smallCodeSize;
+  for (const [option, size] of [[small, 13], [medium, 14], [large, 16]]) {
+    await openSettings();
+    await option.check();
+    assert.equal(await option.isChecked(), true);
+    assert.equal(await fontSize.locator("input:checked").count(), 1);
+    await closeSettings();
+    assert.equal(await textarea.inputValue(), draft, "Changing reading font size must preserve the draft");
+    assert.equal(await fittedHeight(), narrowHeight, "Changing reading font size must preserve draft height");
+    await checkFixedTypography();
+    assert.equal(await font(userMessage), `${size}px`, "User messages must follow the reading font preset");
+    const codeSize = Number.parseFloat(await font(code));
+    if (size === 13) {
+      smallCodeSize = codeSize;
+      assert.ok(codeSize < mediumCodeSize, "Small must reduce the code font size");
+    } else if (size === 14) {
+      assert.equal(codeSize, mediumCodeSize);
+      assert.ok(codeSize > smallCodeSize, "Medium must increase the code font size from Small");
+    } else {
+      assert.ok(codeSize > mediumCodeSize, "Large must increase the code font size");
+    }
+  }
+  const largeCodeSize = await font(code);
   await openSettings();
   await width.press("End");
-  await fontSize.press("Home");
-  for (let i = 12; i < 18; i++) await fontSize.press("ArrowRight");
   await closeSettings();
   assert.equal(await textarea.inputValue(), draft);
   assert.ok(await fittedHeight() < narrowHeight, "Widening must shrink the existing draft");
+  assert.deepEqual(await page.evaluate(() => ({
+    width: localStorage.getItem("pi-chat-content-width"),
+    fontSize: localStorage.getItem("pi-chat-content-font-size"),
+  })), { width: "2000", fontSize: "16" });
   await page.reload({ waitUntil: "networkidle" });
-  await page.locator(".markdown-code-block pre").waitFor();
-  assert.equal(await font(textarea), "18px");
-  assert.equal(await font(page.locator(".markdown-user-message")), "18px");
-  assert.equal(await font(page.locator(".markdown-code-block pre")), "16.5px");
+  await code.waitFor();
+  assert.equal(await font(userMessage), "16px");
+  assert.equal(await font(code), largeCodeSize);
+  await checkFixedTypography();
 
   await openSettings();
   assert.equal(await width.inputValue(), "2000");
-  assert.equal(await fontSize.inputValue(), "18");
+  assert.equal(await large.isChecked(), true, "Stored 16 must remain Large after reload");
   await checkChatAppearanceReset(page);
   // Language is no longer the panel's last section (15b373d moved it above
   // Chat), so "reachable" is checked two ways: the lowest control is hit-
@@ -101,8 +178,7 @@ export async function checkChatAppearance(page) {
     await page.setViewportSize(viewport);
     assert.equal(await page.locator(".settings-general").evaluate((panel) => {
       panel.scrollTop = panel.scrollHeight;
-      // Radio inputs are 1px sr-only proxies under their labels; only visible
-      // controls can be hit.
+      // Ignore sr-only proxies; the font presets are visible native radios.
       const controls = [...panel.querySelectorAll("button, input, select, textarea")]
         .filter((el) => !el.classList.contains("sr-only") && el.getClientRects().length > 0);
       const lowest = controls.reduce((a, b) => (b.getBoundingClientRect().bottom > a.getBoundingClientRect().bottom ? b : a));
@@ -116,11 +192,20 @@ export async function checkChatAppearance(page) {
       return el.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
     }), true, "Every language option must remain reachable in a short settings panel");
   }
-  await fontSize.press("Home");
+  await small.check();
   await closeSettings();
   assert.equal(await font(textarea), "16px", "Mobile inputs retain the focus-zoom minimum");
-  await textarea.fill("A mobile draft wraps and resizes within the available space.");
-  await fittedHeight();
+  assert.equal(await font(userMessage), "13px");
+  const mobileDraft = "A mobile draft wraps and resizes within the available space.";
+  await textarea.fill(mobileDraft);
+  const mobileHeight = await fittedHeight();
+  await openSettings();
+  await large.check();
+  await closeSettings();
+  assert.equal(await font(textarea), "16px", "Mobile composer font must stay fixed across presets");
+  assert.equal(await font(userMessage), "16px");
+  assert.equal(await textarea.inputValue(), mobileDraft);
+  assert.equal(await fittedHeight(), mobileHeight, "Changing reading font size must preserve mobile draft height");
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   console.log("PASS: chat appearance persistence, typography, draft resizing, and short settings panels");
 }

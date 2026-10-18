@@ -7,6 +7,9 @@ const eslintConfig = [
       ".claude/**",
       ".next/**",
       ".next-desktop/**",
+      // Local screenshots, measurements and one-off verification scripts.
+      "test-results/**",
+      "references/**",
       "src-tauri/resources/server/**",
       "src-tauri/target/**",
       // demo/ is a separate Next.js project with its own lint config.

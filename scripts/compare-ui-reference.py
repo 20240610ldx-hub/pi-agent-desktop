@@ -33,7 +33,8 @@ if args.measurements and args.geometry:
     draw = ImageDraw.Draw(overlay)
     scale = measurements["scale"]
     for item in measurements["boxes"]:
-        measured = next(value for value in geometry if item["selector"] in value["class"].split())
+        candidates = [value for value in geometry if item["selector"] in value["class"].split()]
+        measured = candidates[item.get("index", 0)]
         box = [round(measured[key] * scale, 2) for key in ("x", "y", "width", "height")]
         target = item["reference"]
         delta = [round(a - b, 2) for a, b in zip(box, target)]

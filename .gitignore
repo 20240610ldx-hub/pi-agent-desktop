@@ -65,5 +65,8 @@ next-env.d.ts
 .playwright-mcp/
 pi-gui-session-preview.png
 
+# private local UI references and personal-use fonts
+/references/
+
 # upstream e2e scratch files
 e2e_*.mjs

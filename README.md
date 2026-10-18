@@ -1,3 +1,38 @@
+# Pilaude
+
+**English** | [简体中文](./README.zh-CN.md)
+
+> **Development status: Pilaude 0.1.0 is an unfinished desktop application under active development.** The product repository is [20240610ldx-hub/pilaude](https://github.com/20240610ldx-hub/pilaude). No Pilaude installer or signed automatic update is published as part of this work. Full test, UI parity, installation, and release acceptance are still incomplete; passing focused checks does not establish release readiness.
+
+Pilaude combines the Pi agent and desktop foundation with interface work informed by open-claude-ui. Start from source to evaluate the current development version. It uses its own application data directory; see [Pilaude local data and migration](./docs/pilaude-data.md) before importing existing Pi data.
+
+## Run From Source
+
+Use Node.js 22.19 or later and npm. Native desktop development also needs Rust and the platform prerequisites listed in the preserved source notes below (on Windows, Microsoft C++ Build Tools and WebView2).
+
+```bash
+git clone https://github.com/20240610ldx-hub/pilaude.git
+cd pilaude
+npm ci
+npm run dev
+```
+
+Open [http://127.0.0.1:30141](http://127.0.0.1:30141) for the web development UI. To use the native desktop window, stop that server and run `npm run desktop:dev` from the repository root. Neither command produces an installer. Avoid `next build` / `npm run build` while developing because they can disrupt `.next/`.
+
+## Sources And Development Workflow
+
+- Desktop foundation: [abcwyc/pi-agent-desktop](https://github.com/abcwyc/pi-agent-desktop).
+- Agent core: [earendil-works/pi](https://github.com/earendil-works/pi); web foundation: [agegr/pi-web](https://github.com/agegr/pi-web).
+- Interface reference and selected reusable assets: [Caho1/open-claude-ui](https://github.com/Caho1/open-claude-ui). Its source records do not establish complete visual or interaction parity.
+- [Pilaude development notes](./docs/pilaude-development.md) explain the two upstream-tracking forks, the separate product remote, validation before commit/push, and private evidence storage.
+
+Keep the original projects' copyright and license notices. Product version and repository identity are independent of the retained upstream package and component names.
+
+<details>
+<summary>Upstream Pi Agent README — preserved source record</summary>
+
+> Everything in this section records the upstream Pi Agent project. Its screenshots, download links, installation instructions, updater behavior, release claims, and linked upstream documentation describe that source project and are not a Pilaude release or acceptance statement. Use the Pilaude development instructions above for this repository.
+
 # Pi Agent
 
 **English** | [简体中文](./README.zh-CN.md)
@@ -238,3 +273,5 @@ instrumentation.ts     Next.js server-side HTTP proxy initialization
 The desktop integration of Pi Agent is provided by `pi-agent-desktop`; the core capabilities and the web interface come from [earendil-works/pi](https://github.com/earendil-works/pi) and [agegr/pi-web](https://github.com/agegr/pi-web) respectively. Thanks to those projects and their contributors.
 
 Code in the root of this repository is under the MIT License in [`LICENSE`](./LICENSE). The code and dependencies of the three component projects remain subject to the licenses of their own repositories; keep the corresponding copyright and license notices when copying, modifying, or redistributing.
+
+</details>

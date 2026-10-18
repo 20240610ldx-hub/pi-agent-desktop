@@ -40,7 +40,7 @@ test("writes an auditable three-component manifest", () => {
       appVersion: "0.1.0",
       distribution: {
         name: "pilaude",
-        repository: "20240610ldx-hub/pi-agent-desktop",
+        repository: "20240610ldx-hub/pilaude",
         version: "0.1.0",
       },
       components: [

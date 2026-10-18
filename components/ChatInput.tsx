@@ -796,7 +796,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   compact = false,
 }: Props, ref) {
   const { t } = useI18n();
-  const { fontSize } = useChatAppearance();
+  useChatAppearance();
   const isMobile = useIsMobile();
   const composerRef = useRef<HTMLDivElement | null>(null);
   const [composerTier, setComposerTier] = useState<ComposerTier>(() => (isMobile ? "narrow" : "normal"));
@@ -1200,7 +1200,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     if (ta.value) ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
   }, []);
 
-  useLayoutEffect(resizeTextarea, [value, fontSize, resizeTextarea]);
+  useLayoutEffect(resizeTextarea, [value, resizeTextarea]);
 
   useEffect(() => {
     const ta = textareaRef.current;
@@ -1988,7 +1988,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           e.target.value = "";
         }}
       />}
-      <div style={{ maxWidth: "var(--chat-content-max-width, 820px)", margin: "0 auto" }}>
+      <div className="chat-composer-column" style={{ maxWidth: "var(--chat-content-max-width, 820px)", margin: "0 auto" }}>
         {workspaceUnavailable
           ? <WorkspaceUnavailableBanner workspace={workspaceUnavailable} onRecheck={onRecheckWorkspace} />
           : <ModelErrorBanner error={modelError} />}
@@ -2636,7 +2636,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               outline: "none",
               resize: "none",
               color: "var(--text)",
-              fontSize: "var(--chat-content-font-size, 14px)",
+              fontSize: "var(--pilaude-composer-font-size, 14px)",
               lineHeight: 1.6,
               fontFamily: "inherit",
               minHeight: compact ? 96 : 24,

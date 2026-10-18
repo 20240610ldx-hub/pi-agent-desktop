@@ -13,8 +13,7 @@ import {
   CHAT_CONTENT_WIDTH_MAX,
   CHAT_CONTENT_WIDTH_MIN,
   CHAT_CONTENT_FONT_SIZE_DEFAULT,
-  CHAT_CONTENT_FONT_SIZE_MAX,
-  CHAT_CONTENT_FONT_SIZE_MIN,
+  CHAT_CONTENT_FONT_SIZE_PRESETS,
   useChatAppearance,
 } from "@/hooks/useChatAppearance";
 import { useEnterSendMode, setEnterSendMode } from "@/hooks/useEnterSendMode";
@@ -269,8 +268,7 @@ function GeneralSettings({
               </div>
               <div className="settings-chat-option settings-chat-range-option">
                 <div className="settings-chat-range-header">
-                  <label htmlFor="settings-chat-content-font-size">{t("settings.chatContentFontSize")}</label>
-                  <output htmlFor="settings-chat-content-font-size">{fontSize}px</output>
+                  <span id="settings-chat-content-font-size-label">{t("settings.chatContentFontSize")}</span>
                   <ConfigButton
                     variant="ghost"
                     size="small"
@@ -285,15 +283,20 @@ function GeneralSettings({
                     </svg>
                   </ConfigButton>
                 </div>
-                <input
-                  id="settings-chat-content-font-size"
-                  type="range"
-                  min={CHAT_CONTENT_FONT_SIZE_MIN}
-                  max={CHAT_CONTENT_FONT_SIZE_MAX}
-                  step={1}
-                  value={fontSize}
-                  onChange={(event) => setFontSize(Number(event.target.value))}
-                />
+                <div className="settings-chat-font-options" role="group" aria-labelledby="settings-chat-content-font-size-label">
+                  {CHAT_CONTENT_FONT_SIZE_PRESETS.map((option) => (
+                    <label key={option.value} className="settings-chat-font-option">
+                      <input
+                        type="radio"
+                        name="chat-content-font-size"
+                        value={option.value}
+                        checked={fontSize === option.value}
+                        onChange={() => setFontSize(option.value)}
+                      />
+                      <span>{t(option.label)}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
               <div className="settings-chat-option settings-chat-switch-option">
                 <span>{t("settings.quoteSelection")}</span>

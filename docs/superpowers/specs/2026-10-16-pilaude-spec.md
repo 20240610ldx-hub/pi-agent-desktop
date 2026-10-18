@@ -27,7 +27,7 @@
 
 ## 3. 产品身份、平台与发布隔离（I03/I11/I12；E02）
 
-- 用户可见名称 Pilaude；发行名 `pilaude`；发布仓库 `20240610ldx-hub/pi-agent-desktop`，与代码 fork 地址保持一致。
+- 用户可见名称 Pilaude；发行名 `pilaude`；2026-10-18 按用户要求建立独立公开产品仓库 `20240610ldx-hub/pilaude`。`20240610ldx-hub/pi-agent-desktop` 和 UI fork 继续跟进上游，产品通过 `product` 远端提交和推送融合分支。
 - 第一份 Pilaude 开发版本为 `0.1.0`，存入独立的 `src-tauri/pilaude-package.json`，并与本发行的 Cargo 版本一致，不继承上游 Pi Agent 的发行版本号；原 `pi-agent-desktop-package.json` 保留作为上游组件版本，Pi SDK、pi-web、Pi 桌面上游的来源在组件清单中另行保留。清单 `appVersion` / `distribution` 表示 Pilaude，`components` 表示来源组件，不能混作同一个版本。
 - 独立应用标识 `io.github.20240610ldx-hub.pilaude`；与原 Pi Agent 的窗口状态、单实例锁、安装和更新身份隔离。Rust crate / npm 上游包名不为改品牌而无必要地重命名。
 - 正式支持 Windows 10 22H2 x64 / Windows 11 x64，使用已验证的 WebView2；Windows ARM64 不在首发保证范围。macOS 兼容代码保留，后续单独验收与发布。
