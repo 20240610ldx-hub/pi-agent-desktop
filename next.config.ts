@@ -42,7 +42,14 @@ const nextConfig: NextConfig = {
       "**/mdast-util-gfm-autolink-literal/lib/index.js": { loaders: [gfmAutolinkEmailLoader] },
     },
   },
-  webpack(config) {
+  webpack(config, { dev }) {
+    if (dev) {
+      // Rust builds were invalidating every client compilation in this monorepo.
+      // Extend Next's existing ignores; keep source changes and production tracing intact.
+      const ignored = config.watchOptions.ignored as RegExp;
+      const generated = /(?:^|[\\/])(?:src-tauri[\\/]target|test-results|\.next-desktop)(?:[\\/]|$)/;
+      config.watchOptions = { ...config.watchOptions, ignored: new RegExp(`${ignored.source}|${generated.source}`, ignored.flags) };
+    }
     config.module.rules.push({
       test: /[\\/]mdast-util-gfm-autolink-literal[\\/]lib[\\/]index\.js$/,
       loader: gfmAutolinkEmailLoader,

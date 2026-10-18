@@ -120,3 +120,20 @@ test("only markdown files are edited, however they are named in the request", as
   assert.deepEqual(await batch.json(), { results: [{ filePath: authPath, error: "Not a skill file" }] });
   assert.equal(await readFile(authPath, "utf8"), auth);
 });
+
+test("an agent-home override keeps the OS global skill edit root", async () => {
+  const homeKey = process.platform === "win32" ? "USERPROFILE" : "HOME";
+  const previousHome = process.env[homeKey];
+  const previousOverride = process.env.PI_AGENT_HOME;
+  process.env[homeKey] = join(root, "os-home");
+  process.env.PI_AGENT_HOME = join(root, "agent-home-override");
+  try {
+    const skill = await writeSkill(join(process.env[homeKey], ".agents", "skills"), "global-fixture");
+    const response = await patchSkills({ filePath: skill, disableModelInvocation: true });
+    assert.equal(response.status, 200);
+    assert.match(await readFile(skill, "utf8"), /disable-model-invocation: true/);
+  } finally {
+    if (previousHome === undefined) delete process.env[homeKey]; else process.env[homeKey] = previousHome;
+    if (previousOverride === undefined) delete process.env.PI_AGENT_HOME; else process.env.PI_AGENT_HOME = previousOverride;
+  }
+});

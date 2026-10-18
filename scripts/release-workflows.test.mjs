@@ -193,8 +193,11 @@ test("nothing reintroduces a literal homedir() into an fs call", async () => {
   const guarded = [
     "lib/file-access.ts",
     "lib/directory-browser.ts",
+    "lib/linked-directory.ts",
+    "lib/enabled-models-runtime.ts",
     "lib/skill-lock.ts",
     "app/api/cwd/validate/route.ts",
+    "app/api/skills/route.ts",
     "lib/default-cwd.ts",
   ];
 
@@ -204,9 +207,9 @@ test("nothing reintroduces a literal homedir() into an fs call", async () => {
     assert.doesNotMatch(
       code,
       /\bhomedir\s*\(/,
-      `${file} calls homedir() directly — use userHome() from lib/user-home.ts instead`,
+      `${file} calls homedir() directly — use the runtime resolver in lib/user-home.ts instead`,
     );
-    assert.match(code, /userHome\s*\(/, `${file} should resolve the home directory via userHome()`);
+    assert.match(code, /(?:userHome|systemHome)\s*\(/, `${file} should resolve the home directory at runtime`);
   }
 });
 

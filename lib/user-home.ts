@@ -3,8 +3,9 @@ import { homedir } from "os";
 /**
  * The user's home directory, resolved at runtime rather than at build time.
  *
- * Use this instead of `os.homedir()` anywhere the result reaches a filesystem
- * call — `readdir`, `stat`, `join` feeding one of those, and so on.
+ * Use userHome for Pi data paths; use systemHome when authorization or display
+ * must refer to the OS home independently of PI_AGENT_HOME. Both stay dynamic
+ * when the result reaches a traced filesystem call or absolute path.
  *
  * Next's file tracer (@vercel/nft) statically evaluates the arguments to fs
  * calls. When it can fold an expression down to the home directory it globs
@@ -29,4 +30,9 @@ import { homedir } from "os";
  */
 export function userHome(): string {
   return process.env.PI_AGENT_HOME || homedir();
+}
+
+/** Keep OS home semantics for authorization and display, without folding it at build time. */
+export function systemHome(): string {
+  return process.env[process.platform === "win32" ? "USERPROFILE" : "HOME"] || homedir();
 }
