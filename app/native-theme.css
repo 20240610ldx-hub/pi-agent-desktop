@@ -4521,6 +4521,7 @@ html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
 @media (pointer: coarse) {
   .process-details-trigger, .tool-call-trigger, .thinking-disclosure-toggle { min-height: 44px; }
   .tool-call-row[data-command-layout="compact"] .markdown-code-copy { min-width: 44px; min-height: 44px; }
+  .user-text-disclosure-toggle { min-width: 44px; min-height: 44px; }
 }
 
 /* Tool headers keep status glyphs and result/diff colors separate from hover. */

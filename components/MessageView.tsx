@@ -12,6 +12,7 @@ import { copyText } from "@/lib/clipboard";
 import { useI18n } from "@/hooks/useI18n";
 import { useDiffViewMode } from "@/hooks/useDiffViewMode";
 import { useTranscriptExpansion } from "@/hooks/useTranscriptExpansion";
+import { useMeasuredOverflow } from "@/hooks/useMeasuredOverflow";
 import { parseCompactionSummary } from "@/lib/compaction-summary";
 import { getAssistantErrorMessage, getThinkingPreview, hasAssistantAnswer, isAssistantTruncated, isEmptyThinkingBlock } from "@/lib/message-display";
 import { parseUnifiedPatch, type SplitDiffCell, type SplitDiffFile } from "@/lib/patch";
@@ -1778,15 +1779,9 @@ function CollapsibleUserText({ text, cwd, onOpenFile }: {
 }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
-  const [overflowing, setOverflowing] = useState(false);
-  const bodyRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (!el) return;
-    // Small slack so content barely over the limit is not worth collapsing
-    setOverflowing(el.scrollHeight > USER_TEXT_COLLAPSE_HEIGHT + 60);
-  }, [text]);
+  // Small slack so content barely over the limit is not worth collapsing.
+  const { bodyRef, overflowing } = useMeasuredOverflow(text, USER_TEXT_COLLAPSE_HEIGHT + 60);
+  const bodyId = useId();
 
   const collapsed = overflowing && !expanded;
   const fade = "linear-gradient(to bottom, black calc(100% - 48px), transparent 100%)";
@@ -1795,6 +1790,7 @@ function CollapsibleUserText({ text, cwd, onOpenFile }: {
     <div>
       <div
         ref={bodyRef}
+        id={bodyId}
         style={collapsed ? {
           maxHeight: USER_TEXT_COLLAPSE_HEIGHT,
           overflow: "hidden",
@@ -1806,6 +1802,10 @@ function CollapsibleUserText({ text, cwd, onOpenFile }: {
       </div>
       {overflowing && (
         <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          className="user-text-disclosure-toggle"
           onClick={() => setExpanded((v) => !v)}
           style={{
             display: "flex",

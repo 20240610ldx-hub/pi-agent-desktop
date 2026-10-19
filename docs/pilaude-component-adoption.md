@@ -12,9 +12,9 @@
 - **未采用／独立实现**：产品已有同类能力，但没有来源适配证据。下表中的产品文件是现有实现或候选接点，不是采用证明。
 - **正在适配、未验**：新批进行中；不提前统计为直接采用或功能、视觉通过。
 
-截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；11 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，`ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样，`AttachmentCard` 的文件名前缀／最后扩展名分离与分段收缩布局、`ThinkingAccordion` 的受控 Grid 展开、`CodeBlock` 的 2.5 秒复制反馈／衰减，`DraggableSessionList` 的固定根会话键盘相邻重排，以及 `ReasoningAmbientGlow` 的 ShimmerText 背景几何／非对称关键帧。新增 consumer 与测试已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 21 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
+截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；12 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，`ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样，`AttachmentCard` 的文件名前缀／最后扩展名分离与分段收缩布局、`ThinkingAccordion` 的受控 Grid 展开、`CodeBlock` 的 2.5 秒复制反馈／衰减，`DraggableSessionList` 的固定根会话键盘相邻重排，以及 `ReasoningAmbientGlow` 的 ShimmerText 背景几何／非对称关键帧、`ChatMessageBubbles` 的高度测溢出／渐隐／展开机制。新增 consumer 与测试已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 20 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
 
-`ThinkingAccordion` 的 Grid 展开部分已通过真实 `MessageView → ThinkingDisclosure` 路径及九组实际页面检查，登记为**局部适配，仅 Grid 部分**。后续代码复制反馈、固定会话键盘重排和活动微光分别新增限定 consumer，当前计数为 1 项直接采用／11 项局部适配／21 项未确认采用；这不代表完整源组件或 Windows 视觉一致性通过。
+`ThinkingAccordion` 的 Grid 展开部分已通过真实 `MessageView → ThinkingDisclosure` 路径及九组实际页面检查，登记为**局部适配，仅 Grid 部分**。后续代码复制反馈、固定会话键盘重排、活动微光和用户长消息测溢出分别新增限定 consumer，当前计数为 1 项直接采用／12 项局部适配／20 项未确认采用；这不代表完整源组件或 Windows 视觉一致性通过。
 
 `react-diff-view@3.3.3` 是另行记录的 npm 运行时库，不属于上面的 open-claude-ui 33 个模块。它接入 Changes 的通用 diff 呈现，本身不改变 open-claude-ui 的采用计数。既有 `StreamingDiffViewer` 记录只保留 table／gutter 的局部呈现借鉴，不能把新库的 parser、split 配对、tokenize 或词差异能力归入该来源。新渲染路径的最终功能／视觉验收仍待完成，见下方独立记录。
 
@@ -32,6 +32,8 @@
 9. **局部适配，仅键盘重排**：[sidebar-session-metadata.ts](../lib/sidebar-session-metadata.ts) → [SessionSidebar.tsx](../components/SessionSidebar.tsx) 真实固定根会话按钮，消费 DraggableSessionList 的相邻索引／边界／splice；领域适配只更新同组已显示根会话的持久 pin slots，保留家族、草稿、焦点和其他 metadata。
 10. **局部适配，仅 ShimmerText**：[native-theme.css](../app/native-theme.css) 的 `.activity-shimmer` 消费 ReasoningAmbientGlow 的 250% 背景与 vendor `cds-shimmer-text-shine` 非对称关键帧；[ChatWindow.tsx](../components/ChatWindow.tsx) 与 [MessageView.tsx](../components/MessageView.tsx) 用实际事件选择收起摘要／当前思考／工具／等待提示的唯一可见 consumer。产品按用户清单使用 1.8 秒中性循环，并在完成／中断／隐藏／reduced-motion 时停止；未采用 glow canvas、pulse 或扫光层。
 
+11. **局部适配，仅测溢出／渐隐／展开机制**：[useMeasuredOverflow.ts](../hooks/useMeasuredOverflow.ts) 的高度比较与 [MessageView.tsx](../components/MessageView.tsx) 的 `CollapsibleUserText` 裁切／fade／原生按钮适配 `ChatMessageBubbles`；responsive observer、字体生命周期和隐藏恢复是产品扩展。详见下方真实 RED→GREEN 记录。
+
 ## 33 个模块逐项记录
 
 “未采用”行仍列出产品消费证据的缺口和可落地的候选点；相似的独立实现不能用来填“已采用”。源文件内的注释与实际代码不符时，以下限制以实际代码为准。
@@ -44,7 +46,7 @@
 | 04 | `CdsMotionEngine.tsx` | 200ms 按压、30ms chip 级联、105° skeleton sweep | **未采用**，无产品 consumer。 | 这是演示画布而非通用引擎。提取时序或 CSS，去掉固定 chips、演示色值、定时器和依赖外部动画类的展示逻辑。 |
 | 05 | `ChatComposer.tsx` | IME／229 Enter 保护、field-sizing、外点关菜单、附件局部状态 | **未采用／独立实现**。[ChatInput.tsx](../components/ChatInput.tsx) 有真实 Pi 输入器、草稿、队列和提交锁，无该组件导入。 | 可借布局／菜单样式，保留产品单次提交、延迟引用、拒绝恢复及会话切换保护。固定旧模型、模拟附件与发送后无条件清空不可移植。20px／Clay focus 也不能覆盖用户最新紧凑中性输入框选择。 |
 | 06 | `ChatComposerChin.tsx` | 36px 触控／28px 下颌行变量、失败队列横幅 | **未采用**。[ChatInput.tsx](../components/ChatInput.tsx) 的 `QueuedMessageRow` 与真实 queuedMessages 是独立实现。 | 可抽受控行与横幅。源码没有 localStorage 队列，Attach／发送按钮也未接行为；不能直接显示“已保存在本地”或给不明确结果的请求自动 Retry。 |
-| 07 | `ChatMessageBubbles.tsx` | 高度测溢出／Read more、hover 操作、复制衰减、思考／artifact 外壳 | **未采用／独立实现**。[MessageView.tsx](../components/MessageView.tsx) 的 user／assistant 渲染有自身 block 和工具语义。 | 借测溢出和操作显隐，保留 Pi 工具嵌套、分叉、错误、延迟思考及真实统计；不要用示例 Claude 标识和固定内容替换。 |
+| 07 | `ChatMessageBubbles.tsx` | 高度测溢出／Read more、hover 操作、复制衰减、思考／artifact 外壳 | **局部适配，仅测溢出／渐隐／展开机制**。[useMeasuredOverflow.ts](../hooks/useMeasuredOverflow.ts) 署名适配高度比较，由 [MessageView.tsx](../components/MessageView.tsx) 的真实 `CollapsibleUserText` 消费；native button、fade 和测量结果控制裁切。公开 hook 六项及实际同文本缩窄／拉宽、手动展开和精确复制已有证据，详见后续记录。 | 来源 effect 仅随文本测量；自然 Markdown／wrapper 观察、rAF 合并、字体事件、隐藏后返回与清理是产品扩展。保留 Pi 的 220px＋60px slack、48px fade、手动展开和外层 300px 滚动上限；未搬其他消息外壳、hover、copy、thinking／artifact，不算完整组件采用。 |
 | 08 | `ClaudeAudioPlayer.ts` | 单例 AudioContext、gain ramp、四种合成音、sinkId 和 BYO fallback | **未采用／独立实现**。[hooks/useAudio.ts](../hooks/useAudio.ts) 有自有双音 completion；[AppShell.tsx](../components/AppShell.tsx) 消费。 | 可抽 envelope 与输出设备支持，接用户音效偏好及生命周期。合成音不等于官方声效；需处理用户激活、context suspend／close、sinkId 支持情况。 |
 | 09 | `ClaudeDesktopHeader.tsx` | macOS 74px 避让、`74/min(zoom,1)` 补偿、45px drag band | **未采用**。产品顶栏使用 Tauri，未导入该模块。 | 仅 macOS host 几何参考；依赖 `window.electronAPI`、WebkitAppRegion，不能直接搬进 Windows Tauri renderer。 |
 | 10 | `ClaudeMotionPresets.ts` | `calcDampedHarmonicOscillator` 欠／临界／过阻尼解析解；四 springs、CSS easing、message/popover/modal/grapheme variants | **局部适配**。[cds-motion.ts](../lib/cds-motion.ts) 导入求解器和 SNAPPY 320／28／1，实际消费于 [DomContextMenuHost.tsx](../components/DomContextMenuHost.tsx) 的 61 点 CSS `linear()` opacity 进入。纯算法及实际 JSX／CSS consumer 测试通过，页面验证分轮记录于下方。 | 参数域及近临界／重阻尼数值边界由 adapter 补偿，vendor 未改。仅 opacity，布局与命中区域保持原位；reduced motion 静态、关闭即时。未采用其他 springs／variants／空间回弹，source 数值与 AGENTS 文案冲突以源码为准。 |
@@ -82,9 +84,15 @@ DraggableSessionList 只采用键盘相邻索引／边界／splice：持久 pin 
 
 ## 有限步骤动效的来源边界
 
-新步骤的事件账本与 WAAPI 呈现是产品对用户清单的领域适配，不能算作新采用 `CdsMotionEngine` 或 `ClaudeMotionPresets` 的 message variants。`useAgentSession → toolEntryState／consumeToolEntries → ChatWindow → useActivityStepMotion` 只允许真实新增事件驱动一次入场，历史／重连与已消费 ID 保静态；状态图形与摘要文字由实际语义变化驱动有限淡入，不由每个参数 delta 重启。受控 `DisclosureBody` 仍是现有 ThinkingAccordion Grid 的共享 consumer，不增加源模块计数。最终时间序列／边界证据在[复刻基准](pilaude-ui-parity.md)按运行登记，33 项仍为 1 直接／11 局部／21 未确认。
+新步骤的事件账本与 WAAPI 呈现是产品对用户清单的领域适配，不能算作新采用 `CdsMotionEngine` 或 `ClaudeMotionPresets` 的 message variants。`useAgentSession → toolEntryState／consumeToolEntries → ChatWindow → useActivityStepMotion` 只允许真实新增事件驱动一次入场，历史／重连与已消费 ID 保静态；状态图形与摘要文字由实际语义变化驱动有限淡入，不由每个参数 delta 重启。受控 `DisclosureBody` 仍是现有 ThinkingAccordion Grid 的共享 consumer，不增加源模块计数。最终时间序列／边界证据在[复刻基准](pilaude-ui-parity.md)按运行登记，该有限动效批次结束时，33 项为 1 直接／11 局部／21 未确认；后续长消息测溢出 consumer 将当前计数更新为 1／12／20。
 
 参考图的紧凑命令 pill／平铺分隔行在这 33 个源模块中没有可直接替换的匹配组件。当前适配在真实 `MessageView.ToolCallBlock` 呈现边界复用已有 Grid 与 `CodeCopyButton`，不新增来源模块计数；只接受已结束、纯 command 字段的 bash／powershell，额外 timeout／扩展字段、未完参数、运行／部分结果、MCP／codemode／diff／图片等保留既有呈现。compact copy 复制原始 command／result，通用 `getToolCallInputText` 的完整 JSON 合同不变。源库的演示 MCP permission card／完整 CodeBlock 不是该紧凑命令条的来源；私有参考中的命令／项目文字不进入公开夹具。该批功能及原像素残差在复刻基准按最终运行补记，来源计数不代表视觉通过。后续 `CompactCommandText` 复用项目既有 PrismLight 的 bash／powershell grammar，仅字符串着语义绿色、其他token继承字体／中性色；4096字符以上完整plain fallback，Copy仍取原始command。此成熟高亮库consumer不是新增open-claude-ui模块采用。
+
+## 用户长消息的响应式测溢出（2026-10-19）
+
+`ChatMessageBubbles.tsx:95-101` 的 scrollHeight 比较与 155-170 的裁切／渐隐／原生展开机制，由署名 `useMeasuredOverflow → MessageView.CollapsibleUserText` 实际消费。源 effect 只随 text／collapsible／threshold 改变测量；ResizeObserver 同时观察自然 Markdown 与裁切 wrapper、rAF 合并、font ready／loadingdone／loadingerror、隐藏无布局时保留判定及卸载失效是产品扩展，不冒称源能力。消费者继续拥有手动 expanded；220px＋60px slack、48px fade、外层 300px 滚动上限及原文复制保留。
+
+真实 RED `user-message-overflow/run-1792382339554/` 同一 DOM／文本在窗口 1500→430 时自然高度 224→537px，却没有 Expand。修复后公开 hook 六项通过重排双向恢复、隐藏返回、字体事件、source／threshold 变化及陈旧回调清理；独立有界复查未发现问题。实际 `run-1792382907493/` 五组通过：窄窗 220px 裁切＋Expand、手动展开保外层 300px、同文本往返保手动选择、拉宽移除 mask／按钮、精确复制。三个截图已读取，正文中心无遮挡，ARIA 关联与真假 expanded 有记录；中间 `run-1792382743042/` 侧栏离屏点击失败保留，不归为产品测量失败。最终 `run-1792383262052/` 十二组通过，包含真实字体设置令同宽内容 224↔282px、New 隐藏后改宽再返回同一 DOM、Enter／Space 的焦点与 ARIA、原文复制及真实触控。触控 RED `run-1792383105530/` 测得 49.39×21.05px，新增按钮 class 与 coarse-only 44px 最小目标；最终 49.39×44px、center hit 和 native tap 通过，桌面不变。七图已读取，desktop＋touch 的 page／console／external 均为空，仅 mock lease；父级 117 项相关回归、最终 ownership／CSS 15 项、完整类型和 lint 通过，lint 保留 TerminalPanel 既有一条 warning。这不是 Windows 字体或完整消息组件一致性证明。当前模块计数据真实 consumer 更新为 1 直接／12 局部／20 未确认。
 
 ## 尚未使用的高价值算法优先项
 

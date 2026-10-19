@@ -54,7 +54,7 @@
 | 确认与权限对话框 | `ConfirmationDialog`、`McpToolDecisionCard` | 资源可用；后端审批、焦点陷阱、取消/错误状态待融合 |
 | 附件卡与预览 | `AttachmentCard` | 最后扩展名分离／双 span 布局已局部适配到普通文件 TabBar，按宽度省略保完整路径浮签；附件 tile／chip 未采用。长文件名官方状态图缺，窄容器实际检查单独记录 |
 | 输入器及底栏 | `ChatComposer`、`RichComposerWithMentions`、`ChatComposerChin` | 保留 Pi 真实输入器，部分 IME/草稿测试已有；几何、排队、菜单、提及/命令状态待对照 |
-| 消息、操作条、代码 | `ChatMessageBubbles`、`CodeBlock` | CodeBlock 的 2.5 秒复制／衰减由 CodeCopyButton 局部适配并经真实普通 fence／Mermaid source 消费，失败重试、重复计时和陈旧结果检查已有证据；现有 Prism 与 streaming 保留。完整消息布局、编辑和 Windows 同状态视觉仍待对照 |
+| 消息、操作条、代码 | `ChatMessageBubbles`、`CodeBlock` | ChatMessageBubbles 的测高／渐隐／展开机制已由 useMeasuredOverflow→CollapsibleUserText 局部消费；字体／宽度观察与隐藏恢复为产品扩展。CodeBlock 的 2.5 秒复制／衰减由 CodeCopyButton 局部适配并经真实普通 fence／Mermaid source 消费，失败重试、重复计时和陈旧结果检查已有证据；现有 Prism 与 streaming 保留。完整消息布局、编辑和 Windows 同状态视觉仍待对照 |
 | 思考展开和氛围 | `ThinkingAccordion`、`ReasoningAmbientGlow` | ThinkingAccordion 的受控 Grid 开合已由真实 ThinkingBlock 消费并通过加载／重试／偏好／中断清理／减少动效检查；活跃指示缺逐 block wire 标志，氛围层未采用。Windows 同状态参考仍待补 |
 | 模型选择、用量、推理强度 | `ModelSwitcherWithTokenGauge`、`ModelSelectorEffort` | 资源可用；使用真实 Pi 模型能力/未知值，不能移植演示额度 |
 | 动效参数与级联 | `ClaudeMotionPresets`、`CdsMotionEngine` | 前者的求解器／SNAPPY 经 cds-motion→DomContextMenuHost 消费到 opacity 进入；实际 CSS 曲线、静态命中区域、reduced-motion 与菜单交互已有目标检查，其他 springs／variants 未采用。后者仍未采用且含演示展示 |
@@ -335,6 +335,12 @@ SSR真实controller与preference接口先RED后GREEN。实际 `transcript-view/r
 `MessageView → CompactCommandText → 既有lib/syntax-highlighting PrismLight` 现在实际消费已注册bash／powershell grammar。adapter只在≤4096字符时输出span token，超过预算完整plain fallback；原pre／字体／wrap／命令pill和原文Copy不变，不新增lexer／依赖，也不增加open-claude-ui来源计数。字符串使用既有success绿色，其他token继承中性色／字形，未导入完整代码主题。
 
 四项新公开renderer测试先RED后GREEN，相关MessageView合计52项；父级syntax／MessageView／ownership／CSS基线67项、完整类型和lint通过，保留TerminalPanel既有warning。最终 `activity-command-layout/run-1792382399196/` 四组实际页面通过quoted路径着色、字体／字重／斜体继承、单pre、Bash和PowerShell grammar、HTML字面文本、CRLF／Tab／尾空格／精确复制、4096以上完整plain fallback和原全部窄窗／错误／格式回退。1300／430深浅四图已读取；浅色string rgb36,138,61、其余rgb82，暗色string rgb48,209,88，字体仍12px Mono400 normal。page／console／API writes／external为空。原图quotedpath主体候选约rgb30,158,60，颜色仍有残差；DPI／生成文本不同，raw overlay只整数crop／translation，不称像素完全一致。
+
+## 用户长消息的响应式展开（2026-10-19）
+
+原实现只随文本变化测高；实际 `user-message-overflow/run-1792382339554/` 在同一 Markdown 节点／相同文本下，窗口 1500→430、自然内容 224→537px，却没有 Expand，构成有效 RED。署名 `useMeasuredOverflow → CollapsibleUserText` 现在局部消费 open-claude-ui `ChatMessageBubbles` 的测高／渐隐／展开机制，source 的 effect 没有响应式 observer；产品补 wrapper＋自然 Markdown ResizeObserver、rAF 合并、字体生命周期、隐藏无布局保原判定及卸载失效。手动 expanded 独立保留，原 220px＋60px slack、48px fade、外层 300px 滚动上限与复制原文不变，新增原生按钮 type／ARIA 关联。
+
+公开 hook 六项及独立有界复查通过。实际 `run-1792382907493/` 五组通过同文本缩窄、手动展开／外层上限、往返保手动选择、拉宽去 mask／按钮、精确复制；窄窗 body 高220／natural537，拉宽恢复223.906px且不再裁切。三个截图已读取，正文中心无遮挡；API／SSE／clipboard 为生成夹具拦截，无模型执行。中间 `run-1792382743042/` 因侧栏离屏点击失败保留，不能当测量功能失败或被绿结果覆盖。最终 `run-1792383262052/` 十二组通过：真实字体设置在同宽 615.59px 下令自然高度 224↔282px、New 隐藏后改宽再返回同一 DOM、Enter／Space 焦点／ARIA、手动选择保留、精确复制和 native tap。触控前一轮 `run-1792383105530/` 49.39×21.05px 为真实目标尺寸 RED；新增按钮 class 和 coarse-only min44 后最终 49.39×44px，center hit 为真。展开后保留外层 300px 滚动，Collapse 通过原生滚动可见，没有自动抢滚动。七图已读取；desktop＋touch 的 page／console／external 均为空，仅拦截 lease。父级 117 项相关回归、最终 ownership／CSS 15 项、完整类型和 lint 通过，保留 TerminalPanel 既有一条 warning；不冒充完整 npm／terminal E2E。模块计数更新为 1 直接／12 局部／20 未确认，本项只计 ChatMessageBubbles 局部采用，不表示完整组件或 Windows 原生视觉通过。
 
 ## 上游更新规则
 
