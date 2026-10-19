@@ -48,3 +48,4 @@ FileViewer 其他视觉残差。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
 - 2026-10-19T14:09Z · claude:sonnet-xhigh:impl · 领取，租约至 2026-10-19T17:09Z
+- 2026-10-19T14:11Z · claude:sonnet-xhigh:impl · 复述：目标是 FileViewer 窄 pane 下载真正保存正确文件。A1 原样运行 E2E_FILE_TOOLBAR_DOWNLOAD_CONTROL=1 node e2e/file-panel.mjs 保存失败输出；A2 用有界最小浏览器实验区分 fixture/浏览器限制与产品缺陷，并逐项记录假设和结果；A3 保留下载断言，验证实际落盘文件名、bytes 与源 sha256，若确为环境限制且触及 R3 冲突则 blocked 交规划；A4 跑受影响测试、tsc、lint、guard。所有代码基于任务 HEAD，只改 files_allowed，不读主 checkout live 源码。任务板仅 --no-commit，由协调者串行提交；实现自测只写日志，不写 passing evidence。
