@@ -24,6 +24,54 @@
     "note": "Risk levels that force the sync to open a reviewed PR instead of pushing straight to main and triggering a signed release. Most upstream releases will land here, because the remaining drift is accepted by decision rather than pending cleanup \u2014 see `dispositions` and `decisionLog`. Narrow this list only if the drift itself actually goes away."
   },
   "driftedUpstreamFiles": {
+    "lib/types.ts": {
+      "risk": "medium", "drift": 43, "structuralDrift": 43, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4 for the Todo-only index. Preserve the existing chapter, activity and runtime contracts together with the optional canonical session Todo projection; null and a valid empty task list have different meanings. No Plan or permission fields are included in this measurement."
+    },
+    "lib/session-reader.test.mjs": {
+      "risk": "medium", "drift": 139, "structuralDrift": 139, "disposition": "accepted",
+      "reason": "Shared tests measured against 6fcd7d4 retain chapter history boundaries and canonical Todo branch projection, including a valid clear, malformed fallback, tombstones and paged-history independence. Preserve these merge guards rather than treating new tests as fork-owned."
+    },
+    "lib/agent-event-wire.test.mjs": {
+      "risk": "low", "drift": 27, "structuralDrift": 27, "disposition": "accepted",
+      "reason": "Shared tests measured against 6fcd7d4 guard narrow chapter delivery and independent canonical todo_state projection without exposing unrelated custom entries or changing assistant stream lifecycle."
+    },
+    "lib/agent-event-stream.test.mjs": {
+      "risk": "medium", "drift": 65, "structuralDrift": 65, "disposition": "accepted",
+      "reason": "Shared tests measured against 6fcd7d4 preserve actual bootstrap snapshot provenance, authoritative connected Todo state and exclusion of older buffered Todo entries after the subscribed synchronous read. A Todo update must not end the assistant stream."
+    },
+    "lib/rpc-manager.test.mjs": {
+      "risk": "medium", "drift": 90, "structuralDrift": 90, "disposition": "accepted",
+      "reason": "Shared tests measured against 6fcd7d4 using the Todo-only index retain existing model-only chapter and wrapper behavior, canonical Todo getter, normal coding factory registration, branch-independent active tool availability and post-load duplicate composition. Web, Plan and permission lifecycle work is excluded."
+    },
+    "hooks/useAgentSession.test.mjs": {
+      "risk": "high", "drift": 942, "structuralDrift": 941, "disposition": "accepted",
+      "reason": "Shared public hook tests measured against 6fcd7d4 retain activity, streaming, request settlement, cached session restoration and chapter ownership guards. Canonical Todo tests additionally cover connected/history clear, session and selected-branch identity, stale reconnect isolation, navigation failure and return to a prior session. Preserve the entire existing suite during upstream merges."
+    },
+    "lib/i18n/messages/en.ts": {
+      "risk": "low", "drift": 10, "structuralDrift": 10, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4. The canonical English message pack adds only the ten native Todo labels consumed by SessionTodoPanel. Keep the locale key contract aligned with both Chinese packs; other fork catalogue copy remains in locale-plugins."
+    },
+    "lib/i18n/messages/zh-CN.ts": {
+      "risk": "low", "drift": 10, "structuralDrift": 10, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4. The canonical Simplified Chinese message pack adds only the ten native Todo labels consumed by SessionTodoPanel. Preserve literal task content and the common locale key contract."
+    },
+    "lib/i18n/messages/zh-TW.ts": {
+      "risk": "low", "drift": 10, "structuralDrift": 10, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4. The canonical Traditional Chinese message pack adds only the ten native Todo labels consumed by SessionTodoPanel. Preserve literal task content and the common locale key contract."
+    },
+    "scripts/stage-package.mjs": {
+      "risk": "low", "drift": 11, "structuralDrift": 11, "disposition": "accepted",
+      "reason": "Post-baseline shared file, verified in actual upstream/main@3b6a87771267bb884c41df65537156820f23b41d and measured against that revision. Its exact entry overrides the broad scripts/ fork-owned description for upstream sync classification. Preserve complete built-in Todo/config closure staging and explicit TypeBox peer resources; do not substitute dependency-only tracing for lazy TypeScript resources."
+    },
+    "scripts/stage-package.test.mjs": {
+      "risk": "medium", "drift": 31, "structuralDrift": 31, "disposition": "accepted",
+      "reason": "Post-baseline shared test verified and measured against actual upstream/main@3b6a87771267bb884c41df65537156820f23b41d. Preserve real installed Todo factory, config validator, lazy overlay, locale and license staging checks alongside existing package closure tests. Temporary staged imports use Pi namespace injection and do not prove an installer launch."
+    },
+    "scripts/prepare-desktop.mjs": {
+      "risk": "low", "drift": 10, "structuralDrift": 10, "disposition": "accepted",
+      "reason": "Post-baseline shared script verified and measured against actual upstream/main@3b6a87771267bb884c41df65537156820f23b41d. Preserve the existing root notice copy and explicit complete Todo runtime staging in desktop server assembly. This exact shared entry takes precedence over the broad scripts/ fork-owned description; no Web or Plan staging is included."
+    },
     "lib/pi-sdk-internals.ts": {
       "risk": "medium", "drift": 41, "structuralDrift": 41, "disposition": "accepted",
       "reason": "The locked SDK adapter wraps default MCP OAuth storage with the app's encrypted backend and versions the hot-reload cache. Constructor options and refresh-lock behavior must survive upstream updates."
@@ -37,16 +85,16 @@
       "reason": "Sign-out selects the encrypted Pilaude state file and backend while retaining the original late-refresh and cancelled-sign-in write guards."
     },
     "lib/agent-event-wire.ts": {
-      "risk": "low", "drift": 17, "structuralDrift": 17, "disposition": "accepted",
-      "reason": "Only validated chapter custom entries project from entry_appended to an existing custom message_end for live navigation; unrelated large custom storage entries remain omitted. Preserve existing system-message filtering, slimming and snapshot semantics."
+      "risk": "low", "drift": 20, "structuralDrift": 20, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4 for the Todo-only index. Validated chapter entries project narrowly as visible custom messages; canonical rpiv-todo-state entries instead produce independent todo_state events through the bounded projector. Preserve stream lifecycle, system-message filtering and omission of unrelated large custom entries."
     },
     "lib/message-display.ts": {
       "risk": "low", "drift": 24, "structuralDrift": 24, "disposition": "accepted",
       "reason": "Explicit chapter records add display grouping anchors without changing real run boundaries. Only canonical successful completed chapter control calls are filtered from display; error/running/partial and original block indexes remain authoritative."
     },
     "lib/session-reader.ts": {
-      "risk": "medium", "drift": 131, "structuralDrift": 128, "disposition": "accepted",
-      "reason": "Preserve bounded active-branch history, deferred content and aligned entry IDs. Validated chapter custom entries become visible custom messages and participate in tail/wholeTurns boundaries; arbitrary custom storage entries stay hidden and sibling branches never leak into navigation."
+      "risk": "medium", "drift": 133, "structuralDrift": 130, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4 for the Todo-only index. Preserve bounded active-branch history, deferred content, aligned entry IDs and chapter tail/wholeTurns boundaries. Canonical Todo state is read from the complete selected branch independently of paged chat messages, retaining valid clears and earlier valid fallback without leaking sibling branches or arbitrary custom storage."
     },
     "lib/builtin-extensions.ts": {
       "risk": "low", "drift": 1, "structuralDrift": 1, "disposition": "accepted",
@@ -101,12 +149,16 @@
       "reason": "Subagent fallback runtime construction uses Pilaude credentials. Keep this adapter when updating upstream subagent lifecycle or runtime sharing."
     },
     "lib/subagent-extension.ts": {
-      "risk": "low", "drift": 25, "structuralDrift": 25, "disposition": "accepted",
-      "reason": "Measured against 6fcd7d4. When the host really registers Agent, prefer its integrated executor over current and legacy pi-subagents controls only after establishing the package identity. Explicit npm targets, including scoped or unscoped aliases, override alias/path coincidences; retain reverse aliases, lookalike packages, unrelated same-name tools and host-disabled paths. This filter does not prove npm package installation or loading."
+      "risk": "medium", "drift": 52, "structuralDrift": 52, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4. Only when the host really registers Agent, prefer its integrated executor over current and legacy pi-subagents controls after proving package identity. Explicit npm targets override alias/path coincidences; in the real loader override, where SDK sourceInfo is still local, use realpath and the nearest bounded regular package manifest instead of directory spelling. Stop at the first package boundary and retain unknown identities, reverse aliases, unrelated tools and absent/disabled host paths. Public real-loader fixtures close the earlier alias timing failure; no pi-subagents npm package was installed or executed."
     },
     "lib/subagent-extension.test.mjs": {
       "risk": "medium", "drift": 58, "structuralDrift": 58, "disposition": "accepted",
       "reason": "Shared public tests measured against 6fcd7d4 guard package-identity filtering for current controls, npm aliases, reverse aliases, lookalikes and missing or disabled host executors. Preserve these boundaries during upstream merges; real SDK integration separately covers the host model-only execution contract, not third-party installation."
+    },
+    "lib/subagent-extension.integration.test.mjs": {
+      "risk": "medium", "drift": 44, "structuralDrift": 44, "disposition": "accepted",
+      "reason": "Shared integration test present at 6fcd7d4 and unchanged in actual upstream/main3b6a877; measured against 6fcd7d4. Preserve the two existing model-only execution tests and three real DefaultResourceLoader additionalExtensionPaths cases. The new cases observe sourceInfo=local during override, verify alias target identity from actual package manifests, reject directory-name guesses and retain nearest-boundary/absent-host/disabled-host behavior without manually injecting source metadata. Generated module fixtures do not prove installing or executing the third-party npm package."
     },
     "app/api/agent/running/route.ts": {
       "risk": "low", "drift": 2, "structuralDrift": 2, "disposition": "accepted",
@@ -181,8 +233,8 @@
       "reason": "Terminal appearance/theme and pane visibility preserve xterm/PTY instances and ordered input. Mounted tabs share the fork-owned terminal-events client/route so HTTP/1 SSE connections cannot starve input; per-ID replay cursors, reconnect leases, explicit-close/restart and the original 15s request deadline must survive upstream changes."
     },
     "hooks/useAgentSession.ts": {
-      "risk": "high", "drift": 585, "structuralDrift": 585, "disposition": "accepted",
-      "reason": "Session streaming, navigation generations and request settlement diverge from upstream. Preserve event-owned running tool IDs, parallel start/update/end membership, indexed thinking/text activity and Stop/error cleanup with retained partial output. Genuine toolcall_start IDs alone grant one-time entry motion; history/poll snapshots seed seen IDs, reconnect discards pending grants and uses the producer's actual hasStreamingSnapshot marker to suppress bootstrap replay without suppressing genuine later messages between tool turns, explicit session/branch navigation resets scope while normal leaf advancement does not. Consumption is scope checked and survives message/terminal handoff. Periodic reconciliation may retain proven matching growing-tail activity; mount/reconnect snapshots establish none. Duplicate mount loads preserve the canonical cached message window until current-session refs cover its IDs, avoiding pre-commit empty-cache poisoning while retaining live appended messages. Dedicated isSending spans preparation through prompt-admission ACK, scoped by session generation, run and attempt. Pre-dispatch Stop settles the current optimistic stage, restores once and invalidates delayed readiness or creation; late canceled failures cannot restore twice, while post-dispatch accepted promotion and ambiguous recovery remain intact. Queue callbacks remain bound to source session and generation; preserve rejection-only recovery and never replay accepted or ambiguous requests. Recognized custom chapter delivery appends and deduplicates by authoritative chapter ID without dispatching assistant end or clearing active stream/phase."
+      "risk": "high", "drift": 622, "structuralDrift": 622, "disposition": "accepted",
+      "reason": "Session streaming, navigation generations and request settlement diverge from upstream. Preserve event-owned running tool IDs, parallel start/update/end membership, indexed thinking/text activity and Stop/error cleanup with retained partial output. Genuine toolcall_start IDs alone grant one-time entry motion; history/poll snapshots seed seen IDs, reconnect discards pending grants and uses the producer's actual hasStreamingSnapshot marker to suppress bootstrap replay without suppressing genuine later messages between tool turns, explicit session/branch navigation resets scope while normal leaf advancement does not. Consumption is scope checked and survives message/terminal handoff. Periodic reconciliation may retain proven matching growing-tail activity; mount/reconnect snapshots establish none. Duplicate mount loads preserve the canonical cached message window until current-session refs cover its IDs, avoiding pre-commit empty-cache poisoning while retaining live appended messages. Dedicated isSending spans preparation through prompt-admission ACK, scoped by session generation, run and attempt. Pre-dispatch Stop settles the current optimistic stage, restores once and invalidates delayed readiness or creation; late canceled failures cannot restore twice, while post-dispatch accepted promotion and ambiguous recovery remain intact. Queue callbacks remain bound to source session and generation; preserve rejection-only recovery and never replay accepted or ambiguous requests. Recognized custom chapter delivery appends and deduplicates by authoritative chapter ID without dispatching assistant end or clearing active stream/phase. Todo-only measurement is against 6fcd7d4: authoritative history/connected/todo_state updates preserve valid clears and do not touch streaming. Selected-branch identity fences reject obsolete root/reconnect state, retain navigation failure ownership and reset safely across session returns."
     },
     "hooks/useNativeAppMenu.ts": {
       "risk": "low", "drift": 3, "structuralDrift": 3, "disposition": "accepted",
@@ -221,9 +273,9 @@
     },
     "components/ChatWindow.tsx": {
       "risk": "high",
-      "drift": 931,
-      "reason": "The empty-state branding header stays removed. Live and historical process entries share the key tracker, retain manual expansion, render each streaming entry once and leave the actual final answer outside. The stable chat owner consumes event-proven step-entry grants above answered/unanswered group keys; finite motion must not replay on history, reconnect or remount. Preserve indexed activity, canonical versus partial tool results, pending/error counts including apply_patch failures, single-visible-shimmer arbitration and original-index search reveal. Sending is a dedicated admission-pending consumer that yields to real text/thinking/tools/compaction rather than renaming every model wait. Model-authored persisted chapters alone feed navigation; keep literal strong title anchors outside process groups, stable chapter IDs, the existing history render window and session/branch jump cancellation. Display phase boundaries must not reset real run boundaries or cancel still-queued tools from an earlier same-batch assistant message. Only canonical successful chapter control calls leave normal cards/counts. Preserve the fixed bounded directory and symmetric transcript/composer centering as adjacent columns resize. Extension-dialog Enter/Space ignores IME; Escape is contained before its composition check. Permission policy and response transport remain authoritative.",
-      "structuralDrift": 783,
+      "drift": 934,
+      "reason": "The empty-state branding header stays removed. Live and historical process entries share the key tracker, retain manual expansion, render each streaming entry once and leave the actual final answer outside. The stable chat owner consumes event-proven step-entry grants above answered/unanswered group keys; finite motion must not replay on history, reconnect or remount. Preserve indexed activity, canonical versus partial tool results, pending/error counts including apply_patch failures, single-visible-shimmer arbitration and original-index search reveal. Sending is a dedicated admission-pending consumer that yields to real text/thinking/tools/compaction rather than renaming every model wait. Model-authored persisted chapters alone feed navigation; keep literal strong title anchors outside process groups, stable chapter IDs, the existing history render window and session/branch jump cancellation. Display phase boundaries must not reset real run boundaries or cancel still-queued tools from an earlier same-batch assistant message. Only canonical successful chapter control calls leave normal cards/counts. Preserve the fixed bounded directory and symmetric transcript/composer centering as adjacent columns resize. Extension-dialog Enter/Space ignores IME; Escape is contained before its composition check. Permission policy and response transport remain authoritative. Todo-only source measured against 6fcd7d4 mounts the read-only canonical panel and suppresses only the matching rpiv-todos ANSI widget when canonical state is known, including a valid clear; unknown state keeps the original fallback.",
+      "structuralDrift": 785,
       "disposition": "accepted"
     },
     "hooks/useTheme.ts": {
@@ -288,8 +340,9 @@
     },
     "next.config.ts": {
       "risk": "medium",
-      "drift": 45,
-      "reason": "Desktop standalone output retains precedence; an explicit development-only verification flag selects a truly isolated preview-cache directory read by Next's supervised CLI. Preserve webpack watcher exclusions, tracing root and build-only memory options. serverExternalPackages remains upstream-maintained and must not be auto-derived.",
+      "drift": 47,
+      "structuralDrift": 47,
+      "reason": "Desktop standalone output retains precedence; an explicit development-only verification flag selects a truly isolated preview-cache directory read by Next's supervised CLI. Preserve webpack watcher exclusions, tracing root and build-only memory options. serverExternalPackages remains upstream-maintained and must not be auto-derived. The Todo-only index measured against 6fcd7d4 adds explicit Todo/config external packages so the owned inline adapter can load the staged published TypeScript factory; no Web or Plan package is included.",
       "disposition": "accepted"
     },
     "app/layout.tsx": {
@@ -306,8 +359,8 @@
       "disposition": "accepted"
     },
     "lib/agent-event-stream.ts": {
-      "risk": "low", "drift": 1, "structuralDrift": 1, "disposition": "accepted",
-      "reason": "Connected events report actual bootstrap snapshot presence separately from run-wide isStreaming. Preserve this provenance: a reconnect during tool execution can have no assistant snapshot, and must not baseline the next genuine shared-content message as restored history. The field uses the same nonnull predicate as the bootstrap message_start."
+      "risk": "low", "drift": 13, "structuralDrift": 13, "disposition": "accepted",
+      "reason": "Connected events report actual bootstrap snapshot presence separately from run-wide isStreaming. Preserve this provenance: a reconnect during tool execution can have no assistant snapshot, and must not baseline the next genuine shared-content message as restored history. The field uses the same nonnull predicate as the bootstrap message_start. Todo-only source measured against 6fcd7d4 synchronously reads authoritative Todo state after subscription and does not replay older buffered Todo entries over that connected snapshot; independent updates never terminate the stream."
     },
     "lib/streaming-message.ts": {
       "risk": "medium", "drift": 73, "structuralDrift": 73, "disposition": "accepted",
@@ -315,9 +368,9 @@
     },
     "lib/rpc-manager.ts": {
       "risk": "high",
-      "drift": 396,
-      "reason": "Preserve the normal-session model-only chapter extension and branch-independent chapter tool availability, alongside output-style custom entries, prompt hook mounting and cold metadata commands without starting providers/models. Exact/chat-only/subagent prompts remain unmodified; live ownership, mutation guards and unknown/error handling are shared review points. Preserve encrypted-credential runtime construction and lifecycle events. needsInputSessionIds derives from every live wrapper's pending blocking responses or mounted custom UI, including background sessions; notify snapshot deduplication must include this state and clear on response, cancellation, timeout, Stop, shutdown and destroy without treating notifications/widgets as blockers.",
-      "structuralDrift": 396,
+      "drift": 406,
+      "reason": "Preserve the normal-session model-only chapter extension and branch-independent chapter tool availability, alongside output-style custom entries, prompt hook mounting and cold metadata commands without starting providers/models. Exact/chat-only/subagent prompts remain unmodified; live ownership, mutation guards and unknown/error handling are shared review points. Preserve encrypted-credential runtime construction and lifecycle events. needsInputSessionIds derives from every live wrapper's pending blocking responses or mounted custom UI, including background sessions; notify snapshot deduplication must include this state and clear on response, cancellation, timeout, Stop, shutdown and destroy without treating notifications/widgets as blockers. Todo-only index measured against 6fcd7d4 adds the canonical getter, named owned-agentDir factory in normal coding, active Todo retention after branch navigation and precise duplicate filtering composed with existing extension overrides. No Web, Plan or new permission child lifecycle code is included in this measurement.",
+      "structuralDrift": 406,
       "disposition": "accepted"
     },
     "components/BranchNavigator.tsx": {
@@ -329,9 +382,9 @@
     },
     "package.json": {
       "risk": "medium",
-      "drift": 69,
-      "structuralDrift": 69,
-      "reason": "Desktop scripts and runtime dependencies include the exact react-diff-view 3.3.3 renderer and npm distribution of THIRD_PARTY_NOTICES.md. Preserve the pinned renderer, license notice and Tauri compatibility when merging upstream package changes; package name stays @agegr/pi-web on purpose. Current nonblank changed JSON lines are measured against 6fcd7d4, so the unchanged 30/250 thresholds require review.",
+      "drift": 71,
+      "structuralDrift": 71,
+      "reason": "Desktop scripts and runtime dependencies include the exact react-diff-view 3.3.3 renderer and npm distribution of THIRD_PARTY_NOTICES.md. Preserve the pinned renderer, license notice and Tauri compatibility when merging upstream package changes; package name stays @agegr/pi-web on purpose. Todo-only index measurement against 6fcd7d4 includes exactly rpiv-todo and rpiv-config 2.13.9 alongside the existing dependencies, excluding Web, Plan and footer WIP. The unchanged 30/250 structural thresholds require review; lockfile changes remain separately ignored by the incoming-file classifier.",
       "disposition": "accepted"
     },
     "tsconfig.json": {
@@ -395,6 +448,14 @@
     }
   },
   "forkOwnedPaths": [
+    "components/SessionTodoPanel.tsx",
+    "components/SessionTodoPanel.test.mjs",
+    "lib/session-todos.ts",
+    "lib/session-todos.test.mjs",
+    "lib/builtin-todo-extension.ts",
+    "lib/builtin-todo-extension.test.mjs",
+    "lib/builtin-todo-conflicts.ts",
+    "lib/builtin-todo-conflicts.test.mjs",
     "components/ProviderUsageSummary.test.mjs",
     "lib/conversation-chapters.ts",
     "lib/conversation-chapters.test.mjs",
@@ -610,6 +671,7 @@
     "reduce": "Drift that can be removed without losing anything \u2014 desktop-only code that belongs in components/desktop/, or fork additions sitting in an upstream file that can move to a fork-owned one. Act on these."
   },
   "decisionLog": [
+    "2026-10-19 — Todo-only index based on checkpoint139c973 preserves canonical bounded branch projection, authoritative connected state, selected-branch hook ownership and the read-only native panel. Ordinary coding loads the real published Todo/config2.13.9 through the owned agentDir adapter; precise post-load duplicate filtering retains only the named host when it actually registers Todo. Real loader alias identity uses the nearest bounded regular package manifest because SDK sourceInfo is attached after extensionsOverride. This does not isolate the old raw factory's initial XDG read. Catalogue marks Todo built-in with no duplicate install action and migration copy; existing narrow footer catalogue wording is source correction only. At6fcd7d4 the exact Todo index measures types43/43 medium, reader133/130 medium, wire20/20 low, stream13/13 low, rpc-manager406/406 high, useAgentSession622/622 high, ChatWindow934/785 high, three locale packs10/10 low each, next.config47/47 medium and package.json71/71 medium. Shared tests remain shared: reader139/139 medium, wire27/27 low, stream65/65 medium, RPC90/90 medium and hook942/941 high. Three post-baseline scripts are verified in actual upstream/main3b6a87771267bb884c41df65537156820f23b41d and measured against it: stage-package11/11 low, its test31/31 medium and prepare-desktop10/10 low; exact shared entries supersede the broad scripts ownership description. Register the eight new Todo adapter/projector/panel/helper modules and tests as fork-owned. Existing fork CSS, generated checker, catalogue, locale-plugins and root notice keep their ownership, and lockfile remains ignored. No whole-tree WIP totals, Web, Plan, permission child, pane-window or footer runtime are included; source review, final index validation, real browser and Windows/installer acceptance remain separate. Baseline6fcd7d4 and30/250 thresholds are unchanged.",
     "2026-10-17 — Pilaude request headers: accept the masked editor, encrypted configuration references, origin checks and error redaction as merge review points. Refresh ModelsConfig, probe routes and locales against 6fcd7d4; record the post-baseline redaction helper against origin/main. Keep existing risk thresholds and CSS ownership unchanged.",
     "2026-07-26 \u2014 lib/api-types.ts: fork update types moved to lib/app-update-types.ts; file now matches upstream and left the manifest.",
     "2026-07-26 \u2014 components/AppShell.tsx: desktop window chrome moved to components/desktop/ (-53 structural). The remaining 376 lines are the top-bar redesign; accepted.",

@@ -1,6 +1,7 @@
 import type { JsonAgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import { slimToolExecutionResult, slimToolResultMessage } from "./tool-result-details";
 import { chapterEntryMessage } from "./conversation-chapters";
+import { projectSessionTodoEntry } from "./session-todos";
 
 export interface AgentEventLike {
   type: string;
@@ -147,6 +148,8 @@ export function toClientAgentEvent(
   event: AgentEventLike,
 ): AgentEventLike | ClientMessageUpdateEvent | null {
   if (event.type === "entry_appended" && isObject(event.entry)) {
+    const todos = projectSessionTodoEntry(event.entry);
+    if (todos) return { type: "todo_state", todos };
     const message = chapterEntryMessage(event.entry);
     if (message) return { type: "message_end", message };
   }

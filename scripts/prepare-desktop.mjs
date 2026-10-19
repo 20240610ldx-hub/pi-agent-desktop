@@ -6,7 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { desktopTargetTriple } from "./desktop-platform.mjs";
 import { piPackageDirNames } from "./pi-packages.mjs";
-import { dedupeNestedPackages, externalPackageSpecifiers, findNestedPiScopePackages, stageCompletePackage, stageResolvedClosure } from "./stage-package.mjs";
+import { dedupeNestedPackages, externalPackageSpecifiers, findNestedPiScopePackages, stageBuiltinTodoRuntime, stageCompletePackage, stageResolvedClosure } from "./stage-package.mjs";
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const desktopBuildDir = join(rootDir, ".next-desktop");
@@ -131,6 +131,10 @@ async function assembleServer() {
     sources: [join(piCodingAgentModules, "quickjs-wasi"), join(rootDir, "node_modules", "quickjs-wasi")],
     stagedNodeModulesDir,
   });
+
+  // The inline Todo adapter loads the published TypeScript factory through
+  // jiti. Preserve its complete lazy overlay, locales and configuration graph.
+  await stageBuiltinTodoRuntime({ sourceRoot: rootDir, stagedNodeModulesDir });
 
   // pi-ai loads Amazon Bedrock through a variable specifier
   // (`import(runtimeSpecifier)` in bedrock-converse-stream.lazy.js) so bundlers

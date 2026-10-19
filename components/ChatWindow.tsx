@@ -18,6 +18,7 @@ import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ConversationNavigator, SESSION_START_INDEX } from "./ConversationNavigator";
 import { getConversationChapters } from "@/lib/conversation-chapters";
 import { ExtensionWidgets } from "./ExtensionWidgets";
+import { SessionTodoPanel } from "./SessionTodoPanel";
 import { ExtensionStatusLine, formatExtensionStatusLine } from "./ExtensionStatusLine";
 import { AnsiText } from "./AnsiText";
 import { useI18n } from "@/hooks/useI18n";
@@ -311,7 +312,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   const [restoreAnchorReady, setRestoreAnchorReady] = useState(false);
 
   const {
-    loading, error, messages, activeToolResults, runningToolCallIds, toolEntryState, consumeToolEntries, entryIds, historyCursor, hasEarlierMessages, streamState,
+    loading, error, messages, todos, activeToolResults, runningToolCallIds, toolEntryState, consumeToolEntries, entryIds, historyCursor, hasEarlierMessages, streamState,
     agentRunning, bashRunning, pendingBash, modelNames, modelList, modelError, modelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, toolPreset, thinkingLevel,
     retryInfo, contextUsage, forkingEntryId, summarizationRetry, automation, handleSetAutomation,
     isCompacting, compactError, compactNotice, compactResult, displayModel: displayModelValue, modelSwitching, sessionStats,
@@ -1228,8 +1229,9 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
     );
   }
 
-  const aboveEditorWidgets = extensionWidgets.filter((widget) => widget.placement !== "belowEditor");
-  const belowEditorWidgets = extensionWidgets.filter((widget) => widget.placement === "belowEditor");
+  const visibleWidgets = todos ? extensionWidgets.filter((widget) => widget.key !== "rpiv-todos") : extensionWidgets;
+  const aboveEditorWidgets = visibleWidgets.filter((widget) => widget.placement !== "belowEditor");
+  const belowEditorWidgets = visibleWidgets.filter((widget) => widget.placement === "belowEditor");
   const hasExtensionStatus = formatExtensionStatusLine(extensionStatuses).length > 0;
 
   return (
@@ -1693,6 +1695,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
             </button>
           </div>
         )}
+        {todos && <div className="session-todo-shelf"><SessionTodoPanel todos={todos} /></div>}
         {aboveEditorWidgets.length > 0 && (
           <div className="mb-2 w-full" style={{ padding: "0 16px" }}>
             <div style={{ maxWidth: "var(--chat-content-max-width, 820px)", margin: "0 auto" }}>

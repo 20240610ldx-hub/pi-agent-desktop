@@ -1,4 +1,7 @@
 import { Type } from "@earendil-works/pi-ai";
+import { realpathSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { readRegularFileText } from "./regular-file";
 import {
   defineTool,
   type ExtensionContext,
@@ -322,6 +325,29 @@ export function createSubagentExtension(
   };
 }
 
+/** The override runs before the SDK applies package source metadata. Stop at the first manifest. */
+function nearestPackageName(extensionPath: string): { found: boolean; name?: string } {
+  if (extensionPath.startsWith("<") || extensionPath.startsWith("builtin:")) return { found: false };
+  let directory = dirname(resolve(extensionPath));
+  try { directory = dirname(realpathSync(extensionPath)); } catch { /* A stale or synthetic fixture path may not exist. */ }
+  for (;;) {
+    try {
+      const text = readRegularFileText(join(directory, "package.json"), 64 * 1024);
+      if (text !== undefined) {
+        const manifest: unknown = JSON.parse(text);
+        const name = typeof manifest === "object" && manifest !== null && "name" in manifest && typeof manifest.name === "string" ? manifest.name : undefined;
+        return { found: true, name };
+      }
+    } catch {
+      // An unreadable/malformed nearest package is unknown, not permission to guess a parent/name.
+      return { found: true };
+    }
+    const parent = dirname(directory);
+    if (parent === directory) return { found: false };
+    directory = parent;
+  }
+}
+
 /** Keep Pi Web's integrated executor when legacy or current pi-subagents is loaded. */
 export function preferPiWebSubagentExtension(base: LoadExtensionsResult): LoadExtensionsResult {
   const host = base.extensions.find((extension) => extension.path === HOST_SUBAGENT_EXTENSION_PATH);
@@ -337,6 +363,8 @@ export function preferPiWebSubagentExtension(base: LoadExtensionsResult): LoadEx
         const aliasTarget = spec.match(/^(@[^/]+\/[^@]+|[^@]+)@npm:(.+)$/)?.[2];
         return (aliasTarget ?? spec).split("@")[0] === PI_SUBAGENTS_PACKAGE_NAME;
       }
+      const actualPackage = nearestPackageName(extension.resolvedPath || extension.path);
+      if (actualPackage.found) return actualPackage.name === PI_SUBAGENTS_PACKAGE_NAME;
       const sourcePackage = source.split("@")[0];
       const pathSegments = extension.path.replaceAll("\\", "/").split("/");
       return sourcePackage === PI_SUBAGENTS_PACKAGE_NAME

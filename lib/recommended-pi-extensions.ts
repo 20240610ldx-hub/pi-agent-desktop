@@ -23,8 +23,9 @@ function entry(id: string, version: string, license: string, key: string, status
 }
 
 export const RECOMMENDED_PI_EXTENSIONS: readonly RecommendedPiExtension[] = Object.freeze([
-  entry("@juicesharp/rpiv-todo", "2.13.9", "MIT", "todo", "extension"),
+  entry("@juicesharp/rpiv-todo", "2.13.9", "MIT", "todo", "built-in"),
   entry("pi-web-access", "0.42.0", "MIT", "web", "extension"),
+  // RPC primary widget has a bridge; full editor/footer effects and license text remain unverified.
   entry("pi-powerline-footer", "0.20.2", "MIT", "footer", "unsupported"),
   entry("@gotgenes/pi-permission-system", "41.0.0", "MIT", "permissions", "extension"),
   entry("pi-subagents", "0.79.1", "MIT", "subagents", "built-in"),

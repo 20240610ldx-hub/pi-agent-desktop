@@ -112,7 +112,7 @@ function activityHookHarness({ sessionFixtures = {}, strictEffects = false, comm
       : path.includes("/api/models") ? { models: {}, modelList: [] }
       : path.includes("/lease") ? { renewed: 1 }
       : path.includes("/api/agent/") || path.endsWith("/state") ? stateResponse
-      : sessionFixtures[sid] ?? { sessionId: sid, tree: [], leafId: null, context: {
+      : (typeof sessionFixtures[sid] === "function" ? await sessionFixtures[sid](path) : sessionFixtures[sid]) ?? { sessionId: sid, tree: [], leafId: null, context: {
         messages: [], entryIds: [], hasMore: false, oldestEntryId: null, thinkingLevel: "off", model: null,
       } };
     return { ok: true, status: 200, json: async () => body };
@@ -669,6 +669,140 @@ test("an older admission ACK cannot clear Sending for a newer run of the same se
   assert.equal(h.current.isSending, true);
   requests[1].resolve({}); await second; h.render();
   assert.equal(h.current.isSending, false);
+});
+
+test("canonical Todo updates preserve live streaming and tool phase while replaying one snapshot", () => {
+  const h = activityHookHarness();
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "thinking_start", contentIndex: 0 } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "Inspecting actual task state" } });
+  h.emit({ type: "tool_execution_start", toolCallId: "todo-call", toolName: "todo" });
+  const stream = h.current.streamState, phase = h.current.agentPhase, messages = h.current.messages;
+  const todos = { source: "rpiv-todo", snapshotEntryId: "todo-live-entry", tasks: [{ id: 1, subject: "Inspect generated task", status: "in_progress", owner: "generated-worker", blockedBy: [2] }] };
+  h.emit({ type: "todo_state", todos });
+  assert.deepEqual(h.current.todos, todos, "The public hook exposes the canonical full snapshot");
+  assert.strictEqual(h.current.streamState, stream, "Todo metadata never ends the assistant stream");
+  assert.strictEqual(h.current.agentPhase, phase, "The current tool retains its phase");
+  assert.strictEqual(h.current.messages, messages, "Todo state does not insert a transcript message");
+  assert.equal(h.current.agentRunning, true);
+  const accepted = h.current.todos;
+  h.emit({ type: "todo_state", todos: structuredClone(todos) });
+  assert.strictEqual(h.current.todos, accepted, "Replay of the same persisted snapshot is a no-op");
+});
+
+test("Todo reconnect is authoritative, preserves clear snapshots and ignores malformed live state", () => {
+  const h = activityHookHarness();
+  const first = { source: "rpiv-todo", snapshotEntryId: "todo-first", tasks: [{ id: 1, subject: "Generated first task", status: "pending" }] };
+  const clear = { source: "rpiv-todo", snapshotEntryId: "todo-clear", tasks: [] };
+  h.emit({ type: "todo_state", todos: first });
+  h.emit({ type: "connected", todos: clear });
+  assert.deepEqual(h.current.todos, clear, "An empty canonical snapshot clears the visible list");
+  const accepted = h.current.todos;
+  for (const todos of [undefined, null, { ...first, tasks: [{ id: 1, subject: "Wrong status", status: "success" }] }]) {
+    h.emit({ type: "todo_state", todos });
+    assert.strictEqual(h.current.todos, accepted, "Malformed live metadata cannot erase confirmed tasks");
+  }
+  h.emit({ type: "connected", todos: null });
+  assert.equal(h.current.todos, null, "A reconnect with no selected-branch snapshot becomes unknown");
+  h.emit({ type: "connected", todos: first });
+  assert.deepEqual(h.current.todos, first, "Authoritative reconnect may restore an earlier branch snapshot");
+  h.switchSession("session-b");
+  assert.equal(h.current.todos, null, "Session identity changes clear the previous task state during render");
+});
+
+test("Todo history restores the selected branch without older pages or late reads replacing live state", async () => {
+  const saved = { source: "rpiv-todo", snapshotEntryId: "todo-history", tasks: [{ id: 1, subject: "Saved branch task", status: "pending" }] };
+  const live = { source: "rpiv-todo", snapshotEntryId: "todo-new-live", tasks: [{ id: 1, subject: "Latest live task", status: "completed" }] };
+  const otherBranch = { source: "rpiv-todo", snapshotEntryId: "todo-other-branch", tasks: [{ id: 2, subject: "Other branch task", status: "in_progress" }] };
+  const initialContext = { messages: [], entryIds: [], oldestEntryId: null, hasMore: false, thinkingLevel: "off", model: null, todos: saved };
+  let pendingContext = null;
+  const sessionFixtures = { "session-a": async (path) => path.includes("/context?")
+    ? await pendingContext.promise
+    : { sessionId: "session-a", tree: [], leafId: "stored-leaf", context: initialContext } };
+  const h = activityHookHarness({ sessionFixtures });
+  await h.flush();
+  assert.deepEqual(h.current.todos, saved, "The initial API snapshot exposes tasks independently of transcript messages");
+  pendingContext = deferredSubmission();
+  const lateRead = h.current.loadContext("session-a", "stored-leaf");
+  h.emit({ type: "todo_state", todos: live });
+  pendingContext.resolve({ context: initialContext });
+  await lateRead; h.render();
+  assert.deepEqual(h.current.todos, live, "A response started before a new live task snapshot cannot replace it");
+  pendingContext = deferredSubmission();
+  const olderPage = h.current.loadContext("session-a", "stored-leaf", "older-entry");
+  pendingContext.resolve({ context: initialContext });
+  await olderPage; h.render();
+  assert.deepEqual(h.current.todos, live, "Paging older transcript messages never changes the current task snapshot");
+  pendingContext = deferredSubmission();
+  const selectedBranch = h.current.loadContext("session-a", "other-leaf");
+  pendingContext.resolve({ context: { ...initialContext, todos: otherBranch } });
+  await selectedBranch; h.render();
+  assert.deepEqual(h.current.todos, otherBranch, "An authoritative selected-branch read replaces the old branch's tasks");
+});
+
+test("explicit branch selection clears old Todo immediately and A-B-A cannot accept an old context response", async () => {
+  const first = { source: "rpiv-todo", snapshotEntryId: "todo-before-branch", tasks: [{ id: 1, subject: "Old branch", status: "pending" }] };
+  const next = { source: "rpiv-todo", snapshotEntryId: "todo-selected-branch", tasks: [{ id: 2, subject: "Selected branch", status: "pending" }] };
+  const context = { messages: [], entryIds: [], oldestEntryId: null, hasMore: false, thinkingLevel: "off", model: null, todos: first };
+  let read = null;
+  const h = activityHookHarness({ sessionFixtures: { "session-a": async (path) => path.includes("/context?") ? await read.promise : { sessionId: "session-a", tree: [], leafId: "leaf-a", context } } });
+  await h.flush();
+  read = deferredSubmission();
+  const branch = h.changeBranch("leaf-b");
+  h.render();
+  assert.equal(h.current.todos, null, "Old branch tasks are not relabeled as the selected branch while loading");
+  read.resolve({ context: { ...context, todos: next } });
+  await branch; h.render();
+  assert.deepEqual(h.current.todos, next);
+  read = deferredSubmission();
+  const stale = h.current.loadContext("session-a", "leaf-a");
+  h.switchSession("session-b");
+  h.switchSession("session-a");
+  h.emit({ type: "todo_state", todos: next });
+  read.resolve({ context });
+  await stale; h.render();
+  assert.deepEqual(h.current.todos, next, "A previous incarnation of the same session cannot restore its old branch tasks");
+});
+
+test("a connected unknown Todo snapshot outranks an older session read still in flight", async () => {
+  const pending = deferredSubmission();
+  const saved = { source: "rpiv-todo", snapshotEntryId: "todo-delayed-history", tasks: [{ id: 1, subject: "Outdated history", status: "pending" }] };
+  const h = activityHookHarness({ sessionFixtures: { "session-a": () => pending.promise } });
+  await h.flush();
+  h.emit({ type: "todo_state", todos: saved });
+  h.emit({ type: "connected", todos: null });
+  pending.resolve({ sessionId: "session-a", tree: [], leafId: "saved-leaf", context: { messages: [], entryIds: [], oldestEntryId: null, hasMore: false, thinkingLevel: "off", model: null, todos: saved } });
+  await h.flush();
+  assert.equal(h.current.todos, null, "The connection's explicit branch unknown remains authoritative");
+});
+
+test("a reconnect from the old backend branch cannot override an explicitly selected Todo branch", async () => {
+  const first = { source: "rpiv-todo", snapshotEntryId: "todo-old-pointer", tasks: [{ id: 1, subject: "Old backend branch task", status: "pending" }] };
+  const next = { source: "rpiv-todo", snapshotEntryId: "todo-chosen-pointer", tasks: [{ id: 2, subject: "Chosen branch task", status: "completed" }] };
+  const context = { messages: [], entryIds: [], oldestEntryId: null, hasMore: false, thinkingLevel: "off", model: null, todos: first };
+  const pending = deferredSubmission();
+  const h = activityHookHarness({ sessionFixtures: { "session-a": (path) => path.includes("/context?") ? pending.promise : { sessionId: "session-a", tree: [], leafId: "leaf-a", context } } });
+  await h.flush();
+  const branch = h.changeBranch("leaf-b");
+  h.render();
+  h.emit({ type: "connected", todos: first });
+  pending.resolve({ context: { ...context, todos: next } });
+  await branch; h.render();
+  assert.deepEqual(h.current.todos, next, "The chosen branch context owns Todo state until its backend navigation is dispatched");
+});
+
+test("Todo branch ownership releases after a navigation command fails", async () => {
+  const pending = deferredSubmission();
+  const todos = { source: "rpiv-todo", snapshotEntryId: "todo-selected-before-error", tasks: [] };
+  const h = activityHookHarness({ commandResponse: (_sid, command) => command.type === "navigate_tree" ? pending.promise : {} });
+  await h.flush();
+  const branch = h.changeBranch("generated-error-leaf");
+  await h.flush();
+  pending.reject(new Error("Generated navigation failure"));
+  await branch; h.render();
+  h.emit({ type: "connected", todos });
+  assert.deepEqual(h.current.todos, todos, "Failure cleanup restores authoritative connection updates");
 });
 
 test("a real projected chapter append preserves live streaming and phase while deduplicating chapter identity", () => {

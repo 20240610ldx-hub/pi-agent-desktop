@@ -33,6 +33,7 @@ import { isNestedToolExecutionEvent, isSystemMessageEvent } from "@/lib/agent-ev
 import { getToolExecutionProgress } from "@/lib/tool-execution-progress";
 import { INITIAL_ACTIVITY_ENTRY_LEDGER, activityEntryReducer } from "@/lib/activity-entry-ledger";
 import { readConversationChapter } from "@/lib/conversation-chapters";
+import { projectSessionTodoState, type SessionTodoState } from "@/lib/session-todos";
 import { CODEMODE_TOOL_NAME, getCodemodeProgress } from "@/lib/codemode-view";
 import { updateExtensionWidgets } from "@/lib/extension-widgets";
 import { bareMcpOpensSettings } from "@/lib/mcp-command";
@@ -83,6 +84,7 @@ export interface SessionData {
     hasMore: boolean;
     thinkingLevel: string;
     model: { provider: string; modelId: string } | null;
+    todos?: SessionTodoState | null;
   };
   /** Cumulative usage over ALL session-file entries (incl. compacted history). */
   stats?: SessionFileStats;
@@ -353,6 +355,15 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const [error, setError] = useState<string | null>(null);
   const [activeLeafId, setActiveLeafId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [todos, setTodos] = useState<SessionTodoState | null>(null);
+  const todoVersionRef = useRef(0);
+  const todoBranchSelectionRef = useRef<object | null>(null);
+  const syncTodos = useCallback((value: unknown) => {
+    const next = value === null ? null : projectSessionTodoState(value);
+    if (value !== null && !next) return;
+    todoVersionRef.current += 1;
+    setTodos((current) => current?.snapshotEntryId === next?.snapshotEntryId ? current : next);
+  }, []);
   const [activeToolResults, setActiveToolResults] = useState<Map<string, ToolResultMessage>>(new Map());
   // Membership follows execution events, independently of phase labels and
   // partial output: a partial result is still a running tool.
@@ -599,6 +610,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     setError(null);
     setActiveLeafId(null);
     setMessages([]);
+    todoVersionRef.current += 1;
+    todoBranchSelectionRef.current = null;
+    setTodos(null);
     setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
     setActiveToolResults(new Map());
     setEntryIds([]);
@@ -750,6 +764,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const flight = (async (): Promise<unknown> => {
     let messagesLoaded = false;
     const sessionGeneration = sessionGenerationRef.current;
+    const todoVersion = todoVersionRef.current;
     const isCurrent = () => (
       sessionIdRef.current === sid
       && sessionGenerationRef.current === sessionGeneration
@@ -781,6 +796,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json() as SessionData;
       if (!isCurrent()) return null;
+      if (!todoBranchSelectionRef.current && todoVersionRef.current === todoVersion) syncTodos(d.context.todos ?? null);
       dispatchToolEntry({ type: "baseline", messages: d.context.messages });
       // Freshness check: when the disk snapshot is unchanged (same opaque
       // revision), keep any history the user already paged in instead of
@@ -916,12 +932,15 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       if (loadFlightsRef.current.get(flightKey) === flight) loadFlightsRef.current.delete(flightKey);
     });
     return await flight;
-  }, [seedStreamingSnapshot, setToolPresetState, syncLiveModel]);
+  }, [seedStreamingSnapshot, setToolPresetState, syncLiveModel, syncTodos]);
 
   const loadContext = useCallback(async (sid: string, leafId: string | null, before?: string | null, options?: { tail?: number; signal?: AbortSignal }) => {
     const requestId = ++contextLoadIdRef.current;
+    const sessionGeneration = sessionGenerationRef.current;
+    const todoVersion = todoVersionRef.current;
     const isCurrent = () => (
       sessionIdRef.current === sid
+      && sessionGenerationRef.current === sessionGeneration
       && contextLoadIdRef.current === requestId
       && !options?.signal?.aborted
     );
@@ -938,6 +957,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       const d = await res.json() as { context: SessionData["context"] };
       if (!sessionHookMountedRef.current) return false;
       if (!isCurrent()) return false;
+      if (!before && todoVersionRef.current === todoVersion) syncTodos(d.context.todos ?? null);
       dispatchToolEntry({ type: "baseline", messages: d.context.messages });
       // A "before" request prepends history; it is not a new tail message.
       // Keep the message-length layout effect from pulling the reader back to
@@ -968,7 +988,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } catch (e) {
       if (isCurrent()) console.error("Failed to load context:", e);
     }
-  }, []);
+  }, [syncTodos]);
 
   const loadTools = useCallback(async (sid: string) => {
     const requestId = ++toolsLoadIdRef.current;
@@ -1579,7 +1599,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
   const handleAgentEvent = useCallback((event: AgentEvent) => {
     switch (event.type) {
+      case "todo_state":
+        if (!todoBranchSelectionRef.current && event.todos !== null) syncTodos(event.todos);
+        break;
       case "connected": {
+        if (!todoBranchSelectionRef.current && Object.hasOwn(event, "todos")) syncTodos(event.todos);
         dispatchToolEntry({ type: "connected", hasStreamingSnapshot: event.hasStreamingSnapshot as boolean | undefined });
         dispatch({ type: "end" });
         // Starts/updates replayed after connected rebuild the live membership.
@@ -1896,7 +1920,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         handleForkAgentEvent(event);
         break;
     }
-  }, [addNotice, cancelEventStreamGrace, handleExtensionUiRequest, handleForkAgentEvent, loadSession, notifyPromptStage, onAgentEnd, reportCompactFailure, scheduleEventStreamClose, scrollToBottom, setCompactNotice, settleUiStage, syncLiveModel]);
+  }, [addNotice, cancelEventStreamGrace, handleExtensionUiRequest, handleForkAgentEvent, loadSession, notifyPromptStage, onAgentEnd, reportCompactFailure, scheduleEventStreamClose, scrollToBottom, setCompactNotice, settleUiStage, syncLiveModel, syncTodos]);
   handleAgentEventRef.current = handleAgentEvent;
 
   const handleSend = useCallback(async (message: string, images?: AttachedImage[]) => {
@@ -2172,20 +2196,29 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       await summarizeAndNavigate(leafId, options.customInstructions);
       return;
     }
-    dispatchToolEntry({ type: "reset_scope" });
-    setActiveLeafId(leafId);
     const sid = sessionIdRef.current;
     if (!sid) return;
-    const loaded = await loadContext(sid, leafId);
-    if (loaded && leafId && sessionIdRef.current === sid) {
-      // The view already shows the chosen branch; if the agent's pointer cannot
-      // follow, the next prompt would continue the old one — say so.
-      sendAgentCommand(sid, { type: "navigate_tree", targetId: leafId }).catch((e) => {
-        if (sessionIdRef.current !== sid) return;
-        addNotice({ type: "error", message: t("chat.navigateFailed", { error: e instanceof Error ? e.message : String(e) }) });
-      });
+    const selection = {};
+    todoBranchSelectionRef.current = selection;
+    dispatchToolEntry({ type: "reset_scope" });
+    syncTodos(null);
+    setActiveLeafId(leafId);
+    try {
+      // Until navigate_tree completes, reconnect still describes the backend's
+      // old leaf. The selected context owns Todo state during this interval.
+      const loaded = await loadContext(sid, leafId);
+      if (loaded && leafId && sessionIdRef.current === sid && todoBranchSelectionRef.current === selection) {
+        try {
+          await sendAgentCommand(sid, { type: "navigate_tree", targetId: leafId });
+        } catch (e) {
+          if (sessionIdRef.current !== sid || todoBranchSelectionRef.current !== selection) return;
+          addNotice({ type: "error", message: t("chat.navigateFailed", { error: e instanceof Error ? e.message : String(e) }) });
+        }
+      }
+    } finally {
+      if (todoBranchSelectionRef.current === selection) todoBranchSelectionRef.current = null;
     }
-  }, [addNotice, branchSummarySessionIdRef, isCompacting, loadContext, summarizeAndNavigate, t]);
+  }, [addNotice, branchSummarySessionIdRef, isCompacting, loadContext, summarizeAndNavigate, syncTodos, t]);
 
   const handleModelChange = useCallback(async (provider: string, modelId: string) => {
     if (isNew) {
@@ -3043,7 +3076,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
   return {
     // State
-    data, loading, error, activeLeafId, messages, activeToolResults, runningToolCallIds, toolEntryState, consumeToolEntries, entryIds, historyCursor, hasEarlierMessages, streamState,
+    data, loading, error, activeLeafId, messages, todos, activeToolResults, runningToolCallIds, toolEntryState, consumeToolEntries, entryIds, historyCursor, hasEarlierMessages, streamState,
     agentRunning, isSending, modelNames, modelList, modelError, modelScopeWarnings: visibleModelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, newSessionModel, toolPreset, thinkingLevel,
     retryInfo, contextUsage, systemPrompt, forkingEntryId, retryLoad, dismissModelScopeWarnings,
     isCompacting, compactError, compactNotice, compactResult, currentModel, displayModel, modelSwitching, sessionStats,

@@ -298,6 +298,18 @@ export async function stageResolvedClosure({ importer, specifiers, sourceRoot, s
   return written;
 }
 
+/** Complete TypeScript and lazy overlay/config resources for the built-in Todo factory. */
+export async function stageBuiltinTodoRuntime({ sourceRoot, stagedNodeModulesDir }) {
+  // Pi peers already have dedicated complete-dist staging. TypeBox is a peer,
+  // so it must be explicit rather than relying on dependency-only traversal.
+  return stageResolvedClosure({
+    importer: join(sourceRoot, "package.json"),
+    specifiers: ["@juicesharp/rpiv-todo", "@juicesharp/rpiv-config", "typebox"],
+    sourceRoot,
+    stagedNodeModulesDir,
+  });
+}
+
 async function resolveInstalledPackage(fromFile, name, sourceRoot) {
   let dir = dirname(fromFile);
   while (true) {

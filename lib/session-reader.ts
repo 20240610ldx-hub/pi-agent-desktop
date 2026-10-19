@@ -9,6 +9,7 @@ import type { AgentMessage, ImageContent, SessionEntry, SessionHeader, SessionIn
 import { normalizeToolCalls } from "./normalize";
 import { getThinkingPreview } from "./message-display";
 import { chapterEntryMessage } from "./conversation-chapters";
+import { readSessionTodos } from "./session-todos";
 import { projectIdentityKey } from "./project-identity";
 import { sessionPathKey } from "./session-path";
 import { MAX_TOOL_RESULT_IMAGE_BYTES, TOOL_RESULT_IMAGE_MIMES } from "./tool-result-images";
@@ -748,6 +749,7 @@ export function buildSessionContext(
   return {
     messages,
     entryIds,
+    todos: readSessionTodos(entries, leafId),
     oldestEntryId: sliced[0]?.id ?? null,
     hasMore,
     ...getSessionSettings(entries, leafId),

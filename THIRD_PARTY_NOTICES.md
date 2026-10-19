@@ -1,5 +1,40 @@
 # Third-party notices
 
+## Built-in Todo extension
+
+Pilaude consumes the published `@juicesharp/rpiv-todo` default factory through the Pi SDK inline extension loader. `lib/builtin-todo-extension.ts` redirects its configuration I/O to the application's agent directory while retaining the installed task reducer, store, replay and configuration validation. Both new runtime packages are pinned to `2.13.9`; their existing Pi SDK, TUI, TypeBox and jiti peers remain covered by their own installed package licenses. The optional rpiv-i18n peer is not installed.
+
+| Package | Installed version | Source repository | License | License text source |
+| --- | --- | --- | --- | --- |
+| @juicesharp/rpiv-todo | 2.13.9 | [juicesharp/rpiv-mono, packages/rpiv-todo](https://github.com/juicesharp/rpiv-mono/tree/54df50eea935fc9753edc300d5f23c5e28d906d7/packages/rpiv-todo) | MIT | `node_modules/@juicesharp/rpiv-todo/LICENSE` |
+| @juicesharp/rpiv-config | 2.13.9 | [juicesharp/rpiv-mono, packages/rpiv-config](https://github.com/juicesharp/rpiv-mono/tree/54df50eea935fc9753edc300d5f23c5e28d906d7/packages/rpiv-config) | MIT as declared by the package | The published tarball has no LICENSE file. The text below was verified against the [repository root LICENSE at the fixed source commit](https://github.com/juicesharp/rpiv-mono/blob/54df50eea935fc9753edc300d5f23c5e28d906d7/LICENSE), Git blob `ab4771573e8093a025e87b319021572f699c6004`. |
+
+The following text is reproduced from the installed Todo LICENSE and is identical to the fixed repository root LICENSE used for rpiv-config. It is not represented as a file contained in the rpiv-config tarball. Desktop preparation copies this notice alongside the complete packages.
+
+```text
+MIT License
+
+Copyright (c) 2026 juicesharp
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Changes diff renderer
 
 Pilaude uses [react-diff-view](https://github.com/otakustay/react-diff-view) as an npm runtime dependency, pinned to `3.3.3`. `components/ReviewDiff.tsx` consumes its diff components; `lib/review-diff-renderer.ts` adapts parsing, tokenization and edit marking. The installed library sources are unmodified; the integration and theme overrides are maintained in Pilaude.

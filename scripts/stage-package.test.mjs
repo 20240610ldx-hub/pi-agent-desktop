@@ -4,8 +4,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import * as piAi from "@earendil-works/pi-ai";
+import * as piTui from "@earendil-works/pi-tui";
+import { createJiti } from "jiti";
 
-import { dedupeNestedPackages, externalPackageSpecifiers, findNestedPiScopePackages, findStagedCopies, stageCompletePackage, stageResolvedClosure } from "./stage-package.mjs";
+import { dedupeNestedPackages, externalPackageSpecifiers, findNestedPiScopePackages, findStagedCopies, stageBuiltinTodoRuntime, stageCompletePackage, stageResolvedClosure } from "./stage-package.mjs";
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "stage-package-"));
@@ -222,6 +226,32 @@ test("externalPackageSpecifiers keeps bare imports and requires the bedrock pack
       externalPackageSpecifiers(file, ["missing-pkg"]),
       /does not import missing-pkg/,
     );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("the staged installed Todo package retains its real factory, config validation, lazy overlay and locales", async () => {
+  const root = await mkdtemp(join(tmpdir(), "stage-builtin-todo-"));
+  try {
+    const sourceRoot = fileURLToPath(new URL("..", import.meta.url));
+    const stagedNodeModulesDir = join(root, "node_modules");
+    const written = await stageBuiltinTodoRuntime({ sourceRoot, stagedNodeModulesDir });
+    assert.equal(written.length, 3);
+    const todoDir = join(stagedNodeModulesDir, "@juicesharp", "rpiv-todo");
+    assert.equal(JSON.parse(await readFile(join(todoDir, "package.json"), "utf8")).version, "2.13.9");
+    assert.match(await readFile(join(todoDir, "LICENSE"), "utf8"), /MIT/);
+    assert.ok(JSON.parse(await readFile(join(todoDir, "locales", "en.json"), "utf8")));
+    const loader = createJiti(join(root, "package.json"), { fsCache: false, moduleCache: false, virtualModules: {
+      "@earendil-works/pi-ai": piAi,
+      "@earendil-works/pi-tui": piTui,
+    } });
+    const config = await loader.import(join(stagedNodeModulesDir, "@juicesharp", "rpiv-config", "index.ts"));
+    assert.deepEqual(config.validateGuidanceFields({ promptSnippet: "Owned fixture", promptGuidelines: [""] }), { promptSnippet: "Owned fixture" });
+    const loaded = await loader.import(join(todoDir, "index.ts"));
+    const overlay = await loaded.makeTodoOverlayLoader(() => loader.import(join(todoDir, "todo-overlay.ts")))();
+    assert.equal(typeof loaded.default, "function");
+    assert.equal(typeof overlay.TodoOverlay, "function", "the actual lazy import resolves entirely from staged packages");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

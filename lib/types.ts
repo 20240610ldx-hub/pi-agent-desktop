@@ -1,4 +1,5 @@
 // Types mirrored from pi-mono coding-agent session-manager
+import type { SessionTodoState } from "./session-todos";
 
 export interface SessionHeader {
   type: "session";
@@ -435,6 +436,8 @@ export interface SessionInfo {
 export interface SessionContext {
   messages: AgentMessage[];
   entryIds: string[]; // parallel to messages — the session entry id for each message
+  /** Full selected-branch task snapshot; null means no recognized canonical state. */
+  todos: SessionTodoState | null;
   oldestEntryId: string | null;
   hasMore: boolean;
   thinkingLevel: string;

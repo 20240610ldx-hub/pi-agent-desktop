@@ -65,6 +65,8 @@ const nextConfig: NextConfig = {
     "node-pty",
     "undici",
     "web-push",
+    "@juicesharp/rpiv-todo",
+    "@juicesharp/rpiv-config",
     "@earendil-works/pi-coding-agent",
     "@earendil-works/pi-agent-core",
     "@earendil-works/pi-ai",

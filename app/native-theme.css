@@ -9495,3 +9495,28 @@ html.dark .changes-pane {
 .conversation-output-style-discard { position: absolute; width: min(420px, calc(100% - 40px)); }
 .conversation-output-style-discard p { margin: 0; color: var(--text-muted); }
 @media (pointer: coarse) { .conversation-output-style-editor .config-input, .conversation-output-style-actions .config-button { min-height: 44px; } }
+
+/* Read-only canonical session tasks; independent from ANSI extension widgets. */
+.session-todo-shelf { box-sizing: border-box; width: 100%; max-width: var(--chat-content-max-width, 820px); margin: 0 auto 8px; padding-inline: 16px; }
+.session-todo-panel { min-width: 0; border: var(--hairline) solid var(--border); border-radius: 10px; background: var(--bg-panel); color: var(--text); font: 400 12px/1.5 var(--font-ui); }
+.session-todo-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; min-height: 32px; padding: 7px 10px; cursor: pointer; list-style: none; color: var(--text-muted); }
+.session-todo-summary::-webkit-details-marker { display: none; }
+.session-todo-summary::before { content: "›"; flex: none; width: 8px; color: var(--text-dim); transform: rotate(0deg); }
+.session-todo-disclosure[open] > .session-todo-summary::before { transform: rotate(90deg); }
+.session-todo-summary:hover { color: var(--text-hover); }
+.session-todo-summary:focus-visible { outline: 2px solid var(--focus-ring, Highlight); outline-offset: -2px; border-radius: 9px; }
+.session-todo-heading { font-weight: 500; }
+.session-todo-counts { display: flex; flex-wrap: wrap; gap: 3px 10px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.session-todo-list { box-sizing: border-box; max-height: min(220px, 25dvh); margin: 0; padding: 0 10px 7px; overflow: auto; overscroll-behavior: contain; list-style: none; scrollbar-width: thin; }
+.session-todo-row { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding-block: 6px; }
+.session-todo-icon { flex: none; margin-top: 2px; color: var(--text-dim); }
+.session-todo-row[data-status="completed"] .session-todo-icon { color: var(--success); }
+.session-todo-content { flex: 1; min-width: 0; }
+.session-todo-task-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 7px; min-width: 0; }
+.session-todo-id { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.session-todo-subject { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+.session-todo-status { flex: none; color: var(--text-muted); font-size: 11px; }
+.session-todo-description, .session-todo-active-form { margin: 3px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-muted); }
+.session-todo-metadata { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 3px; color: var(--text-dim); font-size: 11px; overflow-wrap: anywhere; }
+.session-todo-empty { margin: 0; padding: 0 10px 9px; color: var(--text-dim); }
+@media (pointer: coarse) { .session-todo-summary { min-height: 44px; } }

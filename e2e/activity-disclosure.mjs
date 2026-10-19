@@ -25,7 +25,7 @@ export async function installActivityFixture(context, report) {
   // the existing customization. No font data or runtime state is persisted here.
   const customCss = await readFile(new URL("../test-results/pilaude/runtime-data/desktop/custom.css", import.meta.url), "utf8").catch(() => "");
   report.localFontSupplied = Boolean(customCss);
-  const state = { messages: [user, historical, historyResult], entryIds: ["history-user", "history-assistant", "history-result"], running: false, revision: 1 };
+  const state = { messages: [user, historical, historyResult], entryIds: ["history-user", "history-assistant", "history-result"], running: false, revision: 1, todos: undefined, todoBranch: null };
   await context.addInitScript(() => {
     if (window.top !== window.self) return;
     localStorage.setItem("pi-theme", "light");
@@ -74,9 +74,14 @@ export async function installActivityFixture(context, report) {
     if (info) {
       const messages = info.id === "activity" ? state.messages : [{ ...user, content: "Other session." }, assistant([{ type: "text", text: "Other session answer." }])];
       const entryIds = info.id === "activity" ? state.entryIds : ["draft-user", "draft-answer"];
-      return route.fulfill({ json: { sessionId: info.id, filePath: info.path, leafId: entryIds.at(-1), tree: [], treeFormat: "summary", snapshotRevision: `activity-${state.revision}`, totalActiveMs: 0,
-        context: { messages, entryIds, oldestEntryId: entryIds[0], hasMore: false, model: null, thinkingLevel: "off" },
+      const todoView = info.id === 'activity' ? state.todoBranch : null;
+      return route.fulfill({ json: { sessionId: info.id, filePath: info.path, leafId: todoView?.leafId ?? entryIds.at(-1), tree: todoView?.tree ?? [], treeFormat: "summary", snapshotRevision: `activity-${state.revision}`, totalActiveMs: 0,
+        context: { messages: todoView?.messages ?? messages, entryIds: todoView?.entryIds ?? entryIds, oldestEntryId: entryIds[0], hasMore: false, model: null, thinkingLevel: "off", ...(state.todos !== undefined ? { todos: info.id === 'activity' ? state.todos : null } : {}) },
         stats: { totalMessages: messages.length, userMessages: 1, assistantMessages: 1, toolCalls: 1, toolResults: 1, tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }, cost: 0, costBreakdown: [] } } });
+    }
+    if (state.todoBranch && url.pathname === '/api/sessions/activity/context') {
+      const branch = state.todoBranch.branches[url.searchParams.get('leafId')];
+      return route.fulfill({ json: { context: branch ? { messages: branch.messages, entryIds: branch.entryIds, oldestEntryId: branch.entryIds[0], hasMore: false, model: null, thinkingLevel: 'off', todos: branch.todos } : { messages: [], entryIds: [], oldestEntryId: null, hasMore: false, model: null, thinkingLevel: 'off', todos: null } } });
     }
     if (/^\/api\/(agent\/activity|sessions\/activity\/state)$/.test(url.pathname)) return route.fulfill({ json: { running: state.running, state: { isStreaming: state.running, isPromptRunning: state.running } } });
     if (url.pathname === "/api/custom-css") return route.fulfill({ contentType: "text/css", body: customCss });
@@ -108,6 +113,144 @@ async function linkedBody(trigger) {
   return trigger.page().locator(`[id=${JSON.stringify(id)}]`);
 }
 
+async function inspectNativeTodos(page, context, state, report, capture) {
+  const snapshot = (id, tasks) => ({ source: 'rpiv-todo', snapshotEntryId: id, tasks });
+  const tasks = [
+    { id: 1, subject: 'Inspect generated source', status: 'completed' },
+    { id: 2, subject: 'Implement generated Todo consumer', status: 'in_progress', activeForm: 'Implementing generated Todo consumer', owner: 'generated-worker' },
+    { id: 3, subject: 'Verify dependency and exact state', status: 'pending', description: 'Keep <source> & task text literal.', blockedBy: [1, 2, 99] },
+    { id: 4, subject: 'Deleted generated tombstone', status: 'deleted' },
+  ];
+  const emit = (events) => page.evaluate((events) => window.__activityEvents(events), events);
+  await context.route(`${base}/api/agent/activity`, async (route) => {
+    const request = route.request();
+    if (request.method() !== 'POST') return route.fallback();
+    const command = request.postDataJSON();
+    if (!['abort', 'navigate_tree'].includes(command?.type)) return route.fallback();
+    report.interceptedWrites.push({ method: 'POST', path: '/api/agent/activity', body: request.postData() });
+    if (command.type === 'navigate_tree') {
+      const branch = state.todoBranch?.branches[command.targetId];
+      if (!branch) return route.fulfill({ status: 400, json: { error: 'Unknown generated branch' } });
+      Object.assign(state.todoBranch, { leafId: command.targetId, messages: branch.messages, entryIds: branch.entryIds });
+      state.todos = branch.todos; state.revision++;
+    }
+    await route.fulfill({ json: {} });
+  });
+  const panel = page.locator('.session-todo-panel');
+  assert.equal(await panel.count(), 0, 'A branch without canonical Todo state does not invent a panel');
+  await emit([{ type: 'extension_ui_request', method: 'setWidget', widgetKey: 'rpiv-todos', widgetLines: ['Generated legacy widget fallback'], widgetPlacement: 'aboveEditor' }]);
+  const input = page.locator('textarea.chat-input-textarea');
+  const draft = 'Generated Todo draft 草稿 stays unsent';
+  await input.fill(draft);
+  const liveUser = { role: 'user', content: 'Generated canonical Todo turn.', timestamp: stamp + 3000 };
+  const liveText = 'Generated live response stays active through task updates.';
+  state.running = true; state.messages.push(liveUser); state.entryIds.push('todo-user'); state.revision++;
+  await emit([{ type: 'agent_start' }, { type: 'message_end', message: liveUser }, { type: 'message_start', message: assistant([], stamp + 4000) }, { type: 'message_update', assistantMessageEvent: { type: 'text_start', contentIndex: 0 } }, { type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: liveText } }]);
+  await page.getByText(liveText, { exact: true }).waitFor();
+  await input.focus();
+  await input.evaluate((element) => { window.__todoInput = element; element.setSelectionRange(3, 8); });
+  await page.locator('.chat-scroll-container').evaluate((element) => { element.scrollTop = 0; element.dispatchEvent(new Event('scroll')); });
+  const scrollBefore = await page.locator('.chat-scroll-container').evaluate((element) => element.scrollTop);
+  state.todos = snapshot('generated-todo-live', tasks);
+  await emit([{ type: 'todo_state', todos: state.todos }]);
+  await panel.waitFor();
+  assert.equal(await panel.locator('.session-todo-row').count(), 3);
+  assert.match(await panel.innerText(), /1 of 3 completed/); assert.match(await panel.innerText(), /1 in progress/); assert.match(await panel.innerText(), /1 pending/);
+  assert.match(await panel.innerText(), /Owner: generated-worker/); assert.match(await panel.innerText(), /Depends on: #1, #2, #99/);
+  assert.doesNotMatch(await panel.innerText(), /Deleted generated tombstone|%|Plan/);
+  assert.equal(await panel.locator('source,input,[role="progressbar"]').count(), 0);
+  assert.equal(await page.locator('[data-message-streaming="true"]').count(), 1, 'Todo metadata cannot end the live assistant stream');
+  assert.equal(await input.inputValue(), draft);
+  assert.equal(await input.evaluate((element) => element === window.__todoInput && element === document.activeElement && element.selectionStart === 3 && element.selectionEnd === 8), true, 'Task updates preserve the input node, focus and selection');
+  assert.equal(await page.locator('.chat-scroll-container').evaluate((element) => element.scrollTop), scrollBefore, 'Todo updates preserve manual history position');
+  assert.equal(await page.getByText('Generated legacy widget fallback', { exact: true }).count(), 0, 'Known canonical tasks replace the duplicate ANSI widget');
+  const rowsBefore = await panel.locator('.session-todo-row').count();
+  await emit([{ type: 'todo_state', todos: structuredClone(state.todos) }, { type: 'todo_state', todos: { source: 'rpiv-todo', snapshotEntryId: 'invalid', tasks: [{ id: 1, subject: 'Invalid generated state', status: 'success' }] } }]);
+  assert.equal(await panel.locator('.session-todo-row').count(), rowsBefore);
+  await capture('todo-live-canonical');
+  const summary = panel.locator('summary');
+  await summary.focus(); await summary.press('Enter');
+  assert.equal(await panel.locator('details').getAttribute('open'), null);
+  await emit([{ type: 'todo_state', todos: snapshot('generated-todo-updated', tasks.map((task) => task.id === 2 ? { ...task, status: 'completed' } : task)) }]);
+  assert.equal(await panel.locator('details').getAttribute('open'), null, 'Canonical updates retain the user collapse choice');
+  await summary.press('Space');
+  assert.notEqual(await panel.locator('details').getAttribute('open'), null);
+  assert.equal(await summary.evaluate((element) => element === document.activeElement), true);
+  report.checks.push('Canonical Todo shows exact states/counts/owner/dependencies, filters only deleted rows, deduplicates replay and preserves stream/draft/focus/manual history and native disclosure');
+  state.todos = snapshot('generated-todo-clear', []);
+  await emit([{ type: 'todo_state', todos: state.todos }]);
+  await panel.getByText('No tasks', { exact: true }).waitFor();
+  assert.equal(await panel.locator('.session-todo-row').count(), 0);
+  await emit([{ type: 'connected', isStreaming: true, todos: null }]);
+  await panel.waitFor({ state: 'detached' });
+  await emit([{ type: 'connected', isStreaming: true, todos: snapshot('generated-todo-reconnected', tasks) }, { type: 'message_start', message: assistant([{ type: 'text', text: liveText }], stamp + 4000) }]);
+  await panel.waitFor();
+  assert.equal(await panel.locator('.session-todo-row').count(), 3);
+  await page.locator('button.composer-abort-button:visible').first().click();
+  await settle(page, () => !document.querySelector('[data-message-streaming="true"]'));
+  const liveAnswer = assistant([{ type: 'text', text: liveText }], stamp + 4000, 'aborted');
+  state.messages.push(liveAnswer); state.entryIds.push('todo-answer'); state.running = false; state.revision++;
+  await emit([{ type: 'message_end', message: liveAnswer }, { type: 'agent_end' }, { type: 'agent_settled' }]);
+  assert.equal(await input.inputValue(), draft);
+  await page.getByRole('button', { name: 'Activity fixture draft', exact: true }).first().click();
+  await page.getByText('Other session answer.', { exact: true }).waitFor();
+  assert.equal(await panel.count(), 0);
+  await input.fill('Generated second session draft');
+  state.todos = snapshot('generated-todo-restored', tasks);
+  await page.getByRole('button', { name: 'Activity fixture activity', exact: true }).first().click();
+  await panel.waitFor();
+  await settle(page, (draft) => document.querySelector('textarea.chat-input-textarea')?.value === draft, draft);
+  report.checks.push('Canonical clear differs from unknown; authoritative reconnect and session round trip restore only the selected snapshot and preserve independent drafts');
+  const branchA = { messages: [user, assistant([{ type: 'text', text: 'Generated branch A answer.' }])], entryIds: ['branch-a-user', 'branch-a'], todos: snapshot('generated-todo-branch-a', [{ id: 11, subject: 'Generated branch A task', status: 'pending' }]) };
+  const branchB = { messages: [user, assistant([{ type: 'text', text: 'Generated branch B answer.' }])], entryIds: ['branch-b-user', 'branch-b'], todos: snapshot('generated-todo-branch-b', [{ id: 22, subject: 'Generated branch B task', status: 'completed' }]) };
+  const tree = ['a', 'b'].map((letter) => ({ entry: { type: 'message', id: `branch-${letter}`, parentId: null, timestamp: new Date(stamp).toISOString(), message: { role: 'user', content: `Generated Todo branch ${letter.toUpperCase()}` } }, children: [] }));
+  state.todoBranch = { leafId: 'branch-a', tree, ...branchA, branches: { 'branch-a': branchA, 'branch-b': branchB } }; state.todos = branchA.todos; state.revision++;
+  await page.goto(`${base}/?session=activity`, { waitUntil: 'domcontentloaded' });
+  await panel.getByText('Generated branch A task', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Branches', exact: true }).first().click();
+  await page.locator('.branch-tree-row').filter({ hasText: 'Generated Todo branch B' }).click();
+  await panel.getByText('Generated branch B task', { exact: true }).waitFor();
+  assert.equal(await panel.getByText('Generated branch A task', { exact: true }).count(), 0);
+  if (await page.getByRole('button', { name: 'Branches', exact: true }).first().getAttribute('aria-pressed') !== 'true') await page.getByRole('button', { name: 'Branches', exact: true }).first().click();
+  await page.locator('.branch-tree-row').filter({ hasText: 'Generated Todo branch A' }).click();
+  await panel.getByText('Generated branch A task', { exact: true }).waitFor();
+  report.checks.push('Actual branch picker and canonical context API restore branch-specific tasks independently of paged transcript text');
+  const longTasks = Array.from({ length: 45 }, (_, index) => ({ id: index + 1, subject: `Generated long Todo task ${index + 1} with literal detail`, status: index === 0 ? 'in_progress' : 'pending', owner: index === 0 ? 'generated-worker' : undefined }));
+  state.todos = snapshot('generated-todo-long', longTasks);
+  await emit([{ type: 'todo_state', todos: state.todos }]);
+  if (await page.getByRole('button', { name: 'Branches', exact: true }).first().getAttribute('aria-pressed') === 'true') await page.getByRole('button', { name: 'Branches', exact: true }).first().click();
+  const contextToggle = page.locator('.pilaude-context-toggle[aria-pressed="true"]');
+  if (await contextToggle.count()) await contextToggle.click();
+  const hideSidebar = page.getByRole('button', { name: 'Hide sidebar', exact: true });
+  if (await hideSidebar.first().isVisible()) await hideSidebar.first().click();
+  await page.waitForFunction(() => !document.querySelector('.app-sidebar.sidebar-open') && document.querySelector('.app-sidebar').getBoundingClientRect().right <= 1);
+  for (const viewport of [{ width: 1300, height: 1000 }, { width: 390, height: 340 }]) {
+    await page.setViewportSize(viewport);
+    await page.waitForFunction(() => !document.querySelector('.app-sidebar.sidebar-open') && document.querySelector('.app-sidebar').getBoundingClientRect().right <= 1);
+    await page.evaluate(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await Promise.allSettled(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished));
+    });
+    await input.fill('Generated long Todo draft stays editable');
+    await input.focus();
+    const geometry = await panel.evaluate((element) => {
+      const rect = (node) => node.getBoundingClientRect().toJSON();
+      const list = element.querySelector('.session-todo-list'), summary = element.querySelector('summary'), input = document.querySelector('textarea.chat-input-textarea');
+      const summaryBox = summary.getBoundingClientRect(), inputBox = input.getBoundingClientRect();
+      return { viewport: { width: innerWidth, height: innerHeight }, panel: rect(element), list: rect(list), listClientHeight: list.clientHeight, listScrollHeight: list.scrollHeight, summary: rect(summary), input: rect(input), summaryHit: summary.contains(document.elementFromPoint(summaryBox.left + summaryBox.width / 2, summaryBox.top + summaryBox.height / 2)), inputHit: document.elementFromPoint(inputBox.left + inputBox.width / 2, inputBox.top + inputBox.height / 2) === input, composer: rect(input.closest('.chat-composer')), inputHitOwner: document.elementFromPoint(inputBox.left + inputBox.width / 2, inputBox.top + inputBox.height / 2)?.className, summaryHitOwner: document.elementFromPoint(summaryBox.left + summaryBox.width / 2, summaryBox.top + summaryBox.height / 2)?.className, sidebarOpen: document.querySelector('#session-sidebar')?.classList.contains('sidebar-open'), animations: element.getAnimations({ subtree: true }).length };
+    });
+    report.measurements.push({ name: `todo-long-${viewport.width}x${viewport.height}`, ...geometry });
+    assert.ok(geometry.listClientHeight < geometry.listScrollHeight && geometry.list.height <= Math.min(220, viewport.height * .25) + 1);
+    assert.ok(geometry.panel.left >= 0 && geometry.panel.right <= viewport.width + 1 && geometry.panel.top >= 0);
+    assert.ok(geometry.summaryHit && geometry.inputHit && geometry.input.height >= 20 && geometry.input.width >= 140, 'Bounded task history leaves composer and collapse control usable');
+    assert.equal(geometry.animations, 0, 'Todo adds no competing continuous activity');
+    await panel.locator('.session-todo-list').evaluate((element) => { element.scrollTop = element.scrollHeight; });
+    await capture(`todo-long-${viewport.width}x${viewport.height}`);
+  }
+  report.checks.push('Long canonical task lists scroll in a bounded panel on desktop and 390x340 while summary and composer retain native hit targets without added animation');
+  await page.setViewportSize({ width: 1300, height: 1000 });
+}
+
 export async function runActivityDisclosure() {
   const out = new URL(`../test-results/pilaude/activity-disclosure/run-${Date.now()}/`, import.meta.url);
   await mkdir(out, { recursive: true });
@@ -118,12 +261,20 @@ export async function runActivityDisclosure() {
     browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1300, height: 1000 }, colorScheme: "light", reducedMotion: "reduce", serviceWorkers: "block" });
     const state = await installActivityFixture(context, report);
+    if (process.env.E2E_TODO_ONLY === '1') state.todos = null;
     page = await context.newPage(); page.setDefaultTimeout(15000);
     page.on("pageerror", (error) => report.pageErrors.push(error.message));
     page.on("console", (message) => { if (message.type() === "error") report.consoleErrors.push(message.text()); });
     const capture = async (name) => { await page.screenshot({ path: artifact(`${name}.png`), scale: "css", style: "nextjs-portal{visibility:hidden!important}" }); report.captures.push(artifact(`${name}.png`)); };
     await page.goto(`${base}/?session=activity`, { waitUntil: "domcontentloaded", timeout: 90000 });
     await page.getByText("Historical answer stays outside the process group.", { exact: true }).waitFor();
+    if (process.env.E2E_TODO_ONLY === '1') {
+      await inspectNativeTodos(page, context, state, report, capture);
+      assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.consoleErrors, []); assert.deepEqual(report.externalRequests, []);
+      assert.ok(report.interceptedWrites.every((request) => request.path.endsWith('/lease') || request.path === '/api/agent/activity' && ['abort', 'navigate_tree'].includes(JSON.parse(request.body).type)), 'Todo fixture attempts only intercepted lease/Stop/branch commands');
+      report.status = 'passed';
+      return report;
+    }
     const history = page.locator(".process-details-trigger").first();
     await assertExpanded(history, false);
     const body = await linkedBody(history);

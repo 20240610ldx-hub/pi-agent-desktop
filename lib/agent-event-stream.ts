@@ -4,10 +4,12 @@ import {
   type AgentEventLike,
 } from "./agent-event-wire";
 import { acquireSessionLivenessLease } from "./session-liveness";
+import type { SessionTodoState } from "./session-todos";
 
 export interface AgentEventStreamSession {
   readonly isStreaming: boolean;
   readonly streamingMessage: unknown;
+  readonly todos?: SessionTodoState | null;
   isAlive?(): boolean;
   onEvent(listener: (event: AgentEventLike) => void): () => void;
 }
@@ -221,10 +223,10 @@ export function createAgentEventStream(
         }
         encode(clientEvent, { droppable: isDroppableEvent(clientEvent) });
       };
-      const forwardEvent = (event: AgentEventLike, snapshot: unknown) => {
+      const forwardEvent = (event: AgentEventLike, snapshot: unknown, todosIncluded = false) => {
         if (isEventIncludedInSnapshot(event, snapshot)) return;
         const clientEvent = toClientAgentEvent(event);
-        if (clientEvent) sendClientEvent(clientEvent);
+        if (clientEvent && !(todosIncluded && clientEvent.type === "todo_state")) sendClientEvent(clientEvent);
       };
 
       const publishSession = async () => {
@@ -263,18 +265,22 @@ export function createAgentEventStream(
           unsubscribe = stopListening;
 
           const snapshot = session.streamingMessage;
+          const todoSnapshot = session.todos;
           encode({
             type: "connected",
             sessionId,
             isStreaming: session.isStreaming,
             hasStreamingSnapshot: snapshot !== undefined && snapshot !== null,
+            todos: todoSnapshot ?? null,
             // onEvent() has just replayed every request the session still holds,
             // so a reconnecting client can drop the ones closed while it was away.
             pendingExtensionUiIds: bufferedEvents
               .filter((event) => event.type === "extension_ui_request" && typeof event.id === "string")
               .map((event) => event.id as string),
           });
-          for (const event of bufferedEvents) forwardEvent(event, snapshot);
+          // The synchronous branch getter includes every entry buffered before this
+          // snapshot. Replaying an older task snapshot afterward would roll it back.
+          for (const event of bufferedEvents) forwardEvent(event, snapshot, todoSnapshot !== undefined);
           if (snapshot !== undefined && snapshot !== null) {
             encode({ type: "message_start", message: snapshot });
           }
