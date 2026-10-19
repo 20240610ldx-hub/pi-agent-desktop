@@ -48,3 +48,4 @@ waivers: []
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
+- 2026-10-19T14:21Z · codex:gpt:coord · 做了：恢复原权限owner上下文并收只读迁移材料，D:/pilaude/relay-evidence/PIL-0001/recovery-permissions/handoff.md及manifest.json含六条原字节/source映射，均与working23329458一致，共享RPC两条与既有Plan owner快照一致；本轮无源码或index改动。状态：最后initial-health单hunk确有独立CLEAN，普通coding permission唯一注册已接，位于read-only MCP policy后，因此本卡背景未接线说明已过时；这不是本卡实际执行前授权验收通过。下一步：暂停，PIL-0001完成且用户恢复工作后再按任务worktree迁入精确权限hunks，优先真实normal操作计数及未覆盖入口默认拒绝，再独立验证。风险：!bash直executeBash、PowerShell原生AST、child权限上限/parent absent、真实MCP和scheduled同门、审批重放仍未覆盖；不把旧6/9/定向证据拼成完整AC通过。
