@@ -3,11 +3,11 @@ id: PIL-0011
 title: 查清并修复 FileViewer 窄 pane 下载被取消
 epic: E2
 priority: P2
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: claude:sonnet-xhigh:impl
+lease_until: 2026-10-19T17:09Z
+branch: task/PIL-0011-fileviewer-download
+implementers: [claude:sonnet-xhigh:impl]
 depends_on: []
 files_allowed: [components/FileViewer*, e2e/file-panel.mjs, app/api/files/**, app/api/desktop/save/**]
 files_shared: []
@@ -47,3 +47,4 @@ FileViewer 其他视觉残差。
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
+- 2026-10-19T14:09Z · claude:sonnet-xhigh:impl · 领取，租约至 2026-10-19T17:09Z

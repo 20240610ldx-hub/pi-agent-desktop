@@ -3,11 +3,11 @@ id: PIL-0014
 title: 把组件复刻基准拆成逐组件任务卡
 epic: E2
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: claude:sonnet-high:impl
+lease_until: 2026-10-19T17:09Z
+branch: task/PIL-0014-parity-index
+implementers: [claude:sonnet-high:impl]
 depends_on: []
 files_allowed: [docs/relay/parity-index.md]
 files_shared: []
@@ -47,3 +47,4 @@ waivers: []
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
+- 2026-10-19T14:09Z · claude:sonnet-high:impl · 领取，租约至 2026-10-19T17:09Z
