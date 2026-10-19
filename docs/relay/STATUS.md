@@ -23,15 +23,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 25 张任务卡：todo 21 · in_progress 3 · verify 0 · review 0 · done 0 · blocked 0 · parked 1
+共 25 张任务卡：todo 23 · in_progress 1 · verify 0 · review 0 · done 0 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0001 | P0 | in_progress | 接力治理落地与工作树分流 | claude:sonnet-high:impl | 2026-10-19T17:07Z | task/PIL-0001-relay-bootstrap |
 | PIL-0014 | P1 | in_progress | 把组件复刻基准拆成逐组件任务卡 | claude:sonnet-high:impl | 2026-10-19T17:09Z | task/PIL-0014-parity-index |
-| PIL-0011 | P2 | in_progress | 查清并修复 FileViewer 窄 pane 下载被取消 | claude:sonnet-xhigh:impl | 2026-10-19T17:09Z | task/PIL-0011-fileviewer-download |
 
 ### 阻塞
 
@@ -41,6 +39,7 @@
 
 | ID | 优先级 | Epic | 标题 | 验收已冻结 | 依赖 |
 | --- | --- | --- | --- | --- | --- |
+| PIL-0001 | P0 | E0 | 接力治理落地与工作树分流 | 是 | — |
 | PIL-0002 | P0 | E0 | 建立可信的测试基线并逐项登记已知失败 | 是 | — |
 | PIL-0010 | P1 | E2 | Changes 面板在独立 Windows 窗口打开 | 是 | PIL-0001 |
 | PIL-0030 | P1 | E4 | 统一执行前授权并接入 pi-permission-system | 是 | PIL-0001 |
@@ -53,6 +52,7 @@
 | PIL-0100 | P1 | E10 | 首次使用引导：不开终端完成第一个真实任务 | 否 | — |
 | PIL-0111 | P1 | E11 | Windows 原生验收基线 | 否 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
+| PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0013 | P2 | E2 | Changes 面板剩余交互与视觉残差 | 否 | PIL-0010 |
 | PIL-0020 | P2 | E3 | 本地数据隔离与凭据加密验收 | 否 | — |
 | PIL-0060 | P2 | E7 | 定时任务接入授权与浏览器 | 否 | PIL-0030 |
