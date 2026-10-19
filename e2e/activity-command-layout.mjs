@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 import { installActivityFixture } from "./activity-disclosure.mjs";
@@ -95,7 +95,8 @@ export async function runActivityCommandLayout() {
   const out = new URL(`../test-results/pilaude/activity-command-layout/run-${Date.now()}/`, import.meta.url);
   await mkdir(out, { recursive: true }); const artifact = (name) => fileURLToPath(new URL(name, out));
   const captureOnly = process.env.E2E_COMMAND_CAPTURE_ONLY === "1";
-  const report = { status: "running", base, captureOnly, checks: [], captures: [], measurements: [], apiRequests: [], thinkingRequests: [], interceptedWrites: [], externalRequests: [], pageErrors: [], consoleErrors: [] };
+  const report = { status: "running", base, captureOnly, checks: [], captures: [], measurements: [], dividers: [], apiRequests: [], thinkingRequests: [], interceptedWrites: [], externalRequests: [], pageErrors: [], consoleErrors: [] };
+  const baseline = process.env.E2E_COMMAND_BASELINE_REPORT ? JSON.parse(await readFile(process.env.E2E_COMMAND_BASELINE_REPORT, "utf8")) : null;
   let browser;
   try {
     browser = await chromium.launch({ headless: true });
@@ -110,6 +111,7 @@ export async function runActivityCommandLayout() {
     if (await group.getAttribute("aria-expanded") !== "true") await group.click();
     const groupBody = await linkedBody(group);
     const initialBash = await openTool(page, "command-bash");
+    await openTool(page, "command-powershell");
     // Always preserve the pre-fix rendered geometry before the first compact-shell assertion.
     const panelClose = page.locator('.right-panel-container.right-panel-open .workspace-pane-close').first();
     if (await panelClose.isVisible()) await panelClose.click();
@@ -120,7 +122,7 @@ export async function runActivityCommandLayout() {
       for (const width of [1300, 430]) {
         await page.setViewportSize({ width, height: 1000 }); await initialBash.trigger.scrollIntoViewIfNeeded(); await settle(page);
         const capture = artifact(`command-${theme}-${width}.png`);
-        await page.screenshot({ path: capture, scale: "css", style: "nextjs-portal{visibility:hidden!important}" }); report.captures.push(capture);
+        const screenshot = await page.screenshot({ path: capture, scale: "css", style: "nextjs-portal{visibility:hidden!important}" }); report.captures.push(capture);
         const syntax = await initialBash.body.locator(".tool-call-command-text").evaluate((pre) => {
           const string = pre.querySelector(".token.string"), s = getComputedStyle(pre), token = string ? getComputedStyle(string) : null;
           return { theme: document.documentElement.classList.contains("dark") ? "dark" : "light", stringText: string?.textContent, stringColor: token?.color, baseColor: s.color, font: s.fontFamily, fontSize: s.fontSize, fontWeight: s.fontWeight, fontStyle: s.fontStyle, whiteSpace: s.whiteSpace, tokenFont: token?.fontFamily, tokenSize: token?.fontSize, tokenWeight: token?.fontWeight, tokenStyle: token?.fontStyle, nestedPreCount: pre.querySelectorAll("pre").length, text: pre.textContent, literalElementCount: pre.querySelectorAll("tag").length };
@@ -136,8 +138,55 @@ export async function runActivityCommandLayout() {
           const box = (node) => { if (!node) return null; const r = node.getBoundingClientRect(), s = getComputedStyle(node); return { x: r.x, y: r.y, width: r.width, height: r.height, border: s.borderWidth, radius: s.borderRadius, background: s.backgroundColor, padding: s.padding, fontSize: s.fontSize }; };
           return { ...conditions, dpr: devicePixelRatio, screenshotScale: "css", row: box(row), body: box(body), input: box(input), commandPill: box(body?.querySelector(".tool-call-command-line")), result: box(body?.querySelector(".tool-call-command-result")), inputText: input?.textContent, font: style.fontFamily, fontSize: style.fontSize, viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth, visibleBounds: rect.left >= 0 && rect.right <= innerWidth + 1 };
         }, { theme, width }));
+        const divider = await page.locator('[data-tool-call-id="command-powershell"]').evaluate((row) => {
+          const process = row.closest(".process-details-content");
+          const bounds = (node) => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height, right: r.right, bottom: r.bottom }; };
+          const processStyle = getComputedStyle(process);
+          const plain = [...process.querySelectorAll(".tool-call-row")].filter((item) => !item.hasAttribute("data-command-layout"));
+          return { process: bounds(process), border: parseFloat(processStyle.borderLeftWidth), row: bounds(row), trigger: bounds(row.querySelector(".tool-call-trigger")), rows: [...process.querySelectorAll(".tool-call-row")].map((item) => ({ id: item.dataset.toolCallId, box: bounds(item), trigger: bounds(item.querySelector(".tool-call-trigger")), header: bounds(item.querySelector(".tool-call-header")), body: item.querySelector(".tool-call-body") ? bounds(item.querySelector(".tool-call-body")) : null, controls: [...item.querySelectorAll(".code-copy-control button")].map(bounds) })), richRows: plain.map((item) => ({ id: item.dataset.toolCallId, box: bounds(item), borderTop: getComputedStyle(item).borderTopWidth, overflow: getComputedStyle(item).overflow, bodyBorder: item.querySelector(".tool-call-body") ? getComputedStyle(item.querySelector(".tool-call-body")).borderTopWidth : null, separatorContent: getComputedStyle(item, "::before").content })) };
+        });
+        const pixels = await page.evaluate(async ({ dataUrl, divider }) => {
+          const image = new Image(); image.src = dataUrl; await image.decode();
+          const canvas = document.createElement("canvas"); canvas.width = image.width; canvas.height = image.height;
+          const ctx = canvas.getContext("2d"); ctx.drawImage(image, 0, 0);
+          const left = Math.ceil(divider.process.x + divider.border), right = Math.floor(divider.process.right - divider.border);
+          const center = Math.floor((left + right) / 2), rows = [];
+          for (let y = Math.floor(divider.row.y) - 1; y <= Math.ceil(divider.row.y) + 1; y++) {
+            const rgba = ctx.getImageData(0, y, image.width, 1).data;
+            const color = (x) => Array.from(rgba.slice(x * 4, x * 4 + 3));
+            const sample = color(center), above = Array.from(ctx.getImageData(center, y - 3, 1, 1).data).slice(0, 3);
+            const contrast = Math.max(...sample.map((c, i) => Math.abs(c - above[i])));
+            let start = center, end = center + 1;
+            const equal = (x) => color(x).every((c, i) => Math.abs(c - sample[i]) <= 1);
+            while (start > left && equal(start - 1)) start--;
+            while (end < right && equal(end)) end++;
+            rows.push({ y, sample, contrast, paintedLeft: start, paintedRight: end, expectedLeft: left, expectedRight: right });
+          }
+          return rows.filter((sample) => sample.contrast > 3).sort((a, b) => b.contrast - a.contrast)[0] ?? { error: "No visible separator at the compact row boundary", rows };
+        }, { dataUrl: `data:image/png;base64,${screenshot.toString("base64")}`, divider });
+        report.dividers.push({ theme, width, ...divider, pixels });
       }
     }
+    if (baseline) {
+      for (const measurement of report.measurements.filter((item) => item.row)) {
+        const previous = baseline.measurements.find((item) => item.row && item.theme === measurement.theme && item.width === measurement.width);
+        assert.ok(previous, "Baseline includes the same theme/viewport capture");
+        for (const key of ["row", "body", "input", "commandPill", "result"]) assert.deepEqual(measurement[key], previous[key], `${key} geometry remains unchanged by separator paint`);
+      }
+      for (const divider of report.dividers) {
+        const previous = baseline.dividers.find((item) => item.theme === divider.theme && item.width === divider.width);
+        assert.deepEqual(divider.rows, previous.rows, "All compact/rich row, header, body and copy-control bounds remain unchanged");
+        assert.deepEqual(divider.richRows, previous.richRows, "Rich inspector clipping and borders remain unchanged");
+      }
+      report.checks.push("Before/after screenshot conditions and all command/rich row/header/body/input/output/copy bounds match exactly");
+    }
+    for (const divider of report.dividers) {
+      assert.equal(divider.pixels.error, undefined, "Adjacent completed commands have a visible shared divider");
+      assert.ok(divider.pixels.paintedLeft <= divider.pixels.expectedLeft + 1 && divider.pixels.paintedRight >= divider.pixels.expectedRight - 1, `${divider.theme}/${divider.width}: shared divider reaches the process container's inner side borders; actual ${divider.pixels.paintedLeft}..${divider.pixels.paintedRight}, expected ${divider.pixels.expectedLeft}..${divider.pixels.expectedRight}`);
+      assert.ok(divider.trigger.x >= divider.row.x && divider.trigger.right <= divider.row.right + 1, "Separator paint does not widen the native disclosure hit target");
+      assert.ok(divider.richRows.every((row) => row.borderTop === "0px" && (row.bodyBorder === null || row.bodyBorder === "1px") && row.overflow === "hidden" && row.separatorContent === "none"), "Mixed MCP/codemode/partial/extension rows keep their existing inspector borders and clipping");
+    }
+    report.checks.push("Adjacent completed compact commands share a full-width one-pixel divider in both themes at1300/430; content/hit targets and rich inspector boundaries remain inset");
     assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.externalRequests, []);
     if (captureOnly) { report.status = "baseline-captured"; return report; }
     await page.setViewportSize({ width: 1300, height: 1000 });

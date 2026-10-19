@@ -129,7 +129,7 @@ function buildComponents(
       if (isBlock) {
         if (lang === ARTIFACT_FENCE_LANG) {
           const artifact = decodeArtifactFence(raw);
-          if (artifact) return <ArtifactCard block={artifact} isStreaming={isStreaming} />;
+          if (artifact) return <ArtifactCard block={artifact} isStreaming={isStreaming} streamingCaret={streamingCaret} />;
         }
         if (lang === "mermaid") {
           return (

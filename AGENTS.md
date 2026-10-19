@@ -4,6 +4,8 @@
 
 Before continuing Pilaude UI work, read [the engineering workspace](docs/engineering/pilaude-ui/README.md), starting with [handoff](docs/engineering/pilaude-ui/handoff.md), then [plan](docs/engineering/pilaude-ui/plan.md), [progress](docs/engineering/pilaude-ui/progress.md) and [technical specification](docs/engineering/pilaude-ui/technical-spec.md). These files preserve the active task across threads; verify their mutable git/service facts, continue the recorded next step and maintain them after meaningful changes, acceptance, commits or handoff. A checkpoint is not completion of full reproduction. User corrections override old acceptance claims. Keep private references/fonts/credentials outside public engineering records. This durable entry is intentional project guidance; preserve it when removing generated Next.js guidance.
 
+For ongoing Pilaude UI work, the user wants 3–8 implementation subagents while the main agent coordinates, reviews, accepts evidence and saves checkpoints; handling user feedback is the exception. Assign a documentation owner when useful, keep file ownership explicit and serialize actual browser checks against the shared preview. A source freeze is not browser acceptance. Temporary agent handles are session-local; a new thread follows the on-disk handoff instead of waiting for old agents.
+
 ## Quick Start
 
 ```bash

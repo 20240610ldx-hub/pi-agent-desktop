@@ -48,11 +48,12 @@ export function ArtifactTypeIcon({ type, size = 16 }: { type: ArtifactType; size
  * An artifact in a message. Simple content stays part of the reply; larger or
  * runnable content becomes a card that opens the side panel.
  */
-export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isStreaming?: boolean }) {
+export function ArtifactCard({ block, isStreaming, streamingCaret }: { block: ArtifactBlock; isStreaming?: boolean; streamingCaret?: boolean }) {
   const { t } = useI18n();
   const sessionId = useActiveArtifactSession();
   const entry = useSessionArtifact(sessionId, block.identifier);
   const generating = !block.complete && Boolean(isStreaming);
+  const activeGenerating = generating && Boolean(streamingCaret);
   const versionIndex = generating ? -1 : versionIndexOf(entry, block);
   const sawGeneratingRef = useRef(false);
   const [readyHighlight, setReadyHighlight] = useState(false);
@@ -96,11 +97,11 @@ export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isS
   // A markdown preview outside the chat has no panel. In the chat, diagrams
   // and short documents render in place; apps and scripted pages do not.
   if (!hasOpener || shouldInlineArtifact(block)) {
-    return <InlineArtifact block={block} isStreaming={isStreaming} onOpen={hasOpener ? handleOpen : undefined} />;
+    return <InlineArtifact block={block} isStreaming={isStreaming} streamingCaret={streamingCaret} onOpen={hasOpener ? handleOpen : undefined} />;
   }
 
   const versionCount = entry?.versions.length ?? 0;
-  const subtitle = generating
+  const subtitle = activeGenerating
     ? t("artifacts.generating")
     : [
         ARTIFACT_TYPE_LABEL[block.type],
@@ -111,16 +112,16 @@ export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isS
     <button
       ref={cardRef}
       type="button"
-      className={`artifact-card${generating ? " is-generating" : ""}${readyHighlight ? " artifact-ready" : ""}`}
+      className={`artifact-card${activeGenerating ? " is-generating" : ""}${readyHighlight ? " artifact-ready" : ""}`}
       onClick={handleOpen}
-      title={generating ? t("artifacts.generating") : t("artifacts.staged")}
+      title={activeGenerating ? t("artifacts.generating") : block.complete ? t("artifacts.staged") : block.title}
     >
       <span className="artifact-card-icon">
         <ArtifactTypeIcon type={block.type} />
       </span>
       <span className="artifact-card-text">
         <span className="artifact-card-title">{block.title}</span>
-        <span className="artifact-card-subtitle">{subtitle}</span>
+        <span className="artifact-card-subtitle" data-streaming-caret={streamingCaret || undefined}>{subtitle}</span>
       </span>
       <span className="artifact-card-action">{t("artifacts.open")}</span>
     </button>
@@ -130,10 +131,12 @@ export function ArtifactCard({ block, isStreaming }: { block: ArtifactBlock; isS
 function InlineArtifact({
   block,
   isStreaming,
+  streamingCaret,
   onOpen,
 }: {
   block: ArtifactBlock;
   isStreaming?: boolean;
+  streamingCaret?: boolean;
   onOpen?: () => void;
 }) {
   const { t } = useI18n();
@@ -150,10 +153,10 @@ function InlineArtifact({
     </button>
   ) : undefined;
   if (block.type === "html" || block.type === "svg" || block.type === "react") {
-    return <HtmlPreviewBlock code={block.content} lang={block.lang} kind={block.type} isStreaming={streaming} headerAction={action} />;
+    return <HtmlPreviewBlock code={block.content} lang={block.lang} kind={block.type} isStreaming={streaming} streamingCaret={streamingCaret} headerAction={action} />;
   }
   if (block.type === "mermaid") {
-    return <MermaidBlock code={block.content} isStreaming={streaming} defaultPreview headerAction={action} />;
+    return <MermaidBlock code={block.content} isStreaming={streaming} streamingCaret={streamingCaret} defaultPreview headerAction={action} />;
   }
-  return <CodeBlock code={block.content} lang={block.lang} isStreaming={streaming} headerAction={action} />;
+  return <CodeBlock code={block.content} lang={block.lang} isStreaming={streaming} streamingCaret={streamingCaret} headerAction={action} />;
 }

@@ -4516,7 +4516,9 @@ html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
 .tool-call-row[data-command-layout="compact"][data-status="error"] .tool-call-command-output { color: var(--danger); }
 .process-details-content .tool-call-row[data-command-layout="compact"] > .tool-call-grid > .disclosure-body-clip > .tool-call-body { border: 0; border-radius: 0; background: transparent; }
 .process-details-content .tool-call-row[data-command-layout="compact"] .code-copy-control + pre { border: 0; }
-.process-details-content .message-assistant-content > .tool-call-row[data-command-layout="compact"] + .tool-call-row[data-command-layout="compact"] { border-top: var(--hairline) solid var(--separator); padding-top: 6px; }
+.process-details-content .message-assistant-content > .tool-call-row[data-command-layout="compact"] + .tool-call-row[data-command-layout="compact"] { position: relative; overflow: visible; border-top: var(--hairline) solid transparent; padding-top: 6px; }
+/* Extend only the shared rule through the assistant's 12px side padding. */
+.process-details-content .message-assistant-content > .tool-call-row[data-command-layout="compact"] + .tool-call-row[data-command-layout="compact"]::before { content: ""; position: absolute; top: calc(-1 * var(--hairline)); inset-inline: -12px; height: var(--hairline); background: var(--separator); pointer-events: none; }
 /* End completed shell command layout. */
 @media (pointer: coarse) {
   .process-details-trigger, .tool-call-trigger, .thinking-disclosure-toggle { min-height: 44px; }
@@ -5110,7 +5112,7 @@ html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
   background: var(--bg-subtle);
   color: var(--text-muted);
 }
-.artifact-card.is-generating .artifact-card-icon {
+.artifact-card.is-generating:not(:has([data-streaming-caret])) .artifact-card-icon {
   animation: artifact-card-pulse 1.4s var(--ease-native) infinite;
 }
 .artifact-card.artifact-ready {
@@ -8223,6 +8225,11 @@ html.dark .app-shell .chat-composer { --composer-line: #373736; --composer-line-
    at this comparison's 1.25 capture scale, not 180 CSS pixels or inferred DPI. */
 .app-shell .composer-attachments { display: flex; flex-wrap: wrap; gap: 7.2px; padding: 13.4px 13.4px 0; }
 @container (max-width: 480px) {
+  /* Busy actions keep their labels and Stop while the draft gets a full line. */
+  .app-shell .chat-composer:not([data-compact]) .chat-composer-editor:has(.composer-streaming-actions) { flex-wrap: wrap; }
+  .app-shell .chat-composer:not([data-compact]) .chat-composer-editor:has(.composer-streaming-actions) > .chat-input-textarea { flex-basis: 100%; }
+  .app-shell .chat-composer:not([data-compact]) .chat-composer-editor:has(.composer-streaming-actions) > .composer-primary-actions { flex: 1 0 100%; height: auto; }
+  .app-shell .chat-composer:not([data-compact]) .composer-streaming-actions { flex-wrap: wrap; justify-content: flex-end; min-width: 0; max-width: 100%; }
   .app-shell .composer-attachments { max-height: min(288px, 35svh); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 10px; }
 }
 @media (max-height: 640px) {

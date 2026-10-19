@@ -9,7 +9,7 @@
 | Tool call group / Collapsed activity summary | 可折叠的执行记录组 | ChatWindow 的真实 turn／process entries，不使用演示步骤 |
 | Summary header / Disclosure trigger | 低于正文权重的摘要行 | 折叠／展开、状态、实际消息／工具数量；尾部 chevron |
 | Step item / Action row / Tool call row | 一条真实工具调用 | Pi tool-call ID、参数生成和执行事件、结果与错误 |
-| Tool input / Tool result / Command output | 展开后的输入与结果 | 原文等宽／复制／滚动；已完成且仅command字段的bash／powershell使用紧凑命令条＋普通结果，额外参数及其他rich views保完整；MCP继续纯文本 |
+| Tool input / Tool result / Command output | 展开后的输入与结果 | 原文等宽／复制／滚动；已完成且仅command字段的bash／powershell使用紧凑命令条＋普通结果，相邻compact分隔paint覆盖容器内缘，额外参数及其他rich views保完整；MCP继续纯文本 |
 | Streaming text / Token streaming | 正在生成的正文 | 当前 message／block，不伪造逐字计时 |
 | Caret / Streaming cursor | 当前正文生成指示 | 仅当前文本生成时存在，完成／中断移除；最后的Markdown正文位置由既有解析树选择，不在列表／表格后追加空白行 |
 | Shimmer text | 当前正在进行的微光文字 | 只有真实活动状态驱动，同一时刻一处可见持续动画 |
@@ -30,7 +30,7 @@
 | 工具步骤 | 参数 generating，实际 execution pending／running、结果 success／error，保留 cancelled | 运行集合与部分输出分离，真实错误自动展开一次 |
 | 思考 | 当前 indexed start／delta／end 的 active／static，加 deferred loading／error | 不伪造 duration 或完成比率 |
 | 发送确认 | 本地 optimistic submission 至事件连接／POST preflight ACK 的专用 isSending，Stop／会话切换／当前请求结算清除 | 不使用覆盖整轮的 rpcPromptPendingRef，不把工具间 waiting_model 误标 Sending；后续真正活动优先 |
-| 流式正文 | indexed text active／static；end／Stop清光标；现有HAST末尾容器负责呈现位置 | 段落／标题／inline code／列表／嵌套列表／表格／代码fence／open fence／quote已验；公式、末尾Artifact及超大raw fallback仍待验 |
+| 流式正文 | indexed text active／static；end／Stop清光标；现有HAST末尾容器负责呈现位置 | 段落／标题／inline code／列表／嵌套列表／表格／代码fence／open fence／quote及mounted Artifact card已验；无opener inline code源仅SSR，其他inline切换／公式／超大raw fallback待验 |
 | 背景任务 | Pi family/subagent 的 queued／starting／running／completed／failed／aborted／interrupted；未知保持 unknown | 静态形状／颜色与可达控制；不是有序 Plan/Todo 完成率 |
 
 ## 动效规格
@@ -84,7 +84,7 @@
 - [x] 首次错误展开并能定位到具体步骤；之后手动收起有效，实际手动历史滚动未被错误展开抢回。
 - [ ] Tab／Enter／Space／Escape／IME 及焦点返回覆盖；ARIA IDs 关联，隐藏区不进入焦点序列。
 - [x] 本批实际覆盖流式／错误、目录hover和普通开合不抢手动历史滚动；焦点返回只在收起后代时发生并使用preventScroll。
-- [x] 导航来源已修为模型mark_chapter工具→持久化记录→纯文本粗体标题／稳定ID锚点，旧用户消息分片语义验收撤回。最终4522954六组检查与4456445原生左右列四状态通过：目录恒定256px、长标题内部省略，正文／输入器在实际中间栏中心误差均0。普通bold／heading无章节；同请求多章／同名不同ID、实时重放、键盘／IME／草稿／手动历史保留。仅已验常规／settled短窗；活动run＋长草稿390×340目录空间不足及更窄clamp仍待验，不表示Windows完整视觉通过。
+- [x] 导航来源已修为模型mark_chapter工具→持久化记录→纯文本粗体标题／稳定ID锚点，旧用户消息分片语义验收撤回。最终4522954六组检查与4456445原生左右列四状态通过：目录恒定256px、长标题内部省略，正文／输入器在实际中间栏中心误差均0。普通bold／heading无章节；同请求多章／同名不同ID、实时重放、键盘／IME／草稿／手动历史保留。另以4943123 RED→5297398 GREEN修复canonical 390×340活动run＋长草稿：textarea234.406×72px／composer高136px，目录256×41px有完整行native hit，Steer／Follow-up／Stop真实命中、同节点草稿／焦点／手动历史保留；更窄clamp、其他组合及Windows完整视觉仍待验。
 - [x] 顶部会话标题菜单及子菜单已挂载，现有真实动作和不可用原因均由六组实际检查验证，无假选择／假成功。
 - [x] Transcript modes 与 Output styles 已接真实 consumer／后端，分别通过完整页面及提示词消费检查；unsupported exact/chat-only/subagent 风格保原合同并说明原因。
 - [x] 原生会话窗口和 VS Code（项目）已接 Rust／IPC 与 capability 探测，Windows20项Rust和mock IPC页面通过；它们的真实OS窗口／Code.exe启动、DPI和macOS／Linux编译继续待验，不能把合同测试算成实物通过。
@@ -98,5 +98,9 @@
 可选 `@juicesharp/rpiv-todo@2.13.9` 的已有路径为扩展 `setWidget("rpiv-todos", …)` → RPC widget lines／state → useAgentSession → ChatWindow aboveEditorWidgets → ExtensionWidgets ANSI 文本。浏览器字段只有 key／lines／placement，没有结构化任务 ID、状态或总数；`e2e/rpiv-todo-compat.mjs` 的九项 SDK／持久化兼容检查不证明浏览器或真实 Code mode 消费。包未安装／未捆绑，原生 Plan/Todo 继续未完成。后续仅能原样验收扩展实际给出的标签／计数、更新／重连／清除，不能从任意文本、隐藏完成项或删除 tombstones 推导进度。
 
 原图复查使用 2136×845 原件，而非聊天显示的 2000×791 预览。参考活动详情是共享外框／分隔线和单条紧凑命令，先前现状有嵌套思考／JSON／输出卡片；当前只对已完成且纯command的shell视图移除内层卡片，其他rich inspectors保留。生成的同类numstat形状对照中桌面详情高164.5→71.75 CSS px、命令pill33.75px／1px边框，对应参考39原像素且DPI未知。参考同图summary/body ink约1.05／1.00，先前浅色约0.87／0.87；墨迹不等于CSS字号，不据此直接放大字体或声称视觉一致。命令语法着色、其他活动行层级和参考字形仍有差异。私有叠图只做整数裁剪／平移，reference100%底层、current50%上层，不提交。
+
+相邻已完成compact命令分隔线独立 `activity-command-layout/run-1792385017293/` RED→`run-1792385059051/` 六组GREEN：1300px深浅paint从x253..1047扩至241..1059，430px从78..352扩至66..364；row／header／body／input／output／copy和rich边界与baseline完全相同。四图及私有原像素叠图已读取，局部差异仅一条线左右各12px，既有精确复制／Prism／错误／回退／focus和溢出检查保持。page／console／external／writes为空；仅采纳整宽分隔paint，参考与实现宽度／文案／DPI及绿色残差仍保留，不称所有活动行已平铺或Windows视觉通过。
+
+Artifact mounted card `streaming-caret-boundaries/run-1792385745393/` 两组通过且四图已读；最终checker `run-1792386132187/` 同产品源加强ended／stopped hint===title后两组通过，报告已读、不追认新四图：active唯一caret、hidden／reduced停、text_end／handoff／Stop静止，inactive incomplete hint真实title，complete保publisher自动open／精确panel Copy并保caret至text_end。原5381513假Generating／pulse RED及5714557行号误作source的checker失败保留。当前card440×58.390625等生命周期几何一致，没有RED数值基线，不称before/after exact。inline无opener code仅SSR，其他inline切换／公式／超大raw和Windows仍待验。最终受影响268/268、完整types／lint通过（既有TerminalPanel一warning），旧323未重复执行；完整npm／E2E不追认。
 
 运行结果和残差在每一批实际完成后补记于[复刻基准](pilaude-ui-parity.md)；未核实项继续保持未完成。Vercel AI Elements、assistant-ui、shadcn/ui 等为原文的参考建议，本轮未逐一核对或声称已采用。

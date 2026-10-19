@@ -266,7 +266,7 @@ RED 先复现 `[a,b,c]` 配合持久 pin `[b,a]` 仍显示 `[a,b,c]`，再补 pi
 
 核心173项、UI88项分别通过，父级最终组合323项、类型、完整lint及更新后ownership／CSS15项通过；lint只有TerminalPanel既有warning。独立实际SDK→SSE→disk reopen／branch→公开hook复查通过，invalid／cancel不写章，重放一次、后续正文继续；无真实模型调用。实际 `conversation-navigator-layout/run-1792384522954/` 六组通过章节／strong锚点／点击、keyboard／IME／focus／draft／手动历史、实时新增／重复、256px＋ellipsis、深浅与2200／900／390／390×340。实际 `run-1792384456445/` 另通过左右列原生Home／End四状态：左180↔480、右300↔1100，正文／composer中心偏差及互差均0、目录256px，Context通过真实按钮逐状态关闭后轨道和可见目录行native hit为真。page／console／nonRead／external均空，生成夹具不执行模型。旧错误report字段、hover打开目录后再点trigger拦截及Context遮挡记录保留。
 
-限制：`run-1792384473222/` 的活动run＋长草稿在390×340时目录仅剩约10px、没有完整可见行，最终短窗通过属于settled run，不据此声称该busy组合已修复；小于280px可用宽度的clamp未实际覆盖。旧五千消息E2E夹具无章节且最早历史未加载，现断言不伪造用户分片；该完整runner未运行，不称完整E2E通过。Windows原生／DPI与完整视觉一致仍待验。
+极短busy专项：旧 `run-1792384473222/` 活动run＋长草稿在390×340时目录约10px；原主矩阵的短窗属于settled状态。新RED `run-1792384943123/` 确认busy actions把textarea挤至19.67×200px、composer高224px、目录11.1875px。仅在既有≤480px container添加四条noncompact busy CSS，让textarea独占一行、actions换行，未改ChatInput JS／DOM／提交或导航高度。最终 `run-1792385297398/results.json` GREEN，run始终活动且无agent_end：textarea234.406×72px、composer高136px／top150.5，目录256×41px／y69..110露出完整28.8px行，native hit真且距composer40.5px；Steer／Follow-up／Stop中心命中全真。同textarea节点／精确草稿／开关前后几何／焦点／手动历史保留，五项既有ChatInput键盘IME／提交一次测试及source review clean，单图已读取；page／console／nonRead／external为空。中途Context遮挡fixture失败保留。只验证这一canonical组合，小于280px可用宽度clamp、其他长草稿／窗口和Windows原生仍待验。旧五千消息E2E夹具无章节且最早历史未加载，现断言不伪造用户分片；该完整runner未运行，不称完整E2E通过。Windows原生／DPI与完整视觉一致仍待验。
 
 实际 `conversation-navigator-layout/run-1792375287625/` 通过深浅、0／50／100% 历史滚动、侧栏／Files 切换、2200×1000／900×600／390×812／390×340、点击／方向键／IME／Escape 焦点、draft reload／resize 和目录不抢正文滚动。轨道相对聊天栏 left=12／top=24 CSS px，正文最小间隙 24px；仅有真实 navigator 时预留 gutter。390px 正文宽 309.2px；390×340 下 track／directory bottom=174，低于输入器 top214.5，短窗不会压输入器。18 项定向测试、类型及 lint 通过；无写入／外部／页面错误。
 
@@ -338,11 +338,25 @@ SSR真实controller与preference接口先RED后GREEN。实际 `transcript-view/r
 
 公开实际MarkdownBody渲染八项先RED后GREEN；既有MessageView／markdown相关85项和父级117项UI／CSS基线分别通过，类型和完整lint退出0，保留TerminalPanel既有ARIA warning。最终 `streaming-caret-boundaries/run-1792381811843/results.json` 通过九种结尾、index0→1真实handoff、text_end先于message_end清光标、native opacity周期、reduced无running caret animation、supplemental DOMhidden、真实New／同会话返回，以及实际Stop／error立即清除。九图全部读取，父级复核list／table／fence末字同行；旧fence root间距约29.64px已消除，新的code marker与末字同y区间。动画查询用getAnimations({subtree:true})包含pseudo，旧普通getAnimations空结果不作为隐藏停止证据。无page／console／external错误，只有被fixture拦截的abort／lease，无模型或真实命令执行。
 
+## Artifact实际卡片的indexed活动与完成态（2026-10-19）
+
+九renderer含无opener `ArtifactCard → InlineArtifact → CodeBlock` 的marker转发，不能证明mounted card。实际 `streaming-caret-boundaries/run-1792385381513/results.json` RED确认live card没有marker，而text_end且message仍busy、下一text index及Stop后仍pulse和Generating，这是活动真值与UX缺陷。现在business generating继续负责版本／路由／publisher完成，activeGenerating只控制当前indexed活动文案与样式；card subtitle消费marker并停重复icon pulse，inactive incomplete的hint用真实title，complete才显示Ready。
+
+`run-1792385745393/results.json` 两组GREEN、四图全读，覆盖live单处caret、reduced／实际New隐藏、text_end／handoff／Stop静止；最终checker `run-1792386132187/results.json` 在同产品源加强ended／stopped hint===title后两组GREEN，报告已读、不重复读取新四图。同artifact closing而text仍active时ready highlight／publisher自动open／真实panel Copy原文和单caret至text_end均通过。无page／console／external错误，仅夹具拦截POST abort，写入白名单断言通过。原始RED保留；5610382是旧hint中间GREEN，5714557因checker把高亮行号1当source而失败，最终改用真实Copy seam，不用DOM text冒充原文。
+
+当前可见生命周期card均440×58.390625px、icon36px、title13px／line20.8、subtitle11px／line17.6，局部坐标和比例已记录；RED无这些数值，不能称前后exact。无opener inline code只由SSR覆盖，其他HTML／Mermaid／Markdown inline完成切换、math-only／超大raw、Windows原生和完整视觉继续待验。最终受影响15文件组合268/268、完整tsc／lint通过，lint仅既有TerminalPanel警告；旧章节323项未重跑，不相加为完整npm／E2E。
+
 ## 紧凑命令复用Prism语法色（2026-10-19）
 
 `MessageView → CompactCommandText → 既有lib/syntax-highlighting PrismLight` 现在实际消费已注册bash／powershell grammar。adapter只在≤4096字符时输出span token，超过预算完整plain fallback；原pre／字体／wrap／命令pill和原文Copy不变，不新增lexer／依赖，也不增加open-claude-ui来源计数。字符串使用既有success绿色，其他token继承中性色／字形，未导入完整代码主题。
 
 四项新公开renderer测试先RED后GREEN，相关MessageView合计52项；父级syntax／MessageView／ownership／CSS基线67项、完整类型和lint通过，保留TerminalPanel既有warning。最终 `activity-command-layout/run-1792382399196/` 四组实际页面通过quoted路径着色、字体／字重／斜体继承、单pre、Bash和PowerShell grammar、HTML字面文本、CRLF／Tab／尾空格／精确复制、4096以上完整plain fallback和原全部窄窗／错误／格式回退。1300／430深浅四图已读取；浅色string rgb36,138,61、其余rgb82，暗色string rgb48,209,88，字体仍12px Mono400 normal。page／console／API writes／external为空。原图quotedpath主体候选约rgb30,158,60，颜色仍有残差；DPI／生成文本不同，raw overlay只整数crop／translation，不称像素完全一致。
+
+## 相邻紧凑命令整宽分隔线（2026-10-19）
+
+实际 `activity-command-layout/run-1792385017293/report.json` 首先RED复现divider仅覆盖内缩内容：1300px深浅原像素span253..1047，容器内缘241..1059；430px为78..352，内缘66..364。相邻compact保留原1px透明border和6px padding，以pointer-events:none的pseudo向两侧各延伸12px，仅修paint。最终 `run-1792385059051/report.json` 六组GREEN，在四种theme／width条件下覆盖内缘；所有compact与rich row／header／body／input／output／copy bounds与RED baseline完全相同。原精确CRLF／Tab／尾空格复制、Prism预算／字面HTML、MCP／codemode／partial／extra fields、错误、focus和overflow检查保持，page／console／external／writes均空。
+
+四张最终图及离线 `reference-evidence/divider-measurements.json` 已读取：before100／after50与localdiff只在一条分隔线两端各新增12px×1px。参考04使用2136×845原件整数crop／translation、参考100%底层／当前50%上层，无重采样；参考card1152px与当前820px、文案、DPI及语法绿色仍不同。只采纳整宽分隔paint，不扩大为所有活动平铺、完整像素一致、coarse target或Windows WebView通过。
 
 ## 用户长消息的响应式展开（2026-10-19）
 

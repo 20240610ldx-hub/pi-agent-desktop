@@ -51,6 +51,113 @@ async function measureCaret(page, tail) {
   }, tail);
 }
 
+async function inspectArtifactCard(page, state, report, artifact, emit) {
+  const title = 'Generated terminal artifact card';
+  const source = "const generatedArtifact = '<source> & exact';";
+  const markdown = `:::artifact{identifier="generated-terminal-card" type="code" title="${title}"}\n\`\`\`javascript\n${source}`;
+  const user = { role: 'user', content: 'Generated mounted artifact caret turn.', timestamp: stamp };
+  const message = assistant([{ type: 'text', text: markdown }], stamp + 1000);
+  state.running = true; state.messages.push(user); state.entryIds.push('artifact-caret-user'); state.revision++;
+  await emit([{ type: 'agent_start' }, { type: 'message_end', message: user }, { type: 'message_start', message: assistant([], stamp + 1000) }, { type: 'message_update', assistantMessageEvent: { type: 'text_start', contentIndex: 0 } }, { type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: markdown } }]);
+  const card = page.locator('.message-streaming-caret .artifact-card').filter({ hasText: title });
+  await card.waitFor();
+  await page.waitForFunction(() => document.querySelector('.message-streaming-caret .artifact-card')?.classList.contains('is-generating'));
+  await card.scrollIntoViewIfNeeded();
+  const sample = async (name) => {
+    const measurement = await page.locator('.artifact-card').filter({ hasText: title }).first().evaluate((card) => {
+      const root = card.closest('.markdown-body');
+      const visible = (element) => element.getClientRects().length > 0 && !element.closest('[hidden], [inert], [aria-hidden="true"]') && getComputedStyle(element).visibility === 'visible';
+      const animations = card.getAnimations({ subtree: true }).map((animation) => ({ name: animation.animationName, state: animation.playState, continuous: animation.effect.getTiming().iterations === Infinity, target: animation.effect.target?.className, pseudo: animation.effect.pseudoElement, currentTime: animation.currentTime }));
+      const rect = card.getBoundingClientRect();
+      const geometry = Object.fromEntries(['icon', 'title', 'subtitle', 'action'].map((part) => {
+        const element = card.querySelector(`.artifact-card-${part}`), box = element.getBoundingClientRect(), style = getComputedStyle(element);
+        return [part, { left: box.left - rect.left, top: box.top - rect.top, width: box.width, height: box.height, lineHeight: style.lineHeight, fontSize: style.fontSize }];
+      }));
+      const message = card.closest('.message-assistant');
+      const messageContinuous = message ? message.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running' && animation.effect.getTiming().iterations === Infinity && animation.effect.target instanceof Element && visible(animation.effect.target)).map((animation) => ({ name: animation.animationName, target: animation.effect.target.className, pseudo: animation.effect.pseudoElement })) : [];
+      return { title: card.querySelector('.artifact-card-title')?.textContent, subtitle: card.querySelector('.artifact-card-subtitle')?.textContent, titleHint: card.title, generating: card.classList.contains('is-generating'), activeText: Boolean(card.closest('[data-message-streaming="true"]')), markerCount: card.querySelectorAll('[data-streaming-caret]').length, cardVisible: visible(card), animations, visibleContinuous: visible(card) ? animations.filter((animation) => animation.continuous && animation.state === 'running').length : 0, messageContinuous, bounds: { width: rect.width, height: rect.height }, geometry, rootText: root?.textContent };
+    });
+    report.measurements.push({ name, ...measurement });
+    return measurement;
+  };
+  const capture = async (name) => { const path = artifact(`${name}.png`); await page.screenshot({ path, scale: 'css', style: 'nextjs-portal{visibility:hidden!important}' }); report.captures.push(path); };
+  const live = await sample('artifact-card-live');
+  await capture('artifact-card-live');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const reduced = await sample('artifact-card-reduced');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.locator('.sidebar-new-row').click();
+  await page.waitForFunction(() => new URLSearchParams(location.search).get('view') === 'new');
+  const hidden = await sample('artifact-card-actual-new-hidden');
+  await page.getByRole('button', { name: 'Activity fixture activity', exact: true }).first().click();
+  await page.waitForFunction(() => new URLSearchParams(location.search).get('view') !== 'new');
+  await emit([{ type: 'message_update', assistantMessageEvent: { type: 'text_end', contentIndex: 0, content: markdown } }]);
+  await page.waitForFunction(() => !document.querySelector('[data-message-streaming="true"]'));
+  const ended = await sample('artifact-card-text-ended-message-still-busy');
+  await capture('artifact-card-text-ended');
+  const narrative = 'Generated next active text after artifact.';
+  await emit([{ type: 'message_update', assistantMessageEvent: { type: 'text_start', contentIndex: 1 } }, { type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 1, delta: narrative } }]);
+  await page.waitForFunction((narrative) => document.querySelector('[data-message-streaming="true"]')?.textContent.includes(narrative), narrative);
+  const handoff = await sample('artifact-card-next-text-active');
+  await page.locator('button.composer-abort-button:visible').first().click();
+  await page.waitForFunction(() => !document.querySelector('[data-message-streaming="true"]'));
+  const stopped = await sample('artifact-card-stopped');
+  await capture('artifact-card-stopped');
+  assert.equal(live.activeText, true);
+  assert.equal(live.markerCount, 1, 'Live mounted artifact consumes its terminal text presentation marker');
+  assert.equal(live.messageContinuous.length, 1, 'The whole live assistant message has one continuous indicator');
+  assert.equal(handoff.messageContinuous.length, 1, 'The next active text owns the message indicator after artifact handoff');
+  assert.equal(stopped.messageContinuous.length, 0, 'Stop removes continuous presentation throughout the assistant message');
+  assert.notEqual(ended.subtitle, 'Generating…'); assert.notEqual(stopped.subtitle, 'Generating…');
+  assert.equal(ended.titleHint, title, 'An incomplete artifact after text_end retains its actual title rather than claiming readiness');
+  assert.equal(stopped.titleHint, title, 'Stop leaves an incomplete artifact hint truthful to its actual title');
+  assert.equal(live.visibleContinuous, 1, 'Live mounted artifact has one continuous presentation owner');
+  assert.equal(reduced.animations.filter((animation) => animation.state === 'running').length, 0, 'Reduced motion stops card activity animations');
+  assert.equal(hidden.animations.filter((animation) => animation.state === 'running').length, 0, 'Actual New stops hidden card animation work');
+  assert.equal(ended.animations.filter((animation) => animation.state === 'running').length, 0, 'text_end stops artifact animation while its assistant message remains busy');
+  assert.equal(handoff.animations.filter((animation) => animation.state === 'running').length, 0, 'A later active text block does not animate the earlier artifact');
+  assert.equal(stopped.animations.filter((animation) => animation.state === 'running').length, 0, 'Stop leaves the artifact static');
+  report.checks.push('Mounted artifact activity is unique, reduced/hidden-safe, ends with its indexed text, and remains static through text handoff and Stop');
+  // A card source copy remains sourced from the artifact publisher, not its
+  // presentation labels or caret. Opening only changes the local UI.
+  await page.locator('.artifact-card').filter({ hasText: title }).first().click();
+  const code = page.locator('.artifact-panel .markdown-code-block code').first();
+  await code.waitFor();
+  assert.equal(await code.textContent(), source, 'Publisher retains exact generated artifact source');
+  await page.locator('.artifact-panel').getByRole('button', { name: 'Copy', exact: true }).first().click();
+  assert.equal(await page.evaluate(() => window.__generatedCaretCopies.at(-1)), source, 'Actual artifact panel Copy receives exact source without presentation caret or labels');
+  message.content.push({ type: 'text', text: narrative });
+  state.messages.push({ ...message, stopReason: 'aborted' }); state.entryIds.push('artifact-caret-answer'); state.running = false; state.revision++;
+  await emit([{ type: 'message_end', message: { ...message, stopReason: 'aborted' } }, { type: 'agent_end' }, { type: 'agent_settled' }]);
+  const completeTitle = 'Generated completing artifact card';
+  const openMarkdown = `:::artifact{identifier="generated-completing-card" type="code" title="${completeTitle}"}\n\`\`\`javascript\n${source}`;
+  const completeUser = { role: 'user', content: 'Generated artifact completion turn.', timestamp: stamp + 3000 };
+  const completeMessage = assistant([{ type: 'text', text: openMarkdown }], stamp + 4000);
+  state.running = true; state.messages.push(completeUser); state.entryIds.push('artifact-complete-user'); state.revision++;
+  await emit([{ type: 'agent_start' }, { type: 'message_end', message: completeUser }, { type: 'message_start', message: assistant([], stamp + 4000) }, { type: 'message_update', assistantMessageEvent: { type: 'text_start', contentIndex: 0 } }, { type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: openMarkdown } }]);
+  const completeCard = page.locator('.message-streaming-caret .artifact-card').filter({ hasText: completeTitle });
+  await completeCard.waitFor();
+  const closure = '\n```\n:::';
+  await emit([{ type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: closure } }]);
+  await page.waitForFunction((title) => [...document.querySelectorAll('.artifact-card')].some((card) => card.textContent.includes(title) && card.classList.contains('artifact-ready')), completeTitle);
+  const completion = await completeCard.evaluate((card) => ({ activeText: Boolean(card.closest('[data-message-streaming="true"]')), ready: card.classList.contains('artifact-ready'), subtitle: card.querySelector('.artifact-card-subtitle').textContent, markerCount: card.querySelectorAll('[data-streaming-caret]').length, continuous: card.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running' && animation.effect.getTiming().iterations === Infinity).map((animation) => animation.animationName) }));
+  report.measurements.push({ name: 'artifact-business-complete-while-text-active', ...completion });
+  assert.equal(completion.ready, true, 'Existing completion effect still marks the completed artifact ready');
+  assert.equal(completion.activeText, true); assert.equal(completion.markerCount, 1); assert.deepEqual(completion.continuous, ['activity-caret'], 'Completed artifact keeps one indexed text caret until text_end');
+  assert.notEqual(completion.subtitle, 'Generating…', 'Business-complete artifact does not claim it is still generating');
+  const panel = page.locator('.artifact-panel').filter({ hasText: completeTitle });
+  await panel.waitFor();
+  await panel.getByRole('button', { name: 'Copy', exact: true }).first().click();
+  assert.equal(await page.evaluate(() => window.__generatedCaretCopies.at(-1)), source, 'Existing completion auto-open retains exact copied source despite highlighted line-number presentation');
+  await capture('artifact-card-completed-text-active');
+  const completedMarkdown = openMarkdown + closure;
+  await emit([{ type: 'message_update', assistantMessageEvent: { type: 'text_end', contentIndex: 0, content: completedMarkdown } }]);
+  await page.waitForFunction(() => !document.querySelector('[data-message-streaming="true"]'));
+  completeMessage.content[0].text = completedMarkdown; state.messages.push(completeMessage); state.entryIds.push('artifact-complete-answer'); state.running = false; state.revision++;
+  await emit([{ type: 'message_end', message: completeMessage }, { type: 'agent_end' }, { type: 'agent_settled' }]);
+  report.checks.push('Closing the same artifact while text stays active preserves publisher/completion auto-open and one caret until text_end');
+}
+
 export async function runStreamingCaretBoundaries() {
   const out = new URL(`../test-results/pilaude/streaming-caret-boundaries/run-${Date.now()}/`, import.meta.url);
   await mkdir(out, { recursive: true });
@@ -61,6 +168,10 @@ export async function runStreamingCaretBoundaries() {
     browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1300, height: 1000 }, colorScheme: "light", reducedMotion: "no-preference", serviceWorkers: "block" });
     const state = await installActivityFixture(context, report);
+    if (process.env.E2E_CARET_ARTIFACT_ONLY === '1') await context.addInitScript(() => {
+      window.__generatedCaretCopies = [];
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { window.__generatedCaretCopies.push(text); } } });
+    });
     // Only the Stop command in this generated fixture is acknowledged. Every API
     // boundary stays intercepted; no command reaches a model/runtime/backend.
     await context.route("**/api/agent/activity", async (route) => {
@@ -76,6 +187,13 @@ export async function runStreamingCaretBoundaries() {
     if (await page.locator('.right-panel-container.right-panel-open .workspace-pane-close').first().isVisible()) await page.locator('.right-panel-container.right-panel-open .workspace-pane-close').first().click();
     if (await page.locator('.pilaude-context-toggle[aria-pressed="true"]').count()) await page.locator('.pilaude-context-toggle[aria-pressed="true"]').click();
     const emit = (events) => page.evaluate((events) => window.__activityEvents(events), events);
+    if (process.env.E2E_CARET_ARTIFACT_ONLY === '1') {
+      await inspectArtifactCard(page, state, report, artifact, emit);
+      assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.consoleErrors, []); assert.deepEqual(report.externalRequests, []);
+      assert.ok(report.interceptedWrites.every((request) => request.path.endsWith('/lease') || request.path === '/api/agent/activity' && JSON.parse(request.body).type === 'abort'), 'Artifact fixture attempts only intercepted lease/Stop writes');
+      report.status = 'passed';
+      return report;
+    }
     let sequence = 0;
     const start = async (name, markdown) => {
       const timestamp = stamp + sequence++ * 10000;

@@ -140,6 +140,58 @@ export async function runConversationNavigatorLayout() {
       assert.ok(Math.abs(inset - topInset) <= 0.6, `${name}: changing viewport height or adjacent panels preserves the same top inset`);
       return geometry;
     };
+    if (process.env.E2E_NAV_BUSY_SHORT === '1') {
+      await page.setViewportSize({ width: 390, height: 812 });
+      const dock = page.getByRole('button', { name: 'Context panel', exact: true });
+      if (await dock.getAttribute('aria-pressed') === 'true') await dock.click();
+      const textarea = page.locator('.chat-input-textarea');
+      const draft = 'Navigation preserves this unsent draft.\n第二行输入草稿';
+      await textarea.fill(draft);
+      await page.evaluate(() => {
+        window.__emitNavigationEvent({ type: 'agent_start' });
+        window.__emitNavigationEvent({ type: 'message_end', message: { role: 'custom', customType: 'pi-web:chapter', content: 'Busy short viewport chapter', display: true, details: { version: 1, chapterId: 'busy-short-chapter', title: 'Busy short viewport chapter' }, timestamp: 999000 } });
+      });
+      await page.setViewportSize({ width: 390, height: 340 }); await settle();
+      if (await dock.getAttribute('aria-pressed') === 'true') await dock.click();
+      await page.locator('.pilaude-context-dock').waitFor({ state: 'hidden' }); await settle();
+      if (await page.locator('.pilaude-context-backdrop').isVisible()) await page.keyboard.press('Escape');
+      await page.locator('.pilaude-context-backdrop').waitFor({ state: 'detached' });
+      await page.locator('.pilaude-context-dock').waitFor({ state: 'detached' }); await settle();
+      await textarea.focus();
+      await textarea.evaluate((element) => { window.__busyOriginalTextarea = element; });
+      const composerState = () => page.locator('.chat-composer').evaluate((element) => ({ rect: element.getBoundingClientRect().toJSON(), input: element.querySelector('textarea').getBoundingClientRect().toJSON(), sameInput: element.querySelector('textarea') === window.__busyOriginalTextarea, value: element.querySelector('textarea').value, overlay: element.closest('.absolute.inset-x-0')?.getBoundingClientRect().toJSON(), inset: getComputedStyle(document.querySelector('.conversation-navigator').parentElement).getPropertyValue('--chat-composer-inset'), controls: Array.from(element.querySelectorAll('.composer-streaming-actions button')).map((button) => { const rect = button.getBoundingClientRect(); return { label: button.getAttribute('aria-label') ?? button.textContent.trim(), rect: rect.toJSON(), centerHit: button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)) }; }) }));
+      const before = await composerState(); report.busyShort = { before };
+      assert.ok(before.input.width >= 200, `Busy narrow input keeps a usable line width (${before.input.width}px)`);
+      assert.ok(before.controls.length >= 3 && before.controls.every((control) => control.centerHit), 'Steer, Follow-up and Stop remain natively reachable');
+      const scrollBefore = await page.locator('.chat-scroll-container').evaluate((element) => element.scrollTop);
+      const trigger = page.getByRole('button', { name: 'Conversation navigation', exact: true });
+      await trigger.focus();
+      if (await trigger.getAttribute('aria-expanded') !== 'true') await page.keyboard.press('Space');
+      await page.locator('.conversation-navigator-directory').waitFor(); await settle();
+      const geometry = await measureNavigation(page, 'busy-short-open', report);
+      const menu = await page.locator('.conversation-navigator-directory').evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const rows = Array.from(element.querySelectorAll('button')).map((row) => { const rect = row.getBoundingClientRect(); return { title: row.textContent.trim(), rect: rect.toJSON(), centerHit: row.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)) }; });
+        return { box: box.toJSON(), rows, fullRows: rows.filter((row) => row.rect.top >= box.top && row.rect.bottom <= box.bottom && row.rect.top >= 0 && row.rect.bottom <= innerHeight) };
+      });
+      const after = await composerState(); report.busyShort = { before, after, menu, scrollBefore, scrollAfter: await page.locator('.chat-scroll-container').evaluate((element) => element.scrollTop) };
+      await capture('busy-short-open');
+      assert.ok(menu.fullRows.length >= 1, `Busy short directory must expose a complete native row (height ${menu.box.height}px)`);
+      assert.equal(menu.fullRows.some((row) => row.centerHit), true, 'A complete chapter row must have a native center hit');
+      assert.ok(menu.box.bottom <= before.rect.top - 0.5, 'The chapter menu does not cover the composer');
+      assert.deepEqual(after.rect, before.rect, 'Opening the directory preserves composer geometry');
+      assert.deepEqual(after.input, before.input, 'Opening the directory preserves input geometry');
+      assert.equal(after.value, before.value, 'Opening the directory preserves the exact draft');
+      assert.equal(after.sameInput, true, 'Responsive layout retains the native textarea node');
+      assert.equal(geometry.transcriptCenterOffset, 0);
+      await page.keyboard.press('Escape');
+      assert.equal(await page.getByRole('button', { name: 'Conversation navigation', exact: true }).evaluate((element) => element === document.activeElement), true);
+      assert.equal(await textarea.inputValue(), draft);
+      assert.ok(Math.abs(await page.locator('.chat-scroll-container').evaluate((element) => element.scrollTop) - scrollBefore) <= 0.6, 'Opening and dismissing the directory preserves manual transcript scroll');
+      assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.consoleErrors, []); assert.deepEqual(report.nonReadRequests, []); assert.deepEqual(report.externalRequests, []);
+      report.checks.push('Busy 390x340 chapter directory exposes a full native row without covering or changing the composer, draft, focus or history');
+      report.status = 'passed'; return report;
+    }
     if (process.env.E2E_NAV_LAYOUT_BASELINE === '1') {
       const contextToggle = page.getByRole('button', { name: 'Context panel', exact: true });
       if (await contextToggle.getAttribute('aria-pressed') === 'true') await contextToggle.click();

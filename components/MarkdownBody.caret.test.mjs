@@ -20,8 +20,8 @@ const examples = [
   ["blockquote", "> Quoted ending", "p"],
   ["fence", "```text\nconst generated = 1;\n```", "code"],
 ];
-function render(markdown, active = true) {
-  return fromHtml(renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(MarkdownBody, { isStreaming: true, streamingCaret: active, className: active ? "message-streaming-caret" : undefined }, markdown))), { fragment: true });
+function render(markdown, active = true, props = {}) {
+  return fromHtml(renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(MarkdownBody, { isStreaming: true, streamingCaret: active, className: active ? "message-streaming-caret" : undefined, ...props }, markdown))), { fragment: true });
 }
 
 for (const [name, markdown, tag] of examples) {
@@ -34,3 +34,20 @@ for (const [name, markdown, tag] of examples) {
     assert.equal(nodes(render(markdown, false), (node) => node.properties?.dataStreamingCaret !== undefined).length, 0);
   });
 }
+
+test("active terminal artifact forwards one presentation caret through the existing Markdown artifact source view", () => {
+  // An unfinished artifact without a mounted panel opener uses the real
+  // ArtifactCard -> InlineArtifact -> CodeBlock source route during SSR.
+  const source = "const generatedArtifact = '<source> & exact';";
+  const markdown = `:::artifact{identifier="generated-caret-artifact" type="code" title="Generated caret artifact"}\n\`\`\`javascript\n${source}`;
+  const tree = render(markdown, true, { artifacts: true });
+  const renderedCode = nodes(tree, (node) => node.tagName === "code");
+  assert.equal(renderedCode.length, 1, "The existing artifact source renderer remains selected");
+  assert.equal(text(renderedCode[0]), source, "Presentation never appends a caret character to source");
+  assert.equal(nodes(tree, (node) => node.tagName === "iframe").length, 0, "An unfinished source artifact does not start a preview");
+  const targets = nodes(tree, (node) => node.properties?.dataStreamingCaret !== undefined);
+  assert.equal(targets.length, 1, "The terminal artifact keeps its active text's sole caret marker");
+  assert.equal(targets[0], renderedCode[0]);
+  assert.equal(text(tree), text(render(markdown, false, { artifacts: true })), "Active presentation does not change visible labels or exact source");
+  assert.equal(nodes(render(markdown, false, { artifacts: true }), (node) => node.properties?.dataStreamingCaret !== undefined).length, 0, "Inactive artifact never owns a caret");
+});
