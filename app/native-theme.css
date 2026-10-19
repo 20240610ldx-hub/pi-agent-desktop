@@ -4507,6 +4507,8 @@ html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
 .tool-call-row[data-command-layout="compact"] .tool-call-command-line { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding: 6px 10px; border: var(--hairline) solid var(--separator); border-radius: 8px; background: var(--bg); }
 .tool-call-row[data-command-layout="compact"] .tool-call-command-prompt { flex: none; color: var(--text-muted); font: 400 calc(12px + var(--chat-font-size-offset, 0px))/1.5 var(--font-mono); }
 .tool-call-row[data-command-layout="compact"] .tool-call-command-text { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; overflow-wrap: anywhere; white-space: pre-wrap; }
+.tool-call-command-text .token { color: inherit; font: inherit; text-shadow: none; }
+.tool-call-command-text .token.string { color: var(--success); }
 .tool-call-row[data-command-layout="compact"] .tool-call-command-line > .code-copy-control { flex: none; width: auto; padding: 0; }
 .tool-call-row[data-command-layout="compact"] .tool-call-command-result { position: relative; min-width: 0; padding: 10px 0; }
 .tool-call-row[data-command-layout="compact"] .tool-call-command-result > .code-copy-control { float: right; width: auto; padding: 0 0 0 8px; }

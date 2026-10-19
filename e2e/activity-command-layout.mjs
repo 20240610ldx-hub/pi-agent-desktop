@@ -12,6 +12,7 @@ export const COMMAND_FIXTURE = Object.freeze({
   powershell: 'git -C "D:/generated/activity-fixture" diff --numstat fixture-base -- src/example.ps1',
   long: 'generated-command --value "<tag>&quoted" --path "D:/generated/' + "nested-folder/".repeat(24) + 'example.txt"\r\n  generated-tail\r\n',
   longOutput: "generated\tvalue\r\n" + "unbroken-output-segment".repeat(40) + "\r\n",
+  budget: 'generated-command --value "' + "<tag>& very long value ".repeat(230) + '"\r\n',
   output: "147\t27\tsrc/example.mjs\n",
   powershellOutput: "12\t3\tsrc/example.ps1\r\n",
   partial: '{"command":"git -C \\"D:/generated/activity-fixture\\" diff --numstat',
@@ -28,6 +29,7 @@ export async function installCommandLayoutFixture(context, report) {
     tool("command-bash", "bash", { command: COMMAND_FIXTURE.bash }),
     tool("command-powershell", "powershell", { command: COMMAND_FIXTURE.powershell }),
     tool("command-long", "bash", { command: COMMAND_FIXTURE.long }),
+    tool("command-budget", "bash", { command: COMMAND_FIXTURE.budget }),
     tool("command-mcp", "mcp__fixture__inspect", { command: "generated inspection", options: { raw: true } }),
     tool("command-codemode", "codemode", { code: COMMAND_FIXTURE.codemode }),
     tool("command-partial", "bash", {}, { rawInput: COMMAND_FIXTURE.partial }),
@@ -42,6 +44,7 @@ export async function installCommandLayoutFixture(context, report) {
     result("command-bash", "bash", COMMAND_FIXTURE.output),
     result("command-powershell", "powershell", COMMAND_FIXTURE.powershellOutput),
     result("command-long", "bash", COMMAND_FIXTURE.longOutput),
+    result("command-budget", "bash", "Generated budget-fallback output.\n"),
     result("command-mcp", "mcp__fixture__inspect", '{"generated":true,"count":2}'),
     result("command-codemode", "codemode", "Script completed\nWall time 0.1 seconds\nOutput:\n", { content: [{ type: "text", text: "Script completed\nWall time 0.1 seconds\nOutput:\n" }, { type: "text", text: "Generated code result." }], details: { calls: [{ id: "nested-generated-read", name: "read", args: '{"path":"src/example.mjs"}', status: "ok", durationMs: 4 }] } }),
     result("command-invalid", "powershell", "Generated invalid-shape fallback result."),
@@ -118,6 +121,16 @@ export async function runActivityCommandLayout() {
         await page.setViewportSize({ width, height: 1000 }); await initialBash.trigger.scrollIntoViewIfNeeded(); await settle(page);
         const capture = artifact(`command-${theme}-${width}.png`);
         await page.screenshot({ path: capture, scale: "css", style: "nextjs-portal{visibility:hidden!important}" }); report.captures.push(capture);
+        const syntax = await initialBash.body.locator(".tool-call-command-text").evaluate((pre) => {
+          const string = pre.querySelector(".token.string"), s = getComputedStyle(pre), token = string ? getComputedStyle(string) : null;
+          return { theme: document.documentElement.classList.contains("dark") ? "dark" : "light", stringText: string?.textContent, stringColor: token?.color, baseColor: s.color, font: s.fontFamily, fontSize: s.fontSize, fontWeight: s.fontWeight, fontStyle: s.fontStyle, whiteSpace: s.whiteSpace, tokenFont: token?.fontFamily, tokenSize: token?.fontSize, tokenWeight: token?.fontWeight, tokenStyle: token?.fontStyle, nestedPreCount: pre.querySelectorAll("pre").length, text: pre.textContent, literalElementCount: pre.querySelectorAll("tag").length };
+        });
+        report.measurements.push({ name: "command-syntax", width, ...syntax });
+        assert.equal(syntax.stringText, '"D:/generated/activity-fixture"');
+        assert.notEqual(syntax.stringColor, syntax.baseColor, "Only the quoted string receives syntax color");
+        assert.equal(syntax.stringColor, theme === "dark" ? "rgb(48, 209, 88)" : "rgb(36, 138, 61)");
+        assert.equal(syntax.tokenFont, syntax.font); assert.equal(syntax.tokenSize, syntax.fontSize); assert.equal(syntax.tokenWeight, syntax.fontWeight); assert.equal(syntax.tokenStyle, syntax.fontStyle);
+        assert.equal(syntax.nestedPreCount, 0); assert.equal(syntax.text, COMMAND_FIXTURE.bash);
         report.measurements.push(await initialBash.row.evaluate((row, conditions) => {
           const rect = row.getBoundingClientRect(); const body = row.querySelector('[role="region"]'); const input = body?.querySelector("pre"); const style = getComputedStyle(row);
           const box = (node) => { if (!node) return null; const r = node.getBoundingClientRect(), s = getComputedStyle(node); return { x: r.x, y: r.y, width: r.width, height: r.height, border: s.borderWidth, radius: s.borderRadius, background: s.backgroundColor, padding: s.padding, fontSize: s.fontSize }; };
@@ -138,6 +151,9 @@ export async function runActivityCommandLayout() {
     const powerShell = await openTool(page, "command-powershell");
     assert.equal(await powerShell.body.locator("pre").first().textContent(), COMMAND_FIXTURE.powershell);
     await exactCopy(page, powerShell.body, 0, COMMAND_FIXTURE.powershell);
+    const powerShellString = powerShell.body.locator(".tool-call-command-text .token.string").first();
+    assert.equal(await powerShellString.textContent(), '"D:/generated/activity-fixture"');
+    assert.equal(await powerShellString.evaluate((node) => getComputedStyle(node).color), "rgb(36, 138, 61)");
     const long = await openTool(page, "command-long");
     assert.equal((await long.body.locator(".tool-call-command-text").textContent()).replaceAll("\r\n", "\n"), COMMAND_FIXTURE.long.replaceAll("\r\n", "\n"), "Displayed text keeps every line and metacharacter; clipboard separately verifies exact CRLF bytes");
     await page.setViewportSize({ width: 430, height: 1000 }); await settle(page);
@@ -145,7 +161,14 @@ export async function runActivityCommandLayout() {
     await exactCopy(page, long.body, 1, COMMAND_FIXTURE.longOutput);
     const longBounds = await long.body.evaluate((node) => { const r = node.getBoundingClientRect(); return { left: r.left, right: r.right, viewport: innerWidth, pageWidth: document.documentElement.scrollWidth }; });
     assert.ok(longBounds.left >= 0 && longBounds.right <= longBounds.viewport + 1 && longBounds.pageWidth <= longBounds.viewport + 1, "Long command/result wrap without document overflow at430px");
+    const budget = await openTool(page, "command-budget");
+    assert.ok(COMMAND_FIXTURE.budget.length > 4096);
+    assert.equal(await budget.body.locator(".token").count(), 0, "Oversized command skips tokenization rather than truncating source");
+    assert.equal((await budget.body.locator(".tool-call-command-text").textContent()).replaceAll("\r\n", "\n"), COMMAND_FIXTURE.budget.replaceAll("\r\n", "\n"));
+    assert.equal(await budget.body.locator(".tool-call-command-text tag").count(), 0, "Literal markup remains text in the plain fallback");
+    await exactCopy(page, budget.body, 0, COMMAND_FIXTURE.budget);
     await page.setViewportSize({ width: 1300, height: 1000 });
+    report.checks.push("Registered Prism shell grammars color quoted strings only, preserve font/wrap/literal text, and fall back to exact plain text above4096characters");
     const mcp = await openTool(page, "command-mcp");
     assert.deepEqual(JSON.parse(await mcp.body.locator("pre").first().textContent()), { command: "generated inspection", options: { raw: true } });
     const partial = await openTool(page, "command-partial");
@@ -177,7 +200,7 @@ export async function runActivityCommandLayout() {
     assert.equal(await failed.trigger.evaluate((node) => node === document.activeElement), true);
     await failed.trigger.press("Space"); assert.equal(await failed.trigger.getAttribute("aria-expanded"), "true");
     assert.equal(await groupBody.count(), 1);
-    assert.ok(report.measurements.every((measurement) => measurement.visibleBounds && measurement.documentWidth <= measurement.viewportWidth + 1), "1300/430 widths keep command bodies inside the viewport");
+    assert.ok(report.measurements.filter((measurement) => measurement.row).every((measurement) => measurement.visibleBounds && measurement.documentWidth <= measurement.viewportWidth + 1), "1300/430 widths keep command bodies inside the viewport");
     assert.deepEqual(report.interceptedWrites, [], "Rendering/copying never submits a command or writes API data");
     assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.consoleErrors, []); assert.deepEqual(report.externalRequests, []);
     report.checks.push("Failure remains visible; copy errors are announced; keyboard disclosure keeps ARIA/inert/focus; no overflow or API writes");

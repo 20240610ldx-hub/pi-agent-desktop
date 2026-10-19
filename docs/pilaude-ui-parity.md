@@ -330,6 +330,12 @@ SSR真实controller与preference接口先RED后GREEN。实际 `transcript-view/r
 
 公开实际MarkdownBody渲染八项先RED后GREEN；既有MessageView／markdown相关85项和父级117项UI／CSS基线分别通过，类型和完整lint退出0，保留TerminalPanel既有ARIA warning。最终 `streaming-caret-boundaries/run-1792381811843/results.json` 通过九种结尾、index0→1真实handoff、text_end先于message_end清光标、native opacity周期、reduced无running caret animation、supplemental DOMhidden、真实New／同会话返回，以及实际Stop／error立即清除。九图全部读取，父级复核list／table／fence末字同行；旧fence root间距约29.64px已消除，新的code marker与末字同y区间。动画查询用getAnimations({subtree:true})包含pseudo，旧普通getAnimations空结果不作为隐藏停止证据。无page／console／external错误，只有被fixture拦截的abort／lease，无模型或真实命令执行。
 
+## 紧凑命令复用Prism语法色（2026-10-19）
+
+`MessageView → CompactCommandText → 既有lib/syntax-highlighting PrismLight` 现在实际消费已注册bash／powershell grammar。adapter只在≤4096字符时输出span token，超过预算完整plain fallback；原pre／字体／wrap／命令pill和原文Copy不变，不新增lexer／依赖，也不增加open-claude-ui来源计数。字符串使用既有success绿色，其他token继承中性色／字形，未导入完整代码主题。
+
+四项新公开renderer测试先RED后GREEN，相关MessageView合计52项；父级syntax／MessageView／ownership／CSS基线67项、完整类型和lint通过，保留TerminalPanel既有warning。最终 `activity-command-layout/run-1792382399196/` 四组实际页面通过quoted路径着色、字体／字重／斜体继承、单pre、Bash和PowerShell grammar、HTML字面文本、CRLF／Tab／尾空格／精确复制、4096以上完整plain fallback和原全部窄窗／错误／格式回退。1300／430深浅四图已读取；浅色string rgb36,138,61、其余rgb82，暗色string rgb48,209,88，字体仍12px Mono400 normal。page／console／API writes／external为空。原图quotedpath主体候选约rgb30,158,60，颜色仍有残差；DPI／生成文本不同，raw overlay只整数crop／translation，不称像素完全一致。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。

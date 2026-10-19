@@ -7,6 +7,7 @@ import { ImagePreview } from "./ImagePreview";
 import { ThinkingDisclosure } from "./ThinkingDisclosure";
 import { DisclosureBody } from "./DisclosureBody";
 import { CodeCopyButton } from "./CodeCopyButton";
+import { CompactCommandText } from "./CompactCommandText";
 import { copyText } from "@/lib/clipboard";
 import { useI18n } from "@/hooks/useI18n";
 import { useDiffViewMode } from "@/hooks/useDiffViewMode";
@@ -1251,7 +1252,7 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
       {/* A validated completed shell call needs one command pill and plain output,
           with the existing exact-payload copy controls retained for each. */}
       {shellCommand !== null && <>
-        <div className="tool-call-command-line"><span className="tool-call-command-prompt" aria-hidden="true">&gt;</span><pre className="tool-call-input tool-call-command-text">{shellCommand}</pre><CodeCopyButton code={shellCommand} /></div>
+        <div className="tool-call-command-line"><span className="tool-call-command-prompt" aria-hidden="true">&gt;</span><pre className="tool-call-input tool-call-command-text"><CompactCommandText command={shellCommand} language={block.toolName as "bash" | "powershell"} /></pre><CodeCopyButton code={shellCommand} /></div>
         <div className="tool-call-command-result"><CodeCopyButton code={resultText ?? ""} /><pre className="tool-call-command-output">{resultIsEmpty ? t("i18n.noOutput") : resultText}</pre></div>
       </>}
       {/* ── Expanded: input args (only when no richer view exists); a codemode script in place of its JSON ── */}
