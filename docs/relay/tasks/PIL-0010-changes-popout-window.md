@@ -48,3 +48,4 @@ waivers: []
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
+- 2026-10-19T14:20Z · codex:gpt:coord · 做了：恢复原窗口上下文并只读核对源与最后失败，证据D:/pilaude/relay-evidence/PIL-0001/recovery-windows/recovery.json。状态：19条窗口源在index快照5193f1e，native lib.rs/checker/probe三个blob匹配working23329458；四轮自建进程与调试端口当前无匹配残留，无需终止。最后run1792392333147预期about:blank但实际已是30142根页，真实开窗IPC、OS1到2到1、移动/DPI/关闭后草稿均未到达，不作为A4通过。下一步：用户恢复工作且PIL-0001完成后，在PIL-0010任务worktree交调试者解决初始导航隔离，再独立验证。风险：空API数组不覆盖CDP接入前请求，不降低真实IPC和窗口验收要求；本轮未改源或启动GUI。
