@@ -16,7 +16,13 @@ import { MAX_SUBAGENT_INPUT_FILES } from "./subagent-input";
 export const HOST_SUBAGENT_EXTENSION_NAME = "pi-web-subagents";
 const HOST_SUBAGENT_EXTENSION_PATH = `<inline:${HOST_SUBAGENT_EXTENSION_NAME}>`;
 const SUBAGENT_TOOL_NAMES = new Set<string>(SUBAGENT_CONTROL_TOOL_NAMES);
-const LEGACY_SUBAGENT_PACKAGE_NAME = "pi-subagents";
+const PI_SUBAGENTS_PACKAGE_NAME = "pi-subagents";
+// Current pi-subagents (0.79.1) uses these names instead of the legacy controls.
+// They identify an executor only after its package identity has been established.
+const PI_SUBAGENTS_CONTROL_TOOL_NAMES = new Set([
+  ...SUBAGENT_TOOL_NAMES,
+  "subagent", "subagents_enable", "bg_wait",
+]);
 const TERMINAL_SUBAGENT_STATUSES = new Set<SubagentRunInfo["status"]>(["completed", "failed", "aborted", "interrupted"]);
 /**
  * The control tools are declared to the model and activated on registration like `direct` tools,
@@ -316,7 +322,7 @@ export function createSubagentExtension(
   };
 }
 
-/** Keep Pi Web's integrated implementation when the legacy package is loaded. */
+/** Keep Pi Web's integrated executor when legacy or current pi-subagents is loaded. */
 export function preferPiWebSubagentExtension(base: LoadExtensionsResult): LoadExtensionsResult {
   const host = base.extensions.find((extension) => extension.path === HOST_SUBAGENT_EXTENSION_PATH);
   if (!host?.tools.has("Agent")) return base;
@@ -324,12 +330,19 @@ export function preferPiWebSubagentExtension(base: LoadExtensionsResult): LoadEx
     .filter((extension) => extension.path !== HOST_SUBAGENT_EXTENSION_PATH)
     .filter((extension) => {
       const source = extension.sourceInfo?.source ?? "";
-      const sourcePackage = source.replace(/^npm:/, "").split("@")[0];
+      // The SDK preserves npm specs, including alias@npm:target@version, in sourceInfo.
+      // An explicit target identity wins over both the alias and a coincidental directory name.
+      if (source.startsWith("npm:")) {
+        const spec = source.slice(4).trim();
+        const aliasTarget = spec.match(/^(@[^/]+\/[^@]+|[^@]+)@npm:(.+)$/)?.[2];
+        return (aliasTarget ?? spec).split("@")[0] === PI_SUBAGENTS_PACKAGE_NAME;
+      }
+      const sourcePackage = source.split("@")[0];
       const pathSegments = extension.path.replaceAll("\\", "/").split("/");
-      return sourcePackage === LEGACY_SUBAGENT_PACKAGE_NAME
-        || pathSegments.some((segment) => segment === LEGACY_SUBAGENT_PACKAGE_NAME);
+      return sourcePackage === PI_SUBAGENTS_PACKAGE_NAME
+        || pathSegments.some((segment) => segment === PI_SUBAGENTS_PACKAGE_NAME);
     })
-    .filter((extension) => [...SUBAGENT_TOOL_NAMES].some((name) => extension.tools.has(name)))
+    .filter((extension) => [...PI_SUBAGENTS_CONTROL_TOOL_NAMES].some((name) => extension.tools.has(name)))
     .map((extension) => extension.path));
   if (legacyPaths.size === 0) return base;
   return {

@@ -23,11 +23,10 @@ type UsageMetric = { id: string; label: string; value: number | string; unit?: s
 type UsageReport = { capturedAt: number; buckets: UsageBucket[]; metrics: UsageMetric[]; notes?: string[] };
 type UsageResponse = { providerId: string; status: "ready" | "auth-unavailable" | "query-failed"; report?: UsageReport; message?: string };
 
-const STORAGE_PREFIX = "pi-web:provider-usage:";
-
 export function ProviderUsageSummary({ providerId, enabled }: { providerId: string; enabled: boolean }) {
   if (!isProviderUsageId(providerId)) return null;
-  return <ProviderUsageContent providerId={providerId} enabled={enabled} />;
+  // Reports have no account identity. Never carry them across known auth/provider scopes.
+  return <ProviderUsageContent key={`${providerId}:${enabled}`} providerId={providerId} enabled={enabled} />;
 }
 
 function ProviderUsageContent({ providerId, enabled }: { providerId: string; enabled: boolean }) {
@@ -36,30 +35,22 @@ function ProviderUsageContent({ providerId, enabled }: { providerId: string; ena
   const [error, setError] = useState<string | null>(null);
   const [refreshDone, setRefreshDone] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
   const { locale, t } = useI18n();
 
-  useEffect(() => {
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    setRefreshDone(false);
-    setSnapshot(null);
-    try {
-      const cached = localStorage.getItem(`${STORAGE_PREFIX}${providerId}`);
-      if (cached) {
-        const parsed = JSON.parse(cached) as UsageResponse;
-        if (parsed?.status === "ready" && parsed.report && Array.isArray(parsed.report.buckets) && Array.isArray(parsed.report.metrics)) {
-          setSnapshot(parsed);
-        }
-      }
-    } catch {
-      try { localStorage.removeItem(`${STORAGE_PREFIX}${providerId}`); } catch {}
-    }
-    setError(null);
-    return () => {
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    };
-  }, [providerId]);
+  }, []);
 
   const query = useCallback(async () => {
+    if (!enabled || requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const isCurrent = () => requestRef.current === controller && !controller.signal.aborted;
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    setRefreshDone(false);
     setQuerying(true);
     setError(null);
     try {
@@ -67,24 +58,31 @@ function ProviderUsageContent({ providerId, enabled }: { providerId: string; ena
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ providerId }),
+        signal: controller.signal,
       });
       const result = await response.json() as UsageResponse & { error?: string };
+      if (!isCurrent()) return;
       if (!response.ok) throw new Error(result.error ?? `HTTP ${response.status}`);
-      if (result.status === "ready") {
+      if (result.providerId !== providerId) throw new Error(t("providerUsage.queryFailed"));
+      if (result.status === "ready" && result.report && Array.isArray(result.report.buckets) && Array.isArray(result.report.metrics)) {
         setSnapshot(result);
-        try { localStorage.setItem(`${STORAGE_PREFIX}${providerId}`, JSON.stringify(result)); } catch {}
         setRefreshDone(true);
-        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
         refreshTimerRef.current = setTimeout(() => setRefreshDone(false), 2000);
       } else {
+        setSnapshot(null);
         setError(result.message ?? t("providerUsage.queryFailed"));
       }
     } catch (caught) {
+      if (!isCurrent()) return;
+      setSnapshot(null);
       setError(caught instanceof Error ? caught.message : t("providerUsage.queryFailed"));
     } finally {
-      setQuerying(false);
+      if (isCurrent()) {
+        requestRef.current = null;
+        setQuerying(false);
+      }
     }
-  }, [providerId, t]);
+  }, [enabled, providerId, t]);
 
   const report = snapshot?.status === "ready" ? snapshot.report : undefined;
   return (

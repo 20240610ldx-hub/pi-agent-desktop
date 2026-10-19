@@ -76,6 +76,10 @@
       "risk": "low", "drift": 36, "structuralDrift": 18, "disposition": "accepted",
       "reason": "Directory navigation ignores obsolete async responses and blocks selection during loading. An upstream merge must retain these protections against selecting a stale folder."
     },
+    "components/ProviderUsageSummary.tsx": {
+      "risk": "medium", "drift": 51, "structuralDrift": 51, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4; the same upstream file exists unchanged at upstream/main 3b6a877. Provider/enabled scope remounts, request abort and current-request identity prevent stale reports from surviving provider changes, disabled state or unmount. Remove provider-only persistent report reuse and reject wrong-provider or failed results. Preserve manual refresh and truthful unknown/auth-unavailable states. This consumer guard does not identify same-provider credential changes or prove real account queries."
+    },
     "lib/model-runtime.ts": {
       "risk": "low", "drift": 20, "structuralDrift": 20, "disposition": "accepted",
       "reason": "Runtime construction delegates to the Pilaude encrypted credential adapter while keeping Pi's extension provider setup and network options."
@@ -95,6 +99,14 @@
     "lib/subagent-runtime.ts": {
       "risk": "low", "drift": 3, "structuralDrift": 3, "disposition": "accepted",
       "reason": "Subagent fallback runtime construction uses Pilaude credentials. Keep this adapter when updating upstream subagent lifecycle or runtime sharing."
+    },
+    "lib/subagent-extension.ts": {
+      "risk": "low", "drift": 25, "structuralDrift": 25, "disposition": "accepted",
+      "reason": "Measured against 6fcd7d4. When the host really registers Agent, prefer its integrated executor over current and legacy pi-subagents controls only after establishing the package identity. Explicit npm targets, including scoped or unscoped aliases, override alias/path coincidences; retain reverse aliases, lookalike packages, unrelated same-name tools and host-disabled paths. This filter does not prove npm package installation or loading."
+    },
+    "lib/subagent-extension.test.mjs": {
+      "risk": "medium", "drift": 58, "structuralDrift": 58, "disposition": "accepted",
+      "reason": "Shared public tests measured against 6fcd7d4 guard package-identity filtering for current controls, npm aliases, reverse aliases, lookalikes and missing or disabled host executors. Preserve these boundaries during upstream merges; real SDK integration separately covers the host model-only execution contract, not third-party installation."
     },
     "app/api/agent/running/route.ts": {
       "risk": "low", "drift": 2, "structuralDrift": 2, "disposition": "accepted",
@@ -383,6 +395,7 @@
     }
   },
   "forkOwnedPaths": [
+    "components/ProviderUsageSummary.test.mjs",
     "lib/conversation-chapters.ts",
     "lib/conversation-chapters.test.mjs",
     "lib/conversation-chapter-extension.ts",
