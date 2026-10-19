@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { Script, createContext } from "node:vm";
 import ts from "typescript";
+import { isImeComposing } from "../lib/ime.ts";
 
 const source = await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8");
 const sessionItemSource = source.slice(source.indexOf("function SessionItem("));
@@ -285,6 +286,34 @@ const collect = (node) => { if (ts.isVariableDeclaration(node)) declarations.pus
 collect(sidebarAst);
 const expressionFor = (name) => declarations.find((node) => node.name.getText(sidebarAst) === name).initializer.getText(sidebarAst);
 const compileExpression = (text) => new Script(ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ESNext } }).outputText);
+
+test("the native session button moves pins only for unmodified Alt+Arrow outside IME", () => {
+  let mainButton;
+  const visit = (node) => {
+    if (ts.isJsxOpeningElement(node) && node.tagName.getText(sidebarAst) === "button"
+      && node.attributes.properties.some((attribute) => ts.isJsxAttribute(attribute) && attribute.name.text === "className" && attribute.initializer?.text === "session-item-main")) mainButton = node;
+    ts.forEachChild(node, visit);
+  };
+  visit(sidebarAst);
+  const attribute = mainButton.attributes.properties.find((node) => ts.isJsxAttribute(node) && node.name.text === "onKeyDown");
+  assert.ok(attribute, "The native selection button must expose the pin keyboard behavior");
+  const calls = [];
+  const context = createContext({ isImeComposing, onMovePinned: (direction) => calls.push(direction) });
+  const handle = compileExpression(`(${attribute.initializer.expression.getText(sidebarAst)})`).runInContext(context);
+  const button = {};
+  const press = (overrides = {}) => {
+    const effects = [];
+    handle({ key: "ArrowDown", altKey: true, target: button, currentTarget: button, nativeEvent: {}, preventDefault: () => effects.push("prevent"), stopPropagation: () => effects.push("stop"), ...overrides });
+    return effects;
+  };
+  assert.deepEqual(press(), ["prevent", "stop"]);
+  assert.deepEqual(press({ key: "ArrowUp" }), ["prevent", "stop"]);
+  assert.deepEqual(calls, ["down", "up"]);
+  for (const ignored of [{ altKey: false }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { key: "Enter" }, { nativeEvent: { isComposing: true } }, { nativeEvent: { keyCode: 229 } }, { defaultPrevented: true }, { target: {} }]) assert.deepEqual(press(ignored), []);
+  assert.deepEqual(calls, ["down", "up"]);
+  context.onMovePinned = undefined;
+  assert.deepEqual(press(), [], "Recent, archived, descendant, unpinned and filtered rows have no reorder callback");
+});
 
 function menuFixture(overrides = {}) {
   const calls = [];

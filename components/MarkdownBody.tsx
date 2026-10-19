@@ -121,7 +121,7 @@ function buildComponents(
   return {
     code({ className, children, ...props }) {
       const lang = className?.replace("language-", "").toLowerCase() ?? "";
-      const raw = String(children);
+      const raw = String(children ?? "");
       const isBlock = className?.includes("language-") || raw.includes("\n");
       if (isBlock) {
         if (lang === ARTIFACT_FENCE_LANG) {

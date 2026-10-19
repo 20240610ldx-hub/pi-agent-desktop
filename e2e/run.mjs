@@ -16,6 +16,7 @@ import { checkSidebarBreakpoint } from "./sidebar-breakpoint.mjs";
 import { checkMcpManager } from "./mcp-manager.mjs";
 import { checkMissingWorkspace, MISSING_WORKSPACE, missingWorkspaceReply } from "./missing-workspace.mjs";
 import { checkCodeBackground } from "./code-background.mjs";
+import { CODE_COPY_SOURCE, installCodeCopyClipboard, restoreCodeCopyClipboard, checkCodeCopy } from "./code-copy.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const mode = process.env.E2E_SERVER_MODE || "dev";
@@ -111,7 +112,7 @@ try {
   writeSession(CODE_BACKGROUND, [
     message("user", null, "user", "E2E code background"),
     message("answer", "user", "assistant", [{ type: "text", text:
-      "```js\nconst x = 1;\n```\n\n```mermaid\ngraph TD\n A --> B\n```",
+      `\`\`\`javascript\n${CODE_COPY_SOURCE}\n\`\`\`\n\n\`\`\`mermaid\ngraph TD\n A --> B\n\`\`\``,
     }]),
   ]);
   // The default page is 50 *visible* messages (user / assistant / compaction).
@@ -507,9 +508,15 @@ try {
     await page.locator(".markdown-code-block pre").waitFor();
     await checkFilePanel(page, previewFile);
     await checkExtensionDialogs(page, artifacts, viewport.width);
+    await installCodeCopyClipboard(context, { sessionId: CODE_BACKGROUND });
     await page.goto(`${base}/?session=${CODE_BACKGROUND}`, { waitUntil: "domcontentloaded" });
     await page.locator(".markdown-code-block pre").waitFor();
     await checkCodeBackground(page);
+    try {
+      await checkCodeCopy(page);
+    } finally {
+      await restoreCodeCopyClipboard(page);
+    }
     if (viewport.width > 600) {
       await page.goto(`${base}/?session=${RICH}`, { waitUntil: "domcontentloaded" });
       await page.locator(".markdown-code-block pre").waitFor();

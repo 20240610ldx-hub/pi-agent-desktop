@@ -44,6 +44,15 @@ function definesSymbol(source, symbol) {
 
 const EXTRACTIONS = [
   {
+    name: "CodeBlock copy feedback",
+    origin: "components/MermaidBlock.tsx",
+    movedTo: ["components/CodeCopyButton.tsx"],
+    movedDefinitions: ["CodeCopyButton"],
+    absentFromOrigin: ["copyText(code)", "setCopied(true)"],
+    requiredInOrigin: ["CodeCopyButton"],
+    presentInTargets: ["copyText(code)", "2500", "pilaude.codeCopyFailed"],
+  },
+  {
     name: "i18n fork message patch",
     origin: "lib/i18n/registry.ts",
     // Upstream message packs are intentionally held in upstream shape. The

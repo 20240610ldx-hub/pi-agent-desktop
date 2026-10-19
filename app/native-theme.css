@@ -963,6 +963,7 @@
   --surface-muted: rgba(255, 255, 255, 0.64);
   --surface-elevated: var(--cds-surface-3);
   --text: var(--cds-text-primary);
+  --text-hover: var(--cds-text-secondary);
   /* #66666b rather than #68686d: the old value measured 4.42:1 on the
      --bg-selected overlay, just under the 4.5:1 AA floor for body text. */
   --text-muted: #66666b;
@@ -1031,6 +1032,7 @@ html.dark {
   --surface-muted: rgba(44, 44, 46, 0.72);
   --surface-elevated: var(--cds-surface-3);
   --text: var(--cds-text-primary);
+  --text-hover: var(--text);
   --text-muted: rgba(235, 235, 245, 0.64);
   /* 0.46 rather than 0.38: matches the light-theme text-dim bump above so
      both themes land at roughly the same ~4:1 contrast against --bg. */
@@ -2652,7 +2654,10 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   color: color-mix(in srgb, var(--text-muted) 88%, var(--accent));
 }
 
-.file-tree-row:hover .file-tree-icon,
+.file-tree-row:hover:not(.is-selected, .is-drop-folder) .file-tree-icon {
+  color: var(--text-hover);
+}
+
 .file-tree-row.is-selected .file-tree-icon {
   color: var(--accent);
 }
@@ -3139,7 +3144,10 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 
 .native-popover button:hover:not(:disabled) {
   background: var(--bg-hover) !important;
-  color: var(--text) !important;
+}
+
+.native-popover button:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"], .is-danger, .is-active, .is-selected, [aria-selected="true"], [aria-checked="true"]) {
+  color: var(--text-hover) !important;
 }
 
 /* Project picker entries render as flush rows separated by divider lines
@@ -3556,7 +3564,11 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   color: var(--text-dim) !important;
 }
 
-.settings-list-add:hover,
+.settings-list-add:hover:not(.is-selected):not(:disabled),
+.models-sidebar-add-item:is(:hover, :focus-visible):not(.is-selected):not(:disabled) {
+  color: var(--text-hover) !important;
+}
+
 .settings-list-add.is-selected {
   color: var(--accent) !important;
 }
@@ -4441,10 +4453,15 @@ html:not(.dark) .session-item.is-selected .session-item-time {
     border-color 140ms ease;
 }
 
-.process-details-trigger:hover {
+html:not(.dark) :is(.process-details-trigger, .thinking-disclosure-toggle) {
+  color: var(--text-dim) !important;
+}
+
+.process-details-trigger:is(:hover, :focus-visible),
+html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
   border-color: var(--border) !important;
   background: var(--bg-hover) !important;
-  color: var(--text) !important;
+  color: var(--text-hover) !important;
 }
 
 .process-details-content {
@@ -4452,6 +4469,26 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   border: var(--hairline) solid var(--separator);
   border-radius: 10px;
   background: color-mix(in srgb, var(--surface) 34%, transparent);
+}
+
+/* Tool headers have inline preview colors; leave the leading status label and
+   any result/diff content alone while the disclosure text follows its trigger. */
+.tool-call-trigger:is(:hover, :focus-visible) {
+  color: var(--text-hover) !important;
+}
+.tool-call-trigger:is(:hover, :focus-visible) :is(.tool-call-preview, .tool-call-metadata) {
+  color: inherit !important;
+}
+.tool-call-trigger:is(:hover, :focus-visible) .tool-call-chevron {
+  stroke: currentColor;
+}
+
+/* These existing message actions and selector stars set accent colors in
+   pointer handlers. Scope the override to interaction so feedback stays intact. */
+.message-user > div:last-child button:is(:hover, :focus-visible):not(:disabled),
+.message-user-bubble button:is(:hover, :focus-visible):not(:disabled),
+[role="listbox"] button:is(:hover, :focus-visible):not(:disabled, [aria-selected="true"]) {
+  color: var(--text-hover) !important;
 }
 
 @media (max-width: 1120px) {
@@ -4552,7 +4589,10 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   text-underline-offset: 3px;
   text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
-.markdown-body a:hover { text-decoration-color: var(--accent); }
+.markdown-body a:is(:hover, :focus-visible) {
+  color: var(--text-hover);
+  text-decoration-color: currentColor;
+}
 .markdown-body .markdown-inline-code {
   background: var(--bg-subtle);
   border-radius: 6px;
@@ -4798,7 +4838,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   line-height: 1.25;
 }
 .markdown-code-action:hover:not(:disabled) {
-  color: var(--text);
+  color: var(--text-hover);
   border-color: color-mix(in srgb, var(--border) 70%, var(--text-muted));
 }
 .markdown-code-action:disabled {
@@ -4809,6 +4849,30 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 .markdown-code-action.is-active {
   background: var(--bg-selected);
   color: var(--text);
+}
+.code-copy-control {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+.code-copy-error {
+  max-width: 180px;
+  color: var(--text-muted);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.markdown-code-actions:has(.code-copy-error) { align-items: flex-start; }
+.markdown-code-header:has(.code-copy-error) { align-items: flex-start; }
+/* CodeBlock copy feedback adapted from open-claude-ui (MIT). */
+.code-copy-saved {
+  display: inline-block;
+  color: var(--success);
+  animation: saved-check-decay 0.35s cubic-bezier(.165, .84, .44, 1) 2.2s forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .code-copy-saved { animation: none; }
 }
 .artifact-inline-open {
   display: inline-flex;
@@ -7619,9 +7683,10 @@ html.native-desktop :is(
   border-radius: 4px;
   transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
 }
-.session-field-copy:hover {
-  color: var(--accent) !important;
-  border-color: var(--accent);
+.session-field-copy:is(:hover, :focus-visible):not(:disabled),
+.session-info-popover button:is(:hover, :focus-visible):not(:disabled) {
+  color: var(--text-hover) !important;
+  border-color: var(--border) !important;
   background: var(--bg-hover);
 }
 
@@ -7747,9 +7812,14 @@ html.native-desktop :is(
   cursor: pointer;
   transition: background 120ms ease;
 }
-.turn-files-header:hover,
-.turn-files-row:hover {
+.turn-files-header:is(:hover, :focus-visible),
+.turn-files-row:is(:hover, :focus-visible) {
   background: var(--bg-hover);
+  color: var(--text-hover);
+}
+.turn-files-header:is(:hover, :focus-visible) :is(.turn-files-header-icon, .turn-files-chevron),
+.turn-files-row:is(:hover, :focus-visible) .turn-files-row-chevron {
+  color: inherit;
 }
 .turn-files-row {
   border-top: var(--hairline) solid var(--separator);
@@ -8035,7 +8105,7 @@ button.pilaude-environment-row:hover { background: var(--bg-hover); }
 .app-shell .message-assistant-footer > .message-meta { display: none; }
 .app-shell .message-response-time { color: var(--text-dim); font-size: 14px; margin-left: 8px; }
 .app-shell .message-assistant-footer > button { position: relative; display: grid !important; place-items: center; width: 28px; height: 28px !important; padding: 0 !important; border: 0; background: none; border-radius: 7px; color: var(--text-dim); cursor: pointer; }
-.app-shell .message-assistant-footer > button:hover { background: var(--cds-alpha-1) !important; color: var(--text); }
+.app-shell .message-assistant-footer > button:hover:not(:disabled) { background: var(--cds-alpha-1) !important; color: var(--text-hover) !important; }
 .app-shell .message-assistant-footer > button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .app-shell .message-assistant-footer > button:disabled { opacity: 0.45; cursor: wait; }
 .pilaude-action-tooltip { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); z-index: 30; padding: 6px 9px; border-radius: 7px; background: #0c0c0b; color: #fff; box-shadow: 0 2px 8px #0002; font: 400 14px/1.3 var(--font-ui); white-space: nowrap; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 100ms, visibility 100ms; }
@@ -9053,12 +9123,15 @@ html.dark .changes-removed { color: #ff2c56; }
 .recommended-pi-extension-reason { color: var(--text-dim); }
 .recommended-pi-extension-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
 .recommended-pi-extension-actions > a { color: var(--accent); font-size: 12px; }
+.recommended-pi-extension-actions > a:is(:hover, :focus-visible),
+.native-update-reminder-link:is(:hover, :focus-visible) { color: var(--text-hover) !important; }
 
 /* ThinkingAccordion Grid disclosure, adapted from open-claude-ui (MIT).
    Pi's controller retains expansion preferences and deferred-history loading. */
 .thinking-disclosure { min-width: 0; border: var(--hairline) solid var(--border); border-radius: 7px; background: var(--bg); font: 400 calc(11px + var(--chat-font-size-offset, 0px))/1.5 var(--font-mono); }
 .thinking-disclosure-toggle { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; min-height: 28px; padding: 6px 10px; border: 0; border-radius: inherit; color: var(--text-muted); background: transparent; text-align: left; font: inherit; cursor: pointer; }
-.thinking-disclosure-toggle:hover { color: var(--text); }
+.thinking-disclosure-toggle:is(:hover, :focus-visible), html:not(.dark) .thinking-disclosure-toggle:is(:hover, :focus-visible) { color: var(--text-hover) !important; }
+.thinking-disclosure-toggle:is(:hover, :focus-visible) .thinking-disclosure-metadata { color: inherit; }
 .thinking-disclosure-toggle:focus-visible { outline: 2px solid var(--focus-ring, Highlight); outline-offset: 2px; }
 .thinking-disclosure-chevron { flex: 0 0 auto; transition: transform .2s cubic-bezier(.19, 1, .22, 1); }
 .thinking-disclosure[data-expanded="true"] .thinking-disclosure-chevron { transform: rotate(90deg); }

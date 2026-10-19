@@ -203,6 +203,14 @@ test("does not normalize escaped delimiters or link destinations", () => {
   assert.equal(normalizeDisplayMath(link), link);
 });
 
+test("empty fenced code remains empty instead of rendering undefined", () => {
+  for (const isStreaming of [false, true]) {
+    const html = renderMarkdown("```javascript\n```", { isStreaming });
+    assert.match(html, /markdown-code-block/);
+    assert.doesNotMatch(html, /undefined/);
+  }
+});
+
 test("previews completed Mermaid diagrams by default", () => {
   const html = renderMarkdown("```mermaid\ngraph TD\n  A --> B\n```");
 

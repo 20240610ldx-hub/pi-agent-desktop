@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProper
 import { SyntaxHighlighter, vs, vscDarkPlus } from "@/lib/syntax-highlighting";
 import { useTheme } from "@/hooks/useTheme";
 import { useI18n } from "@/hooks/useI18n";
-import { copyText } from "@/lib/clipboard";
+import { CodeCopyButton } from "@/components/CodeCopyButton";
 import { isImeComposing } from "@/lib/ime";
 
 interface MermaidBlockProps {
@@ -349,15 +349,6 @@ delete codeBlockDarkTheme['pre[class*="language-"]'].background;
  */
 export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isStreaming }: CodeBlockProps) {
   const { isDark } = useTheme();
-  const { t } = useI18n();
-  const [copied, setCopied] = useState(false);
-
-  const copy = () => {
-    copyText(code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
 
   return (
     <div className="markdown-code-block">
@@ -365,12 +356,7 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
         <span className="markdown-code-lang">{lang || "text"}</span>
         <div className="markdown-code-actions">
           {headerAction}
-          <button
-            onClick={copy}
-            className="markdown-code-action"
-          >
-            {copied ? t("i18n.copied") : t("i18n.copy")}
-          </button>
+          <CodeCopyButton code={code} />
         </div>
       </div>
       {isStreaming ? (

@@ -12,9 +12,9 @@
 - **未采用／独立实现**：产品已有同类能力，但没有来源适配证据。下表中的产品文件是现有实现或候选接点，不是采用证明。
 - **正在适配、未验**：新批进行中；不提前统计为直接采用或功能、视觉通过。
 
-截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；8 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，`ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样，`AttachmentCard` 的文件名前缀／最后扩展名分离与分段收缩布局，以及 `ThinkingAccordion` 的受控 Grid 展开。新增 consumer 与单测已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 24 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
+截至本次审计，33 个模块中：1 项 `CdsButton` 直接采用；10 项有明确局部适配：`useClaudeScrollPinning` 的 150ms 锁、`MediaLightboxViewer` 的自然尺寸／contain 与图片视图几何、`ScrollFadeContainer` 的边缘判定、`useClaudeRovingFocus` 的索引与单 tabstop、`StreamingDiffViewer` 的表格／gutter 呈现，`ClaudeMotionPresets` 的弹簧求解器／SNAPPY 采样，`AttachmentCard` 的文件名前缀／最后扩展名分离与分段收缩布局、`ThinkingAccordion` 的受控 Grid 展开、`CodeBlock` 的 2.5 秒复制反馈／衰减，以及 `DraggableSessionList` 的固定根会话键盘相邻重排。新增 consumer 与测试已有证据，实际页面检查按下方分轮记录；不将局部算法采用升级为完整组件或 Windows 一致性通过。其余 22 项未确认采用。主题 CSS 另已由 [app/layout.tsx](../app/layout.tsx) 导入，不计入这 33 项，也不将所有使用同类 CSS 的控件算作源模块采用。
 
-`ThinkingAccordion` 的 Grid 展开部分已通过真实 `MessageView → ThinkingDisclosure` 路径及九组实际页面检查，登记为**局部适配，仅 Grid 部分**。计数为 1 项直接采用／8 项局部适配／24 项未确认采用；这不代表完整源组件或 Windows 视觉一致性通过。
+`ThinkingAccordion` 的 Grid 展开部分已通过真实 `MessageView → ThinkingDisclosure` 路径及九组实际页面检查，登记为**局部适配，仅 Grid 部分**。后续代码复制反馈与固定会话键盘重排各新增一个限定 consumer，当前计数为 1 项直接采用／10 项局部适配／22 项未确认采用；这不代表完整源组件或 Windows 视觉一致性通过。
 
 `react-diff-view@3.3.3` 是另行记录的 npm 运行时库，不属于上面的 open-claude-ui 33 个模块。它接入 Changes 的通用 diff 呈现，本身不改变 open-claude-ui 的采用计数。既有 `StreamingDiffViewer` 记录只保留 table／gutter 的局部呈现借鉴，不能把新库的 parser、split 配对、tokenize 或词差异能力归入该来源。新渲染路径的最终功能／视觉验收仍待完成，见下方独立记录。
 
@@ -27,6 +27,9 @@
 5. [file-name-display.ts](../lib/file-name-display.ts) 与 [TabBar.tsx](../components/TabBar.tsx) 分别消费 `AttachmentCard` 最后扩展名分离与 prefix／extension 双 span 布局，CSS 按宽度省略，无字符硬切；普通文件标签路径／ARIA／开关动作不改。
 6. [cds-motion.ts](../lib/cds-motion.ts) 导入 [vendored ClaudeMotionPresets.ts](../vendor/open-claude-ui/ClaudeMotionPresets.ts) 的求解器和实际 `SPRING_SNAPPY`（320／28／1），补参数域、近临界与重阻尼数值边界，以 120Hz 生成 CSS `linear()` 采样；[DomContextMenuHost.tsx](../components/DomContextMenuHost.tsx) 的 `MenuPanel` 放置后实际消费曲线作 opacity 进入。没有搬 scale／y、退出延迟或其他 variants；opacity 会钳制物理超调，不能称为可见回弹。quiet [PilaudeWelcome.tsx](../components/PilaudeWelcome.tsx) 仍不消费这些 presets。
 7. **局部适配，仅 Grid 部分**：[MessageView.tsx](../components/MessageView.tsx) 的 `ThinkingBlock` 挂载 [ThinkingDisclosure.tsx](../components/ThinkingDisclosure.tsx)，配合 [native-theme.css](../app/native-theme.css) 消费 `ThinkingAccordion` 的 Grid `0fr↔1fr` 与 200ms `cubic-bezier(.19,1,.22,1)`。产品继续控制展开偏好、延迟历史 fetch／重试和早关闭隔离；无 block-active wire 标志，不推导活跃指示，也不强制 live 展开。九组实际页面已通过加载／重试／缓存、设置／键盘、过渡／中断清理和深浅 390px，仍不等于完整源组件通过，见下方独立记录。
+
+8. **局部适配，仅复制反馈**：[MarkdownBody.tsx](../components/MarkdownBody.tsx) → [MermaidBlock.tsx](../components/MermaidBlock.tsx) 中 CodeBlock → [CodeCopyButton.tsx](../components/CodeCopyButton.tsx)，配合 native theme 和已导入的 vendor keyframes，消费源 CodeBlock 的 2.5 秒／saved-check-decay。复制原文与成功仍以现有 clipboard 回退链为准。
+9. **局部适配，仅键盘重排**：[sidebar-session-metadata.ts](../lib/sidebar-session-metadata.ts) → [SessionSidebar.tsx](../components/SessionSidebar.tsx) 真实固定根会话按钮，消费 DraggableSessionList 的相邻索引／边界／splice；领域适配只更新同组已显示根会话的持久 pin slots，保留家族、草稿、焦点和其他 metadata。
 
 ## 33 个模块逐项记录
 
@@ -44,11 +47,11 @@
 | 08 | `ClaudeAudioPlayer.ts` | 单例 AudioContext、gain ramp、四种合成音、sinkId 和 BYO fallback | **未采用／独立实现**。[hooks/useAudio.ts](../hooks/useAudio.ts) 有自有双音 completion；[AppShell.tsx](../components/AppShell.tsx) 消费。 | 可抽 envelope 与输出设备支持，接用户音效偏好及生命周期。合成音不等于官方声效；需处理用户激活、context suspend／close、sinkId 支持情况。 |
 | 09 | `ClaudeDesktopHeader.tsx` | macOS 74px 避让、`74/min(zoom,1)` 补偿、45px drag band | **未采用**。产品顶栏使用 Tauri，未导入该模块。 | 仅 macOS host 几何参考；依赖 `window.electronAPI`、WebkitAppRegion，不能直接搬进 Windows Tauri renderer。 |
 | 10 | `ClaudeMotionPresets.ts` | `calcDampedHarmonicOscillator` 欠／临界／过阻尼解析解；四 springs、CSS easing、message/popover/modal/grapheme variants | **局部适配**。[cds-motion.ts](../lib/cds-motion.ts) 导入求解器和 SNAPPY 320／28／1，实际消费于 [DomContextMenuHost.tsx](../components/DomContextMenuHost.tsx) 的 61 点 CSS `linear()` opacity 进入。纯算法及实际 JSX／CSS consumer 测试通过，页面验证分轮记录于下方。 | 参数域及近临界／重阻尼数值边界由 adapter 补偿，vendor 未改。仅 opacity，布局与命中区域保持原位；reduced motion 静态、关闭即时。未采用其他 springs／variants／空间回弹，source 数值与 AGENTS 文案冲突以源码为准。 |
-| 11 | `CodeBlock.tsx` | 行号表格／tabular-nums、复制 2.5s 衰减、语言与文件头 | **未采用／独立实现**。[MarkdownBody.tsx](../components/MarkdownBody.tsx) 消费 [MermaidBlock.tsx](../components/MermaidBlock.tsx) 中自有 CodeBlock。 | 借几何与反馈，不丢语法高亮／streaming；示例无高亮，行号路径 `code.trim()` 会改变首尾空行，clipboard 错误和 timer 清理需补。 |
+| 11 | `CodeBlock.tsx` | 行号表格／tabular-nums、复制 2.5s 衰减、语言与文件头 | **局部适配，仅复制反馈**。[CodeCopyButton.tsx](../components/CodeCopyButton.tsx) 与 [native-theme.css](../app/native-theme.css) 消费 2500ms 和现有 vendor `saved-check-decay`，由 [MermaidBlock.tsx](../components/MermaidBlock.tsx) 的真实 CodeBlock 挂载，涵盖普通 fence 与 Mermaid source。实际三轮 RED→GREEN 验证成功时序、重复重置与失败重试，后续边界另记。 | 保留产品 Prism／行号、流式纯文本、headerAction 与原文空白；不搬 `code.trim()`、默认 typescript、源几何和未等待 clipboard 的假成功。产品补现有桌面／浏览器回退链、可本地化失败、定时器清理、旧源码／卸载／陈旧结果隔离、重复动画重启与 reduced-motion；无对应 Windows 逐状态参考，不称完整组件一致。 |
 | 12 | `ConfirmationDialog.tsx` | 400/520/720px 阶梯、遮罩、Escape、进入／退出 | **未采用／独立实现**。[ChatWindow.tsx](../components/ChatWindow.tsx) 等处有真实扩展对话框；无该组件导入。 | 必须接现有 dialog／Escape 栈、焦点进入和恢复；源码没有注释宣称的 focus trap。依赖 Framer Motion、CdsButton 与主题类。 |
 | 13 | `ContainerResponsiveBar.tsx` | 命名 container query、576/480/384px 逐级隐藏与压缩 | **未采用**。[native-theme.css](../app/native-theme.css) 有局部附件容器查询，不等于采用该 toolbar。 | 可抽窄 pane toolbar 的分级规则；将固定模型、Settings／Run 演示内容换为真实 slots。确认 Tailwind 4 命名 container 类产出和最低宽度，不照抄注释未实现的能力。 |
 | 14 | `CoworkAgentCanvas.tsx` | Agent／artifact 列表、选择与状态卡片 | **未采用／独立实现**。[AppShell.tsx](../components/AppShell.tsx) 的 Tasks pane 挂载真实 `AgentSessionPanel`／session family。 | 仅借受控呈现，接 Pi 父子任务、真实产物与 SSE。源码为固定 DEFAULT_AGENTS／DEFAULT_ARTIFACTS，未实现 BroadcastChannel、任务委派或拓扑状态机，按钮也不是执行能力。 |
-| 15 | `DraggableSessionList.tsx` | before/after 中点命中、移除后索引补偿、跨 pinned 分区、Alt 上下重排 | **未采用**。[SessionSidebar.tsx](../components/SessionSidebar.tsx) 与 [sidebar-session-metadata.ts](../lib/sidebar-session-metadata.ts) 的真实 pinned 顺序不是该 demo 的消费。 | 可抽纯 reorder 与键盘规则，接现有 metadata 持久化；源码只改本地 sessions state，无服务端同步、真正拓扑排序或完整拖拽事务。 |
+| 15 | `DraggableSessionList.tsx` | before/after 中点命中、移除后索引补偿、跨 pinned 分区、Alt 上下重排 | **局部适配，仅键盘相邻重排**。[sidebar-session-metadata.ts](../lib/sidebar-session-metadata.ts) 的 `moveSidebarPinnedSession` 署名适配相邻索引／边界／splice，[SessionSidebar.tsx](../components/SessionSidebar.tsx) 真实选择按钮消费；固定列表按持久化 pin rank 呈现。39 项定向检查与五组实际页面通过，详见下方。 | 仅同项目／自定义组内已显示的固定持久化根会话，保持后代、其他 pin slots／组／归档数据、原按钮焦点、草稿和跨窗 storage 同步。排除筛选／搜索、最近重复项、子项、临时／归档／未显示条目；不搬演示 sessions、指针死区／中点／drop 或跨区 pinning，不把 splice 称为拓扑引擎或 Windows 完整一致。 |
 | 16 | `EpitaxyIframeBridge.tsx` | frame source 校验、null-origin／allowlist、channel／error 分流 | **未采用／独立实现**。[useHtmlPreviewFrame.ts](../hooks/useHtmlPreviewFrame.ts)、[html-preview.ts](../lib/html-preview.ts) 已有 source、协议与 sandbox 限制。 | 可借消息 schema／错误分流，保留现安全边界。`hasBeenActive` 是历史激活，不能作单次操作授权；声明七种 MIME 不等于实现七个 renderer／包解析器。 |
 | 17 | `LiveMicActivityBars.tsx` | FFT512 六频段、0.08 noise gate、`energy^0.7` gamma、频段权重、连接波形 | **未采用**，无真实语音输入 consumer。 | 等实际 MediaStream 链就绪再抽算法；固定 bins 对应的 Hz 依赖采样率，应按 sampleRate/fftSize 计算。补 reduced motion、隐藏页暂停、AudioContext 清理及 hooks 规则适配。 |
 | 18 | `McpToolDecisionCard.tsx` | 入参展开、Allow once／Always／Deny、pending/running/terminal 显示 | **未采用**。真实阻塞 UI 在 [rpc-manager.ts](../lib/rpc-manager.ts) 与 [ChatWindow.tsx](../components/ChatWindow.tsx)，不是该 demo 的 consumer。 | 只能先抽受控展示层。源码批准后 `setTimeout(1200)` 假成功，没有白名单／执行 gate；不允许把 UI 状态当权限或自动执行策略。 |
@@ -68,11 +71,19 @@
 | 32 | `useClaudeSharedElementTransition.ts` | 圆角祖先追溯、object-fit contain inset、ViewTransition old/new 配对、reduce-motion fallback | **未采用**。没有该 hook 或其 TypeScript inset／圆角追溯 adapter 的产品 consumer。图片新批采用的是 MediaLightboxViewer 的自然尺寸／contain 与 zoom／pan 适配，不能重复计入本模块。 | 圆角／inset 算法仍有局部抽取价值；完整共享转场须另补并发清理、浏览器兼容、减少动态效果及焦点恢复证据。现有预览／主题转场不证明采用该 hook。 |
 | 33 | `useRateLimitBackoff.ts` | 5s 基数、指数增长、10min 封顶、±15% jitter、3次自动后转手动、倒计时 | **未采用**。[ChatInput.tsx](../components/ChatInput.tsx) 显示 SDK retryInfo，[useSessionAutomation.ts](../hooks/useSessionAutomation.ts) 控制 SDK retry，不消费此 hook。 | 可借纯 delay／countdown，先定义幂等边界。源码不识别 HTTP 429/503，也不是 full jitter／完整 circuit breaker；不得另起已接受 prompt 或外部操作的自动重放。 |
 
+## 2026-10-19 代码复制与固定根会话键盘适配
+
+CodeBlock 复制反馈经历三轮实际 RED→GREEN：原 1500ms 时限、重复成功被旧 timeout 提前清空、clipboard／execCommand 均失败时没有可重试反馈。真实新 consumer 保 source 原文／Prism／流式和 Mermaid 操作，接源 2500ms＋saved-check-decay，补成功后计时、旧结果失效和本地化错误。空 fence `undefined` 的 SSR RED 及空块提示裁切也已修复。最终 `code-copy/run-1792373651369/` 七组通过精确原文／空串、异步乱序、源码变化／卸载、重复／失败重试、深浅 390px、主题背景与 Mermaid header。正常动效在无 mock clock 新 context 实测 opacity 0.794868（2466.519ms），reduced motion 静态；早期 clock 采样失败与错误浮层裁切报告保留。checker 已接完整 E2E runner，但该完整 runner 和 Windows 原生 clipboard 尚未据此通过。
+
+DraggableSessionList 只采用键盘相邻索引／边界／splice：持久 pin rank、纯 metadata helper 与真实选择按钮有 RED→GREEN。39 项定向检查通过；额外审查复现选中预览外根会话时重排让焦点行消失，成功重排现同批展开项目预览保 keyed 按钮，边界 no-op 保上限。最终独立 tracked `e2e/sidebar-pin-order.mjs` 在 `sidebar-pin-order/run-1792373545120/` 五组通过同组／项目／cap、家族、原焦点／草稿、排除项、刷新及 storage 同步；没有 API 写入／外部请求／页面错误。指针／drag／跨 pinned 分区未采用。
+
+中性 hover 是用户后续明确选择：深色变白、浅色变灰，状态／diff 红绿保留；它不是新增源模块消费。逐组 computed colors、原始失败与 Windows 限制见[复刻基准](pilaude-ui-parity.md)。
+
 ## 尚未使用的高价值算法优先项
 
 1. **弹簧解析解与曲线采样**：菜单 opacity 已通过 adapter 接入 `calcDampedHarmonicOscillator`／SNAPPY；后续逐控件评估其余 springs 和 variants，分别记录 spring、交互状态、reduce-motion 和实物残差。单个菜单 consumer 不扩展为所有动效已采用。
 2. **小算法的剩余采用面**：文件名保后缀已局部接入普通文件 tabs；roving 索引与 ScrollFade 边缘判定已局部接入 Changes，其他菜单／selector／tabs 仍是候选。先修相应边界，再逐个登记新 consumer，不把一个面板的适配外推到全站。
-3. **拖放重排**：抽 before/after 命中与移除索引补偿，接已有 pinned/group metadata；键盘与指针共享同一排序事务。不要搬演示 sessions，也不把数组 splice 称为拓扑算法。
+3. **拖放重排**：固定根会话的键盘相邻排序已有限接入；剩余 before/after 指针命中与移除索引补偿仍待适配，后续与现有 metadata 事务衔接。不要搬演示 sessions，也不把数组 splice 称为拓扑算法。
 4. **受控呈现组件**：Thinking 的 Grid 部分已接真实 consumer 并通过限定实际检查，完整源状态及 Windows 视觉待验；Segmented、Status、MCP card 仍待逐个适配。pending／运行／完成／权限／token 必须保留后端真值，不能从会话正在运行推导某个 Thinking block 活跃；先拆 demo timers 与静态数据。
 5. **有依赖后再采用**：FFT 等真实音频链、host 工厂仅宿主参考、backoff 先落实幂等约束；diff 的源解析／增量引擎和 image 共享转场仍未采用，已落地的 zoom／pan 只覆盖上述局部算法。采用更多模块不是绕过这些边界的理由。
 

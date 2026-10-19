@@ -46,7 +46,7 @@ import { openDomMenu, getDomMenu, subscribeDomMenu } from "@/lib/dom-menu-store"
 import {
   SIDEBAR_SESSION_METADATA_KEY, normalizeSidebarSessionMetadata, setSidebarSessionFlag,
   moveSidebarSessionsToGroup, addSidebarSessionGroup, sidebarSessionFamilyIds,
-  orderSidebarSessions, sidebarSessionStatus, type SidebarSessionMetadata,
+  orderSidebarSessions, moveSidebarPinnedSession, sidebarSessionStatus, type SidebarSessionMetadata,
 } from "@/lib/sidebar-session-metadata";
 
 function sessionListUrl(summary: boolean, force: boolean): string {
@@ -1225,20 +1225,37 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         </div>
         {!isCollapsed && (
           <div className="sidebar-project-tree-children">
-            {sessionBuckets.filter((bucket) => bucket.nodes.length).map((bucket) => <div key={bucket.id || "ungrouped"} className="sidebar-session-group">
-              {bucket.name && <div className="sidebar-session-group-name">{bucket.name}</div>}
-              {bucket.nodes.map((node) => {
-                const nodeFamily = sessionFamilies.find((family) => family.root.id === node.session.id);
-                return <SessionFamilyItem
-                  key={node.session.id} node={node}
-                  familySessions={nodeFamily ? [nodeFamily.root, ...nodeFamily.subagents] : undefined}
-                  selectedSessionId={selectedSessionId} runningSessionIds={runningSessionIds}
-                  unreadSessionIds={unreadSessionIds} needsInputSessionIds={needsInputSessionIds}
-                  actions={sidebarActions} onSelectSession={handleSelectSessionFromList}
-                  onRenamed={loadSessions} onSessionDeleted={(id) => { onSessionDeleted?.(id); loadSessions(); }}
-                />;
-              })}
-            </div>)}
+            {sessionBuckets.filter((bucket) => bucket.nodes.length).map((bucket) => {
+              // Eligibility follows the displayed preview and its custom-group bucket,
+              // never a filtered tree's promoted child or a recent/archive duplicate.
+              const eligibleRootIds = !trimmedSessionQuery && !contentSearch
+                ? bucket.nodes.filter((node) => !node.session.transient && !node.session.parentSessionId
+                  && node.session.relation?.kind !== "subagent" && sessionMetadata.pinnedIds.includes(node.session.id)).map((node) => node.session.id)
+                : [];
+              return <div key={bucket.id || "ungrouped"} className="sidebar-session-group">
+                {bucket.name && <div className="sidebar-session-group-name">{bucket.name}</div>}
+                {bucket.nodes.map((node) => {
+                  const nodeFamily = sessionFamilies.find((family) => family.root.id === node.session.id);
+                  return <SessionFamilyItem
+                    key={node.session.id} node={node}
+                    familySessions={nodeFamily ? [nodeFamily.root, ...nodeFamily.subagents] : undefined}
+                    selectedSessionId={selectedSessionId} runningSessionIds={runningSessionIds}
+                    unreadSessionIds={unreadSessionIds} needsInputSessionIds={needsInputSessionIds}
+                    actions={sidebarActions} onSelectSession={handleSelectSessionFromList}
+                    onMovePinned={eligibleRootIds.includes(node.session.id) ? (direction) => {
+                      if (moveSidebarPinnedSession(sessionMetadata, eligibleRootIds, node.session.id, direction) === sessionMetadata) return;
+                      // A selected overflow root can replace a preview slot. Keep
+                      // the moved keyed row mounted when that selection enters the cap.
+                      if (showSessionOverflow && !isSessionOverflowExpanded) {
+                        setExpandedProjectSessions((current) => new Set(current).add(group.projectRoot));
+                      }
+                      setSessionMetadata((current) => moveSidebarPinnedSession(current, eligibleRootIds, node.session.id, direction));
+                    } : undefined}
+                    onRenamed={loadSessions} onSessionDeleted={(id) => { onSessionDeleted?.(id); loadSessions(); }}
+                  />;
+                })}
+              </div>;
+            })}
             {showSessionOverflow && (
               <button
                 type="button"
@@ -1579,9 +1596,11 @@ function SessionFamilyItem({
   onRenamed,
   onSessionDeleted,
   familySessions,
+  onMovePinned,
 }: {
   node: SessionTreeNode;
   familySessions?: SessionInfo[];
+  onMovePinned?: (direction: "up" | "down") => void;
   depth?: number;
   selectedSessionId: string | null;
   runningSessionIds: Set<string>;
@@ -1616,6 +1635,7 @@ function SessionFamilyItem({
           needsInput={familySessions ? familySessions.some((session) => needsInputSessionIds.has(session.id)) : needsInputSessionIds.has(node.session.id)}
           actions={actions}
           onClick={() => onSelectSession(node.session)}
+          onMovePinned={onMovePinned}
           onRenamed={onRenamed}
           onDeleted={(id) => onSessionDeleted?.(id)}
           hasChildren={hasChildren}
@@ -1709,6 +1729,7 @@ function SessionItem({
   onToggleCollapse,
   isSubagentChild = false,
   subtitle,
+  onMovePinned,
 }: {
   session: SessionInfo;
   isSelected: boolean;
@@ -1725,6 +1746,7 @@ function SessionItem({
   isSubagentChild?: boolean;
   /** Cross-project context; omitted inside the project tree where the group already names it. */
   subtitle?: string;
+  onMovePinned?: (direction: "up" | "down") => void;
 }) {
   const { locale, t } = useI18n();
   const [hovered, setHovered] = useState(false);
@@ -2047,6 +2069,13 @@ function SessionItem({
             className="session-item-main"
             aria-label={subtitle ? `${title} · ${subtitle}` : title}
             aria-current={isSelected ? "page" : undefined}
+            onKeyDown={(e) => {
+              if (e.target !== e.currentTarget || e.defaultPrevented || isImeComposing(e) || !onMovePinned || !e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+              if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+              e.preventDefault();
+              e.stopPropagation();
+              onMovePinned(e.key === "ArrowUp" ? "up" : "down");
+            }}
             onClick={(e) => { e.stopPropagation(); onClick(); }}
           >
             {/* Real running / unread state shares the reference's leading dot.

@@ -126,9 +126,9 @@
     },
     "components/SessionSidebar.tsx": {
       "risk": "high",
-      "drift": 3240,
-      "reason": "New opens the existing home independently of project selection; project + remains a new-session action. Stable project-root notifications avoid render loops. Preserve extracted project selection, overflow-only full-name tooltips and accessible rows. Session actions depend on fork-owned pin/group/archive/unread metadata, source-leaf fork_branch semantics and capability-aware destinations. Status precedence must retain authoritative needsInputSessionIds, blue unread and hollow idle without substituting notification history for pending blocking UI.",
-      "structuralDrift": 2706,
+      "drift": 3271,
+      "reason": "New opens the existing home independently of project selection; project + remains a new-session action. Stable project-root notifications avoid render loops. Preserve extracted project selection, overflow-only full-name tooltips and accessible rows. Session actions depend on fork-owned pin/group/archive/unread metadata, source-leaf fork_branch semantics and capability-aware destinations. Persisted pin ranks and Alt+Arrow reorder only displayed pinned persisted roots in the same project/group bucket, preserving families, focus, exclusions and storage synchronization. Status precedence must retain authoritative needsInputSessionIds, blue unread and hollow idle without substituting notification history for pending blocking UI.",
+      "structuralDrift": 2737,
       "disposition": "accepted"
     },
     "components/AppShell.tsx": {
@@ -216,10 +216,22 @@
       "risk": "medium", "drift": 250, "structuralDrift": 227, "disposition": "accepted",
       "reason": "The shared image trigger portals a source-keyed native modal to document.body so Markdown paragraph content stays valid. Its pure geometry adapter owns cursor zoom and bounded pan. Preserve stale-load isolation, IME/Escape, native focus lifecycle, wheel cleanup, viewport reset and explicit loading errors when merging upstream."
     },
+    "e2e/run.mjs": {
+      "risk": "medium", "drift": 173, "structuralDrift": 173, "disposition": "accepted",
+      "reason": "The upstream E2E runner retains fork message, UI and extension scenarios and now runs the exact-source copy feedback checker against its existing code fixture. Preserve scoped clipboard setup and restoration, fixture whitespace and retained Mermaid source/header behavior; a clean upstream merge must not silently drop the new regression. Nonblank changed lines are measured against 6fcd7d4."
+    },
+    "components/MarkdownBody.tsx": {
+      "risk": "medium", "drift": 196, "structuralDrift": 194, "disposition": "accepted",
+      "reason": "Fork Markdown handling includes previews, local file references and streaming throttling. Empty code children now normalize to the empty string rather than the literal undefined, preserving the source copied by CodeBlock. Keep sanitization, exact whitespace and existing preview/streaming behavior when merging upstream."
+    },
+    "components/MermaidBlock.tsx": {
+      "risk": "medium", "drift": 123, "structuralDrift": 113, "disposition": "accepted",
+      "reason": "The shared CodeBlock mounts the fork-owned CodeCopyButton for attributed 2.5s copy feedback with asynchronous failure handling and stale-result isolation. Preserve exact code, Prism syntax highlighting, streaming plain text, line numbers and Mermaid header actions when merging upstream. Existing diagram zoom, download and strict rendering remain shared adaptations."
+    },
     "components/MessageView.tsx": {
       "risk": "high",
-      "drift": 610,
-      "reason": "Message bubble markup, truthful actions and user-image rendering differ from upstream. ThinkingBlock mounts the fork-owned ThinkingDisclosure Grid adapter while retaining product expansion preference, deferred-history fetch/retry and source content. Preserve early-close isolation and existing IME handling without adding a synthetic block-active indicator, forced-live expansion, source clipboard actions or simulated timing. Keep source image order, natural contain geometry, independent text placement and actual preview indexes; this does not establish full source-component or Windows parity.",
+      "drift": 619,
+      "reason": "Message bubble markup, truthful actions and user-image rendering differ from upstream. Explicit tool-call trigger, preview, metadata and chevron class hooks support neutral hover without recoloring success/error labels or diff contents. ThinkingBlock mounts the fork-owned ThinkingDisclosure Grid adapter while retaining product expansion preference, deferred-history fetch/retry and source content. Preserve early-close isolation and existing IME handling without adding a synthetic block-active indicator, forced-live expansion, source clipboard actions or simulated timing. Keep source image order, natural contain geometry, independent text placement and actual preview indexes; this does not establish full source-component or Windows parity.",
       "structuralDrift": 383,
       "disposition": "accepted"
     },
@@ -395,6 +407,9 @@
     "components/ContextUsageRing.test.mjs",
     "components/ThinkingDisclosure.tsx",
     "components/ThinkingDisclosure.test.mjs",
+    "components/CodeCopyButton.tsx",
+    "e2e/code-copy.mjs",
+    "e2e/sidebar-pin-order.mjs",
     "components/RecommendedPiExtensions.tsx",
     "components/RecommendedPiExtensions.test.mjs",
     "lib/recommended-pi-extensions.ts",
@@ -512,6 +527,7 @@
     "2026-10-18 \u2014 ImagePreview portals its existing source-keyed native dialog to body to keep Markdown paragraphs valid. Shared drift is 250 total/227 structural, still medium, and measured modified TypeScript totals are 2117 cosmetic/11717 structural. Changes inline gutter rendering and its presentation-leaf regression remain fork-owned; revision side/text stay authoritative across split-to-inline selection. Risk thresholds remain 30/250.",
     "2026-10-18 \u2014 New is a Next-integrated local home view that retains the chat/draft mount; project + keeps its new-session behavior. Project-root notifications use a stable ordered-path key to avoid render loops. The optional Pi catalogue fills the existing install form without auto-installing packages. Remeasured at 6fcd7d4: AppShell 2466 total/2061 structural, SessionSidebar 3240/2706 remain high; PluginsConfig 4/4 remains low. Modified TypeScript totals are 2117 cosmetic/11764 structural. Thresholds remain 30/250; fixed-grid ripple, revision-aware selection and extension contract checkers are fork-owned.",
     "2026-10-18 — Changes adopts exact react-diff-view 3.3.3 through the fork-owned ReviewDiff consumer and review-diff-renderer parse/tokenize/markEdits adapter; git-review-display retains product selection and feedback policy. Remove deleted review-syntax paths and register the new renderer, tests and root third-party notices. At baseline 6fcd7d4, layout measures 28 total/25 structural and remains low; package.json has 69 nonblank changed lines, including npm notice inclusion, and now records 69 structural at medium rather than retaining its stale 13-line low entry. The already fork-owned prepare-desktop script copies the root notice into resources/server for all desktop platforms. Modified TypeScript totals are 2117 cosmetic/11765 structural. Preserve the 30/250 thresholds and reviewed medium/high overlaps. Runtime-library attribution and acceptance are separate from open-claude-ui adoption counts; targeted renderer and domain regressions pass, while full visual/native acceptance remains pending.",
-    "2026-10-19 — MessageView ThinkingBlock mounts the fork-owned ThinkingDisclosure adapter and test for ThinkingAccordion's Grid 0fr/1fr, 200ms cubic-bezier(.19,1,.22,1) mechanism from open-claude-ui author source 638800b8a4cee4513c8763c3df0ecf8a77b32379 (MIT). Preserve product expansion preference, deferred-history fetch/retry, early-close cancellation and IME behavior; no block-active wire flag is added, so there is no active indicator or forced-live expansion, nor source clipboard/timer behavior. MessageView measures 610 total/383 structural against 6fcd7d4 and remains high under unchanged 30/250 thresholds. Nine actual-page groups now pass the bounded Grid adoption; full source-component and Windows visual acceptance remain pending. After the separate IME freeze, ChatWindow measures 753 total/629 structural, still high: extension option Enter/Space ignores composition and Escape is contained before the IME guard, without changing permission policy or response transport. Combined modified TypeScript totals are 2139 cosmetic/11810 structural."
+    "2026-10-19 — MessageView ThinkingBlock mounts the fork-owned ThinkingDisclosure adapter and test for ThinkingAccordion's Grid 0fr/1fr, 200ms cubic-bezier(.19,1,.22,1) mechanism from open-claude-ui author source 638800b8a4cee4513c8763c3df0ecf8a77b32379 (MIT). Preserve product expansion preference, deferred-history fetch/retry, early-close cancellation and IME behavior; no block-active wire flag is added, so there is no active indicator or forced-live expansion, nor source clipboard/timer behavior. MessageView measures 610 total/383 structural against 6fcd7d4 and remains high under unchanged 30/250 thresholds. Nine actual-page groups now pass the bounded Grid adoption; full source-component and Windows visual acceptance remain pending. After the separate IME freeze, ChatWindow measures 753 total/629 structural, still high: extension option Enter/Space ignores composition and Escape is contained before the IME guard, without changing permission policy or response transport. Combined modified TypeScript totals are 2139 cosmetic/11810 structural.",
+    "2026-10-19 — CodeBlock mounts fork-owned CodeCopyButton for open-claude-ui 2500ms/saved-check-decay feedback with real clipboard settlement, retry, timer cleanup and stale-result isolation; preserve Prism, streaming, exact whitespace and Mermaid actions. MarkdownBody empty code children remain empty. Pin ranks and source-backed adjacent Alt+Arrow moves update only displayed same-bucket persisted roots; successful moves expand capped previews in the same event batch to retain keyed focus. Ordinary hover uses neutral light-gray/dark-white tokens with explicit tool class hooks and preserves status/diff colors. At baseline 6fcd7d4: SessionSidebar 3271 total/2737 structural remains high, MessageView 619/383 remains high, MermaidBlock 123/113 and MarkdownBody 196/194 are accepted medium. Shared e2e/run.mjs records 173 nonblank changed lines and medium review. Modified TypeScript totals 2149 cosmetic/11859 structural; thresholds stay 30/250. Bounded actual checks and regressions pass; full E2E and native visual acceptance remain separate."
   ]
 }

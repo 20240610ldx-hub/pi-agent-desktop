@@ -37,6 +37,10 @@
 - 库内仍存在版本冲突：AGENTS 的旧表面/尺寸说明、v2 的 12/14px composer 描述、主题中的 20px composer，以及新按钮组件的整数尺寸与 CHANGELOG 的桌面光学尺寸并不完全一致。发生冲突时记录证据，用当前 Windows 参考裁决，不能挑一个看起来合理的值。
 - 首次审计发现原先接入的旧版主题遗漏了完整灰阶、主品牌色与装饰 Clay 分离、按钮绘景层和弹性曲线等上游修正。现已更新 vendored theme、Button 和 motion presets；其中 theme 全局导入、Button 由数据导入区消费，motion presets 后续已经 cds-motion 采样实际用于 DOM 菜单 opacity。欢迎页已改为 quiet 构图，不再消费 Button 或 motion。逐模块与纯算法的 consumer／缺口见[采用账本](pilaude-component-adoption.md)，不能把仓库同步等同于所有实现已经采用。
 
+## 中性悬停文字规则（2026-10-19）
+
+用户追加深浅色工具活动摘要参考，并明确普通文字悬停不使用橙色：暗色变白，浅色变灰。该最新选择适用于摘要、消息操作、菜单、链接等普通交互文字；增删数字、失败／危险、选中及真实运行状态仍按各自语义，不把颜色状态误算作 hover。实现加入 `--text-hover`：暗色 `#f5f5f5`、浅色 `#525252`，工具预览／元数据／箭头用明确 class hooks，避免按深层 DOM 位置覆盖状态标签。实际 `hover-colors/results.json` 深浅两轮通过 computed color 与截图核对：过程／思考摘要暗色 `#b4b3a8→#f5f5f5`、浅色 `#8a8a8a→#525252`；工具预览和消息复制暗色 `#898781→#f5f5f5`、浅色 `#8a8a8a→#525252`；文件编辑摘要／行及箭头也按中性色变化。成功与增行保持暗色 `#30d158`／浅色 `#248a3d`，减行保持 `#ff6961`／`#d92d20`。API 写入、外部请求与页面错误为空；文件树／设置 Add 有规则检查，未逐项截图。早期浅色摘要静止／悬停同为 `#525252` 的检查只作中间证据，已补静止灰度与最终变化。用户这组截图没有独立版本／DPI 元数据，不能作为所有控件的像素一致性证据。
+
 ## 组件与资源覆盖清单
 
 下表按目标行为分组覆盖 33 个 TS/TSX 源模块及主要 Pilaude 页面；逐一名称、关键算法、实际 consumer 与演示限制以[采用账本](pilaude-component-adoption.md)为准。**所有组件的 Windows 2.42304.0 一致性均待实物对照**；“已接入”只描述可追踪的代码采用，不表示视觉或交互通过。产品的同类独立实现、仅 vendor 文件和主题 keyframes 不算模块已采用；图片已局部适配自然尺寸／contain 和 zoom／pan 几何，Changes 的表格、焦点和渐隐算法已有 consumer；新增语法色复用产品既有 Prism。实际页面逐轮核验，完整一致性仍待补证。
@@ -50,8 +54,8 @@
 | 确认与权限对话框 | `ConfirmationDialog`、`McpToolDecisionCard` | 资源可用；后端审批、焦点陷阱、取消/错误状态待融合 |
 | 附件卡与预览 | `AttachmentCard` | 最后扩展名分离／双 span 布局已局部适配到普通文件 TabBar，按宽度省略保完整路径浮签；附件 tile／chip 未采用。长文件名官方状态图缺，窄容器实际检查单独记录 |
 | 输入器及底栏 | `ChatComposer`、`RichComposerWithMentions`、`ChatComposerChin` | 保留 Pi 真实输入器，部分 IME/草稿测试已有；几何、排队、菜单、提及/命令状态待对照 |
-| 消息、操作条、代码 | `ChatMessageBubbles`、`CodeBlock` | 已有 Pi 渲染器；新结构、排版、悬浮操作、复制/重试/编辑待融合 |
-| 思考展开和氛围 | `ThinkingAccordion`、`ReasoningAmbientGlow` | 资源可用；绑定真实流式思考、减少动效与状态切换 |
+| 消息、操作条、代码 | `ChatMessageBubbles`、`CodeBlock` | CodeBlock 的 2.5 秒复制／衰减由 CodeCopyButton 局部适配并经真实普通 fence／Mermaid source 消费，失败重试、重复计时和陈旧结果检查已有证据；现有 Prism 与 streaming 保留。完整消息布局、编辑和 Windows 同状态视觉仍待对照 |
+| 思考展开和氛围 | `ThinkingAccordion`、`ReasoningAmbientGlow` | ThinkingAccordion 的受控 Grid 开合已由真实 ThinkingBlock 消费并通过加载／重试／偏好／中断清理／减少动效检查；活跃指示缺逐 block wire 标志，氛围层未采用。Windows 同状态参考仍待补 |
 | 模型选择、用量、推理强度 | `ModelSwitcherWithTokenGauge`、`ModelSelectorEffort` | 资源可用；使用真实 Pi 模型能力/未知值，不能移植演示额度 |
 | 动效参数与级联 | `ClaudeMotionPresets`、`CdsMotionEngine` | 前者的求解器／SNAPPY 经 cds-motion→DomContextMenuHost 消费到 opacity 进入；实际 CSS 曲线、静态命中区域、reduced-motion 与菜单交互已有目标检查，其他 springs／variants 未采用。后者仍未采用且含演示展示 |
 | 滚动跟随和渐隐 | `useClaudeScrollPinning`、`ScrollFadeContainer` | 前者仅 `cds-scroll.ts`→`useAgentSession` 的 150ms 输入锁；后者由 ChangesPane 的 FadedScroll 局部适配 2px 边缘判定，补容器／内容 ResizeObserver。其余阈值、alpha stops 和双轴行为不记采用 |
@@ -60,7 +64,7 @@
 | 产物分屏与桥接 | `ArtifactsSplitPaneResizer`、`EpitaxyIframeBridge` | 资源可用；保留 Pi 产物真实内容、安全边界与保存流程 |
 | Diff | `StreamingDiffViewer` | Changes 的 tabular-nums／增删背景保留源组件的局部样式适配；当前通用 parser、unified／split 表格、替换行配对、词差异和 token 树已迁移到 MIT `react-diff-view@3.3.3`，真实消费点为独立 ReviewDiff。产品保留 revision／连续选区／反馈 ACK；既有 Prism 按 hunk 和两侧隔离，原文继续来自 Git 行。未采用源流式引擎，不增加 open-claude-ui 采用数；最新运行与视觉残差另记 |
 | Windows 窗口与顶栏 | `createClaudeMainWindow`、`ClaudeDesktopHeader` | 主要是 Electron/macOS 参考；Tauri Windows 实物行为与精确几何待补 |
-| 侧栏、项目/会话拖放 | `DraggableSessionList` | 资源可用；完整 Windows 导航、搜索、收起/展开/右键状态未覆盖 |
+| 侧栏、项目/会话拖放 | `DraggableSessionList` | 同组已显示固定根会话 Alt+↑/↓ 相邻重排已局部接入真实 metadata／按钮，保持家族、焦点／草稿、预览上限、刷新及跨窗顺序；四组实际页面检查通过。指针拖放未采用；完整 Windows 导航、搜索、收起/展开/右键状态仍未全部对照 |
 | 多代理任务视图 | `CoworkAgentCanvas` | 含演示状态；需接真实 Pi 父子任务、队列、审批、取消和失败状态 |
 | 窄容器与键盘焦点 | `ContainerResponsiveBar`、`useClaudeRovingFocus` | ChangesPane 的 rove 局部适配索引／Home/End／单 tabstop，含 IME 过滤；ContainerResponsiveBar 未采用。系统 DPI、WebView2 与实际焦点顺序仍需逐项验收 |
 | 限流/重试反馈 | `useRateLimitBackoff` | 资源可用；遵循 Pi 已接受请求不重发和外部操作不重放的约束 |
@@ -225,6 +229,24 @@ Changes 内联 context 起点保留两侧坐标，Shift 到明确删除／添加
 2026-10-19 定向复查修复 select option 的 IME Enter／Space 误提交，以及 composing Escape 从 dialog 冒泡到全局 Stop。option 沿用现有 `isImeComposing`（含 229）过滤；dialog 只对 Escape 先 stopPropagation，合成中保留默认候选窗行为，普通 Escape 仍只回复一次取消。没有改扩展请求 ID、队列、后端 promise、权限策略或工具执行。
 
 相关 16 项定向检查与本批组合 126 项通过；实际 `extension-ime-20261019-002103-852/run.json` 使用六个显式合成队列请求，通过 composing／229 Enter／Space／Escape 不误回复／不取消／不 abort、方向键／Home／End、普通确认／取消、清空 dialog 后全局 Escape 正控制。API 全部本地拦截，不运行真实模型或扩展；本轮 response 与 abort 只是被记录的 fixture 请求。console warning／error 与页面错误为空，实际截图已读取核对。首轮 get_tools 夹具错误和此前未捕获 warnings 的范围明确保留；Windows 原生 IME 不据此标记通过。
+
+## 代码块复制生命周期（2026-10-19）
+
+源 `CodeBlock.tsx` 的 2500ms 反馈与现有 vendor `saved-check-decay` 已由真实 `MarkdownBody → CodeBlock → CodeCopyButton` 消费；Prism／行号、流式纯文本、Mermaid source／header actions、首尾空行／Tab／Unicode／HTML 原文继续保留。三轮 RED→GREEN 分别复现 1500ms 提前消失、重复成功被旧 timer 清空、失败没有反馈／未处理 rejection；组件现等待既有桌面／浏览器回退链，错误可重试，每次成功重置 timer／动画，源码变化或卸载使旧结果失效。额外 SSR RED 复现空 fence 显示 `undefined`，以 `children ?? ""` 保空串；实际空块又复现错误浮层被裁掉 5.594px，改为 header 内正常流第二行。
+
+最终 `code-copy/run-1792373651369/` 七组实际检查通过成功／pending／重复／失败／乱序、真实拦截 SSE 源码变化保原按钮焦点、卸载后结果隔离、精确空串、深浅 390px、Mermaid source 与主题背景回归。真实空块错误提示完整可见；减少动态效果静态，正常动态在全新、从未安装 mock clock 的 context 测得 2466.519ms 时 opacity 0.794868。此前 mock clock resume／reload 仍保留时钟，CSS compositor 与 JS timer 偏移使短暂衰减采样失败；原报告保留，不据此改 source 曲线或追认早期配置断言为可见动效通过。页面／console 错误、external 请求和非读取动作为空；唯一 agent POST 为被拦截的 `get_tools` 读取命令，不运行模型。通用复制 checker 已接 `e2e/run.mjs`。本批最终受影响组件／翻译／侧栏与上游提取／ownership／CSS 基线组合 198 项通过，项目类型和完整 lint 退出 0，保留既有 TerminalPanel ARIA 警告；完整 runner／terminal E2E 与 Windows 原生剪贴板未据此标为通过。
+
+## 固定会话顺序与键盘重排（2026-10-19）
+
+RED 先复现 `[a,b,c]` 配合持久 pin `[b,a]` 仍显示 `[a,b,c]`，再补 pin rank 消费；相邻移动 helper、真实选择按钮和非按钮自身事件保护也分别观察失败后修复。算法适配 `DraggableSessionList` 的当前／相邻索引、边界检查与复制数组 splice，仅对同一项目／自定义组内已显示固定持久化根会话启用 Alt+↑/↓。重排映回完整 pin 数组的原 slots，后代保持在原家族 wrapper，其他组、项目、归档和 pin 资格不变。普通方向键、其他修饰键、IME／229、子元素事件、筛选／内容搜索、最近重复项、临时／子／未固定／归档项及预览外条目不获得该能力；无指针拖放实现。
+
+39 项定向测试、类型及局部 lint 通过。额外审查复现了选中第六根会话替换预览第五位后，第四根下移会离开五行预览并丢失焦点；RED `sidebar-pin-order/run-1792373461695/` 保留。成功重排现在与 metadata 更新同一个事件批次展开该项目预览，保留原 keyed 按钮，边界 no-op 不展开；相邻移动仍只消费事件前已显示的同组 pin slots。实际可独立执行的 `e2e/sidebar-pin-order.mjs` 在最终 `sidebar-pin-order/run-1792373545120/` 五组检查通过顺序、原按钮焦点／草稿、家族和无关 slots 保留、预览／分组边界及所有排除项、刷新和真实跨 tab storage 同步；全部 API／SSE 为预先安装的生成夹具，non-read／external 请求、页面／console 错误为空。此轮只记录 Chromium 的功能通过，不证明 Windows 原生快捷键或整侧栏视觉一致。
+
+## Windows Changes 原生边界补验（2026-10-19）
+
+本机 `x86_64-pc-windows-msvc`／Rust 1.94.1 离线锁文件定向运行 `changes_window::tests::`：4 项通过、7 项无关测试过滤；前端窗口 IPC／能力配置合同 5 项通过。覆盖 cwd／反馈目标编码、清除原 token query／fragment、非法输入、只允许精确 server origin 的 `/changes` 导航，以及专用开关窗口命令与最小 capability 声明。使用仓库 Windows bundle 配置只为测试编译，未构建安装包或启动应用。
+
+原始输出在本机 `test-results/changes-window-native-20261019-retry.log` 与 `test-results/changes-window-contracts-20261019.log`。首次 native 运行只有 compilation 行并以 4 退出，缺测试结果和诊断，原日志保留；相同命令重试实际 4 项通过。该轮不证明 live WebView 权限执行、原生开窗、DPI、贴靠或 IME 行为，不将单元／源码合同测试计作这些实物检查。
 
 ## 上游更新规则
 

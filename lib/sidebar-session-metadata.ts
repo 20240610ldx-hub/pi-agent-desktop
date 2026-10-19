@@ -61,9 +61,30 @@ export function sidebarSessionFamilyIds(sessions: SessionInfo[], sessionId: stri
   return [...ids];
 }
 
-export function orderSidebarSessions<T extends { id: string }>(sessions: T[], pinnedIds: readonly string[]): T[] {
-  const pinned = new Set(pinnedIds);
-  return sessions.map((session, index) => ({ session, index })).sort((a, b) => Number(pinned.has(b.session.id)) - Number(pinned.has(a.session.id)) || a.index - b.index).map(({ session }) => session);
+export function orderSidebarSessions<T extends { id: string }>(sessions: readonly T[], pinnedIds: readonly string[]): T[] {
+  const pinRank = new Map(pinnedIds.map((id, index) => [id, index]));
+  return sessions.map((session, index) => ({ session, index })).sort((a, b) => (pinRank.get(a.session.id) ?? Infinity) - (pinRank.get(b.session.id) ?? Infinity) || a.index - b.index).map(({ session }) => session);
+}
+
+/**
+ * Adapted from open-claude-ui/code-examples/DraggableSessionList.tsx handleKeyDown:
+ * find the adjacent index, guard boundaries, then splice a copied eligible list.
+ * The caller supplies displayed roots from one project/group bucket. Merge back
+ * into their original pin slots so descendants and every other bucket stay put.
+ */
+export function moveSidebarPinnedSession(metadata: SidebarSessionMetadata, eligibleRootIds: readonly string[], sessionId: string, direction: "up" | "down"): SidebarSessionMetadata {
+  const eligible = new Set(eligibleRootIds);
+  const list = metadata.pinnedIds.filter((id) => eligible.has(id));
+  const currentIndex = list.indexOf(sessionId);
+  if (currentIndex === -1) return metadata;
+  const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+  if (targetIndex < 0 || targetIndex >= list.length) return metadata;
+
+  const updatedSubList = [...list];
+  const [moved] = updatedSubList.splice(currentIndex, 1);
+  updatedSubList.splice(targetIndex, 0, moved);
+  let index = 0;
+  return { ...metadata, pinnedIds: metadata.pinnedIds.map((id) => eligible.has(id) ? updatedSubList[index++] : id) };
 }
 
 export function sidebarSessionStatus(needsInput: boolean, running: boolean, unread: boolean): "needs-input" | "running" | "unread" | "idle" {
