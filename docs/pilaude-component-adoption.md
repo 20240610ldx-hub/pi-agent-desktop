@@ -80,6 +80,12 @@ DraggableSessionList 只采用键盘相邻索引／边界／splice：持久 pin 
 
 中性 hover 是用户后续明确选择：深色变白、浅色变灰，状态／diff 红绿保留；它不是新增源模块消费。逐组 computed colors、原始失败与 Windows 限制见[复刻基准](pilaude-ui-parity.md)。
 
+## 有限步骤动效的来源边界
+
+新步骤的事件账本与 WAAPI 呈现是产品对用户清单的领域适配，不能算作新采用 `CdsMotionEngine` 或 `ClaudeMotionPresets` 的 message variants。`useAgentSession → toolEntryState／consumeToolEntries → ChatWindow → useActivityStepMotion` 只允许真实新增事件驱动一次入场，历史／重连与已消费 ID 保静态；状态图形与摘要文字由实际语义变化驱动有限淡入，不由每个参数 delta 重启。受控 `DisclosureBody` 仍是现有 ThinkingAccordion Grid 的共享 consumer，不增加源模块计数。最终时间序列／边界证据在[复刻基准](pilaude-ui-parity.md)按运行登记，33 项仍为 1 直接／11 局部／21 未确认。
+
+参考图的紧凑命令 pill／平铺分隔行在这 33 个源模块中没有可直接替换的匹配组件。后续应在真实 Pi 工具呈现边界做小适配，复用已有 Grid 与复制能力；不能导入演示 MCP permission card 或完整 CodeBlock 后声称同形复刻。私有参考中的命令／项目文字不进入公开夹具。
+
 ## 尚未使用的高价值算法优先项
 
 1. **弹簧解析解与曲线采样**：菜单 opacity 已通过 adapter 接入 `calcDampedHarmonicOscillator`／SNAPPY；后续逐控件评估其余 springs 和 variants，分别记录 spring、交互状态、reduce-motion 和实物残差。单个菜单 consumer 不扩展为所有动效已采用。

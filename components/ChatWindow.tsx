@@ -21,6 +21,7 @@ import { ExtensionStatusLine, formatExtensionStatusLine } from "./ExtensionStatu
 import { AnsiText } from "./AnsiText";
 import { useI18n } from "@/hooks/useI18n";
 import { useTranscriptExpansion } from "@/hooks/useTranscriptExpansion";
+import { useActivityStepMotion } from "@/hooks/useActivityStepMotion";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { phaseLabel } from "@/lib/chat-phase-label";
 import { useAgentSession, type NoticeItem } from "@/hooks/useAgentSession";
@@ -309,7 +310,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   const [restoreAnchorReady, setRestoreAnchorReady] = useState(false);
 
   const {
-    loading, error, messages, activeToolResults, runningToolCallIds, entryIds, historyCursor, hasEarlierMessages, streamState,
+    loading, error, messages, activeToolResults, runningToolCallIds, toolEntryState, consumeToolEntries, entryIds, historyCursor, hasEarlierMessages, streamState,
     agentRunning, bashRunning, pendingBash, modelNames, modelList, modelError, modelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, toolPreset, thinkingLevel,
     retryInfo, contextUsage, forkingEntryId, summarizationRetry, automation, handleSetAutomation,
     isCompacting, compactError, compactNotice, compactResult, displayModel: displayModelValue, modelSwitching, sessionStats,
@@ -342,6 +343,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
     deferInitialScroll: Boolean(pendingScrollRestore),
     onScrollPositionChange,
   });
+  useActivityStepMotion(scrollContainerRef, toolEntryState, consumeToolEntries);
   const sessionBusy = agentRunning || bashRunning;
   const [quotedSelection, setQuotedSelection] = useState<{
     text: string;

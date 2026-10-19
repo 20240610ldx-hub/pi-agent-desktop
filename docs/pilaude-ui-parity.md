@@ -300,6 +300,18 @@ SSR真实controller与preference接口先RED后GREEN。实际 `transcript-view/r
 
 前两轮返回A出现空白的failed报告保留，调查证明与不同会话相同revision无关：cache按session ID隔离，即使fixture使用不同revision仍复现。StrictMode重复mount loads在第一次setMessages尚未commit时取滞后的空messagesRef，覆盖合法cached window；实际初始UI3条但cache0条／3IDs，返回即空白。`useAgentSession` 现只在当前session refs覆盖cached entry IDs时优先保live window，否则用canonical cached window并明确恢复state。public returned-hook RED→GREEN还保新pending user及messages数组identity；实际修后A cache3／3、B2／2、返回A3／3与正文可见。没有重置历史、修改timeout或放宽夹具结果。此批最终组合227项UI／session／翻译／ownership回归、19项输出风格store／API／真实SDK-faux检查、7项渲染DOM风格编辑器检查分别通过；Windows Rust20项已通过。项目完整类型、lint退出0，lint保留既有TerminalPanel ARIA一条warning。分组数字不相加冒充完整npm／terminal E2E。
 
+## 有限步骤入场与快照来源（2026-10-19）
+
+`useAgentSession → activity-entry-ledger → toolEntryState／consumeToolEntries → ChatWindow → useActivityStepMotion` 是新的真实消费链。只有 enriched toolcall_start 的稳定 ID 获得一次性有序 grant；execution replay 不获得，历史／分页／轮询只 seed seen IDs。message_end／终态保留尚未消费 grant，首次 DOM 提交即消费（隐藏／reduced 也消费），scope 隔离会话与显式分支导航，普通 leaf 推进不重置。稳定 ChatWindow owner 位于 answered/unanswered group key 之上，重开／重挂不补播。WAAPI 入场180ms／6px，错开40ms、最大120ms；图标160ms、摘要150ms只响应实际语义变化，不延迟可访问状态或因参数 delta 重启。
+
+独立复查以真实 Agent／AssistantMessageEventStream／wire 复现一个初版缺陷：工具执行期间 isStreaming 仍为 true，但没有 streamingMessage／bootstrap；随后同一 run 的真正 message_start 已共享新工具内容，会被错误基线化而漏掉入场。服务端现在明确发送 `connected.hasStreamingSnapshot`，与实际 bootstrap message_start 使用同一非空谓词；false 允许后续真实事件，true 保护回放，缺字段保守。producer／ledger／public hook 各观察 RED→GREEN，最终相关组合123项通过；独立复查确认原序列修复。父级另外126项UI／ownership／CSS基线通过，项目完整类型和lint通过，lint保留TerminalPanel既有ARIA一条warning。这些分组不合并冒充完整npm test。
+
+最终 `activity-step-motion/run-1792380217575/results.json` 七组实际检查通过：五工具同批入场和单次错开、图标／摘要真实中间opacity、group reopen／不变摘要delta／有快照bootstrap／answered key remount不重播、无快照重连后同一run的新步骤仍入场、隐藏／reduced首次消费、中途收起或改变偏好清理，以及outside focus／手动历史滚动不变。1300／430深浅四张截图已读取；它们只证明有限动效结束后静止与可读性，合成事件排列不用于最终答案布局或官方视觉一致性。初轮 `run-1792380155998` 只到Loading shell，无session fixture请求，保留failed；一次fresh retry通过，page／console／external errors为空，API／SSE均被生成夹具拦截，没有模型执行。
+
+边界最终 `agent-output-boundaries/run-1792380213903/report.json` 十组实际检查通过48个终态步骤exact-once／静态、input／result／codemode三次精确复制（CRLF／Tab／尾空格／字面HTML）、空输出、MCP HTML不执行／不生成image请求、完整超长输出400px双轴滚动、超长工具名保原文并ellipsis、三类hover真命中、parallel＋queued＋partial各自结束和唯一真实持续动画、有快照重连静态，以及430px coarse-pointer三类44px button／native hit／tap。长名初版row right989／name1969.8为真实缺陷，最小改为min-width0／flex-shrink1／ellipsis；最终row／trigger／chevron right1335，name1294.297、metadata1319、chevron宽10，正文无横溢出。hover浅色rgb82、暗色rgb245，均匹配token与:hover实际命中。父级读取touch-details，六图由验收owner读取；无page／console／external错误，只有被fixture拦截的lease写入。初轮HMR／错误工具名partial fixture／离屏关闭按钮与冷hydrate失败保留，不当最终产品失败或丢弃记录；真实长耗时、复杂Markdown光标、原生剪贴板仍未据此通过。
+
+原图额外复查位于本机 `activity-reference-evidence/raw-1792378495618/`：2136×845原件，整数crop／translation，参考100%底层、现状50%上层，无重采样。高置信差异是参考平铺活动行／共享分隔线和单个紧凑命令pill，现状仍有多层卡片及两条Copy栏。参考同图summary/body ink约1.05、tool/body约1.00，当前浅色二者约0.87；ink不是CSS字号，DPI未知，不据此直接放大。源库没有可直接替换的compact shell组件，后续用生成的相同工具／短结果形状收敛，不公开私人参考命令或文字。可选Todo扩展的既有ANSI文本consumer不等于原生结构化Plan/Todo，后者仍未完成。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。

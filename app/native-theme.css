@@ -4491,7 +4491,7 @@ html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
 .tool-call-status-icon { width: 13px; height: 13px; flex-shrink: 0; color: var(--text-dim); }
 .tool-call-row[data-status="success"] .tool-call-status-icon { color: var(--success); }
 .tool-call-row[data-status="error"] .tool-call-status-icon { color: var(--danger); }
-.tool-call-name { flex-shrink: 0; color: inherit; font: inherit; }
+.tool-call-name { min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; font: inherit; }
 .tool-call-preview { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; font: inherit; }
 .tool-call-metadata { flex-shrink: 0; color: var(--text-dim); font: inherit; font-variant-numeric: tabular-nums; }
 .tool-call-chevron { flex-shrink: 0; transition: transform 200ms cubic-bezier(.19, 1, .22, 1); }

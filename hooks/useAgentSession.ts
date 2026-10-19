@@ -31,6 +31,7 @@ import { userMessageKey } from "@/lib/prompt-recovery";
 import { AgentEventConnection } from "@/lib/agent-event-connection";
 import { isNestedToolExecutionEvent, isSystemMessageEvent } from "@/lib/agent-event-wire";
 import { getToolExecutionProgress } from "@/lib/tool-execution-progress";
+import { INITIAL_ACTIVITY_ENTRY_LEDGER, activityEntryReducer } from "@/lib/activity-entry-ledger";
 import { CODEMODE_TOOL_NAME, getCodemodeProgress } from "@/lib/codemode-view";
 import { updateExtensionWidgets } from "@/lib/extension-widgets";
 import { bareMcpOpensSettings } from "@/lib/mcp-command";
@@ -355,6 +356,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   // Membership follows execution events, independently of phase labels and
   // partial output: a partial result is still a running tool.
   const [runningToolCallIds, setRunningToolCallIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [toolEntryLedger, dispatchToolEntry] = useReducer(activityEntryReducer, INITIAL_ACTIVITY_ENTRY_LEDGER);
+  const toolEntryState = useMemo(() => ({ scope: toolEntryLedger.scope, grants: toolEntryLedger.grants }), [toolEntryLedger.scope, toolEntryLedger.grants]);
+  const consumeToolEntries = useCallback((scope: number, ids: readonly string[]) => {
+    dispatchToolEntry({ type: "consume", scope, ids });
+  }, []);
   const [entryIds, setEntryIds] = useState<string[]>([]);
   const [historyCursor, setHistoryCursor] = useState<string | null>(null);
   const [hasEarlierMessages, setHasEarlierMessages] = useState(false);
@@ -550,6 +556,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     const previousIdentity = appliedIdentity;
     setAppliedIdentity(sessionIdentity);
     sessionGenerationRef.current += 1;
+    dispatchToolEntry({ type: "reset_scope" });
     if (previousIdentity && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       rememberScrollPosition(previousIdentity, container);
@@ -722,6 +729,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   // wrapper's in-memory message so the partial output is not dropped.
   const seedStreamingSnapshot = useCallback((message: unknown, preserveActivity = false): boolean => {
     if (!message || typeof message !== "object" || (message as { role?: unknown }).role !== "assistant") return false;
+    dispatchToolEntry({ type: "baseline", messages: [message as AgentMessage] });
     dispatch({ type: "snapshot", message: normalizeToolCalls(message as AgentMessage), preserveActivity });
     return true;
   }, []);
@@ -766,6 +774,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json() as SessionData;
       if (!isCurrent()) return null;
+      dispatchToolEntry({ type: "baseline", messages: d.context.messages });
       // Freshness check: when the disk snapshot is unchanged (same opaque
       // revision), keep any history the user already paged in instead of
       // collapsing back to the fresh 50-entry window. The state hooks then
@@ -922,6 +931,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       const d = await res.json() as { context: SessionData["context"] };
       if (!sessionHookMountedRef.current) return false;
       if (!isCurrent()) return false;
+      dispatchToolEntry({ type: "baseline", messages: d.context.messages });
       // A "before" request prepends history; it is not a new tail message.
       // Keep the message-length layout effect from pulling the reader back to
       // the bottom before the browser delivers its pending scroll event.
@@ -1563,6 +1573,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const handleAgentEvent = useCallback((event: AgentEvent) => {
     switch (event.type) {
       case "connected": {
+        dispatchToolEntry({ type: "connected", hasStreamingSnapshot: event.hasStreamingSnapshot as boolean | undefined });
         dispatch({ type: "end" });
         // Starts/updates replayed after connected rebuild the live membership.
         setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
@@ -1582,6 +1593,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         break;
       }
       case "agent_start":
+        dispatchToolEntry({ type: "agent_start" });
         setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
         cancelEventStreamGrace();
         sdkAgentActiveRef.current = true;
@@ -1687,6 +1699,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
           const msg = event.message as AgentMessage | undefined;
           if (msg?.role === "user") break;
           if (msg?.role === "assistant") {
+            dispatchToolEntry({ type: "message_start", message: msg });
             dispatch({ type: "snapshot", message: msg });
             if (msg.content.length > 0) setAgentPhase(null);
           } else if (msg) {
@@ -1695,6 +1708,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         } else {
           const delta = event.assistantMessageEvent as ClientAssistantMessageEvent | undefined;
           if (delta) {
+            if (delta.type === "toolcall_start" && typeof delta.id === "string") {
+              dispatchToolEntry({ type: "toolcall_start", id: delta.id });
+            }
             dispatch({ type: "delta", event: delta });
             if (delta.type !== "toolcall_start" && delta.type !== "toolcall_delta") {
               setAgentPhase(null);
@@ -2088,6 +2104,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         targetId: entryId,
       });
       if (result?.cancelled || sessionIdRef.current !== sid) return false;
+      dispatchToolEntry({ type: "reset_scope" });
       await loadSession(sid);
       return sessionIdRef.current === sid;
     } catch (e) {
@@ -2104,9 +2121,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     // another branch, so the switch waits for the run like the server does.
     if (bashRunningRef.current || agentRunningRef.current || isCompacting || branchSummaryHolds(branchSummarySessionIdRef.current, sessionIdRef.current)) return;
     if (options?.summarize && leafId) {
+      dispatchToolEntry({ type: "reset_scope" });
       await summarizeAndNavigate(leafId, options.customInstructions);
       return;
     }
+    dispatchToolEntry({ type: "reset_scope" });
     setActiveLeafId(leafId);
     const sid = sessionIdRef.current;
     if (!sid) return;
@@ -2705,6 +2724,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       promotedIdentityRef.current = null;
       const cached = promoted ? null : getSessionViewSnapshot(session.id);
       if (cached) {
+        dispatchToolEntry({ type: "baseline", messages: cached.messages });
         setData({
           sessionId: session.id,
           filePath: "",
@@ -2975,7 +2995,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
   return {
     // State
-    data, loading, error, activeLeafId, messages, activeToolResults, runningToolCallIds, entryIds, historyCursor, hasEarlierMessages, streamState,
+    data, loading, error, activeLeafId, messages, activeToolResults, runningToolCallIds, toolEntryState, consumeToolEntries, entryIds, historyCursor, hasEarlierMessages, streamState,
     agentRunning, modelNames, modelList, modelError, modelScopeWarnings: visibleModelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, newSessionModel, toolPreset, thinkingLevel,
     retryInfo, contextUsage, systemPrompt, forkingEntryId, retryLoad, dismissModelScopeWarnings,
     isCompacting, compactError, compactNotice, compactResult, currentModel, displayModel, modelSwitching, sessionStats,

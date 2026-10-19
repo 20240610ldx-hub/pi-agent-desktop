@@ -46,10 +46,13 @@ function activityHookHarness({ sessionFixtures = {}, strictEffects = false } = {
   const effects = [];
   const timers = new Map();
   const commands = [];
+  let branchChange;
   let cursor = 0;
   let dirty = false;
   let timerId = 0;
-  let opts = { session: { id: "session-a" }, newSessionCwd: null, newSessionDraftKey: null };
+  let opts = { session: { id: "session-a" }, newSessionCwd: null, newSessionDraftKey: null,
+    onBranchDataChange: (_tree, _leafId, change) => { branchChange = change; },
+  };
   let current;
   const stateResponse = { running: false, state: {} };
   const react = {
@@ -156,6 +159,7 @@ function activityHookHarness({ sessionFixtures = {}, strictEffects = false } = {
   render();
   return {
     get current() { return current; }, commands, stateResponse,
+    changeBranch: (...args) => branchChange(...args),
     emit(event) { current.handleAgentEventRef.current(event); return render(); },
     switchSession(id) { opts = { ...opts, session: { id } }; return render(); },
     render,
@@ -322,6 +326,148 @@ test("duplicate mount loads cannot cache an empty transcript or blank a session 
     assert.strictEqual(h.current.messages, liveMessages, "same-revision refresh preserves current live message references");
     assert.equal(h.current.messages.at(-1).content, "New pending message");
   } finally { cache.clearSessionViewCache(); }
+});
+
+test("only genuine tool-call starts grant one-time entries across message handoff", () => {
+  const h = activityHookHarness();
+  h.emit({ type: "agent_start" });
+  const call = { type: "toolCall", toolCallId: "live-entry", toolName: "read", input: {} };
+  // The shared live snapshot can already contain the block before its start.
+  h.emit({ type: "message_start", message: { role: "assistant", content: [call] } });
+  assert.equal(h.current.toolEntryState.grants.size, 0);
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "live-entry", toolName: "read" } });
+  assert.deepEqual([...h.current.toolEntryState.grants], [["live-entry", 0]]);
+  const granted = h.current.toolEntryState;
+  const consume = h.current.consumeToolEntries;
+  h.emit({ type: "message_end", message: { role: "assistant", content: [call] } });
+  assert.strictEqual(h.current.toolEntryState, granted, "message completion preserves the pending grant");
+  h.emit({ type: "tool_execution_start", toolCallId: "live-entry", toolName: "read" });
+  assert.strictEqual(h.current.toolEntryState, granted, "execution starts do not grant entries");
+  consume(granted.scope, ["live-entry"]);
+  h.render();
+  assert.equal(h.current.toolEntryState.grants.size, 0);
+  assert.strictEqual(h.current.consumeToolEntries, consume);
+  h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "live-entry", toolName: "read" } });
+  assert.equal(h.current.toolEntryState.grants.size, 0, "duplicates never replay a consumed entry");
+});
+
+test("loaded history and polled snapshots cannot grant or revoke live tool entries", async () => {
+  const h = activityHookHarness({ sessionFixtures: { "session-a": {
+    sessionId: "session-a", tree: [], leafId: "stored-leaf", context: {
+      messages: [{ role: "assistant", content: [{ type: "toolCall", id: "stored-call", name: "read", arguments: {} }] }],
+      entryIds: ["stored-entry"], oldestEntryId: "stored-entry", hasMore: false, thinkingLevel: "off", model: null,
+    },
+  } } });
+  await h.flush();
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "stored-call", toolName: "read" } });
+  assert.equal(h.current.toolEntryState.grants.size, 0, "history is a baseline, not a new entry");
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 1, id: "live-call", toolName: "read" } });
+  h.stateResponse.running = true;
+  h.stateResponse.state = { isStreaming: true, streamingMessage: { role: "assistant", content: [
+    { type: "toolCall", id: "polled-call", name: "read", arguments: {} },
+    { type: "toolCall", id: "live-call", name: "read", arguments: {} },
+  ] } };
+  await h.flush();
+  await h.reconcile();
+  assert.deepEqual([...h.current.toolEntryState.grants], [["live-call", 0]], "polling does not revoke an existing live grant");
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "polled-call", toolName: "read" } });
+  assert.deepEqual([...h.current.toolEntryState.grants], [["live-call", 0]], "poll snapshots mark their restored IDs seen");
+});
+
+test("reconnect replay never grants an entry but a later fresh tool start does", () => {
+  const h = activityHookHarness();
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "before-reconnect", toolName: "read" } });
+  h.emit({ type: "connected", isStreaming: true, hasStreamingSnapshot: true });
+  assert.equal(h.current.toolEntryState.grants.size, 0, "reconnect drops pending entry animations");
+  h.emit({ type: "tool_execution_start", toolCallId: "replayed", toolName: "read" });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "buffered", toolName: "read" } });
+  assert.equal(h.current.toolEntryState.grants.size, 0);
+  h.emit({ type: "message_start", message: { role: "assistant", content: [{ type: "toolCall", id: "replayed", name: "read", arguments: {} }] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "replayed", toolName: "read" } });
+  assert.equal(h.current.toolEntryState.grants.size, 0);
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 1, id: "fresh-entry", toolName: "write" } });
+  assert.deepEqual([...h.current.toolEntryState.grants], [["fresh-entry", 1]]);
+});
+
+test("reconnecting between tool execution and the next assistant still grants genuine shared-message starts", () => {
+  const h = activityHookHarness();
+  h.emit({ type: "connected", isStreaming: true, hasStreamingSnapshot: false });
+  h.emit({ type: "tool_execution_start", toolCallId: "running-on-reconnect", toolName: "read" });
+  assert.equal(h.current.toolEntryState.grants.size, 0, "execution replay alone is never a new entry");
+  h.emit({ type: "tool_execution_end", toolCallId: "running-on-reconnect", toolName: "read" });
+  const call = { type: "toolCall", id: "next-turn-call", name: "write", arguments: {} };
+  h.emit({ type: "message_start", message: { role: "assistant", content: [call] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "next-turn-call", toolName: "write" } });
+  assert.deepEqual([...h.current.toolEntryState.grants], [["next-turn-call", 0]]);
+});
+
+test("entry scopes reset on session or explicit branch changes, not routine leaf advancement", async () => {
+  const h = activityHookHarness();
+  await h.flush();
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "scoped-call", toolName: "read" } });
+  const first = h.current.toolEntryState;
+  h.current.setActiveLeafId("newly-persisted-leaf");
+  h.render();
+  assert.strictEqual(h.current.toolEntryState, first, "normal persisted leaf movement is not a navigation");
+  h.switchSession("session-b");
+  assert.notEqual(h.current.toolEntryState.scope, first.scope);
+  assert.equal(h.current.toolEntryState.grants.size, 0);
+  await h.flush();
+  const sessionScope = h.current.toolEntryState.scope;
+  await h.current.handleNavigate("branch-entry");
+  h.render();
+  assert.notEqual(h.current.toolEntryState.scope, sessionScope, "accepted in-session navigation starts an entry scope");
+  const branchScope = h.current.toolEntryState.scope;
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "scoped-call", toolName: "read" } });
+  h.current.consumeToolEntries(first.scope, ["scoped-call"]);
+  h.render();
+  assert.equal(h.current.toolEntryState.grants.has("scoped-call"), true, "a stale session consumer cannot acknowledge this branch");
+  h.current.consumeToolEntries(branchScope, ["scoped-call"]);
+  h.render();
+  assert.equal(h.current.toolEntryState.grants.size, 0);
+});
+
+test("branch-picker navigation starts an entry scope for plain and summarized changes", async () => {
+  for (const options of [undefined, { summarize: true }]) {
+    const h = activityHookHarness();
+    await h.flush();
+    const before = h.current.toolEntryState.scope;
+    await h.changeBranch("selected-branch", options);
+    h.render();
+    assert.notEqual(h.current.toolEntryState.scope, before);
+  }
+});
+
+test("entry grants survive terminal handoff until claimed, and empty IDs or execution replay never grant", async () => {
+  for (const terminal of ["prompt_error", "abort", "agent_settled"]) {
+    const h = activityHookHarness();
+    h.current.sessionIdRef.current = null;
+    h.emit({ type: "agent_start" });
+    h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+    for (const id of [undefined, "", " "]) h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id, toolName: "read" } });
+    h.emit({ type: "tool_execution_start", toolCallId: "execution-only", toolName: "read" });
+    assert.equal(h.current.toolEntryState.grants.size, 0);
+    h.emit({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 1, id: "terminal-entry", toolName: "read" } });
+    const grant = h.current.toolEntryState;
+    if (terminal === "abort") {
+      h.current.sessionIdRef.current = "session-a";
+      await h.current.handleAbort();
+      h.render();
+    } else h.emit({ type: terminal, errorMessage: "generated failure" });
+    assert.strictEqual(h.current.toolEntryState, grant, "a committed row can still claim the event after terminal handoff");
+    h.current.consumeToolEntries(grant.scope, ["terminal-entry"]);
+    h.render();
+    assert.equal(h.current.toolEntryState.grants.size, 0, "hidden/reduced consumers can acknowledge without replay later");
+  }
 });
 
 test("keeps the session event stream open through the idle grace window", () => {
