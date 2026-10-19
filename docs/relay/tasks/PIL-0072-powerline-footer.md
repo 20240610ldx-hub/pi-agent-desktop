@@ -1,0 +1,50 @@
+---
+id: PIL-0072
+title: pi-powerline-footer 状态行接入并修复短窗叠字
+epic: E8
+priority: P1
+status: todo
+owner:
+lease_until:
+branch:
+implementers: []
+depends_on: [PIL-0001]
+files_allowed: [lib/builtin-powerline-extension*, components/ExtensionWidgets*, components/ExtensionStatusLine*, e2e/powerline-footer-*.mjs]
+files_shared: [lib/rpc-manager*, hooks/useAgentSession*, lib/agent-event-stream*, lib/agent-event-wire*, lib/types.ts, lib/session-reader*, lib/i18n/messages/*.ts, app/native-theme.css, components/ChatWindow.tsx, package.json, package-lock.json, next.config.ts, scripts/prepare-desktop.mjs, scripts/stage-package*, scripts/web-package-layout.test.mjs, scripts/release-workflows.test.mjs, THIRD_PARTY_NOTICES.md, scripts/fork-ownership.json, docs/pilaude-pi-extensions.md]
+acceptance_sha: b5738af054bb
+waivers: []
+---
+
+## 目标
+
+`pi-powerline-footer` 0.20.2 的状态行在输入器上方正确显示模型与上下文信息，短窗口下不与对话内容重叠。对应 GOALS E8。
+
+## 背景与现状
+
+已有（WIP）：真实 model/context renderer 经 SDK/wrapper 适配 22/22，专用直显 12/12，normal 注册 1/1，实际检查三项；但 390 px 短窗口下 primary 背景透明，与后方 transcript 叠字，旧检查未覆盖这一点。LICENSE 正文缺口未解决，暂不进入 installer。
+
+## 验收标准
+
+- [ ] A1 复现：390 px 短窗口截图显示叠字问题，存证。
+- [ ] A2 修复后同一状态下 primary 行有不透明背景、不与 transcript 重叠；检查脚本增加对重叠的断言（例如状态行与最后一条消息的包围盒不相交），并先在修复前失败。验证：`node e2e/powerline-footer-consumer.mjs`。
+- [ ] A3 one-line 默认展开/收起行为与用户要求一致（默认直接显示），刷新、切换会话、重载扩展后状态正确。
+- [ ] A4 LICENSE 正文缺口记录在 THIRD_PARTY_NOTICES 中，并在卡片日志里写明是否允许打包（需用户决定）。
+- [ ] A5 受影响的测试文件、`node_modules/.bin/tsc --noEmit`、`npm run lint` 通过；`node scripts/relay.mjs guard` 无未豁免阻断项。
+
+## 范围外
+
+完整 editor / footer 替换、第三方 compaction。
+
+## 实现提示
+
+先读仓库根 AGENTS.md 中相关 Hard rules 与 Topic Notes。
+
+## 证据
+
+| 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
+| --- | --- | --- | --- | --- | --- |
+
+## 日志
+
+- 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
+- 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。

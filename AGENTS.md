@@ -1,10 +1,16 @@
 # Pi Web - Development Notes
 
-## Pilaude engineering handoff — read first
+## Pilaude relay — read first
 
-Before continuing Pilaude UI work, read [the engineering workspace](docs/engineering/pilaude-ui/README.md), starting with [handoff](docs/engineering/pilaude-ui/handoff.md), then [plan](docs/engineering/pilaude-ui/plan.md), [progress](docs/engineering/pilaude-ui/progress.md) and [technical specification](docs/engineering/pilaude-ui/technical-spec.md). These files preserve the active task across threads; verify their mutable git/service facts, continue the recorded next step and maintain them after meaningful changes, acceptance, commits or handoff. A checkpoint is not completion of full reproduction. User corrections override old acceptance claims. Keep private references/fonts/credentials outside public engineering records. This durable entry is intentional project guidance; preserve it when removing generated Next.js guidance.
+This repository is built by many agents across tools (Claude Code, Codex, …) and subscriptions, handing work to each other. **The single entry point is [docs/relay/README.md](docs/relay/README.md)** (Chinese). Before any work:
 
-For ongoing Pilaude UI work, the user wants 3–8 implementation subagents while the main agent coordinates, reviews, accepts evidence and saves checkpoints; handling user feedback is the exception. Assign a documentation owner when useful, keep file ownership explicit and serialize actual browser checks against the shared preview. A source freeze is not browser acceptance. Temporary agent handles are session-local; a new thread follows the on-disk handoff instead of waiting for old agents.
+1. Read `docs/relay/README.md`, `docs/relay/GOALS.md`, `docs/relay/RULES.md`, and your role file in `docs/relay/roles/`.
+2. Run `node scripts/relay.mjs check`, `list` and `next`.
+3. Work only on a claimed task card, inside its worktree (`node scripts/relay.mjs start <id>`), within its `files_allowed`.
+
+Non-negotiable (details in `docs/relay/RULES.md`): acceptance criteria are frozen before implementation and change only through `relay amend` approved by the user or planner; implementers never record passing evidence for, or review, their own work; never delete, skip or weaken tests, relax thresholds/baselines, or edit protected files to make checks pass; run `node scripts/relay.mjs guard` before handing to verification; commit `wip(PIL-xxxx): …` often and write the four-part handoff log (`做了 / 状态 / 下一步 / 风险`) before stopping; when unsure or after three failed attempts, set the task `blocked` and stop.
+
+Project state lives in task cards (`docs/relay/tasks/`), task branches (`task/PIL-xxxx-*`) and `docs/relay/GOALS.md` — never in chat history, subagent reports or temporary agent IDs. `docs/engineering/**`, `docs/pilaude-ui-parity.md`, `docs/pilaude-component-adoption.md` and `docs/superpowers/**` are pre-2026-10-19 history archives: consult the specific section a task card cites; do not append new status there. This durable section is intentional project guidance; preserve it when removing generated Next.js guidance.
 
 ## Quick Start
 

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Pilaude relay integrity guard on staged changes. See docs/relay/RULES.md.
+exec node scripts/relay.mjs guard --staged

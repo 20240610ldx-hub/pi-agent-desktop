@@ -1,0 +1,39 @@
+{
+  "integrationBranch": "fusion/pi-claude-desktop",
+  "idPrefix": "PIL",
+  "tasksDir": "docs/relay/tasks",
+  "statusFile": "docs/relay/STATUS.md",
+  "worktreeRoot": "../wt",
+  "evidenceRoot": "../relay-evidence",
+  "defaultLeaseHours": 3,
+  "maxActiveTasks": 8,
+  "protectedPaths": [
+    "app/globals.css",
+    "app/settings.css",
+    "scripts/upstream-css-baseline.json",
+    "lib/branding.test.mjs",
+    "scripts/relay.mjs",
+    "scripts/relay.test.mjs",
+    "docs/relay/RULES.md",
+    "docs/relay/relay.config.json",
+    "docs/relay/GOALS.md",
+    ".githooks/**",
+    "docs/relay/claude/**"
+  ],
+  "privatePatterns": [
+    "references/**",
+    "**/custom.css",
+    "**/datafonts/**",
+    "**/*.ttf",
+    "**/*.otf",
+    "**/*.woff",
+    "**/*.woff2"
+  ],
+  "secretRegexes": [
+    "sk-ant-[A-Za-z0-9_-]{20,}",
+    "\\bsk-[A-Za-z0-9]{32,}",
+    "AKIA[0-9A-Z]{16}",
+    "ghp_[A-Za-z0-9]{30,}",
+    "github_pat_[A-Za-z0-9_]{30,}"
+  ]
+}
