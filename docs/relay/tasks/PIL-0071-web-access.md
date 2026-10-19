@@ -48,3 +48,4 @@ waivers: []
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
+- 2026-10-19T14:24Z · codex:gpt:coord · 做了：原web owner恢复交接已收，D:/pilaude/relay-evidence/PIL-0001/recovery-web/handoff.txt、manifest.json与hunks-and-ownership.json保存从working23329458导出的3条raw专属源及精确共享接点，主已读。状态：28条raw/background专属与11条共享参考共39份hash一致，raw只fetch_content/get_search_content，尚无web_search代码或测试，未声称完整搜索/PDF/YouTube/clone通过。下一步：当前暂停；PIL-0001完成且用户恢复后，在独立任务worktree取专属路径并选择共享hunks，继续原包搜索纵片与真实consumer独立验证。风险：旧raw机器报告未找到，历史受控SDK结果不能冒作新Relay提交证据；不整份覆盖混合RPC/packaging。

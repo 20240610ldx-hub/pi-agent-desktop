@@ -48,3 +48,4 @@ waivers: []
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
+- 2026-10-19T14:24Z · codex:gpt:coord · 做了：原background owner恢复交接已收，D:/pilaude/relay-evidence/PIL-0001/recovery-web/保存working23329458中的25条background/vendor/API/harness专属源，manifest有blob/hash，hunks-and-ownership列精确RPC及packaging范围。状态：后端/原registry/API源可恢复，未发现专属Tasks UI文件；bmynhC四场景与nwJdkE历史报告已保存，但报告自身缺源commit/hash，不追认为当前任务验收。下一步：当前暂停，依赖完成与用户恢复后在任务worktree迁入源，继续现有Tasks pane consumer及状态/重连/全应用退出验证。风险：共享文件须逐hunk协调，不强装排除SDK1.3的原peer、不建立第二registry，不把owned process fixture等同全应用生命周期通过。
