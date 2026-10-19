@@ -1,5 +1,6 @@
 import type { JsonAgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import { slimToolExecutionResult, slimToolResultMessage } from "./tool-result-details";
+import { chapterEntryMessage } from "./conversation-chapters";
 
 export interface AgentEventLike {
   type: string;
@@ -145,6 +146,10 @@ export function isSystemMessageEvent(event: AgentEventLike): boolean {
 export function toClientAgentEvent(
   event: AgentEventLike,
 ): AgentEventLike | ClientMessageUpdateEvent | null {
+  if (event.type === "entry_appended" && isObject(event.entry)) {
+    const message = chapterEntryMessage(event.entry);
+    if (message) return { type: "message_end", message };
+  }
   if (OMITTED_EVENT_TYPES.has(event.type)) return null;
   // Pi >= 0.86 appends the prompt and tool loadout to the transcript as system
   // messages, which the agent loop announces like any message. They carry the

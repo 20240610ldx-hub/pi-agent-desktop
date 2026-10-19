@@ -8245,10 +8245,7 @@ html.dark .app-shell .chat-composer { --composer-line: #373736; --composer-line-
 .app-shell .chat-composer-controls .native-toolbar-button { font-size: 14px !important; font-weight: 400; color: var(--text-muted) !important; }
 .app-shell .chat-scroll-container { padding-top: 24px !important; }
 .app-shell .chat-scroll-container > div { padding-left: 32px !important; padding-right: 32px !important; }
-.app-shell .chat-transcript-column, .app-shell .chat-composer-column { margin-left: auto !important; margin-right: 0 !important; }
-@media (min-width: 1800px) {
-  .app-shell .chat-input-shell, .app-shell .chat-scroll-container > div { padding-right: 89px !important; }
-}
+.app-shell .chat-transcript-column, .app-shell .chat-composer-column { margin-left: auto !important; margin-right: auto !important; }
 .app-shell .conversation-navigator { opacity: 0; transition: opacity 150ms; }
 .app-shell .conversation-navigator:hover, .app-shell .conversation-navigator:focus-within { opacity: 1; }
 .app-shell .composer-send-button, .app-shell .composer-abort-button { display: inline-flex; align-items: center; justify-content: center; width: 28px !important; height: 28px !important; flex-shrink: 0; padding: 0; border: 0; border-radius: 7px; background: transparent; box-shadow: none; color: var(--text); cursor: pointer; }
@@ -8594,11 +8591,13 @@ html.dark .sidebar-title-tooltip { background: #20201f; border-color: #373736; c
 }
 
 /* Conversation navigation reference */
-/* Native reference dimensions are sampled at this implementation's 1.25
-   capture scale; they do not establish the reference's OS DPI or app zoom.
-   Reserve a fixed gutter only when this transcript has a navigation rail. */
-.app-shell .chat-scroll-container:has(~ .conversation-navigator) > div {
-  padding-left: 64.8px !important; /* 12px inset + 28.8px track + 24px gap */
+/* Native reference dimensions do not establish OS DPI or app zoom.
+   Keep both reading axes centered in the actual middle column. Symmetric
+   insets reserve the rail's 12px + 28.8px target + 24px body gap. */
+.app-shell .chat-scroll-container:has(~ .conversation-navigator) > div,
+.app-shell .chat-window:has(.conversation-navigator) .chat-input-shell {
+  padding-left: 64.8px !important;
+  padding-right: 64.8px !important;
 }
 .app-shell .conversation-navigator {
   --navigation-tick: #a5a59d;
@@ -8613,7 +8612,7 @@ html.dark .sidebar-title-tooltip { background: #20201f; border-color: #373736; c
   left: 12px;
   top: 24px;
   bottom: calc(var(--chat-composer-inset, 0px) + 24px);
-  width: 28.8px;
+  width: calc(100% - 24px);
   height: auto;
   max-height: none;
   z-index: 30;
@@ -8684,8 +8683,8 @@ html.dark .app-shell .conversation-navigator {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  width: 278.4px;
-  max-width: calc(100vw - 48px);
+  width: 256px;
+  max-width: 100%;
   max-height: min(360px, 100%);
   margin: 0;
   padding: 5px 4px 4.2px;

@@ -1,5 +1,9 @@
 # Pi Web - Development Notes
 
+## Pilaude engineering handoff — read first
+
+Before continuing Pilaude UI work, read [the engineering workspace](docs/engineering/pilaude-ui/README.md), starting with [handoff](docs/engineering/pilaude-ui/handoff.md), then [plan](docs/engineering/pilaude-ui/plan.md), [progress](docs/engineering/pilaude-ui/progress.md) and [technical specification](docs/engineering/pilaude-ui/technical-spec.md). These files preserve the active task across threads; verify their mutable git/service facts, continue the recorded next step and maintain them after meaningful changes, acceptance, commits or handoff. A checkpoint is not completion of full reproduction. User corrections override old acceptance claims. Keep private references/fonts/credentials outside public engineering records. This durable entry is intentional project guidance; preserve it when removing generated Next.js guidance.
+
 ## Quick Start
 
 ```bash

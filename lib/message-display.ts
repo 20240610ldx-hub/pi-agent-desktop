@@ -1,16 +1,19 @@
-import type { AgentMessage, AssistantContentBlock, AssistantMessage, ThinkingContent, ToolCallContent } from "./types";
+import type { AgentMessage, AssistantContentBlock, AssistantMessage, ThinkingContent, ToolCallContent, ToolResultMessage } from "./types";
+import { isRecordedChapterToolCall, readConversationChapter } from "./conversation-chapters.ts";
 
 interface DisplayOptions {
   isStreaming?: boolean;
+  chapterIds?: ReadonlySet<string>;
+  toolResults?: ReadonlyMap<string, ToolResultMessage>;
+  runningToolCallIds?: ReadonlySet<string>;
+  partialToolCallIds?: ReadonlySet<string>;
 }
 
 export function getThinkingPreview(thinking: string): string {
   return thinking.trimStart().match(/^[^\r\n]{0,240}/u)?.[0].trimEnd() ?? "";
 }
 
-export function isMessageGroupAnchor(message: { role?: AgentMessage["role"]; customType?: string }): boolean {
-  // A background subagent completion starts a new displayed turn, same as a
-  // user message or a compaction / branch summary. Other custom messages stay inside the turn.
+export function isMessageRunAnchor(message: AgentMessage): boolean {
   return message.role === "user"
     || (message.role === "custom" && (
       message.customType === "compaction"
@@ -19,15 +22,27 @@ export function isMessageGroupAnchor(message: { role?: AgentMessage["role"]; cus
     ));
 }
 
+export function isMessageGroupAnchor(message: AgentMessage): boolean {
+  // Chapters split displayed phases without ending their containing live run.
+  return Boolean(readConversationChapter(message)) || isMessageRunAnchor(message);
+}
+
 export function isEmptyThinkingBlock(block: AssistantContentBlock, options: DisplayOptions = {}): block is ThinkingContent {
   return block.type === "thinking" && !block.deferred && !options.isStreaming && block.thinking.trim() === "";
+}
+
+export function isDisplayableAssistantBlock(block: AssistantContentBlock, options: DisplayOptions = {}): boolean {
+  if (isEmptyThinkingBlock(block, options)) return false;
+  if (!options.chapterIds || !isRecordedChapterToolCall(block, options.chapterIds) || block.type !== "toolCall") return true;
+  const result = options.toolResults?.get(block.toolCallId);
+  return !result || Boolean(result.isError) || Boolean(options.runningToolCallIds?.has(block.toolCallId)) || Boolean(options.partialToolCallIds?.has(block.toolCallId));
 }
 
 export function getDisplayableAssistantBlocks(
   message: AssistantMessage,
   options: DisplayOptions = {},
 ): AssistantContentBlock[] {
-  return (message.content ?? []).filter((block) => !isEmptyThinkingBlock(block, options));
+  return (message.content ?? []).filter((block) => isDisplayableAssistantBlock(block, options));
 }
 
 export function getAssistantErrorMessage(

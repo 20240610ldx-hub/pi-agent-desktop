@@ -6,7 +6,7 @@ import type { UnavailableWorkspace } from "@/lib/workspace-availability";
 import type { AgentMessage, AssistantContentBlock, AssistantMessage, BashExecutionMessage, BlockingExtensionUiRequest, ExtensionUiRequest, LeafChangeOptions, SessionInfo, SessionTreeNode, ToolResultMessage } from "@/lib/types";
 import { normalizeCustomPanelLines } from "@/lib/ansi";
 import { asBracketedPaste, toTerminalKeyData } from "@/lib/terminal-input";
-import { getAssistantErrorMessage, getDisplayableAssistantBlocks, hasAssistantAnswer, isAssistantTruncated, isMessageGroupAnchor, splitFinalAssistantBlocks } from "@/lib/message-display";
+import { getAssistantErrorMessage, getDisplayableAssistantBlocks, hasAssistantAnswer, isAssistantTruncated, isMessageGroupAnchor, isMessageRunAnchor, splitFinalAssistantBlocks } from "@/lib/message-display";
 import { extractTurnWrittenFiles, type WrittenFile } from "@/lib/turn-written-files";
 import { applyPatchResultHasFailures } from "@/lib/apply-patch";
 import { isApplyPatchToolName } from "@/lib/tool-names";
@@ -15,7 +15,8 @@ import { MessageView } from "./MessageView";
 import { DisclosureBody } from "./DisclosureBody";
 import { MarkdownBody } from "./MarkdownBody";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
-import { ConversationNavigator, SESSION_START_INDEX, type ConversationTurnLocation } from "./ConversationNavigator";
+import { ConversationNavigator, SESSION_START_INDEX } from "./ConversationNavigator";
+import { getConversationChapters } from "@/lib/conversation-chapters";
 import { ExtensionWidgets } from "./ExtensionWidgets";
 import { ExtensionStatusLine, formatExtensionStatusLine } from "./ExtensionStatusLine";
 import { AnsiText } from "./AnsiText";
@@ -203,7 +204,7 @@ interface ProcessState {
   pendingCount: number;
 }
 
-export function getProcessState(turnMessages: AgentMessage[], toolResults: ReadonlyMap<string, ToolResultMessage>, runningToolCallIds: ReadonlySet<string>, active: boolean, partialToolCallIds?: ReadonlySet<string>): ProcessState {
+export function getProcessState(turnMessages: AgentMessage[], toolResults: ReadonlyMap<string, ToolResultMessage>, runningToolCallIds: ReadonlySet<string>, active: boolean, partialToolCallIds?: ReadonlySet<string>, chapterIds?: ReadonlySet<string>): ProcessState {
   const calls = new Map<string, string>();
   let failedCount = 0;
   let completedCount = 0;
@@ -213,7 +214,7 @@ export function getProcessState(turnMessages: AgentMessage[], toolResults: Reado
   for (const message of turnMessages) {
     if (message.role !== "assistant") continue;
     messageError ||= Boolean(getAssistantErrorMessage(message));
-    for (const block of message.content) if (block.type === "toolCall") calls.set(block.toolCallId, block.toolName);
+    for (const block of getDisplayableAssistantBlocks(message, { chapterIds, toolResults, runningToolCallIds, partialToolCallIds })) if (block.type === "toolCall") calls.set(block.toolCallId, block.toolName);
   }
   for (const [id, name] of calls) {
     const result = toolResults.get(id);
@@ -494,15 +495,8 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
     void handleSend(initialPrompt);
   }, [initialPrompt, loading, error, handleSend, onInitialPromptConsumed]);
 
-  const conversationTurns = useMemo<ConversationTurnLocation[]>(() => {
-    const turns: ConversationTurnLocation[] = [];
-    for (let userIdx = 0; userIdx < messages.length; userIdx++) {
-      const question = getUserInputText(messages[userIdx]);
-      if (!question) continue;
-      turns.push({ index: turns.length, question, entryId: entryIds[userIdx] });
-    }
-    return turns;
-  }, [messages, entryIds]);
+  const conversationChapters = useMemo(() => getConversationChapters(messages, entryIds), [messages, entryIds]);
+  const chapterIds = useMemo(() => new Set(conversationChapters.map((chapter) => chapter.chapterId)), [conversationChapters]);
 
   // Fork/navigate stay referentially stable across busy transitions; gating
   // happens at call time (ref) and visually via the data-session-busy CSS
@@ -1118,7 +1112,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
     ? (modelThinkingLevelMaps[`${displayModelValue.provider}:${displayModelValue.modelId}`] ?? null)
     : null;
 
-  // Jump to a conversation turn from the navigator rail. Turns can sit
+  // Jump to an explicitly recorded chapter from the navigator rail. Chapters can sit
   // outside the rendered window, so expand the window to the full branch
   // first, then scroll once the anchor is mounted. The window counts rendered
   // items, not messages: a turn's "Process details" group is one more item, so
@@ -1127,8 +1121,10 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   useEffect(() => () => {
     if (navigatorFrameRef.current !== null) cancelAnimationFrame(navigatorFrameRef.current);
   }, [session?.id, activeLeafId]);
-  const selectConversationTurn = useCallback((turnIndex: number) => {
-    if (turnIndex === SESSION_START_INDEX && hasEarlierMessages) return;
+  const selectConversationChapter = useCallback((chapterIndex: number) => {
+    if (chapterIndex === SESSION_START_INDEX && hasEarlierMessages) return;
+    const chapter = conversationChapters.find((item) => item.index === chapterIndex);
+    if (chapterIndex !== SESSION_START_INDEX && !chapter) return;
     setVisibleCount((current) => Math.max(current, messages.length * 2));
     if (navigatorFrameRef.current !== null) cancelAnimationFrame(navigatorFrameRef.current);
     navigatorFrameRef.current = requestAnimationFrame(() => {
@@ -1137,17 +1133,17 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
         const container = scrollContainerRef.current;
         if (!container) return;
         const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
-        if (turnIndex === SESSION_START_INDEX) {
+        if (chapterIndex === SESSION_START_INDEX) {
           container.scrollTo({ top: 0, behavior });
           return;
         }
-        const anchor = container.querySelector<HTMLElement>(`[data-conversation-turn="${turnIndex}"]`);
+        const anchor = container.querySelector<HTMLElement>(`[data-conversation-chapter="${CSS.escape(chapter!.chapterId)}"]`);
         if (!anchor) return;
         const top = anchor.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
         container.scrollTo({ top: Math.max(0, top), behavior });
       });
     });
-  }, [messages.length, hasEarlierMessages, scrollContainerRef]);
+  }, [messages.length, hasEarlierMessages, scrollContainerRef, conversationChapters]);
 
   const chatInputElement = (
     <ChatInput
@@ -1350,21 +1346,13 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
               for (let i = messages.length - 1; i >= 0; i--) {
                 if (messages[i].role === "user") { lastUserIdx = i; break; }
               }
-              const lastAnchorIdx = messages.findLastIndex(isMessageGroupAnchor);
+              const lastAnchorIdx = messages.findLastIndex(isMessageRunAnchor);
               const visibleRefIndexByMessage = new Map<number, number>();
               let refIdx = 0;
               messages.forEach((msg, idx) => {
                 if (isMessageGroupAnchor(msg) || msg.role === "assistant") {
                   visibleRefIndexByMessage.set(idx, refIdx++);
                 }
-              });
-
-              // Turn numbers for the navigator rail: they must count user messages
-              // exactly like `conversationTurns`, whose indexes the rail selects.
-              const turnIndexByMessageIndex = new Map<number, number>();
-              let nextTurnIndex = 0;
-              messages.forEach((msg, idx) => {
-                if (getUserInputText(msg)) turnIndexByMessageIndex.set(idx, nextTurnIndex++);
               });
 
               const attachVisibleRef = (idx: number, refIndex: number) => (el: HTMLDivElement | null) => {
@@ -1407,6 +1395,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                     partialToolCallIds={partialToolCallIds}
                     activeToolCallId={activeToolCallId}
                     toolResults={toolResultsMap}
+                    chapterIds={chapterIds}
                     modelNames={modelNames}
                     cwd={messageCwd}
                     onOpenFile={onOpenFile}
@@ -1433,7 +1422,6 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                   <div
                     key={`${keyPrefix}-${messageKey}`}
                     data-entry-id={entryIds[idx]}
-                    data-conversation-turn={turnIndexByMessageIndex.get(idx)}
                     ref={options.attachRef === false ? undefined : attachVisibleRef(idx, currentRefIdx)}>
                     {view}
                   </div>
@@ -1487,7 +1475,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                   }
                   if (processMessage.role !== "assistant") continue;
                   const message = processIdx === finalAssistantIdx ? finalProcessMessage : processMessage;
-                  const blocks = getDisplayableAssistantBlocks(message, { isStreaming: processIdx === streamingIdx });
+                  const blocks = getDisplayableAssistantBlocks(message, { isStreaming: processIdx === streamingIdx, chapterIds, toolResults: toolResultsMap, runningToolCallIds, partialToolCallIds });
                   if (blocks.length === 0) continue;
                   processRefIdx ??= visibleRefIndexByMessage.get(processIdx);
                   revealProcess ||= Boolean(pendingSearchScroll && entryIds[processIdx] === pendingSearchScroll.entryId && (!searchBlock || blocks.includes(searchBlock)));
@@ -1501,7 +1489,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
 
                 if (processViews.length > 0) {
                   const processActive = endIdx === messages.length && (sessionBusy || streamState.isStreaming) && !finalAnswerMessage;
-                  const processState = getProcessState(messages.slice(userIdx + 1, endIdx), toolResultsMap, runningToolCallIds, processActive, partialToolCallIds);
+                  const processState = getProcessState(messages.slice(userIdx + 1, endIdx), toolResultsMap, runningToolCallIds, processActive, partialToolCallIds, chapterIds);
                   if (processActive) phaseInProcess = true;
                   rendered.push(
                     <div
@@ -1578,10 +1566,10 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
         </div>
           <ConversationNavigator
             key={`${session?.id ?? newSessionDraftKey ?? "new"}:${activeLeafId ?? ""}`}
-            turns={conversationTurns}
-            hasSessionStart={!loading && !hasEarlierMessages}
+            chapters={conversationChapters}
+            hasSessionStart={!loading && !hasEarlierMessages && messages.length > 0}
             scrollContainerRef={scrollContainerRef}
-            onSelect={selectConversationTurn}
+            onSelect={selectConversationChapter}
           />
         </>
         }

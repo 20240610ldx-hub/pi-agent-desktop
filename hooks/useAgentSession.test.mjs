@@ -671,6 +671,25 @@ test("an older admission ACK cannot clear Sending for a newer run of the same se
   assert.equal(h.current.isSending, false);
 });
 
+test("a real projected chapter append preserves live streaming and phase while deduplicating chapter identity", () => {
+  const h = activityHookHarness();
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "thinking_start", contentIndex: 0 } });
+  h.emit({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "Ongoing real reasoning" } });
+  h.emit({ type: "tool_execution_start", toolCallId: "mark-call", toolName: "mark_chapter" });
+  const stream = h.current.streamState;
+  const phase = h.current.agentPhase;
+  const wire = hookModule.dependencies.get("@/lib/agent-event-wire");
+  const event = wire.toClientAgentEvent({ type: "entry_appended", entry: { type: "custom", id: "chapter-entry", customType: "pi-web:chapter", data: { version: 1, chapterId: "mark-call", title: "Inspect parser" } } });
+  h.emit(event);
+  assert.strictEqual(h.current.streamState, stream, "chapter metadata is not an assistant stream end");
+  assert.strictEqual(h.current.agentPhase, phase, "the actual tool continues its existing phase");
+  h.emit(event);
+  assert.equal(h.current.messages.filter((message) => message.customType === "pi-web:chapter").length, 1);
+  assert.equal(h.current.messages[0].content, "Inspect parser");
+});
+
 test("keeps the session event stream open through the idle grace window", () => {
   const finishSource = source.slice(
     source.indexOf("const finishPromptWithoutStream"),

@@ -260,6 +260,14 @@ RED 先复现 `[a,b,c]` 配合持久 pin `[b,a]` 仍显示 `[a,b,c]`，再补 pi
 
 ## 左上导航轨与内容搜索（2026-10-19）
 
+用户随后纠正分片语义：导航必须取模型显式调用章节工具撰写的粗体阶段标题，不应按用户消息分片。此前实现以用户消息生成目录，语义验收不成立；以下旧运行仅保留几何／交互证据，不能证明章节来源正确。用户还明确要求收窄的恒定目录宽度，以及正文／输入器在实际中间栏内居中并随左右列宽变化。真实 RED `run-1792383704804/` 有十二个合法章节却仍列三十六条用户问题；布局 RED `run-1792383819453/` 在 2000px 宽、左栏 180px 时正文／输入器中心均向右偏 238px，左栏 480px 时偏 88px。Files 打开后两条轴还相差约 16.4px；目录实际固定 278.39px，属于偏宽而非随标题伸展。现已通过下列限定验收。256px 是本轮收窄选择，参考 DPI 未知，不冒充原 CSS 精确值。
+
+`mark_chapter({title})` 是正常 coding 会话的 model-only／sequential 工具，以 toolCallId 同步 append 版本化 chapter custom entry，确认记录后返回；读取只投影当前 branch。实时只将合法 entry_appended 投影为 custom message_end，hook 按 ID 去重且保当前 stream／phase。UI 只消费这些记录，标题纯文本 strong 位于过程组外；同请求多章、同名不同 ID 保留，普通用户／bold／heading 不生成目录。只有记录对应的真实成功终态控制工具从普通卡片／计数中隐藏，失败／pending／partial 保留。独立 review 复现 chapter 显示边界误使同批 queued 工具变 cancelled，现将真实 run anchor 与显示 anchor 分离，公开 SSR RED→GREEN 并复查关闭。
+
+核心173项、UI88项分别通过，父级最终组合323项、类型、完整lint及更新后ownership／CSS15项通过；lint只有TerminalPanel既有warning。独立实际SDK→SSE→disk reopen／branch→公开hook复查通过，invalid／cancel不写章，重放一次、后续正文继续；无真实模型调用。实际 `conversation-navigator-layout/run-1792384522954/` 六组通过章节／strong锚点／点击、keyboard／IME／focus／draft／手动历史、实时新增／重复、256px＋ellipsis、深浅与2200／900／390／390×340。实际 `run-1792384456445/` 另通过左右列原生Home／End四状态：左180↔480、右300↔1100，正文／composer中心偏差及互差均0、目录256px，Context通过真实按钮逐状态关闭后轨道和可见目录行native hit为真。page／console／nonRead／external均空，生成夹具不执行模型。旧错误report字段、hover打开目录后再点trigger拦截及Context遮挡记录保留。
+
+限制：`run-1792384473222/` 的活动run＋长草稿在390×340时目录仅剩约10px、没有完整可见行，最终短窗通过属于settled run，不据此声称该busy组合已修复；小于280px可用宽度的clamp未实际覆盖。旧五千消息E2E夹具无章节且最早历史未加载，现断言不伪造用户分片；该完整runner未运行，不称完整E2E通过。Windows原生／DPI与完整视觉一致仍待验。
+
 实际 `conversation-navigator-layout/run-1792375287625/` 通过深浅、0／50／100% 历史滚动、侧栏／Files 切换、2200×1000／900×600／390×812／390×340、点击／方向键／IME／Escape 焦点、draft reload／resize 和目录不抢正文滚动。轨道相对聊天栏 left=12／top=24 CSS px，正文最小间隙 24px；仅有真实 navigator 时预留 gutter。390px 正文宽 309.2px；390×340 下 track／directory bottom=174，低于输入器 top214.5，短窗不会压输入器。18 项定向测试、类型及 lint 通过；无写入／外部／页面错误。
 
 原像素比较 `conversation-navigator-layout/comparison-1792374705856/` 用 1625×1125 actual 整数裁剪 [300,0,541,616]，参考 100%／actual 50%，无缩放。reference rail [47,103,68,214]，actual [43,86,65,198]；active 右端差 −3 原像素，正文边界差 +2.746，ink-to-body gap 差 +5.746。首刻度 top 差 −17，但参考 crop 原点／系统 DPI／zoom 未知，不据此改固定 top24 或声称像素一致。

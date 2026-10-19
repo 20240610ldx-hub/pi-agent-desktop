@@ -32,6 +32,7 @@ import { AgentEventConnection } from "@/lib/agent-event-connection";
 import { isNestedToolExecutionEvent, isSystemMessageEvent } from "@/lib/agent-event-wire";
 import { getToolExecutionProgress } from "@/lib/tool-execution-progress";
 import { INITIAL_ACTIVITY_ENTRY_LEDGER, activityEntryReducer } from "@/lib/activity-entry-ledger";
+import { readConversationChapter } from "@/lib/conversation-chapters";
 import { CODEMODE_TOOL_NAME, getCodemodeProgress } from "@/lib/codemode-view";
 import { updateExtensionWidgets } from "@/lib/extension-widgets";
 import { bareMcpOpensSettings } from "@/lib/mcp-command";
@@ -1742,6 +1743,12 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         if (!agentRunningRef.current) break;
         if (isSystemMessageEvent(event)) break;
         const completed = event.message as AgentMessage | undefined;
+        const chapter = completed && readConversationChapter(completed);
+        if (completed && chapter) {
+          setMessages((prev) => prev.some((message) => readConversationChapter(message)?.chapterId === chapter.chapterId)
+            ? prev : [...prev, completed]);
+          break;
+        }
         if (completed && completed.role === "user") {
           // Delivered steering/follow-up messages surface here as user
           // messages. The run's initial prompt also emits one, but handleSend

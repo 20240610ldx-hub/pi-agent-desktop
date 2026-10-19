@@ -9,7 +9,7 @@ const jiti = createJiti(import.meta.url, { jsx: { runtime: "automatic" }, tsconf
 const React = await jiti.import("react");
 const { renderToStaticMarkup } = await jiti.import("react-dom/server");
 const { I18nProvider } = await jiti.import("../hooks/useI18n.tsx");
-const { ConversationNavigator, SESSION_START_INDEX, getConversationLocationTitle, findActiveConversationLocation, keepConversationItemVisible } = await jiti.import("./ConversationNavigator.tsx");
+const { ConversationNavigator, SESSION_START_INDEX, findActiveConversationLocation, keepConversationItemVisible } = await jiti.import("./ConversationNavigator.tsx");
 const { isImeComposing } = await jiti.import("../lib/ime.ts");
 const source = readFileSync(new URL("./ConversationNavigator.tsx", import.meta.url), "utf8");
 const chatSource = readFileSync(new URL("./ChatWindow.tsx", import.meta.url), "utf8");
@@ -37,28 +37,28 @@ function keyEvent(key, overrides = {}) {
   };
 }
 
-const turns = [
-  { index: 0, entryId: "first", question: "## Existing heading\nSecond line" },
-  { index: 1, entryId: "second", question: "真实用户问题\nMore text" },
+const chapters = [
+  { index: 0, chapterId: "chapter-first", entryId: "first", messageIndex: 1, title: "Regression verification" },
+  { index: 1, chapterId: "chapter-second", entryId: "second", messageIndex: 3, title: "Regression verification" },
 ];
 
-test("the rail has one real start plus loaded user turns, without question/answer previews", () => {
+test("the rail contains only explicit chapter records plus the real session start", () => {
   const html = renderToStaticMarkup(React.createElement(I18nProvider, null,
-    React.createElement(ConversationNavigator, { turns, hasSessionStart: true, scrollContainerRef: { current: null }, onSelect() {} })));
+    React.createElement(ConversationNavigator, { chapters, hasSessionStart: true, scrollContainerRef: { current: null }, onSelect() {} })));
   assert.match(html, /aria-expanded="false"/);
-  assert.equal((html.match(/conversation-navigator-tick/g) ?? []).length, 3);
+  assert.equal((html.match(/conversation-navigator-tick/g) ?? []).length, 3, "Duplicate titles retain distinct chapter IDs");
   assert.equal((html.match(/is-active/g) ?? []).length, 1);
   assert.doesNotMatch(html, /conversation-navigator-preview|role="slider"/);
   const noHistoryStart = renderToStaticMarkup(React.createElement(I18nProvider, null,
-    React.createElement(ConversationNavigator, { turns, scrollContainerRef: { current: null }, onSelect() {} })));
+    React.createElement(ConversationNavigator, { chapters, scrollContainerRef: { current: null }, onSelect() {} })));
   assert.equal((noHistoryStart.match(/conversation-navigator-tick/g) ?? []).length, 2);
 });
 
-test("directory labels preserve the first real line rather than inventing chapters", () => {
-  assert.equal(getConversationLocationTitle("\n  ## Existing heading\r\nBody"), "Existing heading");
-  assert.equal(getConversationLocationTitle("真实问题首行\n后续内容"), "真实问题首行");
-  assert.equal(getConversationLocationTitle("#literal is not a heading\nBody"), "#literal is not a heading");
-  assert.equal(getConversationLocationTitle("#\nBody"), "#");
+test("chapterless loaded history has only Session start; incomplete history never claims its tail is the start", () => {
+  const render = (hasSessionStart) => renderToStaticMarkup(React.createElement(I18nProvider, null,
+    React.createElement(ConversationNavigator, { chapters: [], hasSessionStart, scrollContainerRef: { current: null }, onSelect() {} })));
+  assert.equal((render(true).match(/conversation-navigator-tick/g) ?? []).length, 1);
+  assert.equal(render(false), "");
 });
 
 test("scroll active follows section boundaries and does not jump toward a nearer future turn", () => {
@@ -229,9 +229,9 @@ test("list growth preserves manual directory scroll; opening and a different cur
   assert.deepEqual(runs, [4, 4]);
 });
 
-test("ChatWindow reveals historical anchors, cancels stale jumps, and respects reduced motion", () => {
-  const script = variableCallback(chatSource, "selectConversationTurn");
-  for (const [turnIndex, hasEarlierMessages, reducedMotion, expected] of [[12, true, false, 334], [SESSION_START_INDEX, false, true, 0], [SESSION_START_INDEX, true, false, null]]) {
+test("ChatWindow reveals stable chapter anchors, cancels stale jumps, and respects reduced motion", () => {
+  const script = variableCallback(chatSource, "selectConversationChapter");
+  for (const [chapterIndex, hasEarlierMessages, reducedMotion, expected] of [[12, true, false, 334], [SESSION_START_INDEX, false, true, 0], [SESSION_START_INDEX, true, false, null]]) {
     const calls = [];
     const frames = [];
     const cancelled = [];
@@ -240,18 +240,19 @@ test("ChatWindow reveals historical anchors, cancels stale jumps, and respects r
     const container = {
       scrollTop: 300,
       getBoundingClientRect: () => ({ top: 100 }),
-      querySelector(selector) { assert.equal(selector, '[data-conversation-turn="12"]'); return { getBoundingClientRect: () => ({ top: 150 }) }; },
+      querySelector(selector) { assert.equal(selector, '[data-conversation-chapter="chapter-unique"]'); return { getBoundingClientRect: () => ({ top: 150 }) }; },
       scrollTo(value) { calls.push(value); },
     };
     const handler = script.runInNewContext({
       SESSION_START_INDEX, hasEarlierMessages, messages: Array(100), navigatorFrameRef,
+      conversationChapters: [{ index: 12, chapterId: "chapter-unique" }], CSS: { escape(value) { assert.equal(value, "chapter-unique"); return value; } },
       setVisibleCount(update) { visibleCount = update(visibleCount); },
       cancelAnimationFrame(id) { cancelled.push(id); },
       requestAnimationFrame(callback) { frames.push(callback); return frames.length; },
       scrollContainerRef: { current: container },
       window: { matchMedia: () => ({ matches: reducedMotion }) },
     });
-    handler(turnIndex);
+    handler(chapterIndex);
     while (frames.length) frames.shift()();
     if (expected === null) {
       assert.equal(visibleCount, 20);

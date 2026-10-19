@@ -2,6 +2,12 @@
 
 Fork-owned notes moved out of `AGENTS.md` to keep it short. The upstream doc on the same topic (`docs/agents/*.md` without the `fork-` prefix) may describe the same area in other words; where they disagree, these notes describe this fork. Hard rules that must survive a merge are also listed in `AGENTS.md` under **Hard rules**.
 
+## Model-authored conversation chapters
+
+Conversation navigation represents explicit `mark_chapter({ title })` model tool calls. It never derives sections from user prompts, ordinary bold text, Markdown headings or tool output. The recognized `pi-web:chapter` record carries a versioned stable chapter ID and plain title; the transcript renders the title in `<strong>` outside process disclosures and the rail targets that exact ID. Duplicate titles can belong to different chapters. The real Session start appears only after the oldest history is loaded; a paged tail is not relabeled as the beginning.
+
+The directory has a fixed 256px width, with ellipsis inside rows and a clamp to the available middle column. The transcript and composer share a centered axis within the actual middle column as either adjacent column changes width. When the rail is present, symmetric insets keep its hit target and body gap without shifting that axis. All these fork styles belong in `app/native-theme.css`; do not restore right-only auto margins or a wide-screen right inset.
+
 ## Touch affordances
 Session rows render the "…" action menu when `(hovered || touchMode)` — `touchMode` is a post-mount `matchMedia("(hover: none)")` check, so hover styling is untouched on desktop and rename/delete stay reachable on touch. On narrow screens a compact Stop button renders *outside* the collapsed "More controls" row while a run is active. Rename/delete failures surface a fixed-position toast (`sidebar.renameFailed` / `sidebar.deleteFailed`) instead of being swallowed.
 

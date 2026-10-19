@@ -72,6 +72,19 @@ test("process status counts confirmed results and never treats partial live outp
   assert.equal(getProcessState(turn, new Map(), new Set(), false).status, "pending", "missing results never imply completed success");
 });
 
+test("process counts exclude only confirmed recorded chapter controls and preserve genuine failures", () => {
+  const turn = [{ role: "assistant", content: [
+    { type: "toolCall", toolCallId: "chapter", toolName: "mark_chapter", input: { title: "Verification" } },
+    { type: "toolCall", toolCallId: "read", toolName: "read", input: { path: "a.txt" } },
+  ] }];
+  const result = (toolCallId, isError) => ({ role: "toolResult", toolCallId, content: [], isError });
+  const results = new Map([["chapter", result("chapter", false)], ["read", result("read", false)]]);
+  assert.deepEqual(getProcessState(turn, results, new Set(), false, new Set(), new Set(["chapter"])), { status: "success", toolCallCount: 1, completedCount: 1, failedCount: 0, pendingCount: 0 });
+  results.set("chapter", result("chapter", true));
+  assert.deepEqual(getProcessState(turn, results, new Set(), false, new Set(), new Set(["chapter"])), { status: "error", toolCallCount: 2, completedCount: 2, failedCount: 1, pendingCount: 0 });
+  assert.equal(getProcessState(turn, new Map(), new Set(), false, new Set(), new Set(["chapter"])).pendingCount, 2);
+});
+
 test("process summary recognizes a confirmed apply_patch partial failure", () => {
   const turn = [{ role: "assistant", content: [{ type: "toolCall", toolCallId: "patch", toolName: "apply_patch", input: {} }] }];
   const result = { role: "toolResult", toolCallId: "patch", isError: false, content: [], details: { result: { failures: [{ path: "a.txt", error: "context mismatch" }] } } };

@@ -84,7 +84,7 @@
 - [x] 首次错误展开并能定位到具体步骤；之后手动收起有效，实际手动历史滚动未被错误展开抢回。
 - [ ] Tab／Enter／Space／Escape／IME 及焦点返回覆盖；ARIA IDs 关联，隐藏区不进入焦点序列。
 - [x] 本批实际覆盖流式／错误、目录hover和普通开合不抢手动历史滚动；焦点返回只在收起后代时发生并使用preventScroll。
-- [x] 导航轨位于聊天栏 left12／top24 CSS px，正文最小间隙24px；实际390×340、390×812及桌面矩阵通过。原像素残差另记，不据此称完全一致。
+- [x] 导航来源已修为模型mark_chapter工具→持久化记录→纯文本粗体标题／稳定ID锚点，旧用户消息分片语义验收撤回。最终4522954六组检查与4456445原生左右列四状态通过：目录恒定256px、长标题内部省略，正文／输入器在实际中间栏中心误差均0。普通bold／heading无章节；同请求多章／同名不同ID、实时重放、键盘／IME／草稿／手动历史保留。仅已验常规／settled短窗；活动run＋长草稿390×340目录空间不足及更窄clamp仍待验，不表示Windows完整视觉通过。
 - [x] 顶部会话标题菜单及子菜单已挂载，现有真实动作和不可用原因均由六组实际检查验证，无假选择／假成功。
 - [x] Transcript modes 与 Output styles 已接真实 consumer／后端，分别通过完整页面及提示词消费检查；unsupported exact/chat-only/subagent 风格保原合同并说明原因。
 - [x] 原生会话窗口和 VS Code（项目）已接 Rust／IPC 与 capability 探测，Windows20项Rust和mock IPC页面通过；它们的真实OS窗口／Code.exe启动、DPI和macOS／Linux编译继续待验，不能把合同测试算成实物通过。

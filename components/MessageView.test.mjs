@@ -18,7 +18,7 @@ const {
   formatRelativeMessageTime,
 } = await jiti.import("./MessageView.tsx");
 const { I18nProvider } = await jiti.import("@/hooks/useI18n");
-const { splitFinalAssistantBlocks } = await jiti.import("@/lib/message-display");
+const { splitFinalAssistantBlocks, isMessageRunAnchor } = await jiti.import("@/lib/message-display");
 
 function renderMessage(message, props = {}) {
   return renderToStaticMarkup(
@@ -29,6 +29,31 @@ function renderMessage(message, props = {}) {
     ),
   );
 }
+
+test("validated chapter records render a literal bold anchor without an extension inspector", () => {
+  const chapter = { role: "custom", customType: "pi-web:chapter", display: true, content: "Validation <tag> & **literal**", details: { version: 1, chapterId: "chapter-unique", title: "Validation <tag> & **literal**" } };
+  const html = renderMessage(chapter);
+  assert.match(html, /data-conversation-chapter="chapter-unique"/);
+  assert.match(html, /<strong>Validation &lt;tag&gt; &amp; \*\*literal\*\*<\/strong>/);
+  assert.doesNotMatch(html, /markdown-custom-message|Pi Web:chapter|<tag>/);
+  assert.doesNotMatch(renderMessage({ ...chapter, details: { ...chapter.details, version: 2 } }), /data-conversation-chapter=/);
+  assert.doesNotMatch(renderMessage({ role: "assistant", content: [{ type: "text", text: "**Ordinary bold text**" }] }), /data-conversation-chapter=/);
+});
+
+test("recorded successful chapter controls keep original search indices and failed controls stay reachable", () => {
+  const call = { type: "toolCall", toolCallId: "chapter-call", toolName: "mark_chapter", input: { title: "Verification" } };
+  const thinking = { type: "thinking", thinking: "Historical reasoning", deferred: true };
+  const message = { role: "assistant", content: [call, thinking, { type: "text", text: "Visible response." }] };
+  const result = { role: "toolResult", toolCallId: "chapter-call", content: [{ type: "text", text: "Recorded" }], isError: false };
+  const props = { chapterIds: new Set(["chapter-call"]), toolResults: new Map([["chapter-call", result]]), searchBlock: thinking };
+  const html = renderMessage(message, props);
+  assert.doesNotMatch(html, /data-tool-call-id="chapter-call"/);
+  assert.match(html, /data-search-target="true"/);
+  assert.match(html, /Historical reasoning/);
+  assert.match(renderMessage(message, { ...props, toolResults: new Map([["chapter-call", { ...result, isError: true }]]) }), /data-tool-call-id="chapter-call"/);
+  assert.equal(MessageView.compare({ message, ...props }, { message, ...props, chapterIds: new Set() }), false);
+  assert.equal(MessageView.compare({ message, ...props }, { message, ...props, chapterIds: new Set(["chapter-call", "unrelated"]) }), true);
+});
 
 test("completed responses expose a fork action, while streaming responses cannot fork", () => {
   const message = { role: "assistant", content: [{ type: "text", text: "A completed response." }] };
@@ -200,6 +225,21 @@ test("a persisted tool with partial output stays running and only the primary to
   assert.equal((html.match(/class="activity-shimmer"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /data-status="success"|data-status="cancelled"/);
   assert.doesNotMatch(renderMessage(message, { ...props, activeToolCallId: "not-running" }), /activity-shimmer/);
+});
+
+test("publishing a chapter keeps sibling tools in the current live run while historical siblings stay cancelled", () => {
+  const chapterCall = { type: "toolCall", toolCallId: "chapter-call", toolName: "mark_chapter", input: { title: "Verification" } };
+  const running = { type: "toolCall", toolCallId: "running", toolName: "read", input: { path: "a.txt" } };
+  const queued = { type: "toolCall", toolCallId: "queued", toolName: "read", input: { path: "b.txt" } };
+  const batch = { role: "assistant", content: [chapterCall, running, queued] };
+  const chapter = { role: "custom", customType: "pi-web:chapter", display: true, content: "Verification", details: { version: 1, chapterId: "chapter-call", title: "Verification" } };
+  const messages = [{ role: "user", content: "Verify this." }, batch, chapter];
+  const props = { chapterIds: new Set(["chapter-call"]), toolResults: new Map([["chapter-call", { role: "toolResult", toolCallId: "chapter-call", content: [], isError: false }]]), runningToolCallIds: new Set(["running"]), activeToolCallId: "running", isStreaming: false };
+  const liveTurn = 1 >= messages.findLastIndex(isMessageRunAnchor);
+  const html = renderMessage(batch, { ...props, liveTurn });
+  assert.match(html, /data-status="pending" data-tool-call-id="queued"/);
+  messages.push({ role: "user", content: "Next request." });
+  assert.match(renderMessage(batch, { ...props, liveTurn: 1 >= messages.findLastIndex(isMessageRunAnchor) }), /data-status="cancelled" data-tool-call-id="queued"/);
 });
 
 test("queued tools stay pending after the live turn's assistant message finishes streaming", () => {

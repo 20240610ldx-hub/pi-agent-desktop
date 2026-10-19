@@ -8,6 +8,7 @@ import { isAbsolute, join, normalize as normalizePath, relative, resolve as reso
 import type { AgentMessage, ImageContent, SessionEntry, SessionHeader, SessionInfo, SessionContext } from "./types";
 import { normalizeToolCalls } from "./normalize";
 import { getThinkingPreview } from "./message-display";
+import { chapterEntryMessage } from "./conversation-chapters";
 import { projectIdentityKey } from "./project-identity";
 import { sessionPathKey } from "./session-path";
 import { MAX_TOOL_RESULT_IMAGE_BYTES, TOOL_RESULT_IMAGE_MIMES } from "./tool-result-images";
@@ -762,6 +763,7 @@ export function buildSessionContext(
  * over a tool-heavy session can hold a single user message).
  */
 function countsTowardTail(entry: SessionEntry): boolean {
+  if (chapterEntryMessage(entry)) return true;
   if (entry.type === "compaction") return true;
   if (entry.type === "branch_summary") return Boolean((entry as { summary?: string }).summary);
   if (entry.type !== "message") return false;
@@ -836,6 +838,7 @@ const MAX_TURN_EXTENSION_ENTRIES = 1500;
 
 /** Entries that `isMessageGroupAnchor()` treats as the start of a displayed turn. */
 function startsTurn(entry: SessionEntry): boolean {
+  if (chapterEntryMessage(entry)) return true;
   if (entry.type === "compaction") return true;
   if (entry.type === "custom_message") {
     return (entry as { customType?: string }).customType === "pi-web:subagent-notification";
@@ -978,6 +981,8 @@ function entryToUiMessage(
         details: entry.details,
         timestamp: parseEntryTimestamp(entry.timestamp),
       };
+    case "custom":
+      return chapterEntryMessage(entry);
     case "custom_message":
       return {
         role: "custom",

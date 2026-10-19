@@ -3,15 +3,10 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
 import { useI18n } from "../hooks/useI18n";
 import { isImeComposing } from "../lib/ime";
-
-export interface ConversationTurnLocation {
-  index: number;
-  question: string;
-  entryId?: string;
-}
+import type { ConversationChapterLocation } from "../lib/conversation-chapters";
 
 interface Props {
-  turns: ConversationTurnLocation[];
+  chapters: readonly ConversationChapterLocation[];
   /** Only expose the real beginning once the oldest history page is loaded. */
   hasSessionStart?: boolean;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
@@ -19,12 +14,6 @@ interface Props {
 }
 
 export const SESSION_START_INDEX = -1;
-
-/** Existing user text supplies the label; this does not generate chapter names. */
-export function getConversationLocationTitle(question: string): string {
-  return (question.split(/\r?\n/).find((line) => line.trim()) ?? "")
-    .trim().replace(/^#{1,6}\s+/, "");
-}
 
 /** A section stays current until the next anchor crosses the reading line. */
 export function findActiveConversationLocation(
@@ -53,18 +42,19 @@ export function keepConversationItemVisible(container: HTMLElement, item: HTMLEl
   else if (rect.bottom > bottom) container.scrollTop += rect.bottom - bottom;
 }
 
-export function ConversationNavigator({ turns, hasSessionStart = false, scrollContainerRef, onSelect }: Props) {
+export function ConversationNavigator({ chapters, hasSessionStart = false, scrollContainerRef, onSelect }: Props) {
   const { t } = useI18n();
   const directoryId = useId();
   const sessionStartTitle = t("chat.conversationSessionStart");
   const locations = useMemo(() => [
-    ...(hasSessionStart ? [{ index: SESSION_START_INDEX, key: "session-start", title: sessionStartTitle }] : []),
-    ...turns.map((turn) => ({
-      index: turn.index,
-      key: turn.entryId ?? `turn-${turn.index}`,
-      title: getConversationLocationTitle(turn.question),
+    ...(hasSessionStart ? [{ index: SESSION_START_INDEX, key: "session-start", chapterId: undefined, title: sessionStartTitle }] : []),
+    ...chapters.map((chapter) => ({
+      index: chapter.index,
+      key: `chapter:${chapter.chapterId}`,
+      chapterId: chapter.chapterId,
+      title: chapter.title,
     })),
-  ], [turns, hasSessionStart, sessionStartTitle]);
+  ], [chapters, hasSessionStart, sessionStartTitle]);
   const [activeKey, setActiveKey] = useState(locations[0]?.key ?? "");
   const [isOpen, setIsOpen] = useState(false);
   const [focusedPosition, setFocusedPosition] = useState(0);
@@ -85,8 +75,12 @@ export function ConversationNavigator({ turns, hasSessionStart = false, scrollCo
     let frame: number | null = null;
     const updateActive = () => {
       const containerTop = container.getBoundingClientRect().top;
-      const anchors = Array.from(container.querySelectorAll<HTMLElement>("[data-conversation-turn]"))
-        .map((anchor) => ({ index: Number(anchor.dataset.conversationTurn), top: anchor.getBoundingClientRect().top }));
+      const chapterIndexes = new Map(locations.map((location) => [location.chapterId, location.index]));
+      const anchors = Array.from(container.querySelectorAll<HTMLElement>("[data-conversation-chapter]"))
+        .flatMap((anchor) => {
+          const index = chapterIndexes.get(anchor.dataset.conversationChapter);
+          return index === undefined ? [] : [{ index, top: anchor.getBoundingClientRect().top }];
+        });
       const active = findActiveConversationLocation(anchors, containerTop + 28, container.scrollTop <= 1, hasSessionStart);
       const location = locations.find((location) => location.index === active);
       if (location) setActiveKey(location.key);
@@ -204,7 +198,7 @@ export function ConversationNavigator({ turns, hasSessionStart = false, scrollCo
     focusPosition(next);
   };
 
-  if (turns.length === 0 || locations.length < 2) return null;
+  if (locations.length === 0) return null;
 
   return (
     <div
@@ -260,7 +254,7 @@ export function ConversationNavigator({ turns, hasSessionStart = false, scrollCo
           ref={directoryRef}
           className="conversation-navigator-directory"
           aria-label={t("chat.conversationNavigator")}
-          data-navigation-source="user-turns"
+          data-navigation-source="tool-chapters"
           onKeyDown={handleDirectoryKeyDown}
         >
           {locations.map((location, position) => (
@@ -270,6 +264,7 @@ export function ConversationNavigator({ turns, hasSessionStart = false, scrollCo
               type="button"
               className="conversation-navigator-row"
               data-navigation-index={location.index}
+              data-navigation-chapter={location.chapterId}
               aria-current={position === activePosition ? "location" : undefined}
               tabIndex={position === focusedPosition ? 0 : -1}
               title={location.title}
