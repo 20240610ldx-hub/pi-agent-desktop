@@ -188,7 +188,13 @@ New 改为现有首页入口，项目旁的 + 保持新建会话。首页通过 
 
 组合 134 项定向测试通过。实际 `activity-disclosure/run-1792375885811/` 六组通过历史／live 开关、原始 deferred index、exact-once、单可见微光、光标终止、错误手动收起／不抢历史滚动、原零标题命中的内容搜索定位、IME 与会话草稿。真实 normal frames 从 83.333% 到 83.2092%（283.334ms），跨过源关键帧前 15% 的停顿；timeline 为 1.8s，reduced-motion 静态。本机私有 Sans alias loadedFaces=1、摘要 13px／border 0／透明；没有公开字体资产。首轮 2rAF 落在停顿段的失败及搜索 transient marker 断言失败保留，最终观察可见位置／highlight 而非已由布局控制器清除的临时属性。
 
-该 run 的 430px 截图有侧栏／Context 遮挡，只证明无根横溢出，不能作为活动区可读性通过；`mobile-supplement-1792376302856/` 经真实按钮关闭遮挡后，深浅430px摘要／工具无遮挡且native center hit均命中，Sans13px／Mono12px、输出上限400px；详细几何另记复刻基准。工具组／步骤尚为即时 hidden，高度过渡、新步骤进入／错开和状态／摘要有限过渡仍待落实；不据此勾完整动效清单或 Windows 像素一致性。
+该 run 的 430px 截图有侧栏／Context 遮挡，只证明无根横溢出，不能作为活动区可读性通过；`mobile-supplement-1792376302856/` 经真实按钮关闭遮挡后，深浅430px摘要／工具无遮挡且native center hit均命中，Sans13px／Mono12px、输出上限400px；详细几何另记复刻基准。此记录对应当时的即时hidden版本；后续共享Grid高度批次见下节。新步骤进入／错开和状态／摘要有限过渡仍待落实，不据此勾完整动效清单或Windows像素一致性。
+
+## 共享 Grid 的新增 consumer 与后续菜单能力
+
+`ThinkingAccordion` 局部 Grid 采用现扩展至 [DisclosureBody.tsx](../components/DisclosureBody.tsx)，由 ThinkingDisclosure、ChatWindow process group、MessageView tool details 共用；不新增源模块计数。三类分别验证200ms原曲线的中间高度、条件焦点返回、立即inert／ARIA、快速反向／隐藏／reduced-motion清理。过程首次展开后保留子树，思考／工具归零释放；`disclosure-motion/run-1792378208269/` 六组与 `activity-disclosure/run-1792378225066/` 实际通过。源码演示计时／强制live状态继续未采用，步骤进入／错开和状态／摘要有限过渡仍待实施。
+
+Transcript modes、真实输出风格、原生会话窗口／Code项目入口，以及背景任务的键盘／状态修复属于产品领域接入，不因此增加open-claude-ui采用数。普通会话输出风格经真实Pi before_agent_start进入下一次提示词；Default不附加，exact/chat-only/subagent保原合同且明确不可用。背景任务使用既有Pi family，不冒充CoworkCanvas或Plan/Todo。实际结果和限制见[复刻基准](pilaude-ui-parity.md)与[逐项清单](pilaude-agent-output-ui.md)。
 
 ## 更新条件
 

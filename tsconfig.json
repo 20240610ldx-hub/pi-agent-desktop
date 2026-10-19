@@ -36,7 +36,9 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     ".next-desktop/types/**/*.ts",
-    ".next-desktop/dev/types/**/*.ts"
+    ".next-desktop/dev/types/**/*.ts",
+    "test-results/pilaude/preview-cache/types/**/*.ts",
+    "test-results/pilaude/preview-cache/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

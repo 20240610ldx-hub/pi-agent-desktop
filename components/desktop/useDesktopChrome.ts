@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { isTauriDesktop } from "@/lib/desktop-updater";
+import { isConversationWindow } from "@/lib/desktop-native";
 import { getDesktopPlatform, type DesktopPlatform } from "@/lib/desktop-window";
 
 export interface DesktopChrome {
@@ -40,7 +41,7 @@ export function useDesktopChrome(): DesktopChrome {
   const [platform, setPlatform] = useState<DesktopPlatform>(null);
 
   useEffect(() => {
-    if (!isTauriDesktop()) return;
+    if (!isTauriDesktop() || isConversationWindow()) return;
     setPlatform(getDesktopPlatform());
   }, []);
 

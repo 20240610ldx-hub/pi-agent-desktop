@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import { isTauriDesktop } from "@/lib/desktop-updater";
+import { isConversationWindow } from "@/lib/desktop-native";
 
 /**
  * Connect Tauri's native macOS menu events to the web app state. The hook is
@@ -10,7 +11,7 @@ import { isTauriDesktop } from "@/lib/desktop-updater";
  */
 export function useNativeAppMenu(onAction: (action: string) => void): void {
   useEffect(() => {
-    if (!isTauriDesktop()) return;
+    if (!isTauriDesktop() || isConversationWindow()) return;
     let dispose: (() => void) | undefined;
     let cancelled = false;
 

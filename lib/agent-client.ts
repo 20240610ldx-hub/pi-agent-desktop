@@ -25,6 +25,10 @@ export function isPromptRejectedError(error: unknown): error is AgentCommandErro
     && error.accepted === false;
 }
 
+import type { OutputStyleCommand, OutputStyleState } from "./output-styles";
+
+export function sendAgentCommand(sessionId: string, command: OutputStyleCommand): Promise<OutputStyleState>;
+export function sendAgentCommand<T = unknown>(sessionId: string, command: Record<string, unknown>): Promise<T>;
 export async function sendAgentCommand<T = unknown>(
   sessionId: string,
   command: Record<string, unknown>,

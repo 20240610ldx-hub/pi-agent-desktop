@@ -163,8 +163,8 @@ function MenuPanel({
             aria-checked={entry.checked}
             disabled={entry.disabled && !entry.disabledReason}
             aria-disabled={entry.disabled || undefined}
-            title={entry.disabledReason}
-            aria-description={entry.disabledReason}
+            title={entry.disabledReason ?? entry.description}
+            aria-description={entry.disabledReason ?? entry.description}
             data-shortcut={entry.shortcut}
             className={entry.danger ? "is-danger" : undefined}
             // Moving onto a plain item closes an open submenu, as native menus do.

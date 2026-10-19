@@ -32,11 +32,36 @@ test("explicit context changes invalidate a pending workspace restore", () => {
   }
 });
 
-test("all active-session transitions share one persistence effect", () => {
-  assert.match(
-    source,
-    /useEffect\(\(\) => \{\s+if \(selectedSession\) \{[\s\S]*?setLastOpenSession\(projectKey, selectedSession\.id\);\s+setTabOpenSession\(selectedSession\.id\);\s+return;\s+\}\s+if \(newSessionCwd\) setTabOpenNewSession\(newSessionCwd\);\s+\}, \[newSessionCwd, selectedSession\]\);/,
-  );
+test("active-session persistence keeps secondary selection per-tab without overwriting main workspace memory", () => {
+  const start = source.indexOf("  useEffect(() => {\n    if (selectedSession) {", source.indexOf("// Persist every active-session transition"));
+  const end = source.indexOf("\n\n  useEffect", start);
+  const effect = source.slice(start, end);
+  assert.notEqual(start, -1);
+  for (const secondary of [false, true]) {
+    const calls = [];
+    const context = vm.createContext({
+      useEffect: (callback) => callback(), selectedSession: { id: "selected", cwd: "/project", projectKey: "/project" }, newSessionCwd: null,
+      conversationWindow: secondary, activeProjectKeyRef: { current: "/project" }, workspaceKeyOf: (session) => session.cwd,
+      setLastOpenSession: (...args) => calls.push(["workspace", ...args]), setTabOpenSession: (...args) => calls.push(["tab", ...args]), setTabOpenNewSession: (...args) => calls.push(["new", ...args]),
+    });
+    vm.runInContext(effect, context);
+    assert.deepEqual(calls, secondary ? [["tab", "selected"]] : [["workspace", "/project", "selected"], ["tab", "selected"]]);
+  }
+});
+
+test("secondary restoration never clears the main window's missing or drifted session memory", () => {
+  const callback = callbackBody("restoreWorkspaceContext", "handleCwdChange");
+  for (const secondary of [false, true]) for (const sessions of [[{ id: "other", cwd: "/project" }], [{ id: "remembered", cwd: "/different" }]]) {
+    const cleared = [];
+    const context = vm.createContext({
+      useCallback: (body) => body, conversationWindow: secondary, workspaceRestoreTokenRef: { current: 0 },
+      getLastOpenSession: () => "remembered", clearLastOpen: (key) => cleared.push(key), workspaceKeyOf: (session) => session.cwd,
+      sessionCatalog: sessions, router: {},
+    });
+    vm.runInContext(stripTypeScriptTypes(`${callback}\nglobalThis.restore = restoreWorkspaceContext;`), context);
+    context.restore("/project", "/project");
+    assert.deepEqual(cleared, secondary ? [] : ["/project"]);
+  }
 });
 
 test("keeps chat scroll positions in page memory by session id", () => {
@@ -104,6 +129,7 @@ test("New restores the draft after session navigation and workspace auto-restore
         getLastSettingsSection: () => "general",
         isMobile: false,
         desktopMode: false,
+        conversationWindow: false,
         activeCwd: cwd,
         activeFileTabId: null,
         openPanes: { files: true, terminal: false, tasks: false },

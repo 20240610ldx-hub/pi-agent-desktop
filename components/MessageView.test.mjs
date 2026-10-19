@@ -279,8 +279,8 @@ test("tool disclosure is a linked native button with no collapsed argument body"
   const html = renderMessage({ role: "assistant", content: [block] }, { isStreaming: true });
   assert.match(html, /<button type="button"[^>]*class="tool-call-trigger"[^>]*aria-expanded="false"/);
   const bodyId = html.match(/class="tool-call-trigger"[^>]*aria-controls="([^"]+)"/)[1];
-  assert.ok(html.includes(`id="${bodyId}" class="tool-call-body"`));
-  assert.match(html, /class="tool-call-body"[^>]*hidden=""/);
+  assert.ok(html.includes(`id="${bodyId}" class="disclosure-body tool-call-grid"`));
+  assert.match(html, /class="disclosure-body tool-call-grid"[^>]*aria-hidden="true"[^>]*inert=""/);
   assert.doesNotMatch(html, /hidden-secret-content/);
 });
 

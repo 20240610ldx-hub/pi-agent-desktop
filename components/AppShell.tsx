@@ -13,6 +13,10 @@ import { PilaudeWorkspaceContext } from "./PilaudeWorkspaceContext";
 import { PilaudeIcon } from "./PilaudeIcon";
 import { DirectoryPicker } from "./DirectoryPicker";
 import { ChatWindow } from "./ChatWindow";
+import { TranscriptViewProvider } from "./TranscriptViewContext";
+import { useTranscriptView } from "@/hooks/useTranscriptView";
+import { setTranscriptView, TRANSCRIPT_VIEW_MODES } from "@/lib/transcript-view-preference";
+import { useConversationOutputStyle } from "./ConversationOutputStyle";
 import { useScheduledRunNotifications } from "@/hooks/useScheduledRunNotifications";
 import type { ChatScrollPosition } from "@/lib/chat-scroll-position";
 import { clearDraft, getDraft, setDraft } from "@/lib/draft-store";
@@ -44,7 +48,7 @@ import { APP_PREF_KEYS, getPrefBool, getPrefJson, setPref, setPrefJson } from "@
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import { useResizablePanel } from "@/hooks/useResizablePanel";
 import { useDesktopConnection } from "@/lib/desktop-connection";
-import { isTauriDesktop, openChangesWindow, revealItemInDirNative, setCloseQuitsNative } from "@/lib/desktop-native";
+import { isTauriDesktop, isConversationWindow, getConversationDestinations, openConversationWindow, openProjectInVSCode, openChangesWindow, revealItemInDirNative, setCloseQuitsNative, type ConversationDestinations } from "@/lib/desktop-native";
 import { subscribeChangesFeedback } from "@/lib/changes-feedback";
 import { canUseNativeMenu, menuPointBelow, showNativeMenu, type NativeMenuEntry } from "@/lib/desktop-menu";
 import { closeDomMenu, getDomMenu, openDomMenu, subscribeDomMenu } from "@/lib/dom-menu-store";
@@ -144,8 +148,9 @@ export function AppShell() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [desktopMode] = useState(() => isTauriDesktop());
+  const [conversationWindow] = useState(() => isConversationWindow());
   const [persistedWorkspace] = useState(() => (
-    desktopMode ? getPrefJson<PersistedWorkspace>(APP_PREF_KEYS.workspace) : null
+    desktopMode && !conversationWindow ? getPrefJson<PersistedWorkspace>(APP_PREF_KEYS.workspace) : null
   ));
   const [initialNavigation, setInitialNavigation] = useState(() => resolveInitialNavigation(searchParams, persistedWorkspace));
   // Subscribed for its side effects only: this hook installs the shared theme
@@ -162,10 +167,10 @@ export function AppShell() {
   // subscription so the server can notify backgrounded PWAs (notably iOS,
   // which suspends page JS and never receives the SSE completion event).
   useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (conversationWindow || typeof window === "undefined" || !("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     void setupPushSubscription(locale);
-  }, [locale]);
+  }, [locale, conversationWindow]);
   // Audio ownership lives here (not in ChatWindow) so the completion tone can
   // also fire for tasks finishing in a non-active workspace whose ChatWindow
   // is not mounted. ChatWindow receives the audio callbacks as props.
@@ -181,9 +186,11 @@ export function AppShell() {
   }, []);
   const notifiedAttentionRequestIdsRef = useRef(new Set<string>());
   const handleBackgroundTaskDone = useCallback(() => {
-    if (soundEnabledRef.current) playDoneSound();
-  }, [playDoneSound, soundEnabledRef]);
+    if (!conversationWindow && soundEnabledRef.current) playDoneSound();
+  }, [playDoneSound, soundEnabledRef, conversationWindow]);
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
+  const transcriptView = useTranscriptView(selectedSession?.id ?? null);
+  const outputStyle = useConversationOutputStyle(selectedSession?.transient ? null : selectedSession?.id);
   const [titleMenuOpen, setTitleMenuOpen] = useState(false);
   const titleMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [titleRename, setTitleRename] = useState<{ session: SessionInfo; value: string } | null>(null);
@@ -196,6 +203,8 @@ export function AppShell() {
   const titleActionContextRef = useRef({ sessionId: null as string | null, scheduled: false, welcome: false, generation: 0 });
   const [titleActionError, setTitleActionError] = useState<string | null>(null);
   const [titleFileManager, setTitleFileManager] = useState<{ supported: boolean; platform?: string } | null>(null);
+  const [titleDestinations, setTitleDestinations] = useState<ConversationDestinations | null>(null);
+  const [titleDestinationsFailed, setTitleDestinationsFailed] = useState(false);
   const [titleArchiveActions, setTitleArchiveActions] = useState<SidebarArchiveActions | null>(null);
   const handleArchiveActionsChange = useCallback((actions: SidebarArchiveActions) => setTitleArchiveActions(actions), []);
   // The Scheduled page covers the chat area without unmounting it, so the open session keeps its state.
@@ -511,10 +520,10 @@ export function AppShell() {
   }, []);
 
   useEffect(() => {
-    if (desktopMode) {
+    if (desktopMode && !conversationWindow) {
       void setCloseQuitsNative(getPrefBool(APP_PREF_KEYS.closeQuits, false));
     }
-  }, [desktopMode]);
+  }, [desktopMode, conversationWindow]);
 
   // Context usage — populated by ChatWindow, used by the stats panel and ring
   const [contextUsage, setContextUsage] = useState<{ percent: number | null; contextWindow: number; tokens: number | null } | null>(null);
@@ -730,8 +739,8 @@ export function AppShell() {
     setWorkspacePanesRestored(true);
   }, []);
   useEffect(() => {
-    if (workspacePanesRestored) setPrefJson(APP_PREF_KEYS.workspacePaneVisibility, rightPanelOpen);
-  }, [rightPanelOpen, workspacePanesRestored]);
+    if (workspacePanesRestored && !conversationWindow) setPrefJson(APP_PREF_KEYS.workspacePaneVisibility, rightPanelOpen);
+  }, [rightPanelOpen, workspacePanesRestored, conversationWindow]);
   const [artifactTabs, setArtifactTabs] = useState<ArtifactTab[]>([]);
   // Artifacts continue to share the Files workbench; they are not a fourth pane.
   useArtifactTitles(artifactTabs);
@@ -825,10 +834,10 @@ export function AppShell() {
   }, [isMobile]);
 
   useEffect(() => {
-    if (desktopMode) {
+    if (desktopMode && !conversationWindow) {
       void setCloseQuitsNative(getPrefBool(APP_PREF_KEYS.closeQuits, false));
     }
-  }, [desktopMode]);
+  }, [desktopMode, conversationWindow]);
 
   const { state: connectionState, retry: retryConnection } = useDesktopConnection(desktopMode);
 
@@ -874,12 +883,12 @@ export function AppShell() {
       const projectKey = selectedSession.projectKey
         ?? activeProjectKeyRef.current
         ?? workspaceKeyOf(selectedSession);
-      setLastOpenSession(projectKey, selectedSession.id);
+      if (!conversationWindow) setLastOpenSession(projectKey, selectedSession.id);
       setTabOpenSession(selectedSession.id);
       return;
     }
     if (newSessionCwd) setTabOpenNewSession(newSessionCwd);
-  }, [newSessionCwd, selectedSession]);
+  }, [newSessionCwd, selectedSession, conversationWindow]);
 
   useEffect(() => {
     const requestedCwd = initialNavigation.requestedCwd;
@@ -937,12 +946,12 @@ export function AppShell() {
         // The list loaded but the remembered session is gone — forget it.
         // When the list itself failed (d === null) keep the memory so a
         // later switch retries the restore.
-        if (d) clearLastOpen(projectKey);
+        if (d && !conversationWindow) clearLastOpen(projectKey);
         return;
       }
       if (workspaceKeyOf(s) !== projectKey) {
         // Defensive: the remembered session drifted out of this workspace.
-        clearLastOpen(projectKey);
+        if (!conversationWindow) clearLastOpen(projectKey);
         return;
       }
       // Keep the temporary composer's draft in its cwd, even when the
@@ -978,7 +987,7 @@ export function AppShell() {
       .catch(() => {
         // Network hiccup: keep the remembered session for a later retry.
       });
-  }, [router, sessionCatalog]);
+  }, [router, sessionCatalog, conversationWindow]);
 
   const handleCwdChange = useCallback((
     cwd: string | null,
@@ -1331,7 +1340,7 @@ export function AppShell() {
     body: string;
     tag?: string;
   }) => {
-    if (!("Notification" in window)) return;
+    if (conversationWindow || !("Notification" in window)) return;
 
     const fire = () => {
       const sessionUrl = targetSession ? `/?session=${encodeURIComponent(targetSession.id)}` : "/";
@@ -1358,7 +1367,7 @@ export function AppShell() {
         }
       });
     }
-  }, [handleSelectSession, locale]);
+  }, [handleSelectSession, locale, conversationWindow]);
 
   const handleAgentEnd = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -1379,6 +1388,7 @@ export function AppShell() {
   // Scheduled runs have their own notification (success or failure, which task, why).
   // The desktop app shows it natively; a browser tab uses the same path as session completion.
   useScheduledRunNotifications({
+    enabled: !conversationWindow,
     onSound: handleBackgroundTaskDone,
     deliverInBrowser: (notification) => {
       if (!shouldShowBrowserNotification()) return;
@@ -1568,26 +1578,27 @@ export function AppShell() {
     return () => controller.abort();
   }, [desktopMode]);
 
+  const refreshTitleDestinations = useCallback(() => {
+    setTitleDestinationsFailed(false);
+    return getConversationDestinations().then((destinations) => { setTitleDestinations(destinations); return destinations; }).catch(() => {
+      setTitleDestinationsFailed(true);
+      return null;
+    });
+  }, []);
+  useEffect(() => { void refreshTitleDestinations(); }, [refreshTitleDestinations]);
+
   const openTitleMenu = useCallback((button: HTMLButtonElement) => {
     if (!selectedSession || selectedSession.transient || titleActionBusyRef.current) return;
     if (getDomMenu()?.opener === button) { closeDomMenu(); return; }
     const session = selectedSession;
     const archived = titleArchiveActions?.archivedIds.includes(session.id) ?? false;
+    if (desktopMode && titleDestinationsFailed) void refreshTitleDestinations();
     const show = (fileManager: { supported: boolean; platform?: string } | null) => {
-      const unavailable = (label: string, reason: string): Extract<NativeMenuEntry, { kind?: "item" }> => ({ label, disabled: true, disabledReason: reason });
       const entries: NativeMenuEntry[] = [
         { kind: "submenu", label: translate("titleMenu.openIn"), items: [
-          { label: translate("titleMenu.newWindow"), shortcut: "1", disabled: desktopMode, disabledReason: desktopMode ? translate("titleMenu.nativeWindowUnavailable") : undefined, onSelect: () => {
-            const url = new URL(window.location.pathname, window.location.origin);
-            url.searchParams.set("session", session.id);
-            // Keep the browser open synchronous with the user gesture; the detached
-            // same-origin window cannot retain access to its opener.
-            const opened = window.open(url.href, "_blank");
-            if (opened) opened.opener = null;
-            else setTitleActionError(translate("titleMenu.popupBlocked"));
-          } },
+          { label: translate("titleMenu.newWindow"), shortcut: "1", disabled: desktopMode && !titleDestinations?.newWindow, disabledReason: desktopMode && !titleDestinations?.newWindow ? translate(titleDestinationsFailed ? "titleMenu.destinationsUnavailable" : "titleMenu.destinationsChecking") : undefined, onSelect: () => void runTitleAction(() => openConversationWindow(session.id)) },
           { kind: "separator" },
-          { ...unavailable("VS Code", translate("sidebar.editorUnavailable")), shortcut: "2" },
+          { label: translate("titleMenu.vsCodeProject"), description: translate("titleMenu.vsCodeDescription"), shortcut: "2", disabled: !titleDestinations?.vsCode.supported, disabledReason: !titleDestinations?.vsCode.supported ? translate(!desktopMode ? "sidebar.editorUnavailable" : titleDestinationsFailed ? "titleMenu.destinationsUnavailable" : !titleDestinations ? "titleMenu.destinationsChecking" : "titleMenu.vsCodeNotInstalled") : undefined, onSelect: () => void runTitleAction(() => openProjectInVSCode(session.cwd)) },
           { label: fileManager?.platform === "darwin" ? "Finder" : translate("titleMenu.explorer"), shortcut: "3", disabled: !desktopMode && !fileManager?.supported, disabledReason: !desktopMode && !fileManager?.supported ? translate(fileManager ? "sidebar.fileManagerUnavailable" : "titleMenu.checkingFileManager") : undefined, onSelect: () => void runTitleAction(async () => {
             if (desktopMode) return revealItemInDirNative(session.cwd);
             const response = await fetch("/api/open-in-explorer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cwd: session.cwd }) });
@@ -1610,11 +1621,11 @@ export function AppShell() {
           if (titleActionContextRef.current.generation === sourceGeneration) handleSelectSession(child.info);
         }) },
         { kind: "separator" },
-        { kind: "submenu", label: translate("titleMenu.transcriptView"), items: ["normal", "thinking", "verbose"].map((name) => unavailable(translate(`titleMenu.${name}`), translate("titleMenu.transcriptUnavailable"))) },
-        { kind: "submenu", label: translate("titleMenu.outputStyle"), items: [
-          ...["default", "proactive", "concise", "explanatory", "learning"].map((name) => unavailable(translate(`titleMenu.${name}`), translate("titleMenu.outputUnavailable"))),
-          { kind: "separator" }, unavailable(translate("titleMenu.newStyle"), translate("titleMenu.outputUnavailable")),
-        ] },
+        { kind: "submenu", label: translate("titleMenu.transcriptView"), items: TRANSCRIPT_VIEW_MODES.map((mode) => ({
+          label: translate(`titleMenu.${mode}`), checked: transcriptView === mode,
+          onSelect: () => { if (!setTranscriptView(session.id, mode)) setTitleActionError(translate("titleMenu.preferenceFailed")); },
+        })) },
+        { kind: "submenu", label: translate("titleMenu.outputStyle"), items: outputStyle.menuItems },
         { kind: "separator" },
         { label: translate(archived ? "titleMenu.restore" : "titleMenu.archive"), shortcut: "A", disabled: !titleArchiveActions, onSelect: () => titleArchiveActions?.setArchived(session.id, !archived) },
         { label: translate("titleMenu.delete"), shortcut: "D", danger: true, onSelect: () => setTitleDeleteSession(session) },
@@ -1622,7 +1633,7 @@ export function AppShell() {
       openDomMenu(entries, menuPointBelow(button), "conversation", { label: translate("titleMenu.actions"), opener: button });
     };
     show(titleFileManager);
-  }, [selectedSession, titleArchiveActions, desktopMode, titleFileManager, runningSessionIds, translate, runTitleAction, handleSelectSession]);
+  }, [selectedSession, titleArchiveActions, desktopMode, titleFileManager, titleDestinations, titleDestinationsFailed, refreshTitleDestinations, runningSessionIds, transcriptView, outputStyle.menuItems, translate, runTitleAction, handleSelectSession]);
 
   const performTitleDelete = useCallback(() => {
     if (!titleDeleteSession) return;
@@ -1794,7 +1805,7 @@ export function AppShell() {
     }
   }, []);
   useDesktopWorkspaceTabs({
-    desktopMode,
+    desktopMode: desktopMode && !conversationWindow,
     initialSessionRestored,
     persistedWorkspace,
     sessionId: selectedSession?.id ?? null,
@@ -2882,7 +2893,7 @@ export function AppShell() {
         {/* Chat content */}
         <div inert={scheduledOpen || welcomeOpen} aria-hidden={scheduledOpen || welcomeOpen || undefined} style={{ flex: 1, overflow: "hidden", position: "relative", display: welcomeOpen ? "none" : undefined }}>
           {showChat ? (
-            <ChatWindow
+            <TranscriptViewProvider mode={transcriptView} sessionId={selectedSession?.id ?? null}><ChatWindow
               key={sessionKey}
               session={selectedSession}
               searchTarget={searchTarget?.sessionId === selectedSession?.id ? searchTarget : null}
@@ -2919,9 +2930,9 @@ export function AppShell() {
               initialPrompt={pendingQuotePrompt?.sessionId === selectedSession?.id ? pendingQuotePrompt?.text : undefined}
               onInitialPromptConsumed={() => setPendingQuotePrompt(null)}
               soundEnabled={soundEnabled}
-              playDoneSound={playDoneSound}
+              playDoneSound={conversationWindow ? undefined : playDoneSound}
               unlockAudio={unlockAudio}
-            />
+            /></TranscriptViewProvider>
           ) : initialCwdStatus === "validating" ? (
             <div
               role="status"
@@ -3350,9 +3361,11 @@ export function AppShell() {
         <h2 id="title-menu-delete-heading">{translate("titleMenu.deleteHeading")}</h2>
         <p id="title-menu-delete-description">{translate("titleMenu.deleteDescription", { title: titleDeleteSession.name || titleDeleteSession.firstMessage || titleDeleteSession.id })}</p>
         {titleActionError && <p role="alert">{titleActionError}</p>}
-        <div className="app-topbar-title-delete-actions"><button type="button" disabled={titleActionBusy} onClick={() => setTitleDeleteSession(null)}>{translate("common.cancel")}</button><button type="button" className="is-danger" disabled={titleActionBusy} onClick={performTitleDelete}>{translate(titleActionBusy ? "titleMenu.deleting" : "titleMenu.delete")}</button></div>
+        <div className="app-topbar-title-delete-actions"><button type="button" disabled={titleActionBusy} onClick={() => setTitleDeleteSession(null)}>{translate("chat.cancel")}</button><button type="button" className="is-danger" disabled={titleActionBusy} onClick={performTitleDelete}>{translate(titleActionBusy ? "titleMenu.deleting" : "titleMenu.delete")}</button></div>
       </div>
     </div>, document.body)}
+    {outputStyle.error}
+    {outputStyle.editor}
     <DomContextMenuHost />
     </div>
     </>

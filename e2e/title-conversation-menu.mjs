@@ -52,6 +52,7 @@ export async function installTitleMenuFixture(context, report, { locale = "en", 
       }
       return route.fulfill({ status: 409, json: { error: "Unexpected write blocked by title menu fixture" } });
     }
+    if (/^\/api\/sessions\/[^/]+\/output-style$/.test(url.pathname)) return route.fulfill({ json: { supported: false, reason: "exact-system-prompt", selectedId: "default", styles: [] } });
     if (url.pathname === "/api/sessions") return route.fulfill({ json: { sessions } });
     const info = sessions.find((item) => url.pathname === `/api/sessions/${item.id}`);
     if (info) return route.fulfill({ json: {
@@ -117,10 +118,10 @@ export async function runTitleConversationMenu() {
     await page.keyboard.press("ArrowRight");
     const openIn = page.getByRole("menu", { name: "Open in", exact: true });
     await openIn.waitFor();
-    assert.deepEqual(await openIn.locator("button .dom-context-menu-label").allTextContents(), ["New window", "VS Code", "Explorer"]);
+    assert.deepEqual(await openIn.locator("button .dom-context-menu-label").allTextContents(), ["New window", "VS Code (project)", "Explorer"]);
     assert.deepEqual(await openIn.locator(".dom-context-menu-shortcut").allTextContents(), ["1", "2", "3"]);
-    assert.equal(await openIn.getByRole("menuitem", { name: "VS Code", exact: true }).getAttribute("aria-disabled"), "true");
-    assert.match(await openIn.getByRole("menuitem", { name: "VS Code", exact: true }).getAttribute("title"), /not connected/);
+    assert.equal(await openIn.getByRole("menuitem", { name: "VS Code (project)", exact: true }).getAttribute("aria-disabled"), "true");
+    assert.match(await openIn.getByRole("menuitem", { name: "VS Code (project)", exact: true }).getAttribute("title"), /not connected/);
     await page.keyboard.press("ArrowLeft");
     assert.equal(await page.locator(":focus").textContent(), "Open in›", "ArrowLeft returns focus to the parent submenu row");
     await page.keyboard.press("ArrowRight");
@@ -136,8 +137,8 @@ export async function runTitleConversationMenu() {
     const transcript = page.getByRole("menu", { name: "Transcript view", exact: true });
     await transcript.waitFor();
     assert.deepEqual(await transcript.locator("button .dom-context-menu-label").allTextContents(), ["Normal", "Thinking", "Verbose"]);
-    assert.equal(await transcript.locator('[aria-disabled="true"]').count(), 3);
-    assert.equal(await transcript.locator('[role="menuitemcheckbox"]').count(), 0, "Unavailable transcript choices do not pretend to be applied");
+    assert.equal(await transcript.locator('[aria-disabled="true"]').count(), 0);
+    assert.equal(await transcript.getByRole("menuitemcheckbox", { name: "Normal", exact: true }).getAttribute("aria-checked"), "true", "The active transcript view is acknowledged by its checked item");
     await root.getByRole("menuitem", { name: "Output style", exact: true }).hover();
     const output = page.getByRole("menu", { name: "Output style", exact: true });
     await output.waitFor();

@@ -41,7 +41,7 @@ async function compileHookModule(file) {
 }
 const hookModule = await compileHookModule("./useAgentSession.ts");
 
-function activityHookHarness() {
+function activityHookHarness({ sessionFixtures = {}, strictEffects = false } = {}) {
   const slots = [];
   const effects = [];
   const timers = new Map();
@@ -88,7 +88,11 @@ function activityHookHarness() {
       if (!old || deps.some((dep, i) => !Object.is(dep, old.deps[i]))) {
         const slot = { deps, cleanup: old?.cleanup };
         slots[index] = slot;
-        effects.push(() => { slot.cleanup?.(); slot.cleanup = effect(); });
+        effects.push(() => {
+          slot.cleanup?.();
+          slot.cleanup = effect();
+          if (strictEffects && !old) { slot.cleanup?.(); slot.cleanup = effect(); }
+        });
       }
     },
     useLayoutEffect(effect, deps) { react.useEffect(effect, deps); },
@@ -100,7 +104,7 @@ function activityHookHarness() {
     const body = path.includes("/api/models") ? { models: {}, modelList: [] }
       : path.includes("/lease") ? { renewed: 1 }
       : path.includes("/api/agent/") || path.endsWith("/state") ? stateResponse
-      : { sessionId: sid, tree: [], leafId: null, context: {
+      : sessionFixtures[sid] ?? { sessionId: sid, tree: [], leafId: null, context: {
         messages: [], entryIds: [], hasMore: false, oldestEntryId: null, thinkingLevel: "off", model: null,
       } };
     return { ok: true, status: 200, json: async () => body };
@@ -285,6 +289,39 @@ test("periodic reconciliation preserves event-proven activity but reconnect snap
     h.emit({ type: "message_start", message: h.stateResponse.state.streamingMessage });
     assert.equal(h.current.streamState[field], null, "reconnect snapshots alone never establish activity");
   }
+});
+
+test("duplicate mount loads cannot cache an empty transcript or blank a session round trip", async () => {
+  const cache = hookModule.dependencies.get("@/lib/session-view-cache");
+  cache.clearSessionViewCache();
+  const fixture = (id) => ({
+    sessionId: id, tree: [], treeFormat: "summary", snapshotRevision: `unique-${id}-revision`, leafId: `${id}-answer`,
+    context: {
+      messages: [{ role: "user", content: `Question ${id}` }, { role: "assistant", content: [{ type: "text", text: `Answer ${id}` }] }],
+      entryIds: [`${id}-user`, `${id}-answer`], oldestEntryId: `${id}-user`, hasMore: false, thinkingLevel: "off", model: null,
+    },
+  });
+  const sessionFixtures = { "session-a": fixture("session-a"), "session-b": fixture("session-b") };
+  try {
+    const h = activityHookHarness({ sessionFixtures, strictEffects: true });
+    await h.flush();
+    assert.equal(h.current.messages.length, 2);
+    assert.equal(cache.getSessionViewSnapshot("session-a").messages.length, 2, "parallel same-revision loads retain the canonical messages");
+    h.switchSession("session-b");
+    await h.flush();
+    assert.equal(h.current.messages[1].content[0].text, "Answer session-b");
+    h.switchSession("session-a");
+    await h.flush();
+    assert.equal(h.current.messages[1]?.content[0].text, "Answer session-a", "returning to the cached session restores its transcript");
+    assert.equal(h.current.data.context.messages.length, 2);
+    h.current.setMessages((messages) => [...messages, { role: "user", content: "New pending message" }]);
+    h.render();
+    const liveMessages = h.current.messages;
+    h.current.retryLoad();
+    await h.flush();
+    assert.strictEqual(h.current.messages, liveMessages, "same-revision refresh preserves current live message references");
+    assert.equal(h.current.messages.at(-1).content, "New pending message");
+  } finally { cache.clearSessionViewCache(); }
 });
 
 test("keeps the session event stream open through the idle grace window", () => {

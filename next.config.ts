@@ -19,11 +19,13 @@ const nextConfig: NextConfig = {
   // profile dirs (EPERM on "C:\Users\<user>\Application Data") and fail.
   ...(isDesktopBuild
     ? { output: "standalone" as const, distDir: ".next-desktop" }
-    : {}),
+    : process.env.NODE_ENV === "development" && process.env.PI_WEB_UI_VERIFICATION === "1"
+      ? { distDir: "test-results/pilaude/preview-cache" }
+      : {}),
   outputFileTracingRoot: configDir,
   experimental: {
-    // Custom webpack rules disable the default worker. Isolate compilation so
-    // server/client compiler state does not accumulate past Node's heap limit.
+    // These isolate and reduce production-build compilation memory. Development
+    // HMR is managed by the supervised `next dev` process instead.
     webpackBuildWorker: true,
     webpackMemoryOptimizations: true,
     // proxy.ts matches /api/:path*, and Next buffers the request body whenever

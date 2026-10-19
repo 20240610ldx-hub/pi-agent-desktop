@@ -3,6 +3,34 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const source = await readFile(new URL("./AgentSessionPanel.tsx", import.meta.url), "utf8");
+const { createJiti } = await import("jiti");
+const jiti = createJiti(import.meta.url, { jsx: { runtime: "automatic" }, tsconfigPaths: true });
+const React = await jiti.import("react");
+const { renderToStaticMarkup } = await jiti.import("react-dom/server");
+const { AgentSessionPanel } = await jiti.import("./AgentSessionPanel.tsx");
+const { I18nProvider } = await jiti.import("@/hooks/useI18n");
+const root = { id: "main", name: "Main session", firstMessage: "", modified: "2026-01-01T00:00:00Z" };
+const subagent = (id, status) => ({ ...root, id, name: id, relation: { kind: "subagent", parentSessionId: "main", profile: "researcher", description: `Task ${id}`, status } });
+const render = (subagents, running = []) => renderToStaticMarkup(React.createElement(I18nProvider, null,
+  React.createElement(AgentSessionPanel, { rootSession: root, subagents, selectedSessionId: "main", runningSessionIds: new Set(running), onSelectSession() {} })));
+
+test("parallel task states use static shapes and native selection controls", () => {
+  const html = render([subagent("first", "completed"), subagent("second", "running")], ["first", "second"]);
+  assert.doesNotMatch(html, /animate-spin/);
+  assert.equal((html.match(/data-status="running"/g) ?? []).length, 2);
+  assert.equal((html.match(/class="agent-session-select"/g) ?? []).length, 3);
+  assert.match(html, /<button type="button" class="agent-session-select"/);
+  assert.doesNotMatch(html, /role="option"|role="listbox"/);
+});
+
+test("persisted task statuses remain distinct and a missing relation cannot imply success", () => {
+  const html = render([...["queued", "starting", "completed", "failed", "aborted", "interrupted"].map(status => subagent(status, status)), { ...root, id: "unknown" }]);
+  for (const status of ["queued", "starting", "completed", "failed", "aborted", "interrupted", "unknown"]) {
+    assert.match(html, new RegExp(`data-status="${status}"`));
+  }
+  assert.equal((html.match(/data-status="completed"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /animate-spin/);
+});
 
 test("keeps the main session first and makes every agent session selectable", () => {
   const mainRow = source.indexOf("session={rootSession}");
@@ -11,7 +39,7 @@ test("keeps the main session first and makes every agent session selectable", ()
   assert.ok(subagentRows > mainRow);
   assert.match(source, /onSelect=\{\(\) => onSelectSession\(rootSession\)\}/);
   assert.match(source, /onSelect=\{\(\) => onSelectSession\(session\)\}/);
-  assert.match(source, /aria-selected=\{selected\}/);
+  assert.match(source, /aria-current=\{selected \? "true" : undefined\}/);
 });
 
 test("sorts running subagents first and keeps an active search clearable as the family shrinks", () => {
@@ -28,7 +56,7 @@ test("renders as a compact left-positioned dropdown without a centered inner wid
 });
 
 test("shows persisted completion states while live running state takes precedence", () => {
-  assert.match(source, /const status: SubagentSessionStatus = running \? "running" : relation\?\.status \?\? "completed"/);
+  assert.match(source, /const status: SubagentSessionStatus \| "unknown" = running \? "running" : relation\?\.status \?\? "unknown"/);
   assert.match(source, /t\(`agentSwitcher\.status\.\$\{status\}`\)/);
   assert.match(source, /status === "failed"/);
   assert.match(source, /status === "aborted" \|\| status === "interrupted"/);

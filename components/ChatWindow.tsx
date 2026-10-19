@@ -12,6 +12,7 @@ import { applyPatchResultHasFailures } from "@/lib/apply-patch";
 import { isApplyPatchToolName } from "@/lib/tool-names";
 import { buildQuotedSelection } from "@/lib/quoted-selection";
 import { MessageView } from "./MessageView";
+import { DisclosureBody } from "./DisclosureBody";
 import { MarkdownBody } from "./MarkdownBody";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ConversationNavigator, SESSION_START_INDEX, type ConversationTurnLocation } from "./ConversationNavigator";
@@ -19,6 +20,7 @@ import { ExtensionWidgets } from "./ExtensionWidgets";
 import { ExtensionStatusLine, formatExtensionStatusLine } from "./ExtensionStatusLine";
 import { AnsiText } from "./AnsiText";
 import { useI18n } from "@/hooks/useI18n";
+import { useTranscriptExpansion } from "@/hooks/useTranscriptExpansion";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { phaseLabel } from "@/lib/chat-phase-label";
 import { useAgentSession, type NoticeItem } from "@/hooks/useAgentSession";
@@ -227,22 +229,18 @@ export function getProcessState(turnMessages: AgentMessage[], toolResults: Reado
 }
 
 function ProcessDetailsGroup({ messageCount, processState, active = false, activity, defaultExpanded = false, reveal = false, children, t }: { messageCount: number; processState: ProcessState; active?: boolean; activity?: ReactNode; defaultExpanded?: boolean; reveal?: boolean; children: ReactNode; t: (key: string, params?: Record<string, string | number>) => string }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [expanded, setExpanded] = useTranscriptExpansion(() => defaultExpanded, "process");
   const id = useId();
   const previousStatus = useRef<ProcessState["status"] | null>(null);
   useLayoutEffect(() => {
     if (reveal) setExpanded(true);
-  }, [reveal]);
+  }, [reveal, setExpanded]);
   useLayoutEffect(() => {
     // Open on the first real failure, then respect a user's manual collapse.
     if (processState.status === "error" && previousStatus.current !== "error") setExpanded(true);
     previousStatus.current = processState.status;
-  }, [processState.status]);
+  }, [processState.status, setExpanded]);
   const open = expanded || reveal;
-  const [retained, setRetained] = useState(defaultExpanded || reveal);
-  useLayoutEffect(() => {
-    if (open) setRetained(true);
-  }, [open]);
   const { toolCallCount, completedCount, failedCount } = processState;
   const summary = active || processState.status === "running" ? t("chat.processRunning")
     : completedCount > 0 ? t(completedCount === 1 ? "chat.processRanOne" : "chat.processRan", { count: completedCount })
@@ -273,10 +271,10 @@ function ProcessDetailsGroup({ messageCount, processState, active = false, activ
           <polyline points="4 2.5 7.5 6 4 9.5" />
         </svg>
       </button>
-      <div id={`${id}-content`} className="process-details-content" role="region" aria-labelledby={`${id}-trigger`} hidden={!open}>
-        {(open || retained) && children}
+      <DisclosureBody id={`${id}-content`} labelledBy={`${id}-trigger`} expanded={open} keepMountedAfterOpen className="process-details-grid" contentClassName="process-details-content">
+        {children}
         {open && activity}
-      </div>
+      </DisclosureBody>
     </div>
   );
 }

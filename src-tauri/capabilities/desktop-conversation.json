@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-conversation",
+  "description": "Dedicated conversation windows may use local conversation tools and native destinations. They cannot quit the application, change main-window lifecycle, autostart, or install updates. Rust pins navigation and destination callers to the startup server origin.",
+  "windows": ["conversation-*"],
+  "local": true,
+  "remote": { "urls": ["http://127.0.0.1:*/"] },
+  "permissions": [
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-read-image",
+    "allow-get-desktop-api-token",
+    "allow-open-external-url",
+    "allow-open-path",
+    "allow-reveal-item-in-dir",
+    "allow-list-apps-for-file",
+    "allow-open-path-with",
+    "allow-show-popup-menu",
+    "allow-set-ui-theme",
+    "allow-conversation-destinations",
+    "allow-open-conversation-window",
+    "allow-open-project-in-vscode"
+  ]
+}

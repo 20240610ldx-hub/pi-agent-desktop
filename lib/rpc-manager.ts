@@ -54,6 +54,10 @@ import { resolveShellTools } from "./powershell-settings";
 import { CHAT_ONLY_RESOURCE_LOADER_OPTIONS, contextFilesSystemPrompt } from "./chat-only";
 import { createExactSystemPromptExtension } from "./exact-system-prompt";
 import { createArtifactGuideExtension } from "./artifact-guide-extension";
+import { unsupportedOutputStyleState, type OutputStyleCommand, type OutputStyleState } from "./output-styles";
+import { createSessionOutputStyle, type SessionOutputStyle } from "./session-output-style";
+import { createOutputStyleStore } from "./output-style-store";
+import { createOutputStyleExtension } from "./output-style-extension";
 import { createPiWebBuiltinExtensions } from "./builtin-extensions";
 import type { McpHost } from "./mcp-host";
 import { mcpPromptPreparation, type McpCommandCandidate } from "./mcp-command";
@@ -121,6 +125,7 @@ type ExtensionUiRequestBody = Record<string, unknown> & {
 
 
 type AgentSessionWrapperOptions = {
+  outputStyle?: SessionOutputStyle;
   exactSystemPrompt?: () => string;
   chatOnly?: boolean;
   onAgentRunComplete?: AgentRunCompleteListener;
@@ -197,6 +202,7 @@ const COMMANDS_ALLOWED_DURING_SESSION_REPLACEMENT = new Set([
   "get_last_assistant_text",
   "get_tools",
   "get_commands",
+  "get_output_style",
   "extension_ui_response",
   "extension_ui_input",
 ]);
@@ -304,6 +310,7 @@ export class AgentSessionWrapper {
   private extensionsBound = false;
   private extensionBindingPromise: Promise<void> | null = null;
   private extensionBindingError: unknown = null;
+  private readonly outputStyle?: SessionOutputStyle;
   private readonly exactSystemPrompt?: () => string;
   private readonly chatOnly: boolean;
   private readonly onAgentRunComplete?: AgentRunCompleteListener;
@@ -331,11 +338,18 @@ export class AgentSessionWrapper {
     public readonly inner: AgentSessionLike,
     options: AgentSessionWrapperOptions = {},
   ) {
+    this.outputStyle = options.outputStyle;
     this.exactSystemPrompt = options.exactSystemPrompt;
     this.chatOnly = options.chatOnly ?? false;
     this.onAgentRunComplete = options.onAgentRunComplete;
     this.suppressCompletionNotifications = options.suppressCompletionNotifications ?? false;
     this.mcpHost = options.mcpHost;
+  }
+
+  private getOutputStyleState(): OutputStyleState {
+    if (this.exactSystemPrompt || this.chatOnly) return unsupportedOutputStyleState("exact-system-prompt");
+    if (this.suppressCompletionNotifications) return unsupportedOutputStyleState("subagent");
+    return this.outputStyle?.getState() ?? unsupportedOutputStyleState("unavailable");
   }
 
   get sessionId(): string {
@@ -757,6 +771,8 @@ export class AgentSessionWrapper {
     }
   }
 
+  async send(command: OutputStyleCommand): Promise<OutputStyleState>;
+  async send(command: Record<string, unknown>): Promise<unknown>;
   async send(command: Record<string, unknown>): Promise<unknown> {
     const type = command.type as string;
     const allowedDuringReplacement = COMMANDS_ALLOWED_DURING_SESSION_REPLACEMENT.has(type);
@@ -950,6 +966,15 @@ export class AgentSessionWrapper {
           if (!this.isRunning()) this.forceShutdownOnIdle = false;
         }
 
+      case "get_output_style":
+        return this.getOutputStyleState();
+      case "set_output_style": {
+        const state = this.getOutputStyleState();
+        if (!state.supported || !this.outputStyle) throw new OutputStyleUnavailableError(state.reason ?? "unavailable");
+        const next = this.outputStyle.setStyle(command.styleId);
+        this.emit({ type: "output_style_changed", outputStyle: next });
+        return next;
+      }
       case "get_state": {
         const model = this.inner.model;
         const contextUsage = this.inner.getContextUsage();
@@ -988,6 +1013,7 @@ export class AgentSessionWrapper {
           extensionWidgets: this.getExtensionWidgets(),
           routedModel: this.getRoutedModel(),
           cacheWarming: this.getCacheWarming(),
+          outputStyle: this.getOutputStyleState(),
         };
       }
 
@@ -2184,6 +2210,45 @@ export function getRpcSession(sessionId: string): AgentSessionWrapper | undefine
   return getRegistry().get(sessionId);
 }
 
+export class OutputStyleUnavailableError extends Error {
+  constructor(public readonly reason: string) { super(`Output styles are unavailable: ${reason}`); }
+}
+
+/** Reads/writes metadata without starting services, loading providers, or prompting. */
+export async function sessionOutputStyleCommand(sessionId: string, command: OutputStyleCommand): Promise<OutputStyleState | null> {
+  const existing = getRpcSession(sessionId);
+  if (existing?.isAlive()) {
+    if (existing.evictIfDiskAhead()) return sessionOutputStyleCommand(sessionId, command);
+    return existing.send(command);
+  }
+  const pending = closingRpcSessionWait(sessionId) ?? getLocks().get(sessionId);
+  if (pending) {
+    await pending.catch(() => undefined);
+    return sessionOutputStyleCommand(sessionId, command);
+  }
+  const path = await resolveSessionPath(sessionId);
+  if (!path) return null;
+  // Resolving a cold path may yield while another request starts the runtime.
+  // Recheck ownership before opening a second SessionManager for a write.
+  if (getRpcSession(sessionId)?.isAlive() || getLocks().has(sessionId) || closingRpcSessionWait(sessionId)) {
+    return sessionOutputStyleCommand(sessionId, command);
+  }
+  const manager = SessionManager.open(path, undefined);
+  const entries = manager.getEntries() as unknown as SessionEntry[];
+  const reason = readSubagentSessionResources(entries) ? "subagent"
+    : readSessionToolSelection(entries)?.length === 0 ? "exact-system-prompt" : null;
+  if (reason) {
+    if (command.type === "set_output_style") throw new OutputStyleUnavailableError(reason);
+    return unsupportedOutputStyleState(reason);
+  }
+  const store = createOutputStyleStore();
+  const outputStyle = createSessionOutputStyle(manager, { customStyles: () => store.list() });
+  if (command.type === "get_output_style") return outputStyle.getState();
+  const next = outputStyle.setStyle(command.styleId);
+  invalidateSessionListCache();
+  return next;
+}
+
 export interface SetRpcSessionToolsResult {
   session: AgentSessionWrapper;
   sessionId: string;
@@ -2507,6 +2572,10 @@ export async function startRpcSession(
     // Some extensions access the SDK's global theme even outside the terminal UI.
     if (!chatOnly) initTheme();
     const agentDir = getAgentDir();
+    const outputStyleStore = createOutputStyleStore();
+    const outputStyle = !subagentResources && !chatOnly
+      ? createSessionOutputStyle(sessionManager, { customStyles: () => outputStyleStore.list() })
+      : undefined;
 
     // Determine which tools to pass based on requested toolNames.
     // Since v0.68.0, session creation expects string[] tool names instead of Tool[] instances.
@@ -2574,6 +2643,7 @@ export async function startRpcSession(
               ...(builtins?.extensions ?? []),
               createReadOnlyMcpPolicyExtension(),
               createArtifactGuideExtension(),
+              ...(outputStyle ? [createOutputStyleExtension(outputStyle)] : []),
               createProjectCommandBashExtension({
                 cwd: sessionCwd,
                 settings: settingsManager,
@@ -2654,6 +2724,7 @@ export async function startRpcSession(
         : undefined;
     exactSystemPromptRef.current = exactSystemPrompt;
     const wrapper = new AgentSessionWrapper(inner, {
+      outputStyle,
       exactSystemPrompt,
       chatOnly,
       onAgentRunComplete: (completedSessionId) => {

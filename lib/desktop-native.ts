@@ -174,6 +174,46 @@ export async function openChangesWindow(cwd: string, targetId?: string): Promise
   await invoke("open_changes_window", { cwd, targetId });
 }
 
+export interface ConversationDestinations {
+  newWindow: boolean;
+  vsCode: { supported: boolean; reason: "not-installed" | "desktop-only" | "unavailable" | null };
+}
+
+/** Set by Rust before page scripts run; URL flags never select this mode. */
+export function isConversationWindow(): boolean {
+  return isTauriDesktop() && (window as Window & { __PILAUDE_CONVERSATION_WINDOW__?: boolean }).__PILAUDE_CONVERSATION_WINDOW__ === true;
+}
+
+/** Discover native destinations without launching any application. */
+export async function getConversationDestinations(): Promise<ConversationDestinations> {
+  if (!isTauriDesktop()) return { newWindow: true, vsCode: { supported: false, reason: "desktop-only" } };
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<ConversationDestinations>("conversation_destinations");
+}
+
+/** Open the selected conversation at the server origin chosen by the desktop shell. */
+export async function openConversationWindow(sessionId: string): Promise<void> {
+  if (!sessionId.trim() || sessionId.length > 256 || /[\0\r\n]/.test(sessionId)) throw new Error("Invalid conversation identifier.");
+  if (!isTauriDesktop()) {
+    const url = new URL("/", window.location.origin);
+    url.searchParams.set("session", sessionId);
+    const opened = window.open(url.href, "_blank");
+    if (!opened) throw new Error("The browser blocked the new window. Allow popups and try again.");
+    opened.opener = null;
+    return;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("open_conversation_window", { sessionId });
+}
+
+/** Open only the selected project folder in an installed VS Code, not the transcript. */
+export async function openProjectInVSCode(cwd: string): Promise<void> {
+  if (!isTauriDesktop()) throw new Error("Opening a project in VS Code requires the desktop app.");
+  if (!cwd.trim() || cwd.length > 32_768 || /[\0\r\n]/.test(cwd) || !/^(?:[A-Za-z]:[\\/]|\/|\\\\)/.test(cwd)) throw new Error("An absolute project folder is required.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("open_project_in_vscode", { cwd });
+}
+
 /** Close the standalone Changes window; Rust only accepts changes-* callers. */
 export async function closeChangesWindow(): Promise<void> {
   if (!isTauriDesktop()) {

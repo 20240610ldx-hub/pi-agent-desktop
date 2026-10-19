@@ -1,4 +1,19 @@
 [[permission]]
+identifier = "allow-open-conversation-window"
+description = "Allows trusted app windows to open only a same-origin conversation window."
+commands.allow = ["open_conversation_window"]
+
+[[permission]]
+identifier = "allow-conversation-destinations"
+description = "Allows trusted app windows to check native conversation destinations without launching an application."
+commands.allow = ["conversation_destinations"]
+
+[[permission]]
+identifier = "allow-open-project-in-vscode"
+description = "Allows opening one existing absolute project folder in a detected VS Code executable using direct arguments."
+commands.allow = ["open_project_in_vscode"]
+
+[[permission]]
 identifier = "allow-open-changes-window"
 description = "Allows the main window to open only the same-origin Changes page in a dedicated window."
 commands.allow = ["open_changes_window"]

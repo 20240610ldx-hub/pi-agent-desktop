@@ -18,13 +18,17 @@ use std::os::windows::process::CommandExt as _;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Url};
 
 mod changes_window;
+mod conversation_window;
 mod logging;
 #[cfg(windows)]
 pub mod credential_helper;
 mod native_prefs;
+mod project_editor;
 mod shell;
 
 use changes_window::{close_changes_window, open_changes_window, ChangesWindowOrigin};
+use conversation_window::{open_conversation_window, ConversationWindowOrigin};
+use project_editor::{conversation_destinations, open_project_in_vscode};
 use logging::{desktop_log, install_panic_hook};
 use native_prefs::{
     clear_app_cache, reconcile_webview_cache_for_version, set_ui_theme, write_last_version,
@@ -1020,7 +1024,7 @@ pub fn run() {
             tauri_plugin_window_state::Builder::default()
                 // Popouts have one-use labels; do not retain dead entries in
                 // the persisted main-window geometry file.
-                .with_filter(|label| !label.starts_with("changes-"))
+                .with_filter(|label| !label.starts_with("changes-") && !label.starts_with("conversation-"))
                 .with_state_flags(
                     tauri_plugin_window_state::StateFlags::SIZE
                         | tauri_plugin_window_state::StateFlags::POSITION
@@ -1057,6 +1061,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             open_changes_window,
             close_changes_window,
+            open_conversation_window,
+            conversation_destinations,
+            open_project_in_vscode,
             get_desktop_api_token,
             open_external_url,
             open_path,
@@ -1103,6 +1110,7 @@ pub fn run() {
 
             desktop_log(app.handle(), &format!("server ready at {url}"));
             app.manage(ChangesWindowOrigin(url.clone()));
+            app.manage(ConversationWindowOrigin(url.clone()));
             app.manage(server);
             #[cfg(feature = "custom-protocol")]
             if let Some(port) = url.port() {

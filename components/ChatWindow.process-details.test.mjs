@@ -15,7 +15,7 @@ test("groups the leading segment when the history page starts mid-turn", () => {
 });
 
 test("expands process details when a completed turn has no final answer", () => {
-  assert.match(source, /const \[expanded, setExpanded\] = useState\(defaultExpanded\)/);
+  assert.match(source, /const \[expanded, setExpanded\] = useTranscriptExpansion\(\(\) => defaultExpanded, "process"\)/);
   assert.match(
     source,
     /<ProcessDetailsGroup[\s\S]*?defaultExpanded=\{!finalAnswerMessage\}/,

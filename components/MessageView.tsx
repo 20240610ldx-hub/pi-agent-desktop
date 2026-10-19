@@ -5,10 +5,12 @@ import ReactMarkdown from "react-markdown";
 import { MarkdownBody } from "./MarkdownBody";
 import { ImagePreview } from "./ImagePreview";
 import { ThinkingDisclosure } from "./ThinkingDisclosure";
+import { DisclosureBody } from "./DisclosureBody";
 import { CodeCopyButton } from "./CodeCopyButton";
 import { copyText } from "@/lib/clipboard";
 import { useI18n } from "@/hooks/useI18n";
 import { useDiffViewMode } from "@/hooks/useDiffViewMode";
+import { useTranscriptExpansion } from "@/hooks/useTranscriptExpansion";
 import { parseCompactionSummary } from "@/lib/compaction-summary";
 import { getAssistantErrorMessage, getThinkingPreview, hasAssistantAnswer, isAssistantTruncated, isEmptyThinkingBlock } from "@/lib/message-display";
 import { parseUnifiedPatch, type SplitDiffCell, type SplitDiffFile } from "@/lib/patch";
@@ -1045,7 +1047,7 @@ export function ThinkingBlock({ block, searchTarget, active, duration, sessionId
   blockIndex: number;
 }) {
   const { t } = useI18n();
-  const [expanded, setExpanded] = useState(isThinkingExpandedByDefault);
+  const [expanded, setExpanded] = useTranscriptExpansion(isThinkingExpandedByDefault, "thinking");
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1058,7 +1060,7 @@ export function ThinkingBlock({ block, searchTarget, active, duration, sessionId
     const onChange = () => setExpanded(isThinkingExpandedByDefault());
     window.addEventListener(THINKING_EXPANDED_EVENT, onChange);
     return () => window.removeEventListener(THINKING_EXPANDED_EVENT, onChange);
-  }, []);
+  }, [setExpanded]);
 
   // Load deferred history content whenever the block is expanded.
   // loadThinkingContent() memoizes in-flight promises and drops failed ones
@@ -1118,7 +1120,7 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
   const isError = (result?.isError ?? false)
     || (isApplyPatchToolName(block.toolName) && applyPatchResultHasFailures(result?.details));
   const autoExpandError = isError && !dismissedToolErrors.has(block.toolCallId);
-  const [expanded, setExpanded] = useState(() => autoExpandError || (defaultExpanded ?? isToolCallExpanded(block.toolCallId)));
+  const [expanded, setExpanded] = useTranscriptExpansion(() => autoExpandError || (defaultExpanded ?? isToolCallExpanded(block.toolCallId)), "tool");
   const [previousIsError, setPreviousIsError] = useState(isError);
   if (isError !== previousIsError) {
     setPreviousIsError(isError);
@@ -1238,9 +1240,9 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
 
       {/* Result images stay visible even when the argument/result disclosure is closed. */}
       {resultImages.length > 0 && <ResultImages images={resultImages} isError={isError} />}
-      <div id={`${disclosureId}-body`} className="tool-call-body" role="region" aria-labelledby={`${disclosureId}-toggle`} hidden={!expanded}>
+      <DisclosureBody id={`${disclosureId}-body`} labelledBy={`${disclosureId}-toggle`} expanded={expanded} className="tool-call-grid" contentClassName="tool-call-body">
       {/* ── Expanded: input args (only when no richer view exists); a codemode script in place of its JSON ── */}
-      {expanded && (isStreamingInput || !isEditTool) && !patchFiles && (
+      {(isStreamingInput || !isEditTool) && !patchFiles && (
         <>
         <CodeCopyButton code={codemode ? codemode.code : inputStr} />
         <pre
@@ -1264,26 +1266,26 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
       )}
 
       {/* ── Expanded: the calls a codemode script made ── */}
-      {expanded && codemode && (
+      {codemode && (
         <CodemodeCallList calls={codemode.calls} omitted={codemode.omitted} isError={isError} />
       )}
 
       {/* ── Expanded: applied-patch split diff ── */}
-      {expanded && patchFiles && (
+      {patchFiles && (
         <div style={{ borderTop: "var(--hairline) solid rgba(34,197,94,0.15)", background: "var(--bg)" }}>
           <ApplyPatchDiffView files={patchFiles} />
         </div>
       )}
 
       {/* ── Paired result — only shown when expanded ── */}
-      {expanded && result && patchFiles && isError && (
+      {result && patchFiles && isError && (
         <PairedResult
           text={resultText ?? ""}
           isEmpty={resultIsEmpty}
           isError={isError}
         />
       )}
-      {expanded && result && !patchFiles && !codemodeRunning && (
+      {result && !patchFiles && !codemodeRunning && (
         resultDiff ? (
           <PairedDiffResult
             diff={resultDiff}
@@ -1296,7 +1298,7 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
           />
         )
       )}
-      </div>
+      </DisclosureBody>
     </div>
   );
 }

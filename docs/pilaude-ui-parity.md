@@ -274,6 +274,32 @@ RED 先复现 `[a,b,c]` 配合持久 pin `[b,a]` 仍显示 `[a,b,c]`，再补 pi
 
 DPR1.25 原像素抓取的 panel 为161.594×244.578 CSS px，整数 crop203×306原像素，参考202×306；横向取整占1原像素。row35.996对参考36，separator偏移48.496／134.238／219.980对48／134／220。reference100%／actual50%叠图无缩放，父级已读取；glyph／chevron仍有重影，参考DPI未知，不称像素一致。最终本批18文件组合267项通过，完整类型及lint退出0，保留既有TerminalPanel ARIA warning；ownership baseline6fcd7d4和30／250阈值不变。完整npm／terminal E2E与原生Windows GUI仍未据此通过。
 
+## 共享折叠高度、真实任务与菜单能力补齐（2026-10-19）
+
+`DisclosureBody` 提取现有 ThinkingAccordion Grid 机制供思考、工具详情和过程组消费，保持200ms／cubic-bezier(.19,1,.22,1)。过程组首次打开前不挂子树，随后持久保留；思考／工具只保留至归零。关闭立即 aria-hidden／inert，仅当前焦点在被收起的后代时向 trigger preventScroll 返回；隐藏聊天不抢焦点。最新展开 ref、ResizeObserver、media change 与 filtered transitionend 处理反向／未启动／隐藏／reduced-motion，不依赖延时器；收起期间子微光立即停止。
+
+`disclosure-motion/run-1792378208269/` 六组实际通过三类中间高度、焦点／inert、嵌套状态／deferred cache、快速及同批反向、隐藏和中途 reduced-motion、历史滚动与收起单微光。工具 RED opening [0,529.5,529.5]／closing [529.5,0,0]，GREEN opening [0,0,217.28,368.05,446.53,…529.5]／closing [529.5,529.5,312.83,161.80,82.80,…0]。既有活动完整回归 `activity-disclosure/run-1792378225066/` 通过。该run截图中部分chrome正处有限过渡；稳定补拍 `disclosure-motion/run-1792378495618/` 经真实控件关闭遮挡、等待有限过渡结束，1300／430深浅trigger及body远端hit全部通过，mobile body x64.797..414，根scrollWidth=clientWidth=430。父级读取稳定暗色手机图；会话返回空白另经缓存修复独立验收，不用该活动通过替代。新步骤进入／错开、状态／摘要有限切换仍待实施。
+
+真实 Tasks pane 的 `AgentSessionPanel` 改为 native select button 与 sibling Stop／Steer，修复按键冒泡选择和IME误触；queued／starting为空心、running实心、completed勾、failed叉、aborted／interrupted方块，未知不再默认success。并行任务不各自持续旋转。8项组件测试和 `task-activity/run-1792377606134/` 九组实际检查通过原生键盘、IME、单次拦截控制、filter／empty／long／family、并行SSE单项结束、Stop失败保真实状态、深浅／reduced和真实touch tap；Stop／Steer实测44×44且中心命中。父级已读dark／touch截图。它只接现有真实家族任务，不冒充Plan/Todo列表。
+
+Output style 后端新增版本化session custom entry和定义store；普通会话通过隐藏 before_agent_start extension 将真实指令加入Pi system prompt sections，Default删除该section。精确提示词、chat-only和subagent保原合同，明确不可用。cold session GET／PUT metadata不启动运行时或模型；live owner与现有锁／stale wrapper边界共享。49项定向与邻接测试通过，含真实SDK＋进程内faux provider逐风格检查，未调用真实网络／模型。定义有80字符名称、16000字符指令、100项／1MiB上限、regular-file／atomic writer与origin校验。
+
+前端只在ACK后切换勾选；generation隔离A→B→A旧结果，重复提交用ref挡住，损坏响应可重试；自定义创建后应用失败保draft和saved ID，重试不重复创建。7项实际DOM／API tests与 `output-style-menu/run-1792378213108/` 通过主AppShell、503应用失败／同ID重试、精确prompt不可用及1300／430深浅编辑器尺寸和native hit。唯一console503为显式失败夹具，报告保留，不说console全空；无其他console／page／external错误。父级已读手机编辑器和ACK菜单；编辑器无对应官方参考，不称像素一致。初始反向Tab实测逃出editor，最小修复为保存outer focus归属后聚焦form；最终 `output-style-menu/run-1792378489375/` 重验初始Shift+Tab→Cancel／Tab→Name及原全部流程通过，取代前轮此UI版本证据。
+
+原生 New window 新增startup-origin-pinned Tauri command，只携带encoded session ID、theme bootstrap和独立OS controls，关闭不退出主应用；副窗口不覆盖主workspace／last-open、通知／音效或几何。VS Code明确为打开项目文件夹，直接可执行路径＋argv，不转移Pi会话。缺安装或启动失败显示原因。Windows20项Rust、28项Node与 `native-conversation-destinations/run-1792378155118/` 五组主AppShell＋mock IPC通过；更新菜单 `title-conversation-menu/run-1792378173460/` 六组通过，无page／console错误。早期mock缺Tauri event registry的unregisterListener已修fixture，未屏蔽产品错误。原生WebView实际开关／theme／DPI和真实Code.exe启动、macOS／Linux编译尚未实测。
+
+预览本身修复了已确认的隔离缺陷：Next16.3.8 custom server prepare未把conf.distDir传给dev router，原30142实际共享.next/dev并绕过CLI监督进程，约8GiB后exit134。现在开发条件 `PI_WEB_UI_VERIFICATION=1` 从真实next.config选择ignored preview-cache，经next dev CLI启动；实读preview-cache/dev/lock确认30142独立。该改动恢复Next内置阈值重启路径，不表示底层HMR内存增长已根治；正常dev和desktop build目录优先级保留，没有next build。
+
+输出风格存储错误另有隐私RED→GREEN：Node24 JSON.parse可在错误里带出损坏文件片段，原API直接转发message会暴露自定义指令。store read/write与定义／session API未知500现返回通用错误，保安全validation400；仅使用合成marker临时文件复现，12项相关store／API检查通过，无原始私人文件读取／日志。
+
+## Transcript modes 与会话缓存往返修复（2026-10-19）
+
+视图按session ID独立保存并由external-store同步；Thinking展开真实过程／思考，Verbose再展开工具参数／结果，Normal回既有默认。受控Context不重挂composer，mode变化只重新选择展开默认，用户随后手动开关仍有效，搜索／错误、原始deferred index与缓存继续消费；不显示provider system messages。偏好存储失败给出错误，无模型请求。
+
+SSR真实controller与preference接口先RED后GREEN。实际 `transcript-view/run-1792378478848/` 四组通过Thinking原index2只取一次、Verbose原文详情、手动开关／草稿保留、A→B→A会话隔离、刷新与Normal默认恢复。父级已读Verbose实际截图；无页面／console／external错误或模型／mutation请求。
+
+前两轮返回A出现空白的failed报告保留，调查证明与不同会话相同revision无关：cache按session ID隔离，即使fixture使用不同revision仍复现。StrictMode重复mount loads在第一次setMessages尚未commit时取滞后的空messagesRef，覆盖合法cached window；实际初始UI3条但cache0条／3IDs，返回即空白。`useAgentSession` 现只在当前session refs覆盖cached entry IDs时优先保live window，否则用canonical cached window并明确恢复state。public returned-hook RED→GREEN还保新pending user及messages数组identity；实际修后A cache3／3、B2／2、返回A3／3与正文可见。没有重置历史、修改timeout或放宽夹具结果。此批最终组合227项UI／session／翻译／ownership回归、19项输出风格store／API／真实SDK-faux检查、7项渲染DOM风格编辑器检查分别通过；Windows Rust20项已通过。项目完整类型、lint退出0，lint保留既有TerminalPanel ARIA一条warning。分组数字不相加冒充完整npm／terminal E2E。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。

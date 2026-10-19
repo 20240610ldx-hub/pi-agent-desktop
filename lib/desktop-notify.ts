@@ -1,4 +1,5 @@
 import { isTauriDesktop } from "@/lib/desktop-updater";
+import { isConversationWindow } from "@/lib/desktop-native";
 import { APP_PREF_KEYS, getPrefBool } from "@/lib/app-prefs";
 
 export function desktopNotificationsEnabled(): boolean {
@@ -23,7 +24,7 @@ export async function notifyDesktop(options: {
   title: string;
   body: string;
 }): Promise<void> {
-  if (!isTauriDesktop() || !desktopNotificationsEnabled()) return;
+  if (!isTauriDesktop() || isConversationWindow() || !desktopNotificationsEnabled()) return;
 
   try {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");

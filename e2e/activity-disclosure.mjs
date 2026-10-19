@@ -63,6 +63,7 @@ export async function installActivityFixture(context, report) {
       return route.fulfill({ status: 409, json: { error: "Activity fixture never executes writes" } });
     }
     if (url.pathname === "/api/sessions") return route.fulfill({ json: { sessions } });
+    if (/^\/api\/sessions\/[^/]+\/output-style$/.test(url.pathname)) return route.fulfill({ json: { supported: false, reason: "unavailable", selectedId: "default", styles: [] } });
     if (url.pathname === "/api/sessions/search") return route.fulfill({ json: { results: [{ session: sessions[0], before: "", match: "Stored reasoning preview", after: "", entryId: "history-assistant", blockIndex: 2 }], truncated: false } });
     if (url.pathname === "/api/sessions/activity/entries/history-assistant/thinking") {
       report.thinkingRequests.push(Number(url.searchParams.get("blockIndex")));
@@ -127,6 +128,8 @@ export async function runActivityDisclosure() {
     const body = await linkedBody(history);
     assert.equal(await body.count(), 1, "Collapsed content wrapper exists for ARIA");
     assert.equal(await body.isVisible(), false);
+    assert.equal(await body.getAttribute("aria-hidden"), "true");
+    assert.equal(await body.evaluate((element) => element.inert && element.getBoundingClientRect().height === 0), true, "Collapsed group is inert and occupies zero height");
     assert.equal(await history.locator(":scope > :last-child").getAttribute("class"), "process-details-chevron", "Chevron trails the summary");
     await history.focus(); await history.press("Enter"); await assertExpanded(history, true);
     assert.equal(await history.evaluate((button) => button === document.activeElement), true, "Native Enter preserves focus");

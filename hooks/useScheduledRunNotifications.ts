@@ -8,6 +8,8 @@ import { isTauriDesktop } from "@/lib/desktop-updater";
 import { describeRunNotification, type RunNotification } from "@/lib/scheduled-tasks/notification-text";
 
 interface Options {
+  /** The main window owns delivery; secondary conversation views stay silent. */
+  enabled?: boolean;
   /** Play the completion sound (a run that went well). */
   onSound: () => void;
   /** Show a notification in a browser tab; the desktop app uses its native one instead. */
@@ -23,7 +25,9 @@ export function useScheduledRunNotifications(options: Options): void {
   const latest = useRef({ t, ...options });
   useEffect(() => { latest.current = { t, ...options }; });
 
+  const enabled = options.enabled !== false;
   useEffect(() => {
+    if (!enabled) return;
     const release = retainScheduledTaskStream();
     const off = onScheduledTaskEvent((event) => {
       const { t: translate, onSound, deliverInBrowser } = latest.current;
@@ -34,5 +38,5 @@ export function useScheduledRunNotifications(options: Options): void {
       else deliverInBrowser(notification);
     });
     return () => { off(); release(); };
-  }, []);
+  }, [enabled]);
 }

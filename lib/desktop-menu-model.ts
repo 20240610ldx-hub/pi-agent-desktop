@@ -7,6 +7,8 @@ export type NativeMenuEntry =
       onSelect?: (modifiers?: { shiftKey?: boolean }) => void;
       disabled?: boolean;
       disabledReason?: string;
+      /** Explains an available action without changing its visible label. */
+      description?: string;
       /** A displayed menu access key, active only while this panel has focus. */
       shortcut?: string;
       danger?: boolean;

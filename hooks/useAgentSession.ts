@@ -776,38 +776,51 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         && cached?.revision === d.snapshotRevision
         && cached.entryIds.length >= (d.context.entryIds ?? []).length,
       );
-      const persistedMessages = revisionUnchanged ? messagesRef.current : d.context.messages;
-      setData(revisionUnchanged
+      // Parallel mount loads can see the cache before React commits the first
+      // load's setters. Keep that canonical window until this session's refs
+      // cover it; otherwise stale empty refs overwrite valid cached messages.
+      const currentIds = revisionUnchanged ? new Set(entryIdsRef.current) : null;
+      const preservedWindow = revisionUnchanged && cached
+        ? dataRef.current?.sessionId === sid && cached.entryIds.every((id) => currentIds?.has(id))
+          ? { messages: messagesRef.current, entryIds: entryIdsRef.current, oldestEntryId: historyCursorRef.current, hasMore: hasEarlierMessagesRef.current }
+          : cached
+        : null;
+      const persistedMessages = preservedWindow?.messages ?? d.context.messages;
+      setData(preservedWindow
         ? {
             ...d,
             context: {
               ...d.context,
-              messages: messagesRef.current,
-              entryIds: entryIdsRef.current,
-              oldestEntryId: historyCursorRef.current,
-              hasMore: hasEarlierMessagesRef.current,
+              messages: preservedWindow.messages,
+              entryIds: preservedWindow.entryIds,
+              oldestEntryId: preservedWindow.oldestEntryId,
+              hasMore: preservedWindow.hasMore,
             },
           }
         : d);
       setActiveLeafId(d.leafId);
-      if (revisionUnchanged) {
+      if (preservedWindow) {
         // Refresh the cached snapshot with the newest leaf/tree/stats while
         // preserving the wider loaded window.
         setSessionViewSnapshot({
           sessionId: sid,
           revision: d.snapshotRevision!,
-          messages: messagesRef.current,
-          entryIds: entryIdsRef.current,
+          messages: preservedWindow.messages,
+          entryIds: preservedWindow.entryIds,
           leafId: d.leafId,
-          oldestEntryId: historyCursorRef.current,
-          hasMore: hasEarlierMessagesRef.current,
+          oldestEntryId: preservedWindow.oldestEntryId,
+          hasMore: preservedWindow.hasMore,
           summaryTree: d.tree,
           thinkingLevel: d.context.thinkingLevel,
           model: d.context.model,
           stats: d.stats,
           totalActiveMs: d.totalActiveMs,
-          loadedEntryIds: entryIdsRef.current,
+          loadedEntryIds: preservedWindow.entryIds,
         });
+        setMessages(preservedWindow.messages);
+        setEntryIds(preservedWindow.entryIds);
+        setHistoryCursor(preservedWindow.oldestEntryId);
+        setHasEarlierMessages(preservedWindow.hasMore);
       } else {
         setMessages(persistedMessages);
         setEntryIds(d.context.entryIds ?? []);

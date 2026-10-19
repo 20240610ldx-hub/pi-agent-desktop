@@ -30,42 +30,13 @@ function formatRelativeTime(value: string, locale: string): string {
   return formatter.format(Math.round(elapsedHours / 24), "day");
 }
 
-function statusColor(status: SubagentSessionStatus): string {
-  if (status === "running" || status === "starting") return "var(--accent)";
-  if (status === "completed") return "#16a34a";
-  if (status === "failed") return "#dc2626";
-  if (status === "aborted") return "#d97706";
-  return "var(--text-dim)";
-}
-
-function StatusIcon({ status }: { status: SubagentSessionStatus }) {
-  if (status === "running" || status === "starting") {
-    return (
-      <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" opacity="0.25" />
-        <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (status === "failed") {
-    return (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" /><path d="m9 9 6 6M15 9l-6 6" />
-      </svg>
-    );
-  }
-  if (status === "aborted" || status === "interrupted") {
-    return (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" /><path d="M9 9h6v6H9z" />
-      </svg>
-    );
-  }
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" />
-    </svg>
-  );
+function StatusIcon({ status }: { status: SubagentSessionStatus | "unknown" }) {
+  return <svg className="agent-session-status-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {status === "completed" ? <path d="m3 8 3.2 3.2L13 4.5" />
+      : status === "failed" ? <path d="m4 4 8 8M12 4l-8 8" />
+      : status === "aborted" || status === "interrupted" ? <rect x="4" y="4" width="8" height="8" rx="1" />
+      : <circle cx="8" cy="8" r={status === "running" ? 3 : 4.5} fill={status === "running" ? "currentColor" : "none"} />}
+  </svg>;
 }
 
 function StopIcon() {
@@ -106,7 +77,7 @@ function AgentRow({
 }) {
   const { locale, t } = useI18n();
   const relation = session.relation?.kind === "subagent" ? session.relation : null;
-  const status: SubagentSessionStatus = running ? "running" : relation?.status ?? "completed";
+  const status: SubagentSessionStatus | "unknown" = running ? "running" : relation?.status ?? "unknown";
   const primary = main ? t("agentSwitcher.main") : relation?.description || sessionTitle(session);
   const secondary = main
     ? sessionTitle(session)
@@ -114,39 +85,9 @@ function AgentRow({
   const controllable = !main && running;
 
   return (
-    <div
-      role="option"
-      aria-selected={selected}
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
-      style={{
-        width: "100%",
-        minHeight: 56,
-        display: "grid",
-        gridTemplateColumns: "28px minmax(0, 1fr) auto",
-        alignItems: "center",
-        gap: 9,
-        padding: "7px 12px",
-        borderBottom: "var(--hairline) solid var(--border)",
-        borderLeft: selected ? "2px solid var(--accent)" : "2px solid transparent",
-        background: selected ? "var(--bg-selected)" : "transparent",
-        color: "var(--text)",
-        cursor: "pointer",
-        textAlign: "left",
-      }}
-      onMouseEnter={(event) => {
-        if (!selected) event.currentTarget.style.background = "var(--bg-hover)";
-      }}
-      onMouseLeave={(event) => {
-        if (!selected) event.currentTarget.style.background = "transparent";
-      }}
-    >
+    <div className="agent-session-row" role="listitem" data-session-id={session.id} data-status={main && !running ? "idle" : status} data-selected={selected}>
+      <button type="button" className="agent-session-select" aria-current={selected ? "true" : undefined} onClick={onSelect}
+        onKeyDown={(event) => { if (isImeComposing(event)) event.preventDefault(); }}>
       <span style={{ width: 28, height: 28, display: "grid", placeItems: "center", color: main ? "var(--text-muted)" : "var(--accent)" }}>
         {main ? (
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -166,7 +107,7 @@ function AgentRow({
           {secondary}
         </span>
       </span>
-      <span style={{ display: "flex", alignItems: "center", gap: 6, color: main && !running ? "var(--text-dim)" : statusColor(status), fontSize: 11, whiteSpace: "nowrap" }}>
+      <span className="agent-session-status">
         {main && !running ? (
           selected ? t("agentSwitcher.current") : null
         ) : (
@@ -175,8 +116,10 @@ function AgentRow({
             <span>{t(`agentSwitcher.status.${status}`)}</span>
           </>
         )}
+      </span>
+      </button>
         {controllable && (
-          <span style={{ display: "inline-flex", gap: 4, marginLeft: 4 }}>
+          <span className="agent-session-actions">
             <button
               type="button"
               title={t("agentSwitcher.steer")}
@@ -186,7 +129,8 @@ function AgentRow({
                 event.stopPropagation();
                 onSteer();
               }}
-              style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, border: "var(--hairline) solid var(--border)", borderRadius: 5, background: "var(--bg)", color: "var(--text-muted)", cursor: actionPending ? "default" : "pointer", padding: 0 }}
+              className="agent-session-action"
+              onKeyDown={(event) => { if (isImeComposing(event)) event.preventDefault(); }}
             >
               <SteerIcon />
             </button>
@@ -199,13 +143,13 @@ function AgentRow({
                 event.stopPropagation();
                 onStop();
               }}
-              style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, border: "var(--hairline) solid rgba(239,68,68,0.4)", borderRadius: 5, background: "var(--bg)", color: "#ef4444", cursor: actionPending ? "default" : "pointer", padding: 0 }}
+              className="agent-session-action agent-session-action--stop"
+              onKeyDown={(event) => { if (isImeComposing(event)) event.preventDefault(); }}
             >
               <StopIcon />
             </button>
           </span>
         )}
-      </span>
     </div>
   );
 }
@@ -268,7 +212,7 @@ export function AgentSessionPanel({ rootSession, subagents, selectedSessionId, r
   return (
     <div
       className="agent-session-panel"
-      role="listbox"
+      role="region"
       aria-label={t("agentSwitcher.title")}
       style={{
         background: "var(--bg-panel)",
@@ -313,7 +257,7 @@ export function AgentSessionPanel({ rootSession, subagents, selectedSessionId, r
             />
           </div>
         )}
-        <div style={{ maxHeight: "min(58dvh, 480px)", overflowY: "auto" }}>
+        <div role="list" aria-label={t("agentSwitcher.title")} style={{ maxHeight: "min(58dvh, 480px)", overflowY: "auto" }}>
           <AgentRow
             session={rootSession}
             main
