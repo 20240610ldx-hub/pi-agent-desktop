@@ -5794,6 +5794,8 @@ html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
 /* File viewer toolbar */
 .file-viewer-shell {
   display: flex;
+  container-name: file-viewer;
+  container-type: inline-size;
   height: 100%;
   min-width: 0;
   flex-direction: column;
@@ -6054,6 +6056,23 @@ html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
   .markdown-file-preview {
     padding: 22px 18px 52px !important;
   }
+}
+
+/* ContainerResponsiveBar's named-container priority compression (open-claude-ui,
+   MIT), calibrated to the real file controls rather than the viewport/demo tiers. */
+@container file-viewer (max-width: 520px) {
+  .file-viewer-toolbar .file-viewer-meta { display: none; }
+}
+@container file-viewer (max-width: 440px) {
+  .file-viewer-shell > .file-viewer-toolbar { gap: 4px !important; padding-inline: 8px !important; }
+  .file-viewer-toolbar .file-viewer-controls, .file-viewer-toolbar .file-viewer-actions { gap: 2px; }
+  .file-viewer-toolbar .file-viewer-mode-button { padding-inline: 6px; }
+}
+@container file-viewer (max-width: 360px) {
+  .file-viewer-shell > .file-viewer-toolbar { flex-wrap: wrap; height: auto; flex-basis: auto; padding-block: 5px; row-gap: 4px !important; }
+  .file-viewer-toolbar .file-viewer-controls { flex: 1 1 100%; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .file-viewer-controls > .file-viewer-mode-switch { flex: 1 0 100%; justify-content: center; }
+  .file-viewer-controls > .file-viewer-actions { order: 0; margin-right: auto; }
 }
 
 /* File viewer markdown preview — larger headings */
@@ -9269,6 +9288,13 @@ html.dark .changes-removed { color: #ff2c56; }
 [hidden] .activity-shimmer[data-active="true"],
 .disclosure-body[aria-hidden="true"] .activity-shimmer[data-active="true"] { background-image: none; -webkit-text-fill-color: currentColor; animation: none; }
 .message-streaming-caret [data-streaming-caret]::after { content: ""; display: inline-block; width: 1px; height: 1em; margin-left: 3px; vertical-align: -.1em; background: currentColor; animation: activity-caret 1s ease-in-out infinite; }
+/* Plain display math keeps its visual center while the caret paints outside
+   a content-width box. Tagged/offset layouts retain their existing geometry;
+   their caret placement needs a separate adapter. */
+.message-streaming-caret .katex-display:not(.fleqn):not(.leqno) > .katex[data-streaming-caret]:not(:has(.katex-tag)) { width: max-content; max-width: 100%; margin-inline: auto; }
+.message-streaming-caret .katex-display:not(.fleqn):not(.leqno) > .katex[data-streaming-caret]:not(:has(.katex-tag))::after { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); }
+.message-streaming-caret :is(.katex-display.fleqn, .katex-display.leqno) > .katex[data-streaming-caret]::after,
+.message-streaming-caret .katex-display > .katex[data-streaming-caret]:has(.katex-tag)::after { content: none; animation: none; }
 :is([hidden], [inert], [aria-hidden="true"]) .message-streaming-caret [data-streaming-caret]::after { animation: none; }
 @keyframes activity-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {

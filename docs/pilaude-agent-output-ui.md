@@ -30,7 +30,7 @@
 | 工具步骤 | 参数 generating，实际 execution pending／running、结果 success／error，保留 cancelled | 运行集合与部分输出分离，真实错误自动展开一次 |
 | 思考 | 当前 indexed start／delta／end 的 active／static，加 deferred loading／error | 不伪造 duration 或完成比率 |
 | 发送确认 | 本地 optimistic submission 至事件连接／POST preflight ACK 的专用 isSending，Stop／会话切换／当前请求结算清除 | 不使用覆盖整轮的 rpcPromptPendingRef，不把工具间 waiting_model 误标 Sending；后续真正活动优先 |
-| 流式正文 | indexed text active／static；end／Stop清光标；现有HAST末尾容器负责呈现位置 | 段落／标题／inline code／列表／嵌套列表／表格／代码fence／open fence／quote及mounted Artifact card已验；无opener inline code源仅SSR，其他inline切换／公式／超大raw fallback待验 |
+| 流式正文 | indexed text active／static；end／Stop清光标；现有HAST末尾容器负责呈现位置 | 段落／标题／inline code／列表／嵌套列表／表格／代码fence／open fence／quote及mounted Artifact card已验；无opener inline code源仅SSR，simple display公式actual通过且tag保布局但caret明确无支持；其他inline／复杂公式／超大raw fallback待验 |
 | 背景任务 | Pi family/subagent 的 queued／starting／running／completed／failed／aborted／interrupted；未知保持 unknown | 静态形状／颜色与可达控制；不是有序 Plan/Todo 完成率 |
 
 ## 动效规格

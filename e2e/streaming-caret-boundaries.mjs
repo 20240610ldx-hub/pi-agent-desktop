@@ -158,6 +158,153 @@ async function inspectArtifactCard(page, state, report, artifact, emit) {
   report.checks.push('Closing the same artifact while text stays active preserves publisher/completion auto-open and one caret until text_end');
 }
 
+async function inspectFormula(page, report, artifact, emit, start, finish) {
+  const markdown = '$$\nx = 1\n$$';
+  const tex = 'x = 1';
+  // Chromium exposes the actual generated ::after box through the existing
+  // Playwright page's CDP session. No probe element or measuring CSS is added.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('DOM.enable');
+  const sample = async (name, source = tex) => {
+    const measurement = await page.evaluate((source) => {
+      const formula = [...document.querySelectorAll('.message-assistant .katex')].find((element) => element.querySelector('annotation')?.textContent === source);
+      if (!formula) throw new Error(`Generated formula missing: ${source}`);
+      const root = formula.closest('.markdown-body'), message = formula.closest('.message-assistant');
+      const visual = formula.querySelector('.katex-html'), accessible = formula.querySelector('.katex-mathml'), tag = visual.querySelector(':scope > .katex-tag');
+      const box = (rect) => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height });
+      const visible = (element) => element.getClientRects().length > 0 && !element.closest('[hidden], [inert], [aria-hidden="true"]') && getComputedStyle(element).visibility === 'visible';
+      const glyphs = [], walker = document.createTreeWalker(visual, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (!node.textContent.trim()) continue;
+        const range = document.createRange(); range.selectNodeContents(node);
+        for (const rect of range.getClientRects()) if (rect.width && rect.height) glyphs.push(box(rect));
+      }
+      const visualBounds = glyphs.length ? box({ left: Math.min(...glyphs.map((rect) => rect.left)), right: Math.max(...glyphs.map((rect) => rect.right)), top: Math.min(...glyphs.map((rect) => rect.top)), bottom: Math.max(...glyphs.map((rect) => rect.bottom)), get width() { return this.right - this.left; }, get height() { return this.bottom - this.top; } }) : null;
+      const pseudo = getComputedStyle(formula, '::after');
+      const continuous = message.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running' && animation.effect.getTiming().iterations === Infinity && animation.effect.target instanceof Element && visible(animation.effect.target)).map((animation) => ({ name: animation.animationName, target: animation.effect.target.className, pseudo: animation.effect.pseudoElement }));
+      const rootBounds = box(root.getBoundingClientRect()), formulaBounds = box(formula.getBoundingClientRect());
+      return { formulaVisible: visible(formula), activeText: Boolean(formula.closest('[data-message-streaming="true"]')), markerCount: message.querySelectorAll('[data-streaming-caret]').length, formulaMarked: formula.hasAttribute('data-streaming-caret'), nestedMarkers: formula.querySelectorAll('[data-streaming-caret]').length, annotation: formula.querySelector('annotation')?.textContent, accessibleHtml: accessible.outerHTML, visualHtml: visual.outerHTML, rootText: root.textContent, rootBounds, formulaBounds, visualBounds, tagBounds: tag ? box(tag.getBoundingClientRect()) : null, lastGlyph: glyphs.at(-1), visualAriaHidden: visual.getAttribute('aria-hidden'), accessibleBounds: box(accessible.getBoundingClientRect()), pseudo: { display: pseudo.display, position: pseudo.position, content: pseudo.content, width: pseudo.width, height: pseudo.height, marginLeft: pseudo.marginLeft, animation: pseudo.animationName, opacity: Number(pseudo.opacity) }, continuous, ratios: { formulaToRootWidth: rootBounds.width ? formulaBounds.width / rootBounds.width : null, formulaToRootHeight: rootBounds.height ? formulaBounds.height / rootBounds.height : null } };
+    }, source);
+    measurement.nativePseudoBox = null;
+    if (measurement.formulaVisible && !['none', 'normal'].includes(measurement.pseudo.content)) {
+      const { result } = await cdp.send('Runtime.evaluate', { expression: `Array.from(document.querySelectorAll('.message-assistant .katex')).find(element => element.querySelector('annotation')?.textContent === ${JSON.stringify(source)})`, objectGroup: 'generated-formula-caret' });
+      try {
+        const { node } = await cdp.send('DOM.describeNode', { objectId: result.objectId, depth: 1 });
+        const after = node.pseudoElements?.find((element) => element.pseudoType === 'after');
+        if (after) {
+          const { model } = await cdp.send('DOM.getBoxModel', { backendNodeId: after.backendNodeId });
+          const x = model.border.filter((_, index) => index % 2 === 0), y = model.border.filter((_, index) => index % 2 === 1);
+          measurement.nativePseudoBox = { left: Math.min(...x), right: Math.max(...x), top: Math.min(...y), bottom: Math.max(...y), width: Math.max(...x) - Math.min(...x), height: Math.max(...y) - Math.min(...y) };
+        }
+      } finally {
+        await cdp.send('Runtime.releaseObjectGroup', { objectGroup: 'generated-formula-caret' });
+      }
+    }
+    if (measurement.nativePseudoBox && measurement.lastGlyph) {
+      measurement.caretGap = measurement.nativePseudoBox.left - measurement.lastGlyph.right;
+      measurement.verticalOverlap = Math.min(measurement.nativePseudoBox.bottom, measurement.lastGlyph.bottom) - Math.max(measurement.nativePseudoBox.top, measurement.lastGlyph.top);
+      measurement.ratios.caretToVisualHeight = measurement.nativePseudoBox.height / measurement.visualBounds.height;
+    }
+    report.measurements.push({ name, ...measurement });
+    return measurement;
+  };
+  const capture = async (name) => { const path = artifact(`${name}.png`); await page.screenshot({ path, scale: 'css', style: 'nextjs-portal{visibility:hidden!important}' }); report.captures.push(path); };
+  try {
+    const message = await start('formula', markdown);
+    await page.locator('[data-message-streaming="true"] .katex').waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.message-streaming-caret .katex'), '::after').opacity) > .85);
+    const live = await sample('formula-live');
+    await capture('formula-live');
+    const frames = await page.evaluate(async () => {
+      const frames = [], start = performance.now();
+      while (performance.now() - start < 650) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        frames.push({ ms: performance.now() - start, opacity: Number(getComputedStyle(document.querySelector('.message-streaming-caret .katex'), '::after').opacity) });
+      }
+      return frames;
+    });
+    report.measurements.push({ name: 'formula-native-opacity', frames });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const reduced = await sample('formula-reduced');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.locator('.sidebar-new-row').click();
+    await page.waitForFunction(() => new URLSearchParams(location.search).get('view') === 'new');
+    const hidden = await sample('formula-actual-new-hidden');
+    await page.getByRole('button', { name: 'Activity fixture activity', exact: true }).first().click();
+    await page.waitForFunction(() => new URLSearchParams(location.search).get('view') !== 'new' && document.querySelector('.message-streaming-caret .katex')?.getClientRects().length > 0);
+    const returned = await sample('formula-actual-new-return');
+    await emit([{ type: 'message_update', assistantMessageEvent: { type: 'text_end', contentIndex: 0, content: markdown } }]);
+    await page.waitForFunction(() => !document.querySelector('[data-message-streaming="true"]'));
+    const ended = await sample('formula-text-ended-message-busy');
+    await capture('formula-text-ended');
+    const narrative = 'Generated next active text after formula.';
+    await emit([{ type: 'message_update', assistantMessageEvent: { type: 'text_start', contentIndex: 1 } }, { type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 1, delta: narrative } }]);
+    await page.waitForFunction((narrative) => document.querySelector('[data-message-streaming="true"]')?.textContent.includes(narrative), narrative);
+    const handoff = await sample('formula-next-text-active');
+    message.content.push({ type: 'text', text: narrative });
+    await finish('formula', message);
+    await page.locator('.message-assistant').filter({ has: page.locator('.katex') }).first().getByRole('button', { name: 'Copy message', exact: true }).click();
+    const copied = await page.evaluate(() => window.__generatedCaretCopies.at(-1));
+    report.measurements.push({ name: 'formula-actual-copy', expected: `${markdown}\n${narrative}`, copied });
+    const stopMarkdown = '$$\ny = 2\n$$';
+    const stoppedMessage = await start('formula-stop', stopMarkdown);
+    await page.waitForFunction(() => [...document.querySelectorAll('[data-message-streaming="true"] .katex annotation')].some((element) => element.textContent === 'y = 2'));
+    const beforeStop = await sample('formula-before-stop', 'y = 2');
+    await page.locator('button.composer-abort-button:visible').first().click();
+    await page.waitForFunction(() => !document.querySelector('[data-message-streaming="true"]'));
+    const stopped = await sample('formula-stopped', 'y = 2');
+    await capture('formula-stopped');
+    await finish('formula-stop', { ...stoppedMessage, stopReason: 'aborted' });
+    // Tagged layouts are deliberately outside the caret adapter. Their existing
+    // full-width number placement must not change while the text is active.
+    const taggedTex = String.raw`x = 1 \tag{1}`;
+    const taggedMarkdown = `$$\n${taggedTex}\n$$`;
+    const taggedMessage = await start('formula-tag-layout-guard', taggedMarkdown);
+    await page.waitForFunction((source) => [...document.querySelectorAll('[data-message-streaming="true"] .katex annotation')].some((element) => element.textContent === source), taggedTex);
+    const taggedLive = await sample('formula-tag-live-layout-guard', taggedTex);
+    await capture('formula-tag-live-layout-guard');
+    await emit([{ type: 'message_update', assistantMessageEvent: { type: 'text_end', contentIndex: 0, content: taggedMarkdown } }]);
+    await page.waitForFunction(() => !document.querySelector('[data-message-streaming="true"]'));
+    const taggedEnded = await sample('formula-tag-ended-layout-guard', taggedTex);
+    await finish('formula-tag-layout-guard', taggedMessage);
+    assert.equal(live.activeText, true); assert.equal(live.formulaMarked, true); assert.equal(live.markerCount, 1); assert.equal(live.nestedMarkers, 0);
+    assert.equal(live.annotation, tex); assert.equal(live.visualAriaHidden, 'true');
+    assert.deepEqual(live.accessibleHtml, ended.accessibleHtml, 'Activity leaves accessible MathML and original TeX unchanged');
+    assert.deepEqual(live.visualHtml, ended.visualHtml, 'Activity leaves KaTeX visual glyph markup unchanged');
+    assert.equal(live.rootText, ended.rootText, 'Caret never appends source or accessible text');
+    assert.equal(copied, `${markdown}\n${narrative}`, 'Actual Copy message receives exact original Markdown without a caret character');
+    assert.equal(live.continuous.length, 1); assert.equal(live.continuous[0].name, 'activity-caret');
+    assert.ok(frames.length > 1 && Math.max(...frames.map((frame) => frame.opacity)) - Math.min(...frames.map((frame) => frame.opacity)) > .1, 'Formula caret uses the native animation timeline');
+    assert.equal(reduced.formulaMarked, true); assert.equal(reduced.pseudo.animation, 'none'); assert.equal(reduced.continuous.length, 0);
+    assert.equal(hidden.formulaVisible, false); assert.equal(hidden.continuous.length, 0);
+    assert.equal(returned.formulaMarked, true); assert.equal(returned.continuous.length, 1);
+    assert.equal(ended.formulaMarked, false); assert.equal(ended.continuous.length, 0);
+    assert.equal(handoff.formulaMarked, false); assert.equal(handoff.continuous.length, 1); assert.equal(handoff.markerCount, 1);
+    assert.equal(beforeStop.formulaMarked, true); assert.equal(beforeStop.continuous.length, 1);
+    assert.equal(stopped.formulaMarked, false); assert.equal(stopped.continuous.length, 0);
+    report.checks.push('Formula-only caret preserves accessible MathML, original TeX and actual Copy; indexed end/handoff, reduced motion, actual New/return and Stop preserve one activity owner');
+    assert.ok(live.nativePseudoBox, 'The actual CSS ::after has native Chromium box geometry');
+    assert.ok(live.verticalOverlap > live.nativePseudoBox.height * .3, 'Formula caret shares the final visual glyph line');
+    assert.ok(live.caretGap >= 0 && live.caretGap <= 8, 'Formula caret follows the visual formula tail rather than a full-width wrapper');
+    assert.ok(Math.abs(live.rootBounds.height - ended.rootBounds.height) <= 1, 'The active formula adds no extra rendered line');
+    assert.ok(Math.abs(live.visualBounds.left - ended.visualBounds.left) <= 1 && Math.abs(live.visualBounds.top - ended.visualBounds.top) <= 1, 'Activity preserves the formula visual alignment');
+    report.checks.push('Native formula/pseudo/glyph boxes share one line with no added formula row or changed visual alignment; parent proportions recorded');
+    assert.ok(taggedLive.tagBounds && taggedEnded.tagBounds, 'The generated tagged formula uses the existing KaTeX number layout');
+    assert.equal(taggedLive.formulaMarked, true); assert.equal(taggedLive.pseudo.content, 'none'); assert.equal(taggedLive.continuous.length, 0, 'Unsupported tagged math adds no misplaced caret');
+    assert.equal(taggedEnded.formulaMarked, false);
+    for (const part of ['formulaBounds', 'visualBounds', 'tagBounds', 'rootBounds']) {
+      for (const dimension of ['left', 'top', 'width', 'height']) assert.ok(Math.abs(taggedLive[part][dimension] - taggedEnded[part][dimension]) <= 1, `Active tagged math preserves ${part}.${dimension}`);
+    }
+    assert.ok(Math.abs(taggedLive.formulaBounds.width - taggedLive.rootBounds.width) <= 1, 'Tagged formula retains its full-width layout anchor');
+    assert.deepEqual(taggedLive.accessibleHtml, taggedEnded.accessibleHtml); assert.deepEqual(taggedLive.visualHtml, taggedEnded.visualHtml);
+    report.checks.push('Tagged display formula retains its existing full-width number alignment while active and ended; its unsupported caret remains absent');
+  } finally {
+    await cdp.detach();
+  }
+}
+
 export async function runStreamingCaretBoundaries() {
   const out = new URL(`../test-results/pilaude/streaming-caret-boundaries/run-${Date.now()}/`, import.meta.url);
   await mkdir(out, { recursive: true });
@@ -168,7 +315,7 @@ export async function runStreamingCaretBoundaries() {
     browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1300, height: 1000 }, colorScheme: "light", reducedMotion: "no-preference", serviceWorkers: "block" });
     const state = await installActivityFixture(context, report);
-    if (process.env.E2E_CARET_ARTIFACT_ONLY === '1') await context.addInitScript(() => {
+    if (process.env.E2E_CARET_ARTIFACT_ONLY === '1' || process.env.E2E_CARET_FORMULA_ONLY === '1') await context.addInitScript(() => {
       window.__generatedCaretCopies = [];
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { window.__generatedCaretCopies.push(text); } } });
     });
@@ -221,6 +368,13 @@ export async function runStreamingCaretBoundaries() {
       state.messages.push(message); state.entryIds.push(`caret-${name}-answer`); state.running = false; state.revision++;
       await emit([{ type: "message_end", message }, { type: "agent_end" }, { type: "agent_settled" }]);
     };
+    if (process.env.E2E_CARET_FORMULA_ONLY === '1') {
+      await inspectFormula(page, report, artifact, emit, start, finish);
+      assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.consoleErrors, []); assert.deepEqual(report.externalRequests, []);
+      assert.ok(report.interceptedWrites.every((request) => request.path.endsWith('/lease') || request.path === '/api/agent/activity' && JSON.parse(request.body).type === 'abort'), 'Formula fixture attempts only intercepted lease/Stop writes');
+      report.status = 'passed';
+      return report;
+    }
     for (const example of examples) {
       const message = await start(example.name, example.markdown);
       await page.waitForFunction((tail) => document.querySelector('[data-message-streaming="true"]')?.textContent.includes(tail), example.tail);

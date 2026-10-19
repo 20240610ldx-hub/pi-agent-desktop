@@ -40,9 +40,15 @@
 - 过程／步骤／思考折叠使用现有受控 Grid consumer；领域控制器拥有真实数据、错误和手动选择。章节只分隔显示阶段，`isMessageRunAnchor` 保留真实请求／run 边界；追加章节不能把同批尚未执行的工具误判为已取消。
 - 真实新工具事件的一次性 grant 驱动有限 180ms／6px 入场，同批 40ms 错开、120ms 上限；状态 160ms、摘要 150ms。历史、重连和重挂不补播。
 - 专用 `isSending` 仅覆盖本地准备至 POST admission ACK；更具体活动优先。取消前置提交恢复一次；已发出且已接受或不明确的请求不自动重放。
-- Markdown caret 由已有 sanitizer 后 HAST 注解选择终端文字容器，绝不改变原文／复制。Artifact的business generating保留版本／路由／publisher完成语义，indexed活动单独控制Generating、marker和持续动画；有caret时抑制重复icon pulse。inactive incomplete的hint用真实block.title，complete才显示Ready。5745393两组实际验证mounted card的text_end／handoff／Stop、hidden／reduced及同artifact完成但text仍active的自动open／精确Copy／单caret至text_end；6132187在相同产品源加强并通过ended／stopped hint===block.title，5745393四图已读，新一轮只读报告不冒充重复图验。九renderer含无opener inline code源，不推定其他HTML／Mermaid／Markdown inline完成切换；math-only与超大fallback仍待完成。
+- Markdown caret 由已有 sanitizer 后 HAST 注解选择终端文字容器，绝不改变原文／复制。Artifact的business generating保留版本／路由／publisher完成语义，indexed活动单独控制Generating、marker和持续动画；有caret时抑制重复icon pulse。inactive incomplete的hint用真实block.title，complete才显示Ready。5745393两组实际验证mounted card的text_end／handoff／Stop、hidden／reduced及同artifact完成但text仍active的自动open／精确Copy／单caret至text_end；6132187在相同产品源加强并通过ended／stopped hint===block.title，5745393四图已读，新一轮只读报告不冒充重复图验。九renderer含无opener inline code源，不推定其他HTML／Mermaid／Markdown inline完成切换；simple display公式另由KaTeX原子wrapper消费，优先保既有p容器，缺普通容器才选共享.katex，跳过隐藏MathML／annotation／visual子树；最终7339326支持simple caret与生命周期。plain display max-content／auto定位只限无tag／fleqn／leqno并加max-width100%，特殊类保fullwidth且pseudo／animation为none，相关caret明确未支持。tag active／ended编号位置有actual保护；wide／多行／katex-error／huge raw和Windows仍待验。
 - Compact shell 只用于已结束的 exact bash／powershell、唯一 command 字段、无 rich result 的情况；extra fields／running／partial 保完整 inspector。语法沿用 PrismLight，4096 字符以上完整 plain fallback。相邻compact的分隔线在既有1px透明border／6px padding占位上以pointer-events:none的pseudo向两侧各延伸12px；仅改paint，原内容与命中几何、rich inspector边界保持。
 - 长用户消息由 `useMeasuredOverflow` 观察自然 Markdown 和裁切 wrapper，字体与隐藏恢复也触发测量。保留 220px＋60px slack、48px fade、手动 expanded、外层 300px 滚动上限与精确复制；coarse disclosure 最小 44px。
+
+## FileViewer工具栏与字体诊断
+
+- FileViewer shell提供named inline-size container，toolbar作为后代接受查询；metadata先压缩，再按520／440px减少gap／padding，360px以下必要换行保六操作。阈值是产品校准，保DOM／handlers／脚本gate，CSS仅在native-theme。24模式几何与source／sandbox等子项已有证据，最终7645358 keyboard-focus已通过，仅real／control两个download canceled，bytes未验且root cause未证明，不能由机制采用推定整轮UX或参考视觉通过。
+- 字体probe只接受显式本地测量输入，不记录原文／私有CSS／URL body；fonts.load／ready／2rAF后记录生成文本hash、DOM框、Canvas ink与受控baseline probe。7237430只证明current-font generated diagnostic，不证明参考同文、实际glyph face或textarea内部基线；产品字体／字号未改。
+- 用户指定八扩展的真实产品切片与逐项实测见[八项矩阵](../pilaude-extensions/README.md)。旧catalog、兼容契约或同类宿主能力与新runtime消费分开；权限不改当前host/session设置，usage账户额度不能从SDK token推导。
 
 ## 集成与验收
 
@@ -58,6 +64,6 @@
 
 深层验收从真实数据源走到consumer和可观察结果：适用的pending／running／partial／success／error／cancel、loading／empty、键盘／IME与焦点恢复、精确草稿／选择／手动滚动、会话／分支历史、重连／重放去重、隐藏／reduced与终态清理、失败恢复和请求副作用。按切片列出适用与未覆盖项；静态外观不证明异步顺序、请求所有权或恢复语义。
 
-资源采用先查现有产品组件／helper、已归档upstream源码与成熟库，避免重复实现。机制不确定时查官方网络文档，工程记录保留URL、版本或访问日期、解决的具体问题、采用／不采用理由和实际consumer／验证结果；参考示例或未消费资源不增加采用计数。此规则指导后续针对性研究，不要求当前阶段扩展大范围调查；本轮三项UI切片未新增网络资源采用记录，只登记实际读过并用于consumer的来源。
+资源采用先查现有产品组件／helper、已归档upstream源码与成熟库，避免重复实现。机制不确定时查官方网络文档，工程记录保留URL、版本或访问日期、解决的具体问题、采用／不采用理由和实际consumer／验证结果；参考示例或未消费资源不增加采用计数。此规则指导后续针对性研究，不要求当前阶段扩展大范围调查；c1ac371的三项UI切片未新增网络资源采用记录；后续公式实际查KaTeX0.19.0本地buildTree与官方Options，FileViewer查MDN named container说明，具体URL／consumer与验证范围记progress。只登记实际读过且有明确用途的来源，下载相似issue不当当前根因证明。
 
 参考版本按既有证据优先级处理：较新官方图为主，旧3p图补状态，发生冲突分别记录；用户明确选择的3p composer单行高度、细边线和较小圆角仅覆盖这三个项目。来源不明、版本／DPI未知的图片不升级为已确认官方同版本参考。

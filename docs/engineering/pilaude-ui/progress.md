@@ -4,7 +4,7 @@
 
 ## 已保存检查点
 
-仓库：`pi-agent-desktop`；分支：`fusion/pi-claude-desktop`。最新产品实现检查点 `184fade` 及前一 `5eb9bfa` 均已 atomic push 到 product 的 main 与同名融合分支；工程状态提交 `e8b9a9f` 也已发布。文档提交不增加产品验收范围。
+仓库：`pi-agent-desktop`；分支：`fusion/pi-claude-desktop`。最新产品检查点 `c1ac371 fix: align compact activity and preserve truthful artifact states` 已提交（16文件、459 additions／80 deletions）并atomic push至product的main与融合分支，退出0、两ref从e8b9a9f前进至c1ac371。旧184fade／5eb9bfa与工程状态e8b9a9f已发布；发布后文档状态同步不增加验收范围，也不追逐其自身SHA。
 
 | 提交 | 已验证结果 | 限制 |
 | --- | --- | --- |
@@ -12,7 +12,8 @@
 | `c2c518e` | Compact shell、真实 Sending、复杂 Markdown 末尾光标、触控 Copy | formula／Artifact／超大 fallback 与完整回归仍待验 |
 | `8ceff57` | 既有 PrismLight 的 bounded shell consumer，精确复制与完整 plain fallback | 原像素绿色／未知 scale 仍有残差 |
 | `5eb9bfa` | 长消息同文本宽度／字体重排、隐藏返回、手动展开、ARIA／触控、精确复制；六 hook 测试、十二实际页面检查、类型与 lint | ChatMessageBubbles 仅局部采用，不是完整组件或原生视觉通过 |
-| `184fade` | 模型显式章节工具／持久化／实时与历史／粗体锚点、256px目录、动态居中、工程文档和AGENTS入口；323项组合与最终六组＋一组实际页面通过 | 极短busy＋长草稿导航空间、Windows原生与完整视觉仍未通过 |
+| `184fade` | 模型显式章节工具／持久化／实时与历史／粗体锚点、256px目录、动态居中、工程文档和AGENTS入口；323项组合与最终六组＋一组实际页面通过 | 当时未包含极短busy＋长草稿，后由c1ac371单组验证；Windows原生与完整视觉仍未通过 |
+| `c1ac371` | busy composer四条响应式CSS、相邻compact整宽paint、Artifact indexed活动／真实hint与completion；268项受影响组合、types／lint、divider六组／busy一组／Artifact最终两组实际通过；用户3–8子agent及比例／深层UX工程规则落盘 | 更窄clamp、其他inline切换／formula／raw、完整E2E／Windows原生／视觉未通过；FileViewer与字体两项PREP未纳入 |
 
 `5eb9bfa` 最终证据：`test-results/pilaude/user-message-overflow/run-1792383262052/results.json`。同一节点自然高 224→537px，窄窗正确 cap220；字体固定宽度 224↔282px；coarse target 49.39×44px。父级相关回归 117 项通过，最终 ownership／CSS 15 项通过；完整 lint 保留 TerminalPanel 已有一条 ARIA warning。原始 RED `run-1792382339554` 与中间失败记录保留。
 
@@ -44,9 +45,39 @@
 
 Artifact保留5381513原始RED、5610382旧hint中间GREEN和5714557 checker误把高亮行号1当source的失败；5745393改用真实Copy seam并读取四图。最后只将ended／stopped hint从“不等于Generating”加强为“等于真实title”，同冻结产品复验6132187两组GREEN，报告已读，不追认新四图已读；无产品变化，不重复268项／types。无opener inline code源仅SSR，其他HTML／Mermaid／Markdown inline完成切换、公式／huge raw和Windows原生继续未验。
 
-本轮三项源码和文档冻结，浏览器按divider→busy composer→Artifact串行完成并释放；quality owner最终受影响15文件268/268通过，完整types／lint退出0，独立review clean。此前323项SDK检查点未重跑、不能相加冒充完整npm／E2E。主agent只协调／评审／验收／检查点，下一步显式stage已验16文件保存检查点，排除未验`e2e/file-panel.mjs`与`e2e/chat-appearance.mjs` PREP；`stash@{0}` provider rename仍保留。
+三项源码／工程记录已在c1ac371提交并推送；浏览器按divider→busy composer→Artifact串行验收。quality最终15文件268/268、完整types／lint及独立review通过。此前323项SDK检查点未重跑、不能相加冒充完整npm／E2E。两项PREP `e2e/file-panel.mjs`／`e2e/chat-appearance.mjs`明确排除在c1ac371外；`stash@{0}` provider rename保留。本批最终FileViewer7645358部分通过、aggregate FAILED；公式7339326三实际检查通过，字体7237430仅generated diagnostic measured。197项组合通过不把FileViewer下载改成GREEN；采用数保持。当前UI限定检查点待主agent保存，八插件新runtime和研究长报告独立排除。
 
 ownership用既有classifier实测：6fcd7d4的MarkdownBody206 total／204 structural、medium与汇总2238 cosmetic／12749 structural不变。ArtifactCard不在6fcd7d4，真实upstream remote为abcwyc/pi-agent-desktop，创建提交d9548cd在upstream/main祖先；固定`upstream/main@3b6a87771267bb884c41df65537156820f23b41d`有blob d898e43。按此实际上游测21 total／17 structural、low，新增post-baseline共享entry，不使用产品origin推定归属。post-baseline数值与旧基线汇总分开；阈值30／250与采用计数1／12／20保持。
+
+## 发布后当前切片
+
+| 范围 | 当前事实 | 下一证据 |
+| --- | --- | --- |
+| FileViewer工具栏 | 6332257有效RED保留（384 toolbar382／scroll393、path0、Download越11.42；300 toolbar298／scroll393、Diff／Download hit false）。CSS named shell container／metadata-first／520、440、360产品校准source review clean；`file-toolbar-layout/run-1792386878902/report.json` 实际24模式几何和source／modes／sandbox／draft／mention通过 | 整轮failed：download canceled、无API请求，精确字节未验、后续keyboard未执行。page／console／writes／external为空，八最终图及离线toolbar-measurements／叠图已读：path宽600不变133.55、480为50.33→89.58、384为0→57.58、300为0→272；仅300px toolbar高44→98.5。17项FileViewer state／CSS baseline通过。最后7645358启用DOWNLOAD_CONTROL独立采样：24几何及上述UX重验、keyboard-focus子项PASS；真实按钮和同context／origin／URL／bytes的纯anchor均有正确download event／filename但canceled，createReadStream均失败、downloadRequests[]，aggregate FAILED。支持组件外同route seam也失败，根因仍未证、bytes待验。原7419983 focus失败及CSP／join等失败保留，八图已读证据仍为6878902，不冒充最后八图均读；source冻结，无全GREEN／采用增加 |
+| Composer字体诊断 | `composer-calibration/font-ready-1792387237430/measurements.json` measured、两PNG已读；872×1000／DPR1.25、generated32 UTF16 hash记录、reference identity unverified／comparison false，无自供font CSS。Composer742.40625×48／input680.40625×21／action28×28、轴差0，Canvas230.66×14／ascent11／descent3，受控DOM baseline16 | 仅current-font诊断，不是textarea内部基线／actual glyph face／参考同文；21reads、writes／errors／external为空。未改产品字号。6551848 malformed配置仅test-only证据；原文身份／DPI／font未知继续缺口 |
+| Formula-only caret | formula-only公开SSR先9pass1fail marker0 RED，KaTeX原子wrapper适配；review再发现inline后img/br回归10pass1fail，`container??node`保原p后最终两renderer53/53，types与target lint通过、source finding关闭 | actual `streaming-caret-boundaries/run-1792387080370/results.json` 几何RED：CDP caret x607.5..608.5／y428.203..442.891，lastglyph x616.828..624.188／y409.563..426.563，纵overlap-1.641／横gap-16.688，active root高57.281。生命周期／MathML／TeX／真实Copy已通过、三RED图已读。7129999 simple x=1两组GREEN／三图已读：CDP pseudo1×14.6875、gap3／overlap14.6875，active／end root均39.421875；renderer＋CSS baseline57/57。review确认tag／fleqn对齐风险后最终guard+max-width源在7339326三checks GREEN、四图已读：simple CDP gap3／overlap14.6875及root同高；tag active／ended保fullwidth565.40625、编号xyWH exact，caret content／animation none。最终source review clean、11文件197/197；simple支持不覆盖tag／fleqn／leqno caret、wide／多行／error／raw／Windows |
+
+当前实际文件归属以handoff与git status为准。FileViewer仅fork CSS和checker／共享fixture，未改共享FileViewer源码；formula helper与renderer测试是fork-owned，本批不虚增shared drift、不改baseline／阈值。采用数仍1／12／20，source机制与参考视觉分开；最近multi-pane-dark原图只有Markdown hierarchy，缺modifiedHTML六控件同状态参考，版本／DPI未知。
+
+FileViewer所有actual命令均为产品cwd下`node e2e/file-panel.mjs`，默认30142无额外env。保留6332257原始RED、6525017 source join额外换行checker失败、6596427 download timeout、6807943 download canceled／共享fixture frame error与最终6878902 partial。最终7645358在GET／HEAD guard／nested cleanup／独立subcheck源上重验，focus通过、两个download subcheck失败并保AggregateError；实际命令为`E2E_FILE_TOOLBAR_DOWNLOAD_CONTROL=1 node e2e/file-panel.mjs`。两个下载event已有正确URL／filename，但均canceled且无API请求；owner读的[Playwright #28253](https://github.com/microsoft/playwright/issues/28253)只是相似环境报告，没有确认当前根因，不改产品下载或把它称为已修。
+
+FileViewer原像素离线证据在6878902的`reference-evidence/toolbar-measurements.json`及八组before100／after50与reference100／current50局部图，均已读取。参考右侧Markdown card约551原像素、path inset13，对当前598px toolbar／inset12；文本／控件状态不同、DPI／版本未知，不能扩大成HTML六操作同状态像素一致。ContainerResponsiveBar只候选采用named ancestor与priority机制，校准阈值不抄source、不增加模块计数。
+
+Formula实际资源：本地KaTeX0.19.0 `src/buildTree.ts:20` 共享.katex含MathML／HTML，官方[Options](https://katex.org/docs/options)（2026-10-19）确认默认htmlAndMathml的可访问用途，不保证class合同；真实consumer为markdown-streaming-caret helper。FileViewer owner实际读[MDN Container queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_containment/Container_queries)（2026-10-19）核实named ancestor query；容器为shell、目标为toolbar，520／440／360是产品校准，尚未增加源模块采用。网络来源只登记已读用途，不把PREP当新实现通过。
+
+c1ac371发布后首次仅两项PREP残留，新实现已增加formula helper/test/checker、FileViewer CSS及activity-disclosure top-frame guard；后续文档同步不stage／commit，主agent统一评审。
+
+## 本批最终冻结源验证：197项通过
+
+quality owner下列11文件唯一运行197/197、0fail／skipped／cancelled，exit0；完整`node_modules/.bin/tsc --noEmit --incremental false`和`npm run lint`退出0，lint仅既有TerminalPanel217 ARIA warning、branding3/3。`git diff --check`退出0。197项不证明下载／参考视觉通过，也不相加旧57／268／323。
+
+```bash
+node --experimental-strip-types --test --test-reporter=tap components/MarkdownBody.test.mjs components/MarkdownBody.caret.test.mjs components/MessageView.test.mjs components/ChatWindow.render-cache.test.mjs components/FileViewer.test.mjs components/FileViewer.state.test.mjs components/AppShell.file-viewer-state.test.mjs components/AppShell.right-panel-row.test.mjs components/fork-extractions.test.mjs scripts/fork-ownership.test.mjs scripts/upstream-css-baseline.test.mjs
+```
+
+本机任务日志根同下节：197项`bfm8kwogc.output`、types `bbkf3cksv.output`、lint `b31xq5m0o.output`。最后仅checker增加独立下载采样，不改产品；file-panel按6fcd7d4实测253total／252structural、依原250阈值记high，chat-appearance384／376 high；两文件在旧基线实际存在，纠正旧post-baseline假设，其他shared产品源码未变。最终数字更新后的`eslint e2e/file-panel.mjs`退出0、ownership schema11/11通过，不重197／types；entry最终文案已改focus通过、仅下载失败。
+
+当前UI检查点只含限定formula、generated诊断与toolbar几何／已过UX；排除新Todo backend／hook／panel、subagent冲突过滤和三份尚未完成扩展研究长报告。八项README是用户要求的工程入口，可纳当前文档，不作runtime证据。
 
 ## 可复现验证命令
 
@@ -127,7 +158,7 @@ node scripts/measure-fork-drift.mjs 6fcd7d4
 - 导航／布局本轮源码与常规／settled实际页面已通过，184fade检查点已保存并推送；整体复刻仍继续。
 - canonical 390×340＋活动run＋长草稿已在5297398实际通过；其他窗口／长草稿组合、小于280px可用宽度的目录clamp和Windows原生仍未覆盖，不能扩大单组结论。
 - 章节只有当前加载历史范围的数据；不存在全会话章节索引服务，不能把未加载尾部称作真实 Session start。
-- Mounted Artifact card限定路径已通过；无opener inline code只有SSR，其他HTML／Mermaid／Markdown inline完成切换、formula-only／超大raw fallback仍待验。
+- Mounted Artifact card限定路径已通过；无opener inline code只有SSR，其他HTML／Mermaid／Markdown inline完成切换、simple display公式7339326已限定通过，特殊公式caret／超大raw fallback仍待验。
 - 原生结构化 Plan/Todo。可选扩展的 ANSI widget 不是该能力。
 - Windows 真机 GUI、WebView／DPI、原生 clipboard／Code.exe 启动以及完整 npm／terminal E2E。
 - 完整逐状态视觉一致性；已接入／测试通过／某张图可读不等于完全复刻。

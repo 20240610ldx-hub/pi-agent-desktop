@@ -27,6 +27,7 @@ export async function installActivityFixture(context, report) {
   report.localFontSupplied = Boolean(customCss);
   const state = { messages: [user, historical, historyResult], entryIds: ["history-user", "history-assistant", "history-result"], running: false, revision: 1 };
   await context.addInitScript(() => {
+    if (window.top !== window.self) return;
     localStorage.setItem("pi-theme", "light");
     localStorage.setItem("pi-locale", "en");
     localStorage.setItem("pi-workspace-pane-visibility-v1", "false");

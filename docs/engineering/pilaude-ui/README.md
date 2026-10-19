@@ -10,6 +10,8 @@
 4. [技术规格](technical-spec.md)：领域模型、数据链路、布局合同和实现边界。
 5. 按工作区域补读仓库 `AGENTS.md`、`docs/agents/fork-*.md` 和相关 ADR。
 
+用户指定八项Pi扩展的逐项调研→产品接入→实际验证队列见[扩展工作台与八项矩阵](../pilaude-extensions/README.md)。该目录维护研究／consumer／实测状态，不代表安装到当前开发会话；当前UI收口与整体复刻仍继续。
+
 详细历史与原像素残差继续保留在 [复刻基准](../../pilaude-ui-parity.md)、[组件采用账本](../../pilaude-component-adoption.md)、[Agent 输出清单](../../pilaude-agent-output-ui.md)。本目录维护当前决策和交接状态，不复制这些文件的全部历史。
 
 ## 持续维护规则

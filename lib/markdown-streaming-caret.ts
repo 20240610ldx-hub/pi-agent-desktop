@@ -14,6 +14,13 @@ export const rehypeStreamingCaret: Plugin<[], Root> = () => (tree) => {
       return;
     }
     if (node.type !== "element" && node.type !== "root") return;
+    // KaTeX renders accessible MathML and visible glyphs for the same formula.
+    // Preserve an enclosing text container; standalone math uses its shared
+    // wrapper as one visual unit without visiting either generated subtree.
+    if (node.type === "element" && Array.isArray(node.properties.className) && node.properties.className.includes("katex")) {
+      target = container ?? node;
+      return;
+    }
     const next = node.type === "element" && textContainers.has(node.tagName) ? node : container;
     for (const child of node.children) visit(child, next);
   };

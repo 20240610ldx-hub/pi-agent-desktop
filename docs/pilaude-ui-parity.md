@@ -346,6 +346,14 @@ SSR真实controller与preference接口先RED后GREEN。实际 `transcript-view/r
 
 当前可见生命周期card均440×58.390625px、icon36px、title13px／line20.8、subtitle11px／line17.6，局部坐标和比例已记录；RED无这些数值，不能称前后exact。无opener inline code只由SSR覆盖，其他HTML／Mermaid／Markdown inline完成切换、math-only／超大raw、Windows原生和完整视觉继续待验。最终受影响15文件组合268/268、完整tsc／lint通过，lint仅既有TerminalPanel警告；旧章节323项未重跑，不相加为完整npm／E2E。
 
+## Simple display公式光标与特殊布局保护（2026-10-19）
+
+formula-only公开renderer先复现marker0，随后review复现inline公式后图片／br把caret提前；`markdown-streaming-caret`复用已有HAST／KaTeX共享wrapper，`container??node`保普通段落，隐藏MathML／annotation／visual子树不加marker，53/53 renderer通过。实际 `streaming-caret-boundaries/run-1792387080370/` RED的CDP pseudo在末字下一行且横重叠；7129999仅中间simple GREEN，随后review确认max-content会影响tag／fleqn对齐，最终限定plain并保护max-width。
+
+最终 `run-1792387339326/results.json` 三项GREEN、四图已读：simple visual35.375×17px，pseudo1×14.6875、gap3px／纵overlap14.6875，active／ended root565.40625×39.421875同高且公式中心轴保持；MathML／原TeX／真实Copy与end／handoff／New／hidden／reduced／Stop单owner通过。tag active／ended保565.40625px fullwidth及编号xyWH exact，特殊caret content／animation none。无page／console／external错误，仅夹具abort并经写入白名单。它只证明simple display caret和tag布局保护；tag／fleqn／leqno caret、多行／wide／katex-error／raw／Windows不声称支持。
+
+本批唯一11文件197/197、完整types／lint通过，lint仅既有TerminalPanel警告；中间57／旧268／323不重复或相加。来源为实际KaTeX0.19.0 buildTree和官方Options（默认htmlAndMathml用途），不增加open-claude-ui模块采用数。
+
 ## 紧凑命令复用Prism语法色（2026-10-19）
 
 `MessageView → CompactCommandText → 既有lib/syntax-highlighting PrismLight` 现在实际消费已注册bash／powershell grammar。adapter只在≤4096字符时输出span token，超过预算完整plain fallback；原pre／字体／wrap／命令pill和原文Copy不变，不新增lexer／依赖，也不增加open-claude-ui来源计数。字符串使用既有success绿色，其他token继承中性色／字形，未导入完整代码主题。
@@ -363,6 +371,14 @@ SSR真实controller与preference接口先RED后GREEN。实际 `transcript-view/r
 原实现只随文本变化测高；实际 `user-message-overflow/run-1792382339554/` 在同一 Markdown 节点／相同文本下，窗口 1500→430、自然内容 224→537px，却没有 Expand，构成有效 RED。署名 `useMeasuredOverflow → CollapsibleUserText` 现在局部消费 open-claude-ui `ChatMessageBubbles` 的测高／渐隐／展开机制，source 的 effect 没有响应式 observer；产品补 wrapper＋自然 Markdown ResizeObserver、rAF 合并、字体生命周期、隐藏无布局保原判定及卸载失效。手动 expanded 独立保留，原 220px＋60px slack、48px fade、外层 300px 滚动上限与复制原文不变，新增原生按钮 type／ARIA 关联。
 
 公开 hook 六项及独立有界复查通过。实际 `run-1792382907493/` 五组通过同文本缩窄、手动展开／外层上限、往返保手动选择、拉宽去 mask／按钮、精确复制；窄窗 body 高220／natural537，拉宽恢复223.906px且不再裁切。三个截图已读取，正文中心无遮挡；API／SSE／clipboard 为生成夹具拦截，无模型执行。中间 `run-1792382743042/` 因侧栏离屏点击失败保留，不能当测量功能失败或被绿结果覆盖。最终 `run-1792383262052/` 十二组通过：真实字体设置在同宽 615.59px 下令自然高度 224↔282px、New 隐藏后改宽再返回同一 DOM、Enter／Space 焦点／ARIA、手动选择保留、精确复制和 native tap。触控前一轮 `run-1792383105530/` 49.39×21.05px 为真实目标尺寸 RED；新增按钮 class 和 coarse-only min44 后最终 49.39×44px，center hit 为真。展开后保留外层 300px 滚动，Collapse 通过原生滚动可见，没有自动抢滚动。七图已读取；desktop＋touch 的 page／console／external 均为空，仅拦截 lease。父级 117 项相关回归、最终 ownership／CSS 15 项、完整类型和 lint 通过，保留 TerminalPanel 既有一条 warning；不冒充完整 npm／terminal E2E。模块计数更新为 1 直接／12 局部／20 未确认，本项只计 ChatMessageBubbles 局部采用，不表示完整组件或 Windows 原生视觉通过。
+
+## FileViewer窄pane与生成字体诊断的限定结果（2026-10-19）
+
+FileViewer `file-toolbar-layout/run-1792386332257/` 有效RED：384／300px pane横溢出、path归零和按钮裁切。CSS named shell container先让metadata收缩，再按520／440／360产品校准压缩gap／padding和wrap，未改FileViewer JS／DOM。6878902的24种theme／width／mode几何与Source原文、Preview／Diff、sandbox、草稿／mention通过，八图及原像素局部叠图已读：path480／384／300分别恢复89.58／57.58／272px，300 toolbar高44→98.5。整轮仍failed，download canceled且无API请求，精确字节未证；7419983把focus提前后键盘focus失败，download control未达。最后7645358独立focus子项PASS、24几何／既有UX重验通过；真实button与同context／origin／URL／bytes的纯anchor均download canceled且createReadStream失败，无API请求，aggregate FAILED保两失败。它支持组件外同拦截seam也失败，不证明根因或业务bytes；不把旧focus失败当最终状态，也不写全GREEN。
+
+原始参考multi-pane-dark的Markdown card约551px、path inset13，对当前598px／inset12；不同HTML六控件状态且版本／DPI未知，因此只核对机制与局部比例，不称参考视觉一致或增加源模块采用。相似Playwright issue仅参考，当前下载根因未证，不修改产品下载或删失败断言掩盖。
+
+字体 `composer-calibration/font-ready-1792387237430/measurements.json` 为生成32 UTF16 current-font诊断、两PNG已读，872×1000／DPR1.25、无自供私有fontCSS。Composer742.40625×48、input680.40625×21、action28×28、中心差0，Canvas ink230.66×14／ascent11／descent3；受控DOM probe baseline16不是textarea内部基线。21 reads，其余写入／错误／外部为空；referenceTextIdentity unverified、referenceComparison false，未改产品字体／字号。原有同文缺精确原文身份继续未完成，不能由这轮生成文本抵消旧ink残差。
 
 ## 上游更新规则
 
