@@ -312,6 +312,24 @@ SSR真实controller与preference接口先RED后GREEN。实际 `transcript-view/r
 
 原图额外复查位于本机 `activity-reference-evidence/raw-1792378495618/`：2136×845原件，整数crop／translation，参考100%底层、现状50%上层，无重采样。高置信差异是参考平铺活动行／共享分隔线和单个紧凑命令pill，现状仍有多层卡片及两条Copy栏。参考同图summary/body ink约1.05、tool/body约1.00，当前浅色二者约0.87；ink不是CSS字号，DPI未知，不据此直接放大。源库没有可直接替换的compact shell组件，后续用生成的相同工具／短结果形状收敛，不公开私人参考命令或文字。可选Todo扩展的既有ANSI文本consumer不等于原生结构化Plan/Todo，后者仍未完成。
 
+## 紧凑命令与发送确认的限定适配（2026-10-19）
+
+原图2136×845的命令详情先通过生成numstat形状复现JSON卡片差异：`activity-command-layout/run-1792380386297/` 为有效RED，已保存1300／430深浅baseline。`ToolCallBlock` 现仅对完整已结束、exact bash／powershell、唯一自有command字符串字段、无diff／图片／subagent等rich view的调用使用一条命令pill和普通结果。timeout／扩展字段、生成中参数、运行／部分结果、MCP和codemode保现有完整呈现；通用input复制合同不变，compact复制原始command／result，不trim或改CRLF。过程容器内去掉shell详情额外边框／背景，只给相邻compact行共享分隔，不声称所有活动扁平化。
+
+首次GREEN `activity-command-layout/run-1792381266198/` 三组真实页面通过command／PowerShell／原文复制、CRLF／metacharacters／长行430px、额外参数回退、MCP／codemode、错误复制反馈和键盘／ARIA／inert／focus；四图与原像素overlay已读取，page／console／API writes／external为空。桌面详情高164.5→71.75 CSS px，pill33.75px、1px边框、8px圆角、6×10px padding；参考pill39原像素，DPI未知，不改字体追数字。结果保原文与复制但无第二卡片。补coarse Copy目标规则后，fresh最终 `activity-command-layout/run-1792381855078/` 三组再次通过，1300／430深浅四图和同版本reference overlay已读取，无page／console／API writes／external错误。该430px窗口本身为鼠标条件，真实coarse目标由独立手机检查证明，不能互相替代。
+
+独立手机 `command-copy-failure/run-1792381251294/` 三组通过失败状态可读、exact原文、native hit／focus与重试，确认提示不裁切；同时测得Copy约43.6×19.75px，不满足44px触控目标，已加compact-only coarse规则；最终 `command-copy-failure/run-1792381849013/` 三组通过input／output Copy44×44 native hit、成功反馈64.17×44、提示与source保留、focus／重试／无overflow，两个截图已读取。原始失败尺寸保留，不把可点等同于触控尺寸通过。比较目录采用reference100%／actual50%、整数crop／translation，无重采样；命令路径的语法色、不同生成文本、字形／scale、其他generic／thinking层级仍有差异。
+
+发送确认新增专用isSending，自optimistic submission起覆盖session／SSE准备和POST preflight ACK；ACK只代表接收，不结束整轮。更具体的思考／正文／工具／compaction活动优先；waiting_model或rpcPromptPendingRef不改名冒充Sending。代际／run／attempt隔离旧ACK和拒绝；Stop在POST前立即本地清忙碌／phase、移除optimistic bubble并恢复未发送内容一次，晚到的准备失败不再重复恢复；POST后已接收或结果不明的请求不重放，真实新会话ACK仍可正常promote。公开hook先后RED复现A→B→A迟到拒绝恢复旧草稿、取消前置准备后忙碌不清及迟到准备失败重复恢复，均最小修正；本轮hook／lifecycle／i18n97项通过（含10项发送案例）并经独立有界复查。实际 `sending-state/run-1792381844888/` 四组通过延迟POST确认、agent_start不冒充ACK、真实thinking优先、ACK后草稿／焦点和run保留、409恢复一次、Stop／晚ACK及A→B→A隔离；两图已读取，无page／external错误，console仅显式409和被处理的Generated admission rejection，不称全空。
+
+预览30142在34分钟后以3221225477退出，实际caret／command运行只得到ERR_CONNECTION_REFUSED，均保留failed，根因未知，不能改称OOM或产品功能缺陷。通过preview_start重启为9c51ccac-c4aa-4617-a1f1-5df5e67231cc，没有next build或绕过拒绝的shell kill。后续有限验收应固定源码、fresh context并单独保留HMR污染记录。
+
+## Markdown末尾光标位置补验（2026-10-19）
+
+`streaming-caret-boundaries/run-1792381256609/` 实际截图确认列表／表格／fence／blockquote后的root pseudo落在额外空白行，段落／标题原实现正常；nested list／open fence初图被composer遮挡，原估算不单独当确认。修正复用现有react-markdown／rehype语法树，在raw／sanitize／KaTeX后追加可信呈现plugin，选择最后非空text的最近p／heading／li／cell／code容器并只加一个marker。MessageView仅传真实activeText，CodeBlock／Mermaid／Html source只转发optional呈现标志，source／copy不加字符；Artifact路由与preview／autostart策略保留。公式、terminal Artifact和超大SafeMarkdown raw fallback仍未验证。
+
+公开实际MarkdownBody渲染八项先RED后GREEN；既有MessageView／markdown相关85项和父级117项UI／CSS基线分别通过，类型和完整lint退出0，保留TerminalPanel既有ARIA warning。最终 `streaming-caret-boundaries/run-1792381811843/results.json` 通过九种结尾、index0→1真实handoff、text_end先于message_end清光标、native opacity周期、reduced无running caret animation、supplemental DOMhidden、真实New／同会话返回，以及实际Stop／error立即清除。九图全部读取，父级复核list／table／fence末字同行；旧fence root间距约29.64px已消除，新的code marker与末字同y区间。动画查询用getAnimations({subtree:true})包含pseudo，旧普通getAnimations空结果不作为隐藏停止证据。无page／console／external错误，只有被fixture拦截的abort／lease，无模型或真实命令执行。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。

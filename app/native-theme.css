@@ -4501,8 +4501,24 @@ html:not(.dark) .process-details-trigger:is(:hover, :focus-visible) {
 .tool-call-body .code-copy-control + pre { border-top: var(--hairline) solid var(--separator); }
 .tool-call-row[data-status="error"] .tool-call-body { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
 .tool-call-input { margin: 0; padding: 10px 12px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-muted); font: 400 calc(12px + var(--chat-font-size-offset, 0px))/1.5 var(--font-mono); }
+
+/* Completed command-only shell calls consume the activity list's single surface.
+   Keep generic/MCP/codemode inspectors and non-process messages on their own cards. */
+.tool-call-row[data-command-layout="compact"] .tool-call-command-line { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding: 6px 10px; border: var(--hairline) solid var(--separator); border-radius: 8px; background: var(--bg); }
+.tool-call-row[data-command-layout="compact"] .tool-call-command-prompt { flex: none; color: var(--text-muted); font: 400 calc(12px + var(--chat-font-size-offset, 0px))/1.5 var(--font-mono); }
+.tool-call-row[data-command-layout="compact"] .tool-call-command-text { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; overflow-wrap: anywhere; white-space: pre-wrap; }
+.tool-call-row[data-command-layout="compact"] .tool-call-command-line > .code-copy-control { flex: none; width: auto; padding: 0; }
+.tool-call-row[data-command-layout="compact"] .tool-call-command-result { position: relative; min-width: 0; padding: 10px 0; }
+.tool-call-row[data-command-layout="compact"] .tool-call-command-result > .code-copy-control { float: right; width: auto; padding: 0 0 0 8px; }
+.tool-call-row[data-command-layout="compact"] .tool-call-command-output { margin: 0; padding: 0; max-height: 400px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-muted); font: 400 calc(12px + var(--chat-font-size-offset, 0px))/1.5 var(--font-mono); }
+.tool-call-row[data-command-layout="compact"][data-status="error"] .tool-call-command-output { color: var(--danger); }
+.process-details-content .tool-call-row[data-command-layout="compact"] > .tool-call-grid > .disclosure-body-clip > .tool-call-body { border: 0; border-radius: 0; background: transparent; }
+.process-details-content .tool-call-row[data-command-layout="compact"] .code-copy-control + pre { border: 0; }
+.process-details-content .message-assistant-content > .tool-call-row[data-command-layout="compact"] + .tool-call-row[data-command-layout="compact"] { border-top: var(--hairline) solid var(--separator); padding-top: 6px; }
+/* End completed shell command layout. */
 @media (pointer: coarse) {
   .process-details-trigger, .tool-call-trigger, .thinking-disclosure-toggle { min-height: 44px; }
+  .tool-call-row[data-command-layout="compact"] .markdown-code-copy { min-width: 44px; min-height: 44px; }
 }
 
 /* Tool headers keep status glyphs and result/diff colors separate from hover. */
@@ -9243,14 +9259,12 @@ html.dark .changes-removed { color: #ff2c56; }
 }
 [hidden] .activity-shimmer[data-active="true"],
 .disclosure-body[aria-hidden="true"] .activity-shimmer[data-active="true"] { background-image: none; -webkit-text-fill-color: currentColor; animation: none; }
-.message-streaming-caret::after,
-.message-streaming-caret > :is(p, h1, h2, h3, h4, h5, h6):last-child::after { content: ""; display: inline-block; width: 1px; height: 1em; margin-left: 3px; vertical-align: -.1em; background: currentColor; animation: activity-caret 1s ease-in-out infinite; }
-.message-streaming-caret:has(> :is(p, h1, h2, h3, h4, h5, h6):last-child)::after { display: none; }
+.message-streaming-caret [data-streaming-caret]::after { content: ""; display: inline-block; width: 1px; height: 1em; margin-left: 3px; vertical-align: -.1em; background: currentColor; animation: activity-caret 1s ease-in-out infinite; }
+:is([hidden], [inert], [aria-hidden="true"]) .message-streaming-caret [data-streaming-caret]::after { animation: none; }
 @keyframes activity-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .activity-shimmer[data-active="true"] { background-image: none; -webkit-text-fill-color: currentColor; animation: none; }
-  .message-streaming-caret::after,
-  .message-streaming-caret > :is(p, h1, h2, h3, h4, h5, h6):last-child::after { animation: none; }
+  .message-streaming-caret [data-streaming-caret]::after { animation: none; }
   .process-details-chevron, .tool-call-chevron { transition: none; }
 }
 @media (pointer: coarse) { .thinking-disclosure-toggle { min-height: 44px; } }

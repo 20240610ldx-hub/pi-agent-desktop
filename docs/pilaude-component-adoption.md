@@ -84,7 +84,7 @@ DraggableSessionList 只采用键盘相邻索引／边界／splice：持久 pin 
 
 新步骤的事件账本与 WAAPI 呈现是产品对用户清单的领域适配，不能算作新采用 `CdsMotionEngine` 或 `ClaudeMotionPresets` 的 message variants。`useAgentSession → toolEntryState／consumeToolEntries → ChatWindow → useActivityStepMotion` 只允许真实新增事件驱动一次入场，历史／重连与已消费 ID 保静态；状态图形与摘要文字由实际语义变化驱动有限淡入，不由每个参数 delta 重启。受控 `DisclosureBody` 仍是现有 ThinkingAccordion Grid 的共享 consumer，不增加源模块计数。最终时间序列／边界证据在[复刻基准](pilaude-ui-parity.md)按运行登记，33 项仍为 1 直接／11 局部／21 未确认。
 
-参考图的紧凑命令 pill／平铺分隔行在这 33 个源模块中没有可直接替换的匹配组件。后续应在真实 Pi 工具呈现边界做小适配，复用已有 Grid 与复制能力；不能导入演示 MCP permission card 或完整 CodeBlock 后声称同形复刻。私有参考中的命令／项目文字不进入公开夹具。
+参考图的紧凑命令 pill／平铺分隔行在这 33 个源模块中没有可直接替换的匹配组件。当前适配在真实 `MessageView.ToolCallBlock` 呈现边界复用已有 Grid 与 `CodeCopyButton`，不新增来源模块计数；只接受已结束、纯 command 字段的 bash／powershell，额外 timeout／扩展字段、未完参数、运行／部分结果、MCP／codemode／diff／图片等保留既有呈现。compact copy 复制原始 command／result，通用 `getToolCallInputText` 的完整 JSON 合同不变。源库的演示 MCP permission card／完整 CodeBlock 不是该紧凑命令条的来源；私有参考中的命令／项目文字不进入公开夹具。该批功能及原像素残差在复刻基准按最终运行补记，来源计数不代表视觉通过。
 
 ## 尚未使用的高价值算法优先项
 

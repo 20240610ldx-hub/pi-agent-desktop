@@ -1034,7 +1034,7 @@ function BlockView({ block, searchTarget, toolResults, isStreaming, liveTurn, ac
 }
 
 function TextBlock({ block, isStreaming, activeText, cwd, onOpenFile }: { block: TextContent; isStreaming?: boolean; activeText?: boolean; cwd?: string; onOpenFile?: (filePath: string, page?: number) => void }) {
-  return <SafeMarkdownBody className={activeText ? "message-streaming-caret" : undefined} isStreaming={isStreaming} cwd={cwd} onOpenFile={onOpenFile} artifacts>{block.text}</SafeMarkdownBody>;
+  return <SafeMarkdownBody className={activeText ? "message-streaming-caret" : undefined} isStreaming={isStreaming} streamingCaret={activeText} cwd={cwd} onOpenFile={onOpenFile} artifacts>{block.text}</SafeMarkdownBody>;
 }
 
 export function ThinkingBlock({ block, searchTarget, active, duration, sessionId, entryId, blockIndex }: {
@@ -1165,6 +1165,13 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
   const resultImages = getMessageImages(resultContent);
   const resultIsEmpty = resultText === null ? false : (resultText.trim() === "(no output)" || resultText.trim() === "");
   const subagent = isSubagentToolDetails(result?.details) ? result.details : null;
+  // Only the built-in command-only shape has an equivalent compact shell view.
+  // Timeout/extension fields and unfinished input retain the full JSON inspector.
+  const shellCommand = (block.toolName === "bash" || block.toolName === "powershell")
+    && !isStreamingInput && !running && !partial && result && !resultDiff && !patchFiles && !subagent && resultImages.length === 0
+    && block.input && !Array.isArray(block.input) && Object.keys(block.input).length === 1
+    && Object.prototype.hasOwnProperty.call(block.input, "command") && typeof block.input.command === "string" && block.input.command.trim()
+      ? block.input.command : null;
   const codemodeCallCount = codemode ? codemode.calls.length + codemode.omitted : 0;
   // Progress snapshots are paired results too; execution metadata wins until end.
   const status: ToolCallStatus = running ? "running"
@@ -1181,7 +1188,7 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
   const disclosureId = useId();
 
   return (
-    <div className="tool-call-row" data-status={status} data-tool-call-id={block.toolCallId}>
+    <div className="tool-call-row" data-status={status} data-tool-call-id={block.toolCallId} data-command-layout={shellCommand !== null ? "compact" : undefined}>
       {/* ── Tool call header ── */}
       <div className="tool-call-header" style={{ display: "flex", alignItems: "stretch", minWidth: 0 }}>
         <button
@@ -1241,8 +1248,14 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
       {/* Result images stay visible even when the argument/result disclosure is closed. */}
       {resultImages.length > 0 && <ResultImages images={resultImages} isError={isError} />}
       <DisclosureBody id={`${disclosureId}-body`} labelledBy={`${disclosureId}-toggle`} expanded={expanded} className="tool-call-grid" contentClassName="tool-call-body">
+      {/* A validated completed shell call needs one command pill and plain output,
+          with the existing exact-payload copy controls retained for each. */}
+      {shellCommand !== null && <>
+        <div className="tool-call-command-line"><span className="tool-call-command-prompt" aria-hidden="true">&gt;</span><pre className="tool-call-input tool-call-command-text">{shellCommand}</pre><CodeCopyButton code={shellCommand} /></div>
+        <div className="tool-call-command-result"><CodeCopyButton code={resultText ?? ""} /><pre className="tool-call-command-output">{resultIsEmpty ? t("i18n.noOutput") : resultText}</pre></div>
+      </>}
       {/* ── Expanded: input args (only when no richer view exists); a codemode script in place of its JSON ── */}
-      {(isStreamingInput || !isEditTool) && !patchFiles && (
+      {shellCommand === null && (isStreamingInput || !isEditTool) && !patchFiles && (
         <>
         <CodeCopyButton code={codemode ? codemode.code : inputStr} />
         <pre
@@ -1285,7 +1298,7 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
           isError={isError}
         />
       )}
-      {result && !patchFiles && !codemodeRunning && (
+      {shellCommand === null && result && !patchFiles && !codemodeRunning && (
         resultDiff ? (
           <PairedDiffResult
             diff={resultDiff}

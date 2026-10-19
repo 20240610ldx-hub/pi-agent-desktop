@@ -9,9 +9,9 @@
 | Tool call group / Collapsed activity summary | 可折叠的执行记录组 | ChatWindow 的真实 turn／process entries，不使用演示步骤 |
 | Summary header / Disclosure trigger | 低于正文权重的摘要行 | 折叠／展开、状态、实际消息／工具数量；尾部 chevron |
 | Step item / Action row / Tool call row | 一条真实工具调用 | Pi tool-call ID、参数生成和执行事件、结果与错误 |
-| Tool input / Tool result / Command output | 展开后的输入与结果 | 原文；等宽字体，有边界，可复制和滚动，MCP 结果继续纯文本 |
+| Tool input / Tool result / Command output | 展开后的输入与结果 | 原文等宽／复制／滚动；已完成且仅command字段的bash／powershell使用紧凑命令条＋普通结果，额外参数及其他rich views保完整；MCP继续纯文本 |
 | Streaming text / Token streaming | 正在生成的正文 | 当前 message／block，不伪造逐字计时 |
-| Caret / Streaming cursor | 当前正文生成指示 | 仅当前文本生成时存在，完成／中断移除 |
+| Caret / Streaming cursor | 当前正文生成指示 | 仅当前文本生成时存在，完成／中断移除；最后的Markdown正文位置由既有解析树选择，不在列表／表格后追加空白行 |
 | Shimmer text | 当前正在进行的微光文字 | 只有真实活动状态驱动，同一时刻一处可见持续动画 |
 | Thinking block / Reasoning summary | 可折叠思考预览与正文 | 原始 block index、deferred fetch／cache／retry 和偏好继续保留 |
 | Task list / Plan / Todo tracker | 真实任务进度列表 | 背景任务接 Pi family；可选 Todo 扩展只提供原样文本 widget，原生结构化 Plan/Todo 尚无 consumer，不能解析任意文本伪造进度 |
@@ -29,7 +29,8 @@
 | 过程组 | 真实 turn/tool counts：pending／running／success／error；partial 不计完成 | 无权把缺终态历史当成功；组与步骤折叠独立 |
 | 工具步骤 | 参数 generating，实际 execution pending／running、结果 success／error，保留 cancelled | 运行集合与部分输出分离，真实错误自动展开一次 |
 | 思考 | 当前 indexed start／delta／end 的 active／static，加 deferred loading／error | 不伪造 duration 或完成比率 |
-| 流式正文 | indexed text active／static；end／Stop 清光标 | 复杂 Markdown 末尾光标排版仍待补验 |
+| 发送确认 | 本地 optimistic submission 至事件连接／POST preflight ACK 的专用 isSending，Stop／会话切换／当前请求结算清除 | 不使用覆盖整轮的 rpcPromptPendingRef，不把工具间 waiting_model 误标 Sending；后续真正活动优先 |
+| 流式正文 | indexed text active／static；end／Stop清光标；现有HAST末尾容器负责呈现位置 | 段落／标题／inline code／列表／嵌套列表／表格／代码fence／open fence／quote已验；公式、末尾Artifact及超大raw fallback仍待验 |
 | 背景任务 | Pi family/subagent 的 queued／starting／running／completed／failed／aborted／interrupted；未知保持 unknown | 静态形状／颜色与可达控制；不是有序 Plan/Todo 完成率 |
 
 ## 动效规格
@@ -59,6 +60,7 @@
 - [x] 思考、过程组与工具详情有折叠／展开形态，运行时可手动折叠；实际活动 run 验证 live handoff 与手动开关保留。
 - [ ] 空输出／超长输出／48步／并行独立完成和重连已有十组边界检查；真实长耗时／慢连接及更多复杂正文仍需补验，不把生成事件间隔当真实时长。
 - [x] 部分输出不造成成功误判；未知活动保持静态。已通过 reducer／hook 与真实活动页面；定时 reconciliation 仅保留同一尾块的既有事件证明。
+- [x] Sending专用提交阶段由真实准备／POST确认驱动，具体活动优先；延迟ACK／拒绝／Stop／跨会话和草稿隔离分别通过公开hook及实际页面，取消未发出请求即时清忙碌且只恢复一次。
 
 ### 视觉层级
 
@@ -91,10 +93,10 @@
 
 2026-10-19 新参考原字节归档在工作区私有 `references/claude-desktop/agent-activity/2026-10-19/` 与 `conversation-navigation/2026-10-19/`，各有 manifest／SHA256。活动图含 2136×845 原图和 741×104 Sending 局部；导航原图 241×616。PNG 内嵌 DPI 不证明系统 DPI，静态图也不证明 shimmer 时间。原始图、字体和叠图不提交公开仓库；实现／参考双图层始终不重采样。
 
-本批活动完整页面为 `activity-disclosure/run-1792375885811/`，手机可读性补充为 `mobile-supplement-1792376302856/`，导航为 `conversation-navigator-layout/run-1792375287625/`，内容搜索为 `sidebar-content-search/run-1792375755599/`。前者原430px截图有侧栏／Context遮挡，只记录布局／溢出；补拍经真实按钮关闭遮挡后逐目标命中、文字和原图复核通过。后续 `disclosure-motion/run-1792378208269/` 已分别验证三类高度和清理语义。有限步骤动效最终 `activity-step-motion/run-1792380217575/` 独立通过七组 native frames／不重播／隐藏reduced／focus与手动历史滚动检查，并保存1300／430深浅稳定截图；初轮冷启动只到Loading shell、尚无会话fixture请求的失败报告保留。最终 fresh context 无page／console／external错误，没有模型执行；复杂Markdown光标和Windows原生渲染不由此补认。
+本批活动完整页面为 `activity-disclosure/run-1792375885811/`，手机可读性补充为 `mobile-supplement-1792376302856/`，导航为 `conversation-navigator-layout/run-1792375287625/`，内容搜索为 `sidebar-content-search/run-1792375755599/`。前者原430px截图有侧栏／Context遮挡，只记录布局／溢出；补拍经真实按钮关闭遮挡后逐目标命中、文字和原图复核通过。后续 `disclosure-motion/run-1792378208269/` 已分别验证三类高度和清理语义。有限步骤动效最终 `activity-step-motion/run-1792380217575/` 独立通过七组 native frames／不重播／隐藏reduced／focus与手动历史滚动检查，并保存1300／430深浅稳定截图；初轮冷启动只到Loading shell、尚无会话fixture请求的失败报告保留。最终 fresh context 无page／console／external错误，没有模型执行；这轮不补认复杂Markdown或Windows原生渲染；后续独立 `streaming-caret-boundaries/run-1792381811843/` 已验证九种正文结尾、indexed handoff、native blink、New／返回和Stop／error清理，公式／Artifact／超大fallback及Windows原生仍保留待验。
 
 可选 `@juicesharp/rpiv-todo@2.13.9` 的已有路径为扩展 `setWidget("rpiv-todos", …)` → RPC widget lines／state → useAgentSession → ChatWindow aboveEditorWidgets → ExtensionWidgets ANSI 文本。浏览器字段只有 key／lines／placement，没有结构化任务 ID、状态或总数；`e2e/rpiv-todo-compat.mjs` 的九项 SDK／持久化兼容检查不证明浏览器或真实 Code mode 消费。包未安装／未捆绑，原生 Plan/Todo 继续未完成。后续仅能原样验收扩展实际给出的标签／计数、更新／重连／清除，不能从任意文本、隐藏完成项或删除 tombstones 推导进度。
 
-原图复查使用 2136×845 原件，而非聊天显示的 2000×791 预览。参考活动详情是共享外框／分隔线和单条紧凑命令，现状仍有嵌套思考／JSON／输出卡片；同图 summary/body ink 比例约 1.05／1.00，当前浅色约 0.87／0.87。墨迹比例不等于 CSS 字号，参考 DPI 未知；先用相同工具／内容继续对照，不据此直接放大字体或声称视觉层级一致。私有叠图只做整数裁剪／平移，reference100% 底层、current50% 上层，不提交。
+原图复查使用 2136×845 原件，而非聊天显示的 2000×791 预览。参考活动详情是共享外框／分隔线和单条紧凑命令，先前现状有嵌套思考／JSON／输出卡片；当前只对已完成且纯command的shell视图移除内层卡片，其他rich inspectors保留。生成的同类numstat形状对照中桌面详情高164.5→71.75 CSS px、命令pill33.75px／1px边框，对应参考39原像素且DPI未知。参考同图summary/body ink约1.05／1.00，先前浅色约0.87／0.87；墨迹不等于CSS字号，不据此直接放大字体或声称视觉一致。命令语法着色、其他活动行层级和参考字形仍有差异。私有叠图只做整数裁剪／平移，reference100%底层、current50%上层，不提交。
 
 运行结果和残差在每一批实际完成后补记于[复刻基准](pilaude-ui-parity.md)；未核实项继续保持未完成。Vercel AI Elements、assistant-ui、shadcn/ui 等为原文的参考建议，本轮未逐一核对或声称已采用。

@@ -7,6 +7,7 @@ import { inlineCodeFilePath } from "@/lib/file-context-menu";
 import { parsePdfPageFragment, resolveLocalFileHref, shouldOpenLocalFileInApp } from "@/lib/file-links";
 import { encodeFilePathForApi } from "@/lib/file-paths";
 import { markdownRehypePlugins, markdownRemarkPlugins, markdownUrlTransform, markdownUserRemarkPlugins, normalizeDisplayMath } from "@/lib/markdown";
+import { rehypeStreamingCaret } from "@/lib/markdown-streaming-caret";
 import { ImagePreview } from "./ImagePreview";
 import { MermaidBlock, CodeBlock } from "./MermaidBlock";
 import { HtmlPreviewBlock } from "./HtmlPreviewBlock";
@@ -21,6 +22,7 @@ interface MarkdownBodyProps {
   children: string;
   className?: string;
   isStreaming?: boolean;
+  streamingCaret?: boolean;
   cwd?: string;
   onOpenFile?: (filePath: string, page?: number) => void;
   /** Render every line ending as a line break, for text the user typed. */
@@ -119,7 +121,8 @@ function buildComponents(
   onOpenFile: ((filePath: string, page?: number) => void) | undefined,
 ): Components {
   return {
-    code({ className, children, ...props }) {
+    code({ className, children, node, ...props }) {
+      const streamingCaret = node?.properties.dataStreamingCaret === "true";
       const lang = className?.replace("language-", "").toLowerCase() ?? "";
       const raw = String(children ?? "");
       const isBlock = className?.includes("language-") || raw.includes("\n");
@@ -133,6 +136,7 @@ function buildComponents(
             <MermaidBlock
               code={raw.replace(/\n$/, "")}
               isStreaming={isStreaming}
+              streamingCaret={streamingCaret}
               defaultPreview
             />
           );
@@ -145,11 +149,12 @@ function buildComponents(
               lang={lang}
               kind={previewKind}
               isStreaming={isStreaming}
+              streamingCaret={streamingCaret}
               defaultPreview={previewKind !== "react"}
             />
           );
         }
-        return <CodeBlock code={raw.replace(/\n$/, "")} lang={lang} isStreaming={isStreaming} />;
+        return <CodeBlock code={raw.replace(/\n$/, "")} lang={lang} isStreaming={isStreaming} streamingCaret={streamingCaret} />;
       }
       return (
         <MarkdownInlineCode cwd={cwd} onOpenFile={onOpenFile} {...props}>
@@ -235,7 +240,7 @@ function useStreamingThrottle(value: string, active: boolean): string {
 
 // Memoized: markdown parsing + highlighting is the most expensive render work
 // in the app, so parent re-renders with identical props must be free.
-export const MarkdownBody = memo(function MarkdownBody({ children, className, isStreaming, cwd, onOpenFile, keepLineBreaks, artifacts }: MarkdownBodyProps) {
+export const MarkdownBody = memo(function MarkdownBody({ children, className, isStreaming, streamingCaret, cwd, onOpenFile, keepLineBreaks, artifacts }: MarkdownBodyProps) {
   const markdown = useStreamingThrottle(children, Boolean(isStreaming));
   const normalizedMarkdown = useMemo(
     () => normalizeDisplayMath(artifacts ? encodeArtifactsForMarkdown(markdown) : markdown),
@@ -245,18 +250,19 @@ export const MarkdownBody = memo(function MarkdownBody({ children, className, is
     () => buildComponents(isStreaming, cwd, onOpenFile),
     [isStreaming, cwd, onOpenFile],
   );
+  const rehypePlugins = useMemo(() => streamingCaret ? [...(markdownRehypePlugins ?? []), rehypeStreamingCaret] : markdownRehypePlugins, [streamingCaret]);
   // ReactMarkdown is not memoized itself; reusing the element lets the
   // throttled re-renders (text unchanged) skip parsing entirely.
   const body = useMemo(() => (
     <ReactMarkdown
       remarkPlugins={keepLineBreaks ? markdownUserRemarkPlugins : markdownRemarkPlugins}
-      rehypePlugins={markdownRehypePlugins}
+      rehypePlugins={rehypePlugins}
       urlTransform={onOpenFile ? markdownUrlTransform : undefined}
       components={components}
     >
       {normalizedMarkdown}
     </ReactMarkdown>
-  ), [normalizedMarkdown, components, onOpenFile, keepLineBreaks]);
+  ), [normalizedMarkdown, components, onOpenFile, keepLineBreaks, rehypePlugins]);
 
   return (
     <div className={["markdown-body", className].filter(Boolean).join(" ")}>

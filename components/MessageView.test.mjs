@@ -662,6 +662,41 @@ test("uses the unanswered truncation notice for an empty length reply", () => {
 
 const { setToolCallExpanded } = await jiti.import("@/lib/tool-call-expansion");
 
+test("completed command-only shell inputs render exact command text without JSON wrappers", (t) => {
+  for (const toolName of ["bash", "powershell"]) {
+    const command = 'git -C "D:/generated/activity-fixture" diff --numstat fixture-base -- src/example.mjs\r\n';
+    const block = { type: "toolCall", toolCallId: `compact-${toolName}`, toolName, input: { command } };
+    const result = { role: "toolResult", toolCallId: block.toolCallId, content: [{ type: "text", text: "147\t27\tsrc/example.mjs\r\n" }] };
+    setToolCallExpanded(block.toolCallId, true);
+    t.after(() => setToolCallExpanded(block.toolCallId, false));
+    const html = renderMessage({ role: "assistant", content: [block] }, { toolResults: new Map([[block.toolCallId, result]]) });
+    const firstPre = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/)?.[1];
+    assert.equal(textOf(firstPre), command, "The shell payload is neither trimmed nor newline-normalized");
+    assert.match(html, /data-command-layout="compact"/);
+    assert.doesNotMatch(firstPre, /&quot;command&quot;/);
+    assert.equal(getToolCallInputText(block), JSON.stringify(block.input, null, 2), "The generic full-input contract remains intact");
+  }
+});
+
+test("shell arguments with timeout, extension fields, invalid command or partial input keep full JSON", (t) => {
+  const cases = [
+    { toolName: "bash", input: { command: "generated", timeout: 3 } },
+    { toolName: "powershell", input: { command: "generated", cwd: "D:/generated/other" } },
+    { toolName: "bash", input: { command: 17 } },
+    { toolName: "bash", input: { command: "" } },
+    { toolName: "mcp__fixture__bash", input: { command: "generated" } },
+    { toolName: "bash", input: { command: "generated" }, rawInput: '{"command":"part' },
+  ];
+  cases.forEach((item, index) => {
+    const block = { type: "toolCall", toolCallId: `generic-shell-${index}`, ...item };
+    setToolCallExpanded(block.toolCallId, true); t.after(() => setToolCallExpanded(block.toolCallId, false));
+    const result = { role: "toolResult", toolCallId: block.toolCallId, content: [{ type: "text", text: "Generated output" }] };
+    const html = renderMessage({ role: "assistant", content: [block] }, { toolResults: new Map([[block.toolCallId, result]]) });
+    assert.equal(textOf(html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/)[1]), item.rawInput ?? JSON.stringify(item.input, null, 2));
+    assert.doesNotMatch(html, /data-command-layout="compact"/);
+  });
+});
+
 function textOf(html) {
   return html.replace(/<[^>]+>/g, "").replace(/&quot;/g, "\"").replace(/&amp;/g, "&").replace(/&#x27;/g, "'");
 }

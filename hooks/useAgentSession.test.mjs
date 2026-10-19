@@ -41,16 +41,20 @@ async function compileHookModule(file) {
 }
 const hookModule = await compileHookModule("./useAgentSession.ts");
 
-function activityHookHarness({ sessionFixtures = {}, strictEffects = false } = {}) {
+function activityHookHarness({ sessionFixtures = {}, strictEffects = false, commandResponse, connectionReady, freshSession = false, sessionCreation } = {}) {
   const slots = [];
   const effects = [];
   const timers = new Map();
   const commands = [];
+  const restored = [];
+  const rekeyed = [];
   let branchChange;
   let cursor = 0;
   let dirty = false;
   let timerId = 0;
-  let opts = { session: { id: "session-a" }, newSessionCwd: null, newSessionDraftKey: null,
+  let opts = { session: freshSession ? null : { id: "session-a" }, newSessionCwd: freshSession ? "D:/generated/sending-test" : null, newSessionDraftKey: freshSession ? "new:generated-sending" : null,
+    chatInputRef: { current: { restoreSubmission: (...args) => restored.push(args), rekeyDraft: (...args) => rekeyed.push(args) } },
+    onSessionCreated: (session) => { opts = { ...opts, session, newSessionCwd: null, newSessionDraftKey: null }; },
     onBranchDataChange: (_tree, _leafId, change) => { branchChange = change; },
   };
   let current;
@@ -104,7 +108,8 @@ function activityHookHarness({ sessionFixtures = {}, strictEffects = false } = {
   const response = async (url) => {
     const path = String(url);
     const sid = /\/sessions\/([^/?]+)/.exec(path)?.[1] ?? "session-a";
-    const body = path.includes("/api/models") ? { models: {}, modelList: [] }
+    const body = path === "/api/agent/new" ? (sessionCreation ? await sessionCreation.promise : { sessionId: "session-created" })
+      : path.includes("/api/models") ? { models: {}, modelList: [] }
       : path.includes("/lease") ? { renewed: 1 }
       : path.includes("/api/agent/") || path.endsWith("/state") ? stateResponse
       : sessionFixtures[sid] ?? { sessionId: sid, tree: [], leafId: null, context: {
@@ -131,12 +136,12 @@ function activityHookHarness({ sessionFixtures = {}, strictEffects = false } = {
       if (name === "react") return react;
       if (name === "@/hooks/useI18n") return { useI18n: () => ({ t: (key) => key }) };
       if (name === "@/lib/agent-event-connection") return {
-        AgentEventConnection: class { maintain() {} close() {} ensureConnected() { return Promise.resolve(); } },
+        AgentEventConnection: class { maintain() {} close() {} ensureConnected() { return connectionReady?.promise ?? Promise.resolve(); } },
       };
       const dependency = module.dependencies.get(name);
       if (name === "@/lib/agent-client") return {
         ...dependency,
-        sendAgentCommand: async (sid, command) => { commands.push([sid, command]); return {}; },
+        sendAgentCommand: async (sid, command) => { commands.push([sid, command]); return commandResponse ? commandResponse(sid, command) : {}; },
       };
       if (name === "@/lib/fetch-timeout") return { ...dependency, fetchWithRetry: response };
       return dependency?.compiled ? load(dependency) : dependency;
@@ -158,7 +163,7 @@ function activityHookHarness({ sessionFixtures = {}, strictEffects = false } = {
   }
   render();
   return {
-    get current() { return current; }, commands, stateResponse,
+    get current() { return current; }, commands, stateResponse, restored, rekeyed,
     changeBranch: (...args) => branchChange(...args),
     emit(event) { current.handleAgentEventRef.current(event); return render(); },
     switchSession(id) { opts = { ...opts, session: { id } }; return render(); },
@@ -468,6 +473,202 @@ test("entry grants survive terminal handoff until claimed, and empty IDs or exec
     h.render();
     assert.equal(h.current.toolEntryState.grants.size, 0, "hidden/reduced consumers can acknowledge without replay later");
   }
+});
+
+test("Sending spans event readiness and prompt admission, then ends at ACK while the run continues", async () => {
+  const ready = deferredSubmission();
+  const accepted = deferredSubmission();
+  const h = activityHookHarness({ connectionReady: ready, commandResponse: (_sid, command) => command.type === "prompt" ? accepted.promise : {} });
+  await h.flush();
+  const pending = h.current.handleSend("Generated sending test");
+  h.render();
+  assert.equal(h.current.isSending, true, "optimistic submission waits for transport readiness");
+  assert.equal(h.commands.length, 0);
+  ready.resolve();
+  await h.flush();
+  assert.equal(h.commands[0][1].type, "prompt");
+  h.emit({ type: "agent_start" });
+  assert.equal(h.current.isSending, true, "agent_start is not the POST acknowledgement");
+  accepted.resolve({});
+  await pending;
+  h.render();
+  assert.equal(h.current.isSending, false);
+  assert.equal(h.current.agentRunning, true, "ACK does not finish the prompt lifecycle");
+  assert.equal(h.current.messages.filter((message) => message.role === "user").length, 1);
+});
+
+test("Stop clears Sending immediately and cancels a submission still waiting for event readiness", async () => {
+  const ready = deferredSubmission();
+  const h = activityHookHarness({ connectionReady: ready });
+  await h.flush();
+  const pending = h.current.handleSend("Do not dispatch after Stop");
+  h.render();
+  assert.equal(h.current.isSending, true);
+  await h.current.handleAbort();
+  h.render();
+  assert.equal(h.current.isSending, false);
+  assert.equal(h.current.agentRunning, false, "a canceled pre-dispatch submission has no server run to keep busy");
+  assert.equal(h.current.agentPhase, null);
+  assert.equal(h.current.messages.some((message) => message.content === "Do not dispatch after Stop"), false);
+  assert.equal(h.restored.length, 1, "the unsent submission returns to the composer once");
+  ready.resolve();
+  await pending;
+  h.render();
+  assert.equal(h.commands.some(([, command]) => command.type === "prompt"), false);
+});
+
+test("session switching clears Sending and A-B-A stale ACK cannot clear a newer attempt", async () => {
+  const requests = [deferredSubmission(), deferredSubmission()];
+  let requestIndex = 0;
+  const h = activityHookHarness({ commandResponse: (_sid, command) => command.type === "prompt" ? requests[requestIndex++].promise : {} });
+  await h.flush();
+  const first = h.current.handleSend("First attempt");
+  await h.flush();
+  assert.equal(h.current.isSending, true);
+  h.switchSession("session-b");
+  assert.equal(h.current.isSending, false);
+  await h.flush();
+  h.switchSession("session-a");
+  await h.flush();
+  const second = h.current.handleSend("Newer attempt");
+  await h.flush();
+  assert.equal(h.current.isSending, true);
+  requests[0].resolve({});
+  await first;
+  h.render();
+  assert.equal(h.current.isSending, true, "old finally must not clear the later A submission");
+  requests[1].resolve({});
+  await second;
+  h.render();
+  assert.equal(h.current.isSending, false);
+  assert.equal(h.commands.filter(([, command]) => command.type === "prompt").length, 2);
+});
+
+test("fresh-session promotion clears Sending for the same submission without resetting its transcript", async () => {
+  const accepted = deferredSubmission();
+  const h = activityHookHarness({ freshSession: true, commandResponse: (_sid, command) => command.type === "prompt" ? accepted.promise : {} });
+  await h.flush();
+  const pending = h.current.handleSend("First fresh message");
+  await h.flush();
+  assert.equal(h.current.isSending, true);
+  accepted.resolve({});
+  await pending;
+  h.render();
+  assert.equal(h.current.isSending, false);
+  assert.equal(h.current.isNew, false);
+  assert.equal(h.current.messages.at(-1).content, "First fresh message");
+  assert.deepEqual(h.rekeyed, [["new:generated-sending", "session-created"]]);
+});
+
+test("rejected Sending restores once while an ambiguous transport failure never replays the draft", async () => {
+  const { AgentCommandError } = hookModule.dependencies.get("@/lib/agent-client");
+  for (const definitive of [true, false]) {
+    const request = deferredSubmission();
+    const h = activityHookHarness({ commandResponse: (_sid, command) => command.type === "prompt" ? request.promise : {} });
+    await h.flush();
+    const pending = h.current.handleSend("Recover this submission");
+    await h.flush();
+    request.reject(definitive ? new AgentCommandError("Generated rejection", 409, "prompt_rejected", false) : new Error("Generated connection failure"));
+    await pending;
+    h.render();
+    assert.equal(h.current.isSending, false);
+    assert.equal(h.restored.length, definitive ? 1 : 0);
+    assert.equal(h.commands.filter(([, command]) => command.type === "prompt").length, 1);
+  }
+});
+
+test("stale send rejections cannot restore a draft or mutate a newer A-B-A submission", async () => {
+  const { AgentCommandError } = hookModule.dependencies.get("@/lib/agent-client");
+  const requests = [deferredSubmission(), deferredSubmission()];
+  let requestIndex = 0;
+  const h = activityHookHarness({ commandResponse: (_sid, command) => command.type === "prompt" ? requests[requestIndex++].promise : {} });
+  await h.flush();
+  const first = h.current.handleSend("Old rejected message");
+  await h.flush();
+  h.switchSession("session-b"); await h.flush();
+  h.switchSession("session-a"); await h.flush();
+  const second = h.current.handleSend("Current unsent draft"); await h.flush();
+  requests[0].reject(new AgentCommandError("Late rejection", 409, "prompt_rejected", false));
+  await first; h.render();
+  assert.equal(h.current.isSending, true);
+  assert.deepEqual(h.restored, []);
+  assert.equal(h.current.messages.at(-1).content, "Current unsent draft");
+  requests[1].resolve({}); await second; h.render();
+  assert.equal(h.current.isSending, false);
+});
+
+test("Stop after dispatch keeps Sending cleared while an accepted fresh session can still promote", async () => {
+  const accepted = deferredSubmission();
+  const h = activityHookHarness({ freshSession: true, commandResponse: (_sid, command) => command.type === "prompt" ? accepted.promise : {} });
+  await h.flush();
+  const pending = h.current.handleSend("Accepted before Stop");
+  await h.flush();
+  assert.equal(h.commands.some(([, command]) => command.type === "prompt"), true);
+  await h.current.handleAbort(); h.render();
+  assert.equal(h.current.isSending, false);
+  accepted.resolve({}); await pending; h.render();
+  assert.equal(h.current.isSending, false);
+  assert.equal(h.current.isNew, false, "the already accepted session remains discoverable after Stop");
+  assert.deepEqual(h.rekeyed, [["new:generated-sending", "session-created"]]);
+});
+
+test("Stop before a fresh session receives an ID settles locally and never submits after creation", async () => {
+  const creation = deferredSubmission();
+  const h = activityHookHarness({ freshSession: true, sessionCreation: creation });
+  await h.flush();
+  const pending = h.current.handleSend("Unsent fresh submission");
+  await h.flush();
+  assert.equal(h.current.sessionIdRef.current, null);
+  assert.equal(h.current.isSending, true);
+  await h.current.handleAbort(); h.render();
+  assert.equal(h.current.isSending, false);
+  assert.equal(h.current.agentRunning, false);
+  assert.equal(h.current.agentPhase, null);
+  assert.equal(h.current.messages.length, 0);
+  assert.equal(h.restored.length, 1);
+  creation.resolve({ sessionId: "session-created" });
+  await pending; h.render();
+  assert.equal(h.current.agentRunning, false);
+  assert.equal(h.commands.some(([, command]) => command.type === "prompt"), false);
+  assert.deepEqual(h.rekeyed, [], "an unsent cancellation does not promote the draft");
+});
+
+test("readiness and fresh-session rejection after Stop never restore a canceled draft twice", async () => {
+  for (const freshSession of [false, true]) {
+    const preparation = deferredSubmission();
+    const h = activityHookHarness(freshSession
+      ? { freshSession: true, sessionCreation: preparation }
+      : { connectionReady: preparation });
+    await h.flush();
+    const pending = h.current.handleSend("Canceled pending submission");
+    await h.flush();
+    await h.current.handleAbort(); h.render();
+    assert.equal(h.restored.length, 1);
+    preparation.reject(new Error("Generated canceled preparation failure"));
+    await pending; h.render();
+    assert.equal(h.restored.length, 1, "a late rejected await must not replay the canceled draft");
+    assert.equal(h.current.agentRunning, false);
+    assert.equal(h.current.isSending, false);
+    assert.equal(h.current.notices.length, 0);
+    assert.equal(h.commands.some(([, command]) => command.type === "prompt"), false);
+  }
+});
+
+test("an older admission ACK cannot clear Sending for a newer run of the same session", async () => {
+  const requests = [deferredSubmission(), deferredSubmission()];
+  let requestIndex = 0;
+  const h = activityHookHarness({ commandResponse: (_sid, command) => command.type === "prompt" ? requests[requestIndex++].promise : {} });
+  await h.flush();
+  const first = h.current.handleSend("First run finishes before HTTP response");
+  await h.flush();
+  h.emit({ type: "prompt_done" });
+  assert.equal(h.current.agentRunning, false);
+  const second = h.current.handleSend("New run still awaiting admission");
+  await h.flush();
+  requests[0].resolve({}); await first; h.render();
+  assert.equal(h.current.isSending, true);
+  requests[1].resolve({}); await second; h.render();
+  assert.equal(h.current.isSending, false);
 });
 
 test("keeps the session event stream open through the idle grace window", () => {
@@ -926,7 +1127,7 @@ test("delegates event stream readiness and hides an empty agent phase", () => {
   assert.match(ensureSource, /eventConnectionRef\.current!\.maintain\(sid\)/);
   assert.match(chatWindowSource, /const hasStreamingContent = Boolean\(streamState\.streamingMessage\?\.content\.length\)/);
   assert.match(chatWindowSource, /const transcriptMessages = useMemo\(\(\) => streamState\.isStreaming && streamState\.streamingMessage\s*\? \[\.\.\.messages, streamState\.streamingMessage\]/);
-  assert.match(chatWindowSource, /agentRunning && !hasStreamingContent && activeThinkingIndex === null && activeToolCallId === null && \(agentPhase \|\| isCompacting\)/);
+  assert.match(chatWindowSource, /agentRunning && !hasStreamingContent && activeThinkingIndex === null && activeToolCallId === null && \(agentPhase \|\| isCompacting \|\| showingSending\)/);
   // Compaction is what the user needs to know while a turn is being compacted, so it is
   // forwarded to the label instead of letting the stream phase read as a hang.
   assert.match(chatWindowSource, /phaseLabel\(agentPhase, t, isCompacting\)/);

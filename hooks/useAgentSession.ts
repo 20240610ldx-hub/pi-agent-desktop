@@ -366,6 +366,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const [hasEarlierMessages, setHasEarlierMessages] = useState(false);
   const [streamState, dispatch] = useReducer(streamReducer, INITIAL_STREAMING_STATE);
   const [agentRunning, setAgentRunning] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const sendingAttemptRef = useRef(0);
+  const cancelPendingSubmissionRef = useRef<(() => boolean) | null>(null);
   const [bashRunning, setBashRunning] = useState(false);
   const [pendingBash, setPendingBash] = useState<PendingBash | null>(null);
   const { automation, setAutomation, syncAutomation } = useSessionAutomation();
@@ -556,6 +559,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     const previousIdentity = appliedIdentity;
     setAppliedIdentity(sessionIdentity);
     sessionGenerationRef.current += 1;
+    sendingAttemptRef.current += 1;
+    cancelPendingSubmissionRef.current = null;
+    setIsSending(false);
     dispatchToolEntry({ type: "reset_scope" });
     if (previousIdentity && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
@@ -1919,6 +1925,13 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     }
 
     const promptRunId = promptRunIdRef.current + 1;
+    const sendingAttempt = ++sendingAttemptRef.current;
+    const sendingGeneration = sessionGenerationRef.current;
+    const isCurrentSubmission = () => sessionHookMountedRef.current
+      && sessionGenerationRef.current === sendingGeneration
+      && promptRunIdRef.current === promptRunId;
+    const canDispatchSubmission = () => isCurrentSubmission() && sendingAttemptRef.current === sendingAttempt;
+    setIsSending(true);
     cancelEventStreamGrace();
     rpcPromptPendingRef.current = true;
 
@@ -1943,6 +1956,16 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     const piImages = images?.map((img) => ({ type: "image" as const, data: img.data, mimeType: img.mimeType }));
     let sentSessionId: string | null = null;
     let promptRequestStarted = false;
+    const cancelBeforeDispatch = () => {
+      if (promptRequestStarted || !canDispatchSubmission() || sdkAgentActiveRef.current) return false;
+      rpcPromptPendingRef.current = false;
+      optimisticUserMessageKeyRef.current = null;
+      setMessages((prev) => prev.filter((item) => item !== userMsg));
+      restoreSubmission(message, images, composerDraftKey);
+      settleUiStage();
+      return true;
+    };
+    cancelPendingSubmissionRef.current = cancelBeforeDispatch;
 
     try {
       if (isNew && newSessionCwd) {
@@ -1951,6 +1974,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         const sid = existingSid ?? await ensureNewSession();
 
         if (!sid) throw new Error("Unable to create a session for the prompt");
+        if (!canDispatchSubmission()) return;
         sentSessionId = sid;
         if (selectedModel) {
           setPendingModel(selectedModel);
@@ -1959,17 +1983,21 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
           }
         }
         await ensureEventsConnected(sid);
+        if (!canDispatchSubmission()) return;
         promptRequestStarted = true;
+        if (cancelPendingSubmissionRef.current === cancelBeforeDispatch) cancelPendingSubmissionRef.current = null;
         await sendAgentCommand(sid, {
           type: "prompt",
           message,
           ...(piImages?.length ? { images: piImages } : {}),
         });
-        promoteNewSession(1, message);
+        if (isCurrentSubmission()) promoteNewSession(1, message);
       } else if (session) {
         sentSessionId = session.id;
         await ensureEventsConnected(session.id);
+        if (!canDispatchSubmission()) return;
         promptRequestStarted = true;
+        if (cancelPendingSubmissionRef.current === cancelBeforeDispatch) cancelPendingSubmissionRef.current = null;
         await sendAgentCommand(session.id, {
           type: "prompt",
           message,
@@ -1978,19 +2006,21 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       } else {
         throw new Error("No active session for the prompt");
       }
-      if (isSlashCommandPrompt && sentSessionId) {
+      if (isCurrentSubmission() && isSlashCommandPrompt && sentSessionId) {
         void waitForPromptSettlement(sentSessionId, promptRunId);
       }
     } catch (e) {
+      if (!promptRequestStarted && !canDispatchSubmission()) return;
       console.error("Failed to send message:", e);
       const definitivelyRejected = !promptRequestStarted || isPromptRejectedError(e);
       // A transport/proxy failure after dispatch is ambiguous: the server may
       // have accepted the prompt before the response was lost. Keep SSE alive
       // until server state confirms the run is idle.
       if (!definitivelyRejected && sentSessionId) {
-        void waitForPromptSettlement(sentSessionId, promptRunId);
+        if (isCurrentSubmission()) void waitForPromptSettlement(sentSessionId, promptRunId);
         return;
       }
+      if (!isCurrentSubmission()) return;
       rpcPromptPendingRef.current = false;
       setMessages((prev) => {
         const optimisticIndex = prev.lastIndexOf(userMsg);
@@ -2013,8 +2043,13 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       setAgentRunning(false);
       setAgentPhase(null);
       dispatch({ type: "end" });
+    } finally {
+      if (cancelPendingSubmissionRef.current === cancelBeforeDispatch) cancelPendingSubmissionRef.current = null;
+      if (sendingAttemptRef.current === sendingAttempt
+        && sessionGenerationRef.current === sendingGeneration
+        && promptRunIdRef.current === promptRunId) setIsSending(false);
     }
-  }, [isNew, newSessionCwd, newSessionModel, session, ensureNewSession, ensureEventsConnected, promoteNewSession, waitForPromptSettlement, addNotice, cancelEventStreamGrace, closeEvents, composerDraftKey, reconcileAgentState, restoreSubmission, editEntryId, setEdit, branchSummarySessionIdRef]);
+  }, [isNew, newSessionCwd, newSessionModel, session, ensureNewSession, ensureEventsConnected, promoteNewSession, waitForPromptSettlement, addNotice, cancelEventStreamGrace, closeEvents, composerDraftKey, reconcileAgentState, restoreSubmission, editEntryId, setEdit, branchSummarySessionIdRef, settleUiStage]);
 
   const executeBash = useCallback(async (command: string, excludeFromContext: boolean) => {
     if (agentRunningRef.current || bashRunningRef.current) return;
@@ -2049,6 +2084,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   executeBashRef.current = executeBash;
 
   const handleAbort = useCallback(async () => {
+    const canceledBeforeDispatch = cancelPendingSubmissionRef.current?.() ?? false;
+    cancelPendingSubmissionRef.current = null;
+    sendingAttemptRef.current += 1;
+    setIsSending(false);
+    if (canceledBeforeDispatch) return;
     const sid = sessionIdRef.current;
     if (!sid) return;
     if (bashRunningRef.current) {
@@ -2782,6 +2822,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     }
     return () => {
       sessionHookMountedRef.current = false;
+      cancelPendingSubmissionRef.current = null;
       const abandonedDraftKey = isNew ? newSessionDraftKey : null;
       if (abandonedDraftKey) {
         queueMicrotask(() => {
@@ -2996,7 +3037,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   return {
     // State
     data, loading, error, activeLeafId, messages, activeToolResults, runningToolCallIds, toolEntryState, consumeToolEntries, entryIds, historyCursor, hasEarlierMessages, streamState,
-    agentRunning, modelNames, modelList, modelError, modelScopeWarnings: visibleModelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, newSessionModel, toolPreset, thinkingLevel,
+    agentRunning, isSending, modelNames, modelList, modelError, modelScopeWarnings: visibleModelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, newSessionModel, toolPreset, thinkingLevel,
     retryInfo, contextUsage, systemPrompt, forkingEntryId, retryLoad, dismissModelScopeWarnings,
     isCompacting, compactError, compactNotice, compactResult, currentModel, displayModel, modelSwitching, sessionStats,
     slashCommands, slashCommandsLoading, queuedMessages,

@@ -25,6 +25,7 @@ interface HtmlPreviewBlockProps {
   lang: string;
   kind: HtmlPreviewKind;
   isStreaming?: boolean;
+  streamingCaret?: boolean;
   /** An artifact action shown beside the preview/source toggle. */
   headerAction?: ReactNode;
   /** React fences start as source: a snippet should not run until asked. */
@@ -60,7 +61,7 @@ const KIND_MIME: Record<HtmlPreviewKind, string> = {
  * Source toggle like MermaidBlock. While the message streams it stays source:
  * re-mounting the frame on every chunk would re-run the page's scripts.
  */
-export function HtmlPreviewBlock({ code, lang, kind, isStreaming, defaultPreview = true, headerAction }: HtmlPreviewBlockProps) {
+export function HtmlPreviewBlock({ code, lang, kind, isStreaming, streamingCaret, defaultPreview = true, headerAction }: HtmlPreviewBlockProps) {
   const { t } = useI18n();
   const [showPreview, setShowPreview] = useState(() => (
     defaultPreview && (Boolean(isStreaming) || !htmlPreviewHasActiveContent(code) || wasStreamedHere(code))
@@ -102,7 +103,7 @@ export function HtmlPreviewBlock({ code, lang, kind, isStreaming, defaultPreview
   );
 
   if (!previewVisible) {
-    return <CodeBlock code={code} lang={lang} headerAction={previewButton} isStreaming={isStreaming} />;
+    return <CodeBlock code={code} lang={lang} headerAction={previewButton} isStreaming={isStreaming} streamingCaret={streamingCaret} />;
   }
 
   const download = () => {

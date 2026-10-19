@@ -320,7 +320,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
     isAutoThinkingSelection,
     defaultModel,
     savedDefaultThinkingLevel,
-    agentPhase,
+    agentPhase, isSending,
     addNotice,
     isNew,
     editEntryId,
@@ -982,9 +982,10 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
     : streamingTailBlock?.type === "toolCall" && streamingTailBlock.rawInput !== undefined
       ? streamingTailBlock.toolCallId
       : [...runningToolCallIds].at(-1) ?? null;
-  const phaseActivity = agentRunning && !hasStreamingContent && activeThinkingIndex === null && activeToolCallId === null && (agentPhase || isCompacting) ? (
-    <div className="break-words py-2 text-[13px] text-text-muted">
-      <span className="activity-shimmer" data-active="true">{phaseLabel(agentPhase, t, isCompacting)}</span>
+  const showingSending = isSending && !isCompacting && agentPhase?.kind !== "running_tools";
+  const phaseActivity = agentRunning && !hasStreamingContent && activeThinkingIndex === null && activeToolCallId === null && (agentPhase || isCompacting || showingSending) ? (
+    <div className="break-words py-2 text-[13px] text-text-muted" data-sending={showingSending || undefined}>
+      <span className="activity-shimmer" data-active="true">{showingSending ? t("chat.sending") : phaseLabel(agentPhase, t, isCompacting)}</span>
     </div>
   ) : null;
   const messageKeys = useMemo(() => {

@@ -10,6 +10,7 @@ import { isImeComposing } from "@/lib/ime";
 interface MermaidBlockProps {
   code: string;
   isStreaming?: boolean;
+  streamingCaret?: boolean;
   defaultPreview?: boolean;
   /**
    * Scale the diagram to the width it is shown in (see `.mermaid-fit` in
@@ -56,7 +57,7 @@ type RenderState =
   | { key: string; status: "error" }
   | { key: string; status: "ready"; svg: string };
 
-export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = false, headerAction }: MermaidBlockProps) {
+export function MermaidBlock({ code, isStreaming, streamingCaret, defaultPreview = false, fit = false, headerAction }: MermaidBlockProps) {
   const { isDark } = useTheme();
   const { t } = useI18n();
   const [showPreview, setShowPreview] = useState(defaultPreview);
@@ -142,7 +143,7 @@ export function MermaidBlock({ code, isStreaming, defaultPreview = false, fit = 
   ), [isStreaming, previewVisible, t]);
 
   if (!previewVisible) {
-    return <CodeBlock code={code} lang="mermaid" headerAction={previewButton} isStreaming={isStreaming} />;
+    return <CodeBlock code={code} lang="mermaid" headerAction={previewButton} isStreaming={isStreaming} streamingCaret={streamingCaret} />;
   }
 
   const body = renderState?.key === currentKey && renderState.status === "error" ? (
@@ -326,6 +327,7 @@ interface CodeBlockProps {
   lang: string;
   headerAction?: ReactNode;
   isStreaming?: boolean;
+  streamingCaret?: boolean;
 }
 
 // Prism's light theme uses backgroundColor, while its dark theme uses the
@@ -347,7 +349,7 @@ delete codeBlockDarkTheme['pre[class*="language-"]'].background;
  * message is still streaming, the block renders as plain monospace text —
  * highlighting a growing block re-tokenizes all of it on every chunk.
  */
-export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isStreaming }: CodeBlockProps) {
+export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isStreaming, streamingCaret }: CodeBlockProps) {
   const { isDark } = useTheme();
 
   return (
@@ -370,7 +372,7 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
             backgroundColor: "color-mix(in srgb, var(--bg) 92%, var(--bg-panel))",
           }}
         >
-          <code style={{ fontFamily: "var(--font-mono)" }}>{code}</code>
+          <code data-streaming-caret={streamingCaret || undefined} style={{ fontFamily: "var(--font-mono)" }}>{code}</code>
         </pre>
       ) : (
         <SyntaxHighlighter
