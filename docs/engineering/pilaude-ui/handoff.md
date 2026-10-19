@@ -12,7 +12,7 @@
 ## 已核实运行环境
 
 - 工作区 `D:/pilaude` 非 git；产品在 `D:/pilaude/pi-agent-desktop`，参考 checkout 在 `D:/pilaude/open-claude-ui`。
-- 产品分支 `fusion/pi-claude-desktop`；最近已提交／推送为 `5eb9bfa`（responsive user-message disclosure），product 的 main 与融合分支已更新。
+- 产品分支 `fusion/pi-claude-desktop`；最近产品实现提交为 `184fade`（model-authored chapters、居中布局和工程交接入口），已 atomic push 到 product 的 main 与融合分支；前一检查点为 `5eb9bfa`。后续文档状态同步提交见实际 HEAD，不把文档提交误作新产品验收。
 - 现有 preview 配置 `pilaude-ui-verification`，端口 30142，最近 server ID `9c51ccac-c4aa-4617-a1f1-5df5e67231cc`。接手先用 preview_list 核实；不启动重复服务，不用 shell 绕过 preview_stop 拒绝。
 - 保留 provider rename stash；不恢复。不运行 next build。
 - 提交 footer：`Co-Authored-By: Claude Code <noreply@anthropic.com>`。
@@ -51,8 +51,8 @@
 
 可执行顺序：
 
-1. 工程目录／两级AGENTS／记忆入口、章节源码、323项集成、类型／lint、最后两轮实际页面均已完成；补读最终图并保存已验证检查点。
-2. 显式 stage 本轮文件，保护 Artifact／divider WIP；按既有授权提交／推送，写入实际 commit 与发布结果。
+1. 工程目录／两级AGENTS／记忆入口、章节源码、323项集成、类型／lint、最终图及两轮实际页面均已完成；184fade检查点已保存并推送。
+2. 当前只同步这些发布后工程状态，显式 stage 三份状态文档，保护 Artifact／divider WIP。
 3. 下一切片先处理已确认的活动run＋长草稿390×340目录高度不足：沿已有checker复现，只修菜单可达性，不改composer业务／草稿真值；完成后定向重验。
 4. 再继续 Artifact 实际 card／分隔线等 plan.md 的后续项。不得将尚未跑的完整E2E、Windows原生和视觉一致写为通过。
 

@@ -4,7 +4,7 @@
 
 ## 已保存检查点
 
-仓库：`pi-agent-desktop`；分支：`fusion/pi-claude-desktop`。最近已核实发布 HEAD 为 `5eb9bfa`，已 atomic push 到 product 的 main 与同名融合分支。
+仓库：`pi-agent-desktop`；分支：`fusion/pi-claude-desktop`。最新产品实现检查点 `184fade` 及前一 `5eb9bfa` 均已 atomic push 到 product 的 main 与同名融合分支。后续工程记录同步提交以实际 HEAD 为准，不增加产品验收范围。
 
 | 提交 | 已验证结果 | 限制 |
 | --- | --- | --- |
@@ -12,6 +12,7 @@
 | `c2c518e` | Compact shell、真实 Sending、复杂 Markdown 末尾光标、触控 Copy | formula／Artifact／超大 fallback 与完整回归仍待验 |
 | `8ceff57` | 既有 PrismLight 的 bounded shell consumer，精确复制与完整 plain fallback | 原像素绿色／未知 scale 仍有残差 |
 | `5eb9bfa` | 长消息同文本宽度／字体重排、隐藏返回、手动展开、ARIA／触控、精确复制；六 hook 测试、十二实际页面检查、类型与 lint | ChatMessageBubbles 仅局部采用，不是完整组件或原生视觉通过 |
+| `184fade` | 模型显式章节工具／持久化／实时与历史／粗体锚点、256px目录、动态居中、工程文档和AGENTS入口；323项组合与最终六组＋一组实际页面通过 | 极短busy＋长草稿导航空间、Windows原生与完整视觉仍未通过 |
 
 `5eb9bfa` 最终证据：`test-results/pilaude/user-message-overflow/run-1792383262052/results.json`。同一节点自然高 224→537px，窄窗正确 cap220；字体固定宽度 224↔282px；coarse target 49.39×44px。父级相关回归 117 项通过，最终 ownership／CSS 15 项通过；完整 lint 保留 TerminalPanel 已有一条 ARIA warning。原始 RED `run-1792382339554` 与中间失败记录保留。
 
@@ -41,7 +42,7 @@
 
 ## 仍未完成
 
-- 导航／布局本轮源码与常规／settled实际页面已通过，发布检查点待保存。
+- 导航／布局本轮源码与常规／settled实际页面已通过，184fade检查点已保存并推送；整体复刻仍继续。
 - 已确认极短390×340＋活动run＋长草稿时目录仅约10px，未修；最终短窗通过不包含该组合。小于280px可用宽度的目录clamp也未实际覆盖。
 - 章节只有当前加载历史范围的数据；不存在全会话章节索引服务，不能把未加载尾部称作真实 Session start。
 - Artifact card／formula-only／超大 raw fallback caret 的完整活动和清理。
