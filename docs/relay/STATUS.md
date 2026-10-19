@@ -23,13 +23,11 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 25 张任务卡：todo 23 · in_progress 1 · verify 0 · review 0 · done 0 · blocked 0 · parked 1
+共 25 张任务卡：todo 24 · in_progress 0 · verify 0 · review 0 · done 0 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
-| ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
-| --- | --- | --- | --- | --- | --- | --- |
-| PIL-0014 | P1 | in_progress | 把组件复刻基准拆成逐组件任务卡 | claude:sonnet-high:impl | 2026-10-19T17:09Z | task/PIL-0014-parity-index |
+（无）
 
 ### 阻塞
 
@@ -42,6 +40,7 @@
 | PIL-0001 | P0 | E0 | 接力治理落地与工作树分流 | 是 | — |
 | PIL-0002 | P0 | E0 | 建立可信的测试基线并逐项登记已知失败 | 是 | — |
 | PIL-0010 | P1 | E2 | Changes 面板在独立 Windows 窗口打开 | 是 | PIL-0001 |
+| PIL-0014 | P1 | E2 | 把组件复刻基准拆成逐组件任务卡 | 是 | — |
 | PIL-0030 | P1 | E4 | 统一执行前授权并接入 pi-permission-system | 是 | PIL-0001 |
 | PIL-0040 | P1 | E5 | 受控浏览器 | 否 | PIL-0030 |
 | PIL-0050 | P1 | E6 | 多代理完整流程与 pi-subagents 适配 | 否 | PIL-0030 |
