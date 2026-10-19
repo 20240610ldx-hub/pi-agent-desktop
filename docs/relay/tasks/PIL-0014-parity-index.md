@@ -48,3 +48,4 @@ waivers: []
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
 - 2026-10-19T14:09Z · claude:sonnet-high:impl · 领取，租约至 2026-10-19T17:09Z
+- 2026-10-19T14:10Z · claude:sonnet-high:impl · 复述：目标是把历史复刻基准整理为逐组件可领取索引；A1 逐行列组件、参考覆盖和版本/DPI已知性、实现状态、历史证据位置及残差，并将历史记录与当前验收分开；A2 在仓库外evidence生成每个未验组件的E2建卡建议，协调者串行建卡及规划者补标准后回填实际ID，未建卡不宣称完成；A3 单列缺参考组件和需用户补采决定；A4 用提交文件清单证明只改docs/relay/parity-index.md。自测仅文档结构及范围检查，不运行产品测试、preview或构建，不写自己的通过证据。
