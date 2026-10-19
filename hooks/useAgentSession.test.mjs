@@ -3,6 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { Script } from "node:vm";
 import ts from "typescript";
+import { createJiti } from "jiti";
+
+const jiti = createJiti(import.meta.url);
 
 const jitiSource = async (url) => (await readFile(url, "utf8")).replace(/\r\n/g, "\n");
 const source = await jitiSource(new URL("./useAgentSession.ts", import.meta.url));
@@ -11,6 +14,278 @@ const phaseLabelSource = await jitiSource(new URL("../lib/chat-phase-label.ts", 
 const chatInputSource = await jitiSource(new URL("../components/ChatInput.tsx", import.meta.url));
 const messageViewSource = await jitiSource(new URL("../components/MessageView.tsx", import.meta.url));
 const appShellSource = await jitiSource(new URL("../components/AppShell.tsx", import.meta.url));
+
+// The same VM seam as the existing callback tests, expanded to observe the
+// hook's returned state and real render-phase session resets. React state,
+// effects and the transport are controlled; application helpers stay real.
+const hookModules = new Map();
+async function compileHookModule(file) {
+  if (hookModules.has(file)) return hookModules.get(file);
+  const text = await jitiSource(new URL(file, import.meta.url));
+  const compiled = ts.transpileModule(text, {
+    compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const dependencies = new Map();
+  for (const [, name] of compiled.matchAll(/require\("([^"]+)"\)/g)) {
+    if (name === "react" || name === "@/hooks/useI18n") continue;
+    if (name.startsWith("@/hooks/")) {
+      dependencies.set(name, await compileHookModule(`./${name.slice("@/hooks/".length)}.ts`));
+    } else {
+      const path = name.startsWith("@/") ? `../${name.slice(2)}.ts` : name;
+      dependencies.set(name, await jiti.import(path));
+    }
+  }
+  const result = { compiled, dependencies };
+  hookModules.set(file, result);
+  return result;
+}
+const hookModule = await compileHookModule("./useAgentSession.ts");
+
+function activityHookHarness() {
+  const slots = [];
+  const effects = [];
+  const timers = new Map();
+  const commands = [];
+  let cursor = 0;
+  let dirty = false;
+  let timerId = 0;
+  let opts = { session: { id: "session-a" }, newSessionCwd: null, newSessionDraftKey: null };
+  let current;
+  const stateResponse = { running: false, state: {} };
+  const react = {
+    useState(initial) {
+      const index = cursor++;
+      if (!slots[index]) {
+        const slot = { value: typeof initial === "function" ? initial() : initial };
+        slot.set = (update) => {
+          const value = typeof update === "function" ? update(slot.value) : update;
+          if (!Object.is(slot.value, value)) { slot.value = value; dirty = true; }
+        };
+        slots[index] = slot;
+      }
+      return [slots[index].value, slots[index].set];
+    },
+    useReducer(reducer, initial) {
+      const [value, set] = react.useState(initial);
+      return [value, (action) => set((previous) => reducer(previous, action))];
+    },
+    useRef(initial) {
+      const index = cursor++;
+      return slots[index] ??= { current: initial };
+    },
+    useMemo(factory, deps) {
+      const index = cursor++;
+      const old = slots[index];
+      if (!old || deps.some((dep, i) => !Object.is(dep, old.deps[i]))) {
+        slots[index] = { value: factory(), deps };
+      }
+      return slots[index].value;
+    },
+    useCallback(callback, deps) { return react.useMemo(() => callback, deps); },
+    useEffect(effect, deps) {
+      const index = cursor++;
+      const old = slots[index];
+      if (!old || deps.some((dep, i) => !Object.is(dep, old.deps[i]))) {
+        const slot = { deps, cleanup: old?.cleanup };
+        slots[index] = slot;
+        effects.push(() => { slot.cleanup?.(); slot.cleanup = effect(); });
+      }
+    },
+    useLayoutEffect(effect, deps) { react.useEffect(effect, deps); },
+  };
+  const listenerTarget = { addEventListener() {}, removeEventListener() {} };
+  const response = async (url) => {
+    const path = String(url);
+    const sid = /\/sessions\/([^/?]+)/.exec(path)?.[1] ?? "session-a";
+    const body = path.includes("/api/models") ? { models: {}, modelList: [] }
+      : path.includes("/lease") ? { renewed: 1 }
+      : path.includes("/api/agent/") || path.endsWith("/state") ? stateResponse
+      : { sessionId: sid, tree: [], leafId: null, context: {
+        messages: [], entryIds: [], hasMore: false, oldestEntryId: null, thinkingLevel: "off", model: null,
+      } };
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const globals = {
+    console, Set, Map, Date, URLSearchParams, AbortController, DOMException, encodeURIComponent,
+    fetch: response, performance: { now: () => 0 },
+    window: listenerTarget, document: { ...listenerTarget, visibilityState: "visible" },
+    queueMicrotask,
+    setTimeout(callback, ms) { const id = ++timerId; timers.set(id, { callback, ms }); return id; },
+    setInterval(callback, ms) { const id = ++timerId; timers.set(id, { callback, ms, interval: true }); return id; },
+    clearTimeout: (id) => timers.delete(id), clearInterval: (id) => timers.delete(id),
+    requestAnimationFrame: () => ++timerId, cancelAnimationFrame() {},
+  };
+  const loaded = new Map();
+  function load(module) {
+    if (loaded.has(module)) return loaded.get(module);
+    const exports = {};
+    loaded.set(module, exports);
+    new Script(`(function(require, exports) { ${module.compiled}\n})`).runInNewContext(globals)((name) => {
+      if (name === "react") return react;
+      if (name === "@/hooks/useI18n") return { useI18n: () => ({ t: (key) => key }) };
+      if (name === "@/lib/agent-event-connection") return {
+        AgentEventConnection: class { maintain() {} close() {} ensureConnected() { return Promise.resolve(); } },
+      };
+      const dependency = module.dependencies.get(name);
+      if (name === "@/lib/agent-client") return {
+        ...dependency,
+        sendAgentCommand: async (sid, command) => { commands.push([sid, command]); return {}; },
+      };
+      if (name === "@/lib/fetch-timeout") return { ...dependency, fetchWithRetry: response };
+      return dependency?.compiled ? load(dependency) : dependency;
+    }, exports);
+    return exports;
+  }
+  const { useAgentSession } = load(hookModule);
+  function render() {
+    let passes = 0;
+    do {
+      assert.ok(++passes < 20, "hook should reach a stable render");
+      cursor = 0;
+      dirty = false;
+      // This VM drives React's state/effect boundary synchronously for tests.
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      current = useAgentSession(opts);
+    } while (dirty);
+    return current;
+  }
+  render();
+  return {
+    get current() { return current; }, commands, stateResponse,
+    emit(event) { current.handleAgentEventRef.current(event); return render(); },
+    switchSession(id) { opts = { ...opts, session: { id } }; return render(); },
+    render,
+    async flush() {
+      for (let i = 0; i < 15; i++) {
+        effects.splice(0).forEach((effect) => effect());
+        await Promise.resolve();
+        render();
+      }
+      return current;
+    },
+    async reconcile() {
+      for (const timer of [...timers.values()]) if (timer.interval && timer.ms === 15_000) timer.callback();
+      await this.flush();
+    },
+  };
+}
+
+test("running tool membership survives messages and partial results until each execution ends", () => {
+  const h = activityHookHarness();
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "tool_execution_start", toolCallId: "call-a", toolName: "bash" });
+  assert.deepEqual([...h.current.runningToolCallIds], ["call-a"]);
+  h.emit({ type: "tool_execution_start", toolCallId: "call-b", toolName: "read" });
+  const active = h.current.runningToolCallIds;
+  h.emit({ type: "tool_execution_update", toolCallId: "call-a", toolName: "bash", partialResult: { content: [{ type: "text", text: "partial" }] } });
+  assert.strictEqual(h.current.runningToolCallIds, active, "progress does not reorder or replace membership");
+  assert.equal(h.current.activeToolResults.has("call-a"), true);
+  h.emit({ type: "message_end", message: { role: "toolResult", toolCallId: "call-a", toolName: "bash", content: [] } });
+  assert.strictEqual(h.current.runningToolCallIds, active, "message lifecycle does not complete tools");
+  h.emit({ type: "tool_execution_end", toolCallId: "call-a", toolName: "bash" });
+  assert.deepEqual([...h.current.runningToolCallIds], ["call-b"]);
+  h.emit({ type: "tool_execution_end", toolCallId: "call-b", toolName: "read", isError: true });
+  assert.deepEqual([...h.current.runningToolCallIds], []);
+});
+
+test("agent end clears all running tool activity while the logical prompt can continue", () => {
+  const h = activityHookHarness();
+  h.current.sessionIdRef.current = null; // No transport refresh is needed for this event boundary.
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "tool_execution_start", toolCallId: "call-a", toolName: "read" });
+  h.emit({ type: "agent_end" });
+  assert.deepEqual([...h.current.runningToolCallIds], []);
+  assert.equal(h.current.agentRunning, true);
+});
+
+test("settlement and idle reconciliation clear execution activity when end events were missed", async () => {
+  for (const terminal of ["agent_settled", "prompt_done", "idle_reconcile"]) {
+    const h = activityHookHarness();
+    await h.flush();
+    if (terminal === "prompt_done") {
+      h.current.setAgentRunning(true);
+      h.render();
+      await h.flush();
+    } else h.emit({ type: "agent_start" });
+    h.emit({ type: "tool_execution_start", toolCallId: "call-a", toolName: "read" });
+    if (terminal === "idle_reconcile") {
+      await h.flush();
+      await h.reconcile();
+    } else {
+      h.emit({ type: terminal });
+    }
+    assert.deepEqual([...h.current.runningToolCallIds], [], terminal);
+  }
+});
+
+test("switching sessions clears activity and reconnect replay restores only live top-level calls", () => {
+  const h = activityHookHarness();
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "tool_execution_start", toolCallId: "call-a", toolName: "read" });
+  h.switchSession("session-b");
+  assert.deepEqual([...h.current.runningToolCallIds], [], "session switch drops the old membership");
+  h.emit({ type: "connected", isStreaming: true });
+  h.emit({ type: "tool_execution_update", toolCallId: "call-b", toolName: "read" });
+  assert.deepEqual([...h.current.runningToolCallIds], ["call-b"], "an update can replay a missed start");
+  const replayed = h.current.runningToolCallIds;
+  for (const type of ["tool_execution_start", "tool_execution_update", "tool_execution_end"]) {
+    h.emit({ type, toolCallId: "call-b/1", parentToolCallId: "call-b", toolName: "read" });
+    assert.strictEqual(h.current.runningToolCallIds, replayed, "nested executions never change top-level membership");
+  }
+  h.emit({ type: "connected", isStreaming: true });
+  assert.deepEqual([...h.current.runningToolCallIds], [], "a new connection drops stale membership before replay");
+  h.emit({ type: "tool_execution_start", toolCallId: "call-c", toolName: "write" });
+  assert.deepEqual([...h.current.runningToolCallIds], ["call-c"]);
+});
+
+test("prompt errors and explicit aborts clear live activity without inventing tool results", async () => {
+  for (const terminal of ["prompt_error", "abort"]) {
+    const h = activityHookHarness();
+    h.emit({ type: "agent_start" });
+    h.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+    h.emit({ type: "message_update", assistantMessageEvent: { type: "thinking_start", contentIndex: 0 } });
+    h.emit({ type: "tool_execution_start", toolCallId: "call-a", toolName: "bash" });
+    h.emit({ type: "tool_execution_update", toolCallId: "call-a", toolName: "bash", partialResult: { content: [{ type: "text", text: "unfinished output" }] } });
+    if (terminal === "abort") {
+      await h.current.handleAbort();
+      h.render();
+      assert.equal(h.commands[0][1].type, "abort");
+    } else h.emit({ type: "prompt_error", errorMessage: "execution failed" });
+    assert.deepEqual([...h.current.runningToolCallIds], [], terminal);
+    assert.equal(h.current.streamState.activeThinkingIndex, null, terminal);
+    assert.equal(h.current.activeToolResults.has("call-a"), true, "partial output remains a cache, never a completed result");
+    assert.equal(h.current.messages.some((message) => message.role === "toolResult"), false);
+  }
+});
+
+test("a new agent run resets stale execution membership", () => {
+  const h = activityHookHarness();
+  h.emit({ type: "agent_start" });
+  h.emit({ type: "tool_execution_start", toolCallId: "old-call", toolName: "read" });
+  h.emit({ type: "agent_start" });
+  assert.deepEqual([...h.current.runningToolCallIds], []);
+});
+
+test("periodic reconciliation preserves event-proven activity but reconnect snapshots do not", async () => {
+  for (const kind of ["thinking", "text"]) {
+    const h = activityHookHarness();
+    await h.flush();
+    h.emit({ type: "agent_start" });
+    const message = { role: "assistant", content: [], timestamp: 123, provider: "anthropic", model: "test-model", stopReason: "pending" };
+    h.emit({ type: "message_start", message });
+    h.emit({ type: "message_update", assistantMessageEvent: { type: `${kind}_start`, contentIndex: 0 } });
+    h.emit({ type: "message_update", assistantMessageEvent: { type: `${kind}_delta`, contentIndex: 0, delta: "In progress" } });
+    h.stateResponse.running = true;
+    h.stateResponse.state = { isStreaming: true, streamingMessage: { ...message, content: [{ type: kind, [kind]: "In progress still" }] } };
+    await h.flush();
+    await h.reconcile();
+    const field = kind === "thinking" ? "activeThinkingIndex" : "activeTextIndex";
+    assert.equal(h.current.streamState[field], 0, "a poll keeps existing evidence for its matching tail");
+    h.emit({ type: "connected", isStreaming: true });
+    h.emit({ type: "message_start", message: h.stateResponse.state.streamingMessage });
+    assert.equal(h.current.streamState[field], null, "reconnect snapshots alone never establish activity");
+  }
+});
 
 test("keeps the session event stream open through the idle grace window", () => {
   const finishSource = source.slice(
@@ -467,8 +742,8 @@ test("delegates event stream readiness and hides an empty agent phase", () => {
   assert.match(ensureSource, /eventConnectionRef\.current!\.ensureConnected\(sid\)/);
   assert.match(ensureSource, /eventConnectionRef\.current!\.maintain\(sid\)/);
   assert.match(chatWindowSource, /const hasStreamingContent = Boolean\(streamState\.streamingMessage\?\.content\.length\)/);
-  assert.match(chatWindowSource, /streamState\.isStreaming && hasStreamingContent && streamState\.streamingMessage/);
-  assert.match(chatWindowSource, /agentRunning && !hasStreamingContent && \(agentPhase \|\| isCompacting\)/);
+  assert.match(chatWindowSource, /const transcriptMessages = useMemo\(\(\) => streamState\.isStreaming && streamState\.streamingMessage\s*\? \[\.\.\.messages, streamState\.streamingMessage\]/);
+  assert.match(chatWindowSource, /agentRunning && !hasStreamingContent && activeThinkingIndex === null && activeToolCallId === null && \(agentPhase \|\| isCompacting\)/);
   // Compaction is what the user needs to know while a turn is being compacted, so it is
   // forwarded to the label instead of letting the stream phase read as a hang.
   assert.match(chatWindowSource, /phaseLabel\(agentPhase, t, isCompacting\)/);
@@ -615,7 +890,8 @@ test("reconnects active shell output to its streaming tool call", () => {
   assert.match(updateSource, /content,/);
   assert.match(endSource, /setActiveToolResults[\s\S]*next\.delete\(id\)/);
   assert.match(chatWindowSource, /const map = new Map\(activeToolResults\)/);
-  assert.match(chatWindowSource, /<MessageView message=\{streamState\.streamingMessage as AgentMessage\} toolResults=\{toolResultsMap\}/);
+  assert.match(chatWindowSource, /const streamingIdx = streamState\.isStreaming && streamState\.streamingMessage \? messages\.length - 1 : -1/);
+  assert.match(chatWindowSource, /<MessageView\s+key=\{[^\n]+\}\s+message=\{msg\}\s+isStreaming=\{isStreaming\}[\s\S]*?toolResults=\{toolResultsMap\}/);
 });
 
 test("reports a running script's newest call as its progress", () => {

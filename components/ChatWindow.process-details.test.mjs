@@ -22,6 +22,15 @@ test("expands process details when a completed turn has no final answer", () => 
   );
 });
 
+test("process summaries expose a static state shape independently from shimmer activity", () => {
+  const group = source.slice(source.indexOf("function ProcessDetailsGroup"), source.indexOf("export function ChatWindow"));
+  assert.match(group, /className="process-details-status"/);
+  assert.match(group, /data-status=\{processState.status\}/);
+  assert.match(group, /processState.status === "error"/);
+  assert.match(group, /processState.status === "success"/);
+  assert.match(group, /processState.status === "running"/);
+});
+
 test("resets process details when the turn gains or loses its final answer", () => {
   // useState only reads defaultExpanded on mount; keying on answer availability
   // makes an answered turn start collapsed even if it first rendered unanswered.

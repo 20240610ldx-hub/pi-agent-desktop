@@ -28,6 +28,14 @@ test("controlled thinking presentation keeps its body absent until expanded and 
   assert.ok(text(button).includes("3s"));
 });
 
+test("thinking puts its chevron after the preview and metadata", () => {
+  const button = nodes(render(false), node => node.tagName === "button")[0];
+  const elements = button.children.filter(node => node.type === "element");
+  assert.ok(hasClass(elements[0], "thinking-disclosure-preview"));
+  assert.ok(hasClass(elements[1], "thinking-disclosure-metadata"));
+  assert.ok(hasClass(elements.at(-1), "thinking-disclosure-chevron"));
+});
+
 test("expanded thinking preserves exact plain source in a labelled region without synthetic live state", () => {
   const tree = render(true);
   const button = nodes(tree, node => node.tagName === "button")[0];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
 import { useI18n } from "../hooks/useI18n";
 import { isImeComposing } from "../lib/ime";
 
@@ -211,7 +211,7 @@ export function ConversationNavigator({ turns, hasSessionStart = false, scrollCo
       ref={rootRef}
       className={`conversation-navigator${isOpen ? " is-open" : ""}`}
       // 12 native px pitch / 1.25 implementation capture scale = 9.6 CSS px.
-      style={{ height: Math.min(locations.length, 27) * 9.6 - 7.2 }}
+      style={{ "--navigation-track-height": `${Math.min(locations.length, 27) * 9.6 - 7.2}px` } as CSSProperties}
       onPointerEnter={(event) => {
         if (event.pointerType !== "touch") {
           setFocusedPosition(activePosition);

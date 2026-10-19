@@ -60,7 +60,7 @@ function MenuPanel({
   autoFocus?: boolean;
   /** Called for ArrowLeft in a submenu. */
   onKeyboardClose?: () => void;
-  appearance?: "terminal" | "session";
+  appearance?: DomMenuState["appearance"];
 }) {
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
 
@@ -72,7 +72,8 @@ function MenuPanel({
   }, [panelRef, place, entries]);
 
   useEffect(() => {
-    if (position && autoFocus) panelRef.current?.focus({ preventScroll: true });
+    const panel = panelRef.current;
+    if (position && autoFocus && panel && !panel.contains(document.activeElement)) panel.focus({ preventScroll: true });
   }, [position, autoFocus, panelRef]);
 
   const hasChecks = entries.some((entry) => entry.kind !== "separator" && entry.kind !== "submenu" && entry.kind !== "predefined" && entry.checked !== undefined);
@@ -81,7 +82,7 @@ function MenuPanel({
     Array.from(panelRef.current?.querySelectorAll<HTMLButtonElement>(":scope > button:not(:disabled)") ?? []);
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (isImeComposing(event)) return;
+    if (isImeComposing(event)) { event.stopPropagation(); return; }
     const buttons = focusable();
     const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -100,6 +101,12 @@ function MenuPanel({
     } else if (event.key === "ArrowLeft" && onKeyboardClose) {
       event.preventDefault();
       onKeyboardClose();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      buttons[event.key === "Home" ? 0 : buttons.length - 1]?.focus();
+    } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.length === 1) {
+      const item = entries.find((entry): entry is Item => entry.kind !== "separator" && entry.kind !== "submenu" && entry.kind !== "predefined" && entry.shortcut?.toLowerCase() === event.key.toLowerCase());
+      if (item) { event.preventDefault(); if (!item.disabled) onItem(item); }
     }
   };
 
@@ -157,13 +164,16 @@ function MenuPanel({
             disabled={entry.disabled && !entry.disabledReason}
             aria-disabled={entry.disabled || undefined}
             title={entry.disabledReason}
+            aria-description={entry.disabledReason}
+            data-shortcut={entry.shortcut}
             className={entry.danger ? "is-danger" : undefined}
             // Moving onto a plain item closes an open submenu, as native menus do.
             onMouseEnter={onSubmenu ? () => onSubmenu(-1, null) : undefined}
             onClick={(event) => { if (!entry.disabled) onItem(entry, { shiftKey: event.shiftKey }); }}
           >
             {hasChecks && <span className="dom-context-menu-check" aria-hidden="true">{entry.checked ? "✓" : ""}</span>}
-            <span className="dom-context-menu-label">{entry.label}{entry.disabledReason && <small>{entry.disabledReason}</small>}</span>
+            <span className="dom-context-menu-label">{entry.label}{entry.disabledReason && appearance !== "conversation" && <small>{entry.disabledReason}</small>}</span>
+            {entry.shortcut && <span className="dom-context-menu-shortcut" aria-hidden="true">{entry.shortcut}</span>}
           </button>
         );
       })}
@@ -176,10 +186,16 @@ function MenuView({ menu }: { menu: DomMenuState }) {
   const subRef = useRef<HTMLDivElement>(null);
   const [sub, setSub] = useState<OpenSubmenu | null>(null);
 
-  const placeRoot = useCallback<Place>(({ width, height }) => ({
-    left: clamp(menu.at.x, window.innerWidth - width - VIEWPORT_MARGIN),
-    top: clamp(menu.at.y, window.innerHeight - height - VIEWPORT_MARGIN),
-  }), [menu.at.x, menu.at.y]);
+  const placeRoot = useCallback<Place>(({ width, height }) => {
+    // On a phone, reserve the sibling panel beside this dropdown. Anchoring
+    // mid-screen then clamping each panel separately makes a flipped child
+    // cover its parent's other submenu rows and traps pointer navigation.
+    const reserve = menu.appearance === "conversation" && window.innerWidth < width * 3 ? width - SUBMENU_OVERLAP : 0;
+    return {
+      left: clamp(menu.at.x, window.innerWidth - width - reserve - VIEWPORT_MARGIN),
+      top: clamp(menu.at.y, window.innerHeight - height - VIEWPORT_MARGIN),
+    };
+  }, [menu.at.x, menu.at.y, menu.appearance]);
 
   const subRect = sub?.rect;
   const placeSub = useCallback<Place>(({ width, height }) => {
@@ -195,7 +211,7 @@ function MenuView({ menu }: { menu: DomMenuState }) {
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (rootRef.current?.contains(target) || subRef.current?.contains(target)) return;
+      if (rootRef.current?.contains(target) || subRef.current?.contains(target) || menu.opener?.contains(target)) return;
       closeDomMenu();
     };
     const onScroll = (event: Event) => {
@@ -205,9 +221,13 @@ function MenuView({ menu }: { menu: DomMenuState }) {
       closeDomMenu();
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented || isImeComposing(event)) return;
+      if (event.defaultPrevented || isImeComposing(event)) return;
+      if (event.key === "Tab") { closeDomMenu(); return; }
+      if (event.key !== "Escape") return;
       event.preventDefault();
+      event.stopPropagation();
       closeDomMenu();
+      menu.opener?.focus({ preventScroll: true });
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("keydown", onKeyDown);
@@ -221,13 +241,14 @@ function MenuView({ menu }: { menu: DomMenuState }) {
       window.removeEventListener("blur", closeDomMenu);
       window.removeEventListener("resize", closeDomMenu);
     };
-  }, []);
+  }, [menu.opener]);
 
   const onItem = useCallback((item: Item, modifiers?: { shiftKey?: boolean }) => {
     if (item.disabled) return;
     closeDomMenu();
+    menu.opener?.focus({ preventScroll: true });
     item.onSelect?.(modifiers);
-  }, []);
+  }, [menu.opener]);
 
   const onSubmenu = useCallback((index: number, rect: DOMRect | null, byKeyboard = false) => {
     setSub((current) => {
@@ -248,6 +269,7 @@ function MenuView({ menu }: { menu: DomMenuState }) {
         place={placeRoot}
         panelRef={rootRef}
         appearance={menu.appearance}
+        label={menu.label}
         onItem={onItem}
         onSubmenu={onSubmenu}
         openIndex={sub?.index ?? null}
@@ -264,8 +286,9 @@ function MenuView({ menu }: { menu: DomMenuState }) {
           onItem={onItem}
           autoFocus={sub?.focus}
           onKeyboardClose={() => {
+            const parent = rootRef.current?.children[sub?.index ?? -1] as HTMLElement | undefined;
             setSub(null);
-            rootRef.current?.focus({ preventScroll: true });
+            (parent ?? rootRef.current)?.focus({ preventScroll: true });
           }}
         />
       )}

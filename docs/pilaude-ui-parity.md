@@ -248,6 +248,32 @@ RED 先复现 `[a,b,c]` 配合持久 pin `[b,a]` 仍显示 `[a,b,c]`，再补 pi
 
 原始输出在本机 `test-results/changes-window-native-20261019-retry.log` 与 `test-results/changes-window-contracts-20261019.log`。首次 native 运行只有 compilation 行并以 4 退出，缺测试结果和诊断，原日志保留；相同命令重试实际 4 项通过。该轮不证明 live WebView 权限执行、原生开窗、DPI、贴靠或 IME 行为，不将单元／源码合同测试计作这些实物检查。
 
+## 活动摘要与单处微光（2026-10-19）
+
+真实链为 indexed thinking／text delta 和 tool execution IDs → useAgentSession → ChatWindow process group／MessageView。partial output 不等于终态；Stop／错误清活动但保留输出，当前 turn 未执行项仍 pending，历史缺终态不伪造成功。定时 reconciliation 只保留同 timestamp／provider／model、无后继／终态的相同或增长尾块已有活动证明；mount／reconnect／未知快照不推导。过程与流式消息共用 key tracker，保手动折叠、错误首次展开／后续手动关闭、最终答案组外和 exact-once；apply_patch 详情中的失败也进入摘要失败数。
+
+组合 134 项定向测试通过。完整 `activity-disclosure/run-1792375885811/` 六组通过 live／history、deferred 原始索引、真实状态交接、光标结束、IME／草稿、错误展开不抢历史滚动，以及原零标题命中内容搜索后的思考定位。新结构实测本机私有 Sans alias loadedFaces=1、13px、border 0、透明；命令／输出保等宽。ShimmerText 局部消费来源 250% 背景与非对称关键帧，用户选择周期 1.8s；native frames 283.334ms 时位置从 83.333% 移到 83.2092%，reduced-motion 静态。先前 2rAF 停顿区采样和 transient search marker 检查失败保留；最终用跨停顿段实际位置和可见 highlight／滚动几何验收。
+
+该 run 原 430px 截图被侧栏／Context 遮挡，只证明无根横溢出。补充 `activity-disclosure/mobile-supplement-1792376302856/` 经真实按钮关闭二者，深浅 430px 收起／展开截图均无遮挡；summary x64.797／w187.203／h28，tool x77.797／w323.203／h28，native center hit 均命中，输出上限 400px，root scrollWidth=clientWidth=430。触控 44px 的 coarse-pointer 样式尚需独立实际验收，不能以 430px 鼠标 viewport 推定通过。父级已读取两轮截图；无页面／console／external 错误，lease 等请求均由 fixture 拦截，无模型调用。
+
+工具组／步骤目前仍是即时 hidden，200ms 高度、新步骤进入／错开、状态图标及摘要有限过渡尚待落实；复杂 Markdown 末尾光标也不追认全结构通过。清单逐项见 [Agent 输出实施记录](pilaude-agent-output-ui.md)。
+
+## 左上导航轨与内容搜索（2026-10-19）
+
+实际 `conversation-navigator-layout/run-1792375287625/` 通过深浅、0／50／100% 历史滚动、侧栏／Files 切换、2200×1000／900×600／390×812／390×340、点击／方向键／IME／Escape 焦点、draft reload／resize 和目录不抢正文滚动。轨道相对聊天栏 left=12／top=24 CSS px，正文最小间隙 24px；仅有真实 navigator 时预留 gutter。390px 正文宽 309.2px；390×340 下 track／directory bottom=174，低于输入器 top214.5，短窗不会压输入器。18 项定向测试、类型及 lint 通过；无写入／外部／页面错误。
+
+原像素比较 `conversation-navigator-layout/comparison-1792374705856/` 用 1625×1125 actual 整数裁剪 [300,0,541,616]，参考 100%／actual 50%，无缩放。reference rail [47,103,68,214]，actual [43,86,65,198]；active 右端差 −3 原像素，正文边界差 +2.746，ink-to-body gap 差 +5.746。首刻度 top 差 −17，但参考 crop 原点／系统 DPI／zoom 未知，不据此改固定 top24 或声称像素一致。
+
+内容搜索另修标题过滤零结果时不挂载搜索组件的问题，保原查询和搜索语义。32 项侧栏测试与 `sidebar-content-search/run-1792375755599/` 通过 title no-match → Enter 内容 GET／结果／excerpt → Escape／重输回 title mode → 清空恢复；actual query 为生成的 content-only-quartz-needle。无真实写入／external／页面错误，思考命中另在活动完整 run 中确认原块高亮可见。
+
+## 会话标题下拉菜单（2026-10-19）
+
+顶部 chevron 现挂载真实主／子菜单：Open in、Rename、Fork、Transcript view、Output style、Archive／Restore、Delete。复用共享 DOM host，保分隔、提示键、hover／键盘子菜单、IME、Escape 焦点返回和390px三语边界。真实动作接浏览器同源新窗口／Explorer、PATCH rename、当前 leaf fork_branch、现有侧栏家族 archive writer、确认后 DELETE；失败保原选择并显示错误。原生 New window、VS Code、Transcript modes 与 Output styles 缺对应 consumer／后端，显示明确不可用原因，无假选中／假成功；它们仍是待实现能力。
+
+实际 `title-conversation-menu/run-1792376414932/report.json` 六组通过根顺序／键盘／取消与三语390px、archive family／fork／delete，以及延迟动作跨会话的回归。RED 先复现重复点 opener 重开、旧 DELETE 成功清空 B、旧 fork 在 A→B→A 后跳走；分别以 opener pointerdown exclusion、删除 current-ID 检查与 fork generation 校验修复。重命名迟到失败也按代际隔离。所有修改／删除请求为生成的本地 fixture 拦截，不操作用户真实会话。
+
+DPR1.25 原像素抓取的 panel 为161.594×244.578 CSS px，整数 crop203×306原像素，参考202×306；横向取整占1原像素。row35.996对参考36，separator偏移48.496／134.238／219.980对48／134／220。reference100%／actual50%叠图无缩放，父级已读取；glyph／chevron仍有重影，参考DPI未知，不称像素一致。最终本批18文件组合267项通过，完整类型及lint退出0，保留既有TerminalPanel ARIA warning；ownership baseline6fcd7d4和30／250阈值不变。完整npm／terminal E2E与原生Windows GUI仍未据此通过。
+
 ## 上游更新规则
 
 两个 fork main 的 GitHub Actions 定时同步仍保留；2026-10-18 Pi 遇到 GITHUB_TOKEN 工作流权限限制，已由本地授权同步。Codex「Pilaude 上游同步」每 6 小时运行工作区 sync.ps1（本机与 Codex 可用时），保留融合分支和未提交修改，只在失败时通知。开始工作及采纳资产前 fetch origin/upstream，确认作者侧落后提交数；融合分支保存当前改动后合并已同步的 Pi main，处理冲突、依赖和语义变化，运行相关验证。不能只刷新 remote ref 就说融合分支已更新。

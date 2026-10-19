@@ -287,6 +287,25 @@ collect(sidebarAst);
 const expressionFor = (name) => declarations.find((node) => node.name.getText(sidebarAst) === name).initializer.getText(sidebarAst);
 const compileExpression = (text) => new Script(ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ESNext } }).outputText);
 
+test("requested content search renders even when the title-filtered project list is empty", () => {
+  let emptyCondition;
+  const visit = (node) => {
+    if (ts.isConditionalExpression(node)) {
+      const branch = ts.isParenthesizedExpression(node.whenTrue) ? node.whenTrue.expression : node.whenTrue;
+      if (ts.isJsxElement(branch) && branch.openingElement.attributes.properties.some((attribute) => ts.isJsxAttribute(attribute)
+        && attribute.name.text === "className" && attribute.initializer?.text === "sidebar-project-tree-empty")) emptyCondition = node.condition;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sidebarAst);
+  assert.ok(emptyCondition);
+  const condition = compileExpression(`(${emptyCondition.getText(sidebarAst)})`);
+  const state = createContext({ allProjects: [], archivedSessions: [], contentSearch: false });
+  assert.equal(condition.runInContext(state), true, "Ordinary no-title-match uses the existing empty/loading/error branch");
+  state.contentSearch = true;
+  assert.equal(condition.runInContext(state), false, "Enter mounts the content-search consumer despite zero title matches");
+});
+
 test("the native session button moves pins only for unmodified Alt+Arrow outside IME", () => {
   let mainButton;
   const visit = (node) => {

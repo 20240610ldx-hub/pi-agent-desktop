@@ -1,13 +1,15 @@
 "use client";
 import { registerAbortHandler } from "@/hooks/useKeyboardShortcuts";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { UnavailableWorkspace } from "@/lib/workspace-availability";
 import type { AgentMessage, AssistantContentBlock, AssistantMessage, BashExecutionMessage, BlockingExtensionUiRequest, ExtensionUiRequest, LeafChangeOptions, SessionInfo, SessionTreeNode, ToolResultMessage } from "@/lib/types";
 import { normalizeCustomPanelLines } from "@/lib/ansi";
 import { asBracketedPaste, toTerminalKeyData } from "@/lib/terminal-input";
-import { countToolCallBlocks, getAssistantErrorMessage, getDisplayableAssistantBlocks, hasAssistantAnswer, isAssistantTruncated, isMessageGroupAnchor, splitFinalAssistantBlocks } from "@/lib/message-display";
+import { getAssistantErrorMessage, getDisplayableAssistantBlocks, hasAssistantAnswer, isAssistantTruncated, isMessageGroupAnchor, splitFinalAssistantBlocks } from "@/lib/message-display";
 import { extractTurnWrittenFiles, type WrittenFile } from "@/lib/turn-written-files";
+import { applyPatchResultHasFailures } from "@/lib/apply-patch";
+import { isApplyPatchToolName } from "@/lib/tool-names";
 import { buildQuotedSelection } from "@/lib/quoted-selection";
 import { MessageView } from "./MessageView";
 import { MarkdownBody } from "./MarkdownBody";
@@ -93,17 +95,7 @@ interface Props {
 const CHAT_MINIMAP_WIDTH = 0;
 const CHAT_COLUMN_PADDING = 16;
 
-function hasFinalAssistantAnswer(message: AgentMessage): boolean {
-  if (message.role !== "assistant") return false;
-  return getFinalSplit(message as AssistantMessage).answerBlocks.some((block) => (
-    block.type === "image" || (block.type === "text" && block.text.trim().length > 0)
-  ));
-}
-
-function findFinalAssistantIndex(messages: AgentMessage[], userIdx: number, endIdx: number): number {
-  for (let candidateIdx = endIdx - 1; candidateIdx > userIdx; candidateIdx--) {
-    if (hasFinalAssistantAnswer(messages[candidateIdx])) return candidateIdx;
-  }
+export function findFinalAssistantIndex(messages: AgentMessage[], userIdx: number, endIdx: number): number {
   for (let candidateIdx = endIdx - 1; candidateIdx > userIdx; candidateIdx--) {
     if (messages[candidateIdx]?.role === "assistant") return candidateIdx;
   }
@@ -154,7 +146,8 @@ export function getFinalSplit(message: AssistantMessage): FinalSplitEntry {
   let cached = finalSplitCache.get(message);
   if (!cached) {
     const { processBlocks, answerBlocks } = splitFinalAssistantBlocks(message);
-    const answerMessage = answerBlocks.length > 0 || getAssistantErrorMessage(message) || isAssistantTruncated(message)
+    const answerAvailable = answerBlocks.some((block) => block.type === "image" || (block.type === "text" && block.text.trim().length > 0));
+    const answerMessage = answerAvailable || getAssistantErrorMessage(message) || isAssistantTruncated(message)
       ? withAssistantBlocks(message, answerBlocks)
       : null;
     const processEnd = message.content.indexOf(answerBlocks[0]);
@@ -199,49 +192,91 @@ export function getTurnWrittenFiles(finalAssistant: AssistantMessage, turnMessag
   return files;
 }
 
-function ProcessDetailsGroup({ messageCount, toolCallCount, defaultExpanded = false, reveal = false, children, t }: { messageCount: number; toolCallCount: number; defaultExpanded?: boolean; reveal?: boolean; children: ReactNode; t: (key: string, params?: Record<string, string | number>) => string }) {
+interface ProcessState {
+  status: "pending" | "running" | "success" | "error";
+  toolCallCount: number;
+  completedCount: number;
+  failedCount: number;
+  pendingCount: number;
+}
+
+export function getProcessState(turnMessages: AgentMessage[], toolResults: ReadonlyMap<string, ToolResultMessage>, runningToolCallIds: ReadonlySet<string>, active: boolean, partialToolCallIds?: ReadonlySet<string>): ProcessState {
+  const calls = new Map<string, string>();
+  let failedCount = 0;
+  let completedCount = 0;
+  let runningCount = 0;
+  let pendingCount = 0;
+  let messageError = false;
+  for (const message of turnMessages) {
+    if (message.role !== "assistant") continue;
+    messageError ||= Boolean(getAssistantErrorMessage(message));
+    for (const block of message.content) if (block.type === "toolCall") calls.set(block.toolCallId, block.toolName);
+  }
+  for (const [id, name] of calls) {
+    const result = toolResults.get(id);
+    if (runningToolCallIds.has(id)) runningCount++;
+    else if (result && !partialToolCallIds?.has(id)) {
+      completedCount++;
+      if (result.isError || (isApplyPatchToolName(name) && applyPatchResultHasFailures(result.details))) failedCount++;
+    } else pendingCount++;
+  }
+  return {
+    status: failedCount > 0 || messageError ? "error" : active || runningCount > 0 ? "running" : pendingCount > 0 ? "pending" : "success",
+    toolCallCount: calls.size, completedCount, failedCount, pendingCount,
+  };
+}
+
+function ProcessDetailsGroup({ messageCount, processState, active = false, activity, defaultExpanded = false, reveal = false, children, t }: { messageCount: number; processState: ProcessState; active?: boolean; activity?: ReactNode; defaultExpanded?: boolean; reveal?: boolean; children: ReactNode; t: (key: string, params?: Record<string, string | number>) => string }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const id = useId();
+  const previousStatus = useRef<ProcessState["status"] | null>(null);
   useLayoutEffect(() => {
     if (reveal) setExpanded(true);
   }, [reveal]);
-  const parts = [t("chat.processDetails"), `${messageCount} ${t(messageCount === 1 ? "chat.message" : "chat.messages")}`];
-  if (toolCallCount > 0) parts.push(`${toolCallCount} ${t(toolCallCount === 1 ? "chat.toolCall" : "chat.toolCalls")}`);
+  useLayoutEffect(() => {
+    // Open on the first real failure, then respect a user's manual collapse.
+    if (processState.status === "error" && previousStatus.current !== "error") setExpanded(true);
+    previousStatus.current = processState.status;
+  }, [processState.status]);
+  const open = expanded || reveal;
+  const [retained, setRetained] = useState(defaultExpanded || reveal);
+  useLayoutEffect(() => {
+    if (open) setRetained(true);
+  }, [open]);
+  const { toolCallCount, completedCount, failedCount } = processState;
+  const summary = active || processState.status === "running" ? t("chat.processRunning")
+    : completedCount > 0 ? t(completedCount === 1 ? "chat.processRanOne" : "chat.processRan", { count: completedCount })
+      : processState.status === "pending" ? t("chat.processPending") : t("chat.processDetails");
+  const parts = [summary, `${messageCount} ${t(messageCount === 1 ? "chat.message" : "chat.messages")}`];
+  if (toolCallCount > 0 && completedCount === 0) parts.push(`${toolCallCount} ${t(toolCallCount === 1 ? "chat.toolCall" : "chat.toolCalls")}`);
+  if (failedCount > 0) parts.push(t("chat.processError", { failed: failedCount }));
 
   return (
-    <div className="process-details" style={{ marginBottom: 14 }}>
+    <div className="process-details" data-expanded={open} data-status={processState.status}>
       <button
+        id={`${id}-trigger`}
         className="process-details-trigger"
         type="button"
-        aria-expanded={expanded || reveal}
+        aria-expanded={open}
+        aria-controls={`${id}-content`}
         onClick={() => setExpanded((v) => !v)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          width: "auto",
-          minHeight: 24,
-          padding: "2px 0",
-          border: "none",
-          background: "transparent",
-          color: "var(--text-muted)",
-          cursor: "pointer",
-          fontSize: 12,
-          textAlign: "left",
-        }}
-        title={expanded ? t("chat.collapseProcess") : t("chat.expandProcess")}
+        title={open ? t("chat.collapseProcess") : t("chat.expandProcess")}
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: expanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>
+        <svg className="process-details-status" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {processState.status === "error" ? <path d="m4 4 8 8M12 4l-8 8" />
+            : processState.status === "success" ? <path d="m3 8 3 3 7-7" />
+              : processState.status === "running" ? <circle cx="8" cy="8" r="3" fill="currentColor" stroke="none" />
+                : <circle cx="8" cy="8" r="5" />}
+        </svg>
+        <span className={`process-details-label${active && !open ? " activity-shimmer" : ""}`} data-active={active && !open ? "true" : undefined}>{parts.join(" · ")}</span>
+        <svg className="process-details-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <polyline points="4 2.5 7.5 6 4 9.5" />
         </svg>
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {parts.join(" · ")}
-        </span>
       </button>
-      {(expanded || reveal) && (
-        <div style={{ marginTop: 8 }}>
-          {children}
-        </div>
-      )}
+      <div id={`${id}-content`} className="process-details-content" role="region" aria-labelledby={`${id}-trigger`} hidden={!open}>
+        {(open || retained) && children}
+        {open && activity}
+      </div>
     </div>
   );
 }
@@ -276,7 +311,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   const [restoreAnchorReady, setRestoreAnchorReady] = useState(false);
 
   const {
-    loading, error, messages, activeToolResults, entryIds, historyCursor, hasEarlierMessages, streamState,
+    loading, error, messages, activeToolResults, runningToolCallIds, entryIds, historyCursor, hasEarlierMessages, streamState,
     agentRunning, bashRunning, pendingBash, modelNames, modelList, modelError, modelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, toolPreset, thinkingLevel,
     retryInfo, contextUsage, forkingEntryId, summarizationRetry, automation, handleSetAutomation,
     isCompacting, compactError, compactNotice, compactResult, displayModel: displayModelValue, modelSwitching, sessionStats,
@@ -845,6 +880,11 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
     }
     return map;
   }, [activeToolResults, messages]);
+  const partialToolCallIds = useMemo(() => {
+    const ids = new Set(activeToolResults.keys());
+    for (const message of messages) if (message.role === "toolResult") ids.delete(message.toolCallId);
+    return ids;
+  }, [activeToolResults, messages]);
   const inputHistory = useMemo(() => {
     const seen = new Set<string>();
     const history: string[] = [];
@@ -933,6 +973,20 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   // on the post-run reload; keying by the id remounted the sent bubble.
   const messageKeyTrackerRef = useRef<{ sessionId: string | null; tracker: ReturnType<typeof createMessageKeyTracker> } | null>(null);
   const messageKeySessionId = session?.id ?? sessionIdRef.current ?? null;
+  const transcriptMessages = useMemo(() => streamState.isStreaming && streamState.streamingMessage
+    ? [...messages, streamState.streamingMessage]
+    : messages, [messages, streamState.isStreaming, streamState.streamingMessage]);
+  const activeThinkingIndex = streamState.isStreaming ? streamState.activeThinkingIndex : null;
+  const streamingTailBlock = streamState.streamingMessage?.content.at(-1);
+  const activeToolCallId = activeThinkingIndex !== null ? null
+    : streamingTailBlock?.type === "toolCall" && streamingTailBlock.rawInput !== undefined
+      ? streamingTailBlock.toolCallId
+      : [...runningToolCallIds].at(-1) ?? null;
+  const phaseActivity = agentRunning && !hasStreamingContent && activeThinkingIndex === null && activeToolCallId === null && (agentPhase || isCompacting) ? (
+    <div className="break-words py-2 text-[13px] text-text-muted">
+      <span className="activity-shimmer" data-active="true">{phaseLabel(agentPhase, t, isCompacting)}</span>
+    </div>
+  ) : null;
   const messageKeys = useMemo(() => {
     let current = messageKeyTrackerRef.current;
     // A new session's id appears only after its first send; keep the tracker
@@ -942,8 +996,8 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
       messageKeyTrackerRef.current = current;
     }
     current.sessionId = messageKeySessionId;
-    return assignMessageKeys(current.tracker, messages, entryIds);
-  }, [messageKeySessionId, messages, entryIds]);
+    return assignMessageKeys(current.tracker, transcriptMessages, entryIds);
+  }, [messageKeySessionId, transcriptMessages, entryIds]);
   const promptAnchorSpacerRef = useRef<HTMLDivElement | null>(null);
   const promptAnchorSpacerHeightRef = useRef(0);
   const promptAnchorMeasureFrameRef = useRef<number | null>(null);
@@ -1287,18 +1341,15 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
             {loading ? (
               <div className="chat-loading-hint">{t("chat.loadingSession")}</div>
             ) : (() => {
+              // Include the pending message in the same keyed turn as its persisted
+              // predecessors. Its key is inherited when message_end appends it.
+              const messages = transcriptMessages;
+              const streamingIdx = streamState.isStreaming && streamState.streamingMessage ? messages.length - 1 : -1;
               let lastUserIdx = -1;
               for (let i = messages.length - 1; i >= 0; i--) {
                 if (messages[i].role === "user") { lastUserIdx = i; break; }
               }
-              // Anchor for live-tail detection. A compaction summary or subagent
-              // completion can sit after the last user message and own the
-              // still-streaming segment. lastUserIdx stays the scroll target.
-              let lastAnchorIdx = -1;
-              for (let i = messages.length - 1; i >= 0; i--) {
-                if (isMessageGroupAnchor(messages[i])) { lastAnchorIdx = i; break; }
-              }
-
+              const lastAnchorIdx = messages.findLastIndex(isMessageGroupAnchor);
               const visibleRefIndexByMessage = new Map<number, number>();
               let refIdx = 0;
               messages.forEach((msg, idx) => {
@@ -1322,6 +1373,9 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
 
               const renderMessage = (idx: number, options: { attachRef?: boolean; keyPrefix?: string; messageOverride?: AgentMessage; showTimestamp?: boolean; writtenFiles?: WrittenFile[]; recoverTruncation?: boolean } = {}): ReactNode => {
                 const msg = options.messageOverride ?? messages[idx];
+                const isStreaming = idx === streamingIdx;
+                const activeTextBlock = isStreaming && streamState.activeTextIndex !== null ? streamState.streamingMessage?.content[streamState.activeTextIndex] : undefined;
+                const activeTextIndex = activeTextBlock && msg.role === "assistant" ? msg.content.indexOf(activeTextBlock) : -1;
                 const isVisible = isMessageGroupAnchor(msg) || msg.role === "assistant";
                 const currentRefIdx = visibleRefIndexByMessage.get(idx);
                 const keyPrefix = options.keyPrefix ?? "message";
@@ -1344,6 +1398,13 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                   <MessageView
                     key={`${keyPrefix}-view-${messageKey}`}
                     message={msg}
+                    isStreaming={isStreaming}
+                    liveTurn={idx >= lastAnchorIdx && (sessionBusy || streamState.isStreaming)}
+                    activeThinkingIndex={isStreaming ? activeThinkingIndex : undefined}
+                    activeTextIndex={isStreaming ? activeTextIndex < 0 ? null : activeTextIndex : undefined}
+                    runningToolCallIds={runningToolCallIds}
+                    partialToolCallIds={partialToolCallIds}
+                    activeToolCallId={activeToolCallId}
                     toolResults={toolResultsMap}
                     modelNames={modelNames}
                     cwd={messageCwd}
@@ -1379,6 +1440,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
               };
 
               const rendered: ReactNode[] = [];
+              let phaseInProcess = false;
               for (let idx = 0; idx < messages.length;) {
                 const msg = messages[idx];
                 const hasAnchor = isMessageGroupAnchor(msg);
@@ -1406,22 +1468,12 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                   continue;
                 }
 
-                const isLiveTail = (sessionBusy || streamState.isStreaming) && endIdx === messages.length && userIdx === lastAnchorIdx;
-                if (isLiveTail) {
-                  for (let renderIdx = groupStartIdx; renderIdx < endIdx; renderIdx++) {
-                    rendered.push(renderMessage(renderIdx));
-                  }
-                  idx = endIdx;
-                  continue;
-                }
-
                 if (hasAnchor) rendered.push(renderMessage(userIdx));
 
                 const finalAssistant = messages[finalAssistantIdx] as AssistantMessage;
                 const { answerMessage: finalAnswerMessage, processMessage: finalProcessMessage } = getFinalSplit(finalAssistant);
 
                 const processViews: ReactNode[] = [];
-                let processToolCount = 0;
                 let processRefIdx: number | undefined;
                 let revealProcess = false;
 
@@ -1434,10 +1486,9 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                   }
                   if (processMessage.role !== "assistant") continue;
                   const message = processIdx === finalAssistantIdx ? finalProcessMessage : processMessage;
-                  const blocks = getDisplayableAssistantBlocks(message);
+                  const blocks = getDisplayableAssistantBlocks(message, { isStreaming: processIdx === streamingIdx });
                   if (blocks.length === 0) continue;
                   processRefIdx ??= visibleRefIndexByMessage.get(processIdx);
-                  processToolCount += countToolCallBlocks(blocks);
                   revealProcess ||= Boolean(pendingSearchScroll && entryIds[processIdx] === pendingSearchScroll.entryId && (!searchBlock || blocks.includes(searchBlock)));
                   processViews.push(renderMessage(processIdx, {
                     attachRef: false,
@@ -1448,6 +1499,9 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                 }
 
                 if (processViews.length > 0) {
+                  const processActive = endIdx === messages.length && (sessionBusy || streamState.isStreaming) && !finalAnswerMessage;
+                  const processState = getProcessState(messages.slice(userIdx + 1, endIdx), toolResultsMap, runningToolCallIds, processActive, partialToolCallIds);
+                  if (processActive) phaseInProcess = true;
                   rendered.push(
                     <div
                       key={`process-group-${messageKeys[groupStartIdx] ?? groupStartIdx}`}
@@ -1458,7 +1512,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                           would otherwise stay open once its answer shows up, e.g. when
                           switching between an answered and an unanswered leaf of the same
                           turn. Manual toggles survive every other re-render. */}
-                      <ProcessDetailsGroup key={finalAnswerMessage ? "answered" : "unanswered"} messageCount={processViews.length} toolCallCount={processToolCount} defaultExpanded={!finalAnswerMessage} reveal={revealProcess} t={t}>
+                      <ProcessDetailsGroup key={finalAnswerMessage ? "answered" : "unanswered"} messageCount={processViews.length} processState={processState} active={processActive} activity={processActive ? phaseActivity : null} defaultExpanded={!finalAnswerMessage} reveal={revealProcess} t={t}>
                         {processViews}
                       </ProcessDetailsGroup>
                     </div>,
@@ -1492,18 +1546,10 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                     </div>
                   )}
                   {rendered.slice(startIndex)}
+                  {!phaseInProcess && phaseActivity}
                 </>
               );
             })()}
-            {streamState.isStreaming && hasStreamingContent && streamState.streamingMessage && (
-              <MessageView message={streamState.streamingMessage as AgentMessage} toolResults={toolResultsMap} isStreaming modelNames={modelNames} cwd={messageCwd} onOpenFile={onOpenFile} onOpenSession={onOpenSession} />
-            )}
-
-            {agentRunning && !hasStreamingContent && (agentPhase || isCompacting) && (
-              <div className="break-words py-2 text-[13px] text-text-muted">
-                <span className="animate-[pulse_1.5s_infinite]">{phaseLabel(agentPhase, t, isCompacting)}</span>
-              </div>
-            )}
 
             {bashRunning && !pendingBash && (
               <div className="py-2 text-[13px] text-text-muted">

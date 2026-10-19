@@ -352,6 +352,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const [activeLeafId, setActiveLeafId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [activeToolResults, setActiveToolResults] = useState<Map<string, ToolResultMessage>>(new Map());
+  // Membership follows execution events, independently of phase labels and
+  // partial output: a partial result is still a running tool.
+  const [runningToolCallIds, setRunningToolCallIds] = useState<ReadonlySet<string>>(() => new Set());
   const [entryIds, setEntryIds] = useState<string[]>([]);
   const [historyCursor, setHistoryCursor] = useState<string | null>(null);
   const [hasEarlierMessages, setHasEarlierMessages] = useState(false);
@@ -582,6 +585,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     setError(null);
     setActiveLeafId(null);
     setMessages([]);
+    setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
     setActiveToolResults(new Map());
     setEntryIds([]);
     setHistoryCursor(null);
@@ -716,9 +720,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   // Re-connecting to a run already in flight (page refresh mid-stream, or a
   // session opened while the agent works): seed the streaming bubble from the
   // wrapper's in-memory message so the partial output is not dropped.
-  const seedStreamingSnapshot = useCallback((message: unknown): boolean => {
+  const seedStreamingSnapshot = useCallback((message: unknown, preserveActivity = false): boolean => {
     if (!message || typeof message !== "object" || (message as { role?: unknown }).role !== "assistant") return false;
-    dispatch({ type: "snapshot", message: normalizeToolCalls(message as AgentMessage) });
+    dispatch({ type: "snapshot", message: normalizeToolCalls(message as AgentMessage), preserveActivity });
     return true;
   }, []);
 
@@ -1308,6 +1312,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     setAgentRunning(false);
     setAgentPhase(null);
     setRetryInfo(null);
+    setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
     setActiveToolResults(new Map());
     dispatch({ type: "end" });
     return wasRunning;
@@ -1495,7 +1500,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       if (busy) {
         sdkAgentActiveRef.current = Boolean(state.isStreaming);
         rpcPromptPendingRef.current = Boolean(state.isPromptRunning);
-        if (state.isStreaming) seedStreamingSnapshot(state.streamingMessage);
+        if (state.isStreaming) seedStreamingSnapshot(state.streamingMessage, true);
         return;
       }
       if (!agentRunningRef.current) return;
@@ -1546,6 +1551,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     switch (event.type) {
       case "connected": {
         dispatch({ type: "end" });
+        // Starts/updates replayed after connected rebuild the live membership.
+        setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
         if (Array.isArray(event.pendingExtensionUiIds)) {
           // The server replays what it still holds right after this event.
           const pending = new Set(event.pendingExtensionUiIds as string[]);
@@ -1562,6 +1569,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         break;
       }
       case "agent_start":
+        setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
         cancelEventStreamGrace();
         sdkAgentActiveRef.current = true;
         agentRunningRef.current = true;
@@ -1573,6 +1581,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         // One logical prompt can emit multiple agent_end events before retrying,
         // compacting, or continuing messages queued by extension handlers.
         // Keep the stream open until prompt_done/agent_settled and the idle grace.
+        setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
         if (!agentRunningRef.current) break;
         setAgentPhase(null);
         setRetryInfo(null);
@@ -1642,6 +1651,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         }
         break;
       case "prompt_error":
+        setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
+        dispatch({ type: "clear_activity" });
         addNotice({ type: "error", message: (event.errorMessage as string | undefined) ?? "Command failed" });
         break;
       case "extension_error":
@@ -1728,6 +1739,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         if (isNestedToolExecutionEvent(event)) break;
         const id = event.toolCallId as string;
         const name = event.toolName as string;
+        setRunningToolCallIds((prev) => prev.has(id) ? prev : new Set([...prev, id]));
         setAgentPhase((prev) => {
           const tools = prev?.kind === "running_tools" ? [...prev.tools] : [];
           if (!tools.some((t) => t.id === id)) tools.push({ id, name });
@@ -1739,6 +1751,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         if (isNestedToolExecutionEvent(event)) break;
         const id = event.toolCallId as string;
         const name = event.toolName as string;
+        setRunningToolCallIds((prev) => prev.has(id) ? prev : new Set([...prev, id]));
         const partialResult = event.partialResult as Partial<ToolResultMessage> | undefined;
         const content = partialResult?.content;
         // Live output for shells; for codemode, the calls its script has made so far.
@@ -1777,6 +1790,12 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       case "tool_execution_end": {
         if (isNestedToolExecutionEvent(event)) break;
         const id = event.toolCallId as string;
+        setRunningToolCallIds((prev) => {
+          if (!prev.has(id)) return prev;
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
         setActiveToolResults((prev) => {
           if (!prev.has(id)) return prev;
           const next = new Map(prev);
@@ -2011,6 +2030,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       }
       return;
     }
+    setRunningToolCallIds((prev) => prev.size === 0 ? prev : new Set());
+    dispatch({ type: "clear_activity" });
     try {
       await sendAgentCommand(sid, { type: "abort" });
     } catch (e) {
@@ -2941,7 +2962,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
   return {
     // State
-    data, loading, error, activeLeafId, messages, activeToolResults, entryIds, historyCursor, hasEarlierMessages, streamState,
+    data, loading, error, activeLeafId, messages, activeToolResults, runningToolCallIds, entryIds, historyCursor, hasEarlierMessages, streamState,
     agentRunning, modelNames, modelList, modelError, modelScopeWarnings: visibleModelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, newSessionModel, toolPreset, thinkingLevel,
     retryInfo, contextUsage, systemPrompt, forkingEntryId, retryLoad, dismissModelScopeWarnings,
     isCompacting, compactError, compactNotice, compactResult, currentModel, displayModel, modelSwitching, sessionStats,

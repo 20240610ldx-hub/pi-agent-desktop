@@ -54,7 +54,13 @@ function sessionListUrl(summary: boolean, force: boolean): string {
   if (force) return "/api/sessions?force=1";
   return "/api/sessions";
 }
+export interface SidebarArchiveActions {
+  archivedIds: readonly string[];
+  setArchived: (sessionId: string, archived: boolean) => void;
+}
+
 interface Props {
+  onArchiveActionsChange?: (actions: SidebarArchiveActions) => void;
   selectedSessionId: string | null;
   onSelectSession: (session: SessionInfo, isRestore?: boolean, entryId?: string, blockIndex?: number) => void;
   onNewSession?: (sessionId: string, cwd: string) => void;
@@ -199,7 +205,7 @@ function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
   return roots;
 }
 
-export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, onOpenWelcome, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, onOpenCustomize, onOpenSettings, onOpenArtifacts, onOpenMore, scheduledOpen = false }: Props) {
+export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSelectSession, onNewSession, onOpenWelcome, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, onOpenCustomize, onOpenSettings, onOpenArtifacts, onOpenMore, scheduledOpen = false }: Props) {
   const { t } = useI18n();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
   // Tracked in a ref only: the version is compared against the polled value to
@@ -1056,6 +1062,15 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     const ids = sidebarSessionFamilyIds(allSessions, sessionId);
     setSessionMetadata((current) => setSidebarSessionFlag(current, flag, ids, enabled));
   };
+  // The title menu delegates to the same family update and sole metadata writer.
+  const setArchivedFromTitle = useCallback((sessionId: string, archived: boolean) => {
+    const ids = sidebarSessionFamilyIds(allSessions, sessionId);
+    setSessionMetadata((current) => setSidebarSessionFlag(current, "archivedIds", ids, archived));
+  }, [allSessions]);
+  useEffect(() => {
+    onArchiveActionsChange?.({ archivedIds: sessionMetadata.archivedIds, setArchived: setArchivedFromTitle });
+  }, [onArchiveActionsChange, sessionMetadata.archivedIds, setArchivedFromTitle]);
+
   const moveSessionGroup = (sessionId: string, groupId: string | null) => {
     const ids = sidebarSessionFamilyIds(allSessions, sessionId);
     setSessionMetadata((current) => moveSidebarSessionsToGroup(current, ids, groupId));
@@ -1380,7 +1395,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           Clicking a project header toggles collapse; the ⋯ menu offers sort
           and collapse/expand-all; the + button opens the project picker to
           add a new project. The FileExplorer has moved to the right panel. */}
-      {allProjects.length === 0 && archivedSessions.length === 0 ? (
+      {!contentSearch && allProjects.length === 0 && archivedSessions.length === 0 ? (
         <div className="sidebar-project-tree-empty">
           {loading
             ? t("sidebar.loading")

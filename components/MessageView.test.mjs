@@ -53,6 +53,18 @@ test("updates a reused message when its written files change", () => {
   assert.equal(MessageView.compare(props, { ...props, writtenFiles: [{ path: "/tmp/result.txt" }] }), false);
 });
 
+test("rerenders when active block metadata changes but ignores unrelated running tools", () => {
+  const message = { role: "assistant", content: [
+    { type: "thinking", thinking: "Reasoning" },
+    { type: "toolCall", toolCallId: "current", toolName: "read", input: {} },
+  ] };
+  const props = { message, isStreaming: true, activeThinkingIndex: 0, runningToolCallIds: new Set(), activeToolCallId: null };
+  assert.equal(MessageView.compare(props, { ...props, activeThinkingIndex: null }), false);
+  assert.equal(MessageView.compare(props, { ...props, activeToolCallId: "current" }), false);
+  assert.equal(MessageView.compare(props, { ...props, runningToolCallIds: new Set(["current"]) }), false);
+  assert.equal(MessageView.compare(props, { ...props, runningToolCallIds: new Set(["another-message"]) }), true);
+});
+
 test("matches response model aliases and otherwise includes the provider", () => {
   const names = {
     "gateway:claude-sonnet-5": "Sonnet 5",
@@ -90,12 +102,36 @@ test("previews the first thinking line and reveals the full text with the saved 
   }
 });
 
+test("only the explicitly active thinking block shimmers while the message streams", () => {
+  const message = { role: "assistant", content: [
+    { type: "thinking", thinking: "" },
+    { type: "thinking", thinking: "Completed reasoning" },
+    { type: "thinking", thinking: "Active reasoning" },
+  ] };
+  const html = renderMessage(message, { isStreaming: true, activeThinkingIndex: 2 });
+  assert.match(html, /class="activity-shimmer" data-active="true">Active reasoning/);
+  assert.doesNotMatch(html, /class="activity-shimmer"[^>]*>Completed reasoning/);
+  assert.doesNotMatch(renderMessage(message, { isStreaming: true }), /class="activity-shimmer"/);
+  assert.doesNotMatch(renderMessage(message, { isStreaming: false, activeThinkingIndex: 2 }), /class="activity-shimmer"/);
+});
+
 test("shows deferred thinking previews without loading the full content", () => {
   const html = renderMessage({
     role: "assistant",
     content: [{ type: "thinking", thinking: "Historical first line", deferred: true }],
   });
   assert.match(html, />Historical first line<\/span>/);
+  assert.match(html, /aria-expanded="false"/);
+});
+
+test("marks the matched thinking block for scrolling without changing its saved expansion", () => {
+  const matched = { type: "thinking", thinking: "Matched reasoning" };
+  const html = renderMessage({ role: "assistant", content: [
+    { type: "thinking", thinking: "" }, matched, { type: "text", text: "Answer" },
+  ] }, { searchBlock: matched });
+  assert.equal((html.match(/data-search-target="true"/g) ?? []).length, 1);
+  assert.match(html, /class="thinking-disclosure"[^>]*data-search-target="true"/);
+  assert.match(html, /aria-label="Thinking: Matched reasoning"/);
   assert.match(html, /aria-expanded="false"/);
 });
 
@@ -146,6 +182,121 @@ test("keeps streamed tool input out of collapsed markup while counting it", () =
   assert.equal(getTokenEstimateText(block), block.rawInput);
 });
 
+test("a persisted tool with partial output stays running and only the primary tool shimmers", () => {
+  const first = { type: "toolCall", toolCallId: "parallel-first", toolName: "read", input: { path: "a" } };
+  const primary = { type: "toolCall", toolCallId: "parallel-primary", toolName: "bash", input: { command: "long-command" } };
+  const message = { role: "assistant", content: [first, primary] };
+  const props = {
+    isStreaming: false,
+    runningToolCallIds: new Set([first.toolCallId, primary.toolCallId]),
+    activeToolCallId: primary.toolCallId,
+    toolResults: new Map([[primary.toolCallId, {
+      role: "toolResult", toolCallId: primary.toolCallId, content: [{ type: "text", text: "Partial output" }],
+    }]]),
+  };
+  const html = renderMessage(message, props);
+  assert.equal((html.match(/data-status="running"/g) ?? []).length, 2);
+  assert.match(html, /class="activity-shimmer" data-active="true">bash/);
+  assert.equal((html.match(/class="activity-shimmer"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /data-status="success"|data-status="cancelled"/);
+  assert.doesNotMatch(renderMessage(message, { ...props, activeToolCallId: "not-running" }), /activity-shimmer/);
+});
+
+test("queued tools stay pending after the live turn's assistant message finishes streaming", () => {
+  const first = { type: "toolCall", toolCallId: "sequential-first", toolName: "read", input: { path: "a" } };
+  const queued = { type: "toolCall", toolCallId: "sequential-queued", toolName: "read", input: { path: "b" } };
+  const message = { role: "assistant", content: [first, queued] };
+  const props = { message, isStreaming: false, liveTurn: true, runningToolCallIds: new Set([first.toolCallId]), activeToolCallId: first.toolCallId };
+  const html = renderMessage(message, props);
+  assert.match(html, /data-status="running" data-tool-call-id="sequential-first"/);
+  assert.match(html, /data-status="pending" data-tool-call-id="sequential-queued"/);
+  assert.doesNotMatch(html, /data-status="cancelled"/);
+  assert.match(renderMessage(message, { ...props, liveTurn: false }), /data-status="cancelled" data-tool-call-id="sequential-queued"/);
+  assert.equal(MessageView.compare(props, { ...props, liveTurn: false }), false);
+});
+
+test("a stopped partial result cannot present success or a completion duration", () => {
+  const block = { type: "toolCall", toolCallId: "stopped-partial", toolName: "bash", input: { command: "long-command" } };
+  const props = {
+    runningToolCallIds: new Set(), partialToolCallIds: new Set([block.toolCallId]), activeToolCallId: block.toolCallId,
+    toolResults: new Map([[block.toolCallId, { role: "toolResult", toolCallId: block.toolCallId, timestamp: 11_000, content: [{ type: "text", text: "Progress" }] }]]),
+  };
+  const message = { role: "assistant", timestamp: 1_000, content: [block] };
+  const html = renderMessage(message, props);
+  assert.match(html, /data-status="cancelled"/);
+  assert.doesNotMatch(html, /activity-shimmer|>10s</);
+  assert.match(renderMessage(message, { ...props, isStreaming: true }), /data-status="pending"/);
+  const base = { message, partialToolCallIds: new Set() };
+  assert.equal(MessageView.compare(base, { ...base, partialToolCallIds: props.partialToolCallIds }), false);
+});
+
+test("the streaming caret belongs only to the explicitly active last text block", () => {
+  const message = { role: "assistant", content: [{ type: "text", text: "Earlier" }, { type: "text", text: "Current" }] };
+  const props = { isStreaming: true, activeTextIndex: 1 };
+  const html = renderMessage(message, props);
+  assert.equal((html.match(/data-message-streaming="true"/g) ?? []).length, 1);
+  assert.match(html, /data-message-streaming="true"[\s\S]*Current/);
+  assert.doesNotMatch(renderMessage(message, { ...props, activeThinkingIndex: 0 }), /data-message-streaming="true"/);
+  assert.doesNotMatch(renderMessage(message, { ...props, activeToolCallId: "call" }), /data-message-streaming="true"/);
+  assert.doesNotMatch(renderMessage(message, { ...props, isStreaming: false }), /data-message-streaming="true"/);
+  assert.doesNotMatch(renderMessage(message, { isStreaming: true }), /data-message-streaming="true"/);
+  assert.equal(MessageView.compare({ message, activeTextIndex: 0 }, { message, activeTextIndex: 1 }), false);
+});
+
+test("local shell execution uses actual running, cancelled and failed states", () => {
+  const base = { role: "bashExecution", command: "long-command", timestamp: 24_000 };
+  assert.match(renderMessage({ ...base, output: "" }), /data-status="running"/);
+  assert.match(renderMessage({ ...base, output: "Partial output" }), /data-status="running"/);
+  assert.match(renderMessage({ ...base, output: "Partial output", cancelled: true }), /data-status="cancelled"/);
+  const failed = renderMessage({ ...base, output: "exit failed", exitCode: 1 });
+  assert.match(failed, /data-status="error"/);
+  assert.match(failed, /class="tool-call-trigger"[^>]*aria-expanded="true"/);
+  assert.match(failed, /exit failed/);
+  assert.match(renderMessage({ ...base, output: "done", exitCode: 0 }), /data-status="success"/);
+});
+
+test("tool rows expose honest pending, generating, completed, failed and cancelled states", () => {
+  const block = { type: "toolCall", toolCallId: "status-call", toolName: "read", input: { path: "secret-body" } };
+  const result = { role: "toolResult", toolCallId: block.toolCallId, content: [{ type: "text", text: "done" }] };
+  const cases = [
+    { status: "pending", props: { isStreaming: true } },
+    { status: "generating", block: { ...block, rawInput: "" }, props: { isStreaming: true, activeToolCallId: block.toolCallId } },
+    { status: "success", props: { toolResults: new Map([[block.toolCallId, result]]) } },
+    { status: "error", props: { toolResults: new Map([[block.toolCallId, { ...result, isError: true }]]) } },
+    { status: "cancelled", props: {} },
+  ];
+  for (const item of cases) {
+    const html = renderMessage({ role: "assistant", content: [item.block ?? block] }, item.props);
+    assert.match(html, new RegExp(`class="tool-call-row" data-status="${item.status}"`));
+    assert.match(html, /class="tool-call-status-icon"/);
+    assert.doesNotMatch(html, /border:1px solid rgba\(34,197,94,0\.25\)/);
+    if (item.status === "pending") assert.doesNotMatch(html, /activity-shimmer/);
+  }
+});
+
+test("tool disclosure is a linked native button with no collapsed argument body", () => {
+  const block = { type: "toolCall", toolCallId: "linked-call", toolName: "write", input: { path: "/tmp/file", content: "hidden-secret-content" } };
+  const html = renderMessage({ role: "assistant", content: [block] }, { isStreaming: true });
+  assert.match(html, /<button type="button"[^>]*class="tool-call-trigger"[^>]*aria-expanded="false"/);
+  const bodyId = html.match(/class="tool-call-trigger"[^>]*aria-controls="([^"]+)"/)[1];
+  assert.ok(html.includes(`id="${bodyId}" class="tool-call-body"`));
+  assert.match(html, /class="tool-call-body"[^>]*hidden=""/);
+  assert.doesNotMatch(html, /hidden-secret-content/);
+});
+
+test("errors reveal their result automatically while ordinary success remains collapsed", () => {
+  const block = { type: "toolCall", toolCallId: "auto-error", toolName: "read", input: { path: "/missing" } };
+  const result = { role: "toolResult", toolCallId: block.toolCallId, isError: true, content: [{ type: "text", text: "File missing" }] };
+  const message = { role: "assistant", content: [block] };
+  const html = renderMessage(message, { toolResults: new Map([[block.toolCallId, result]]) });
+  assert.match(html, /class="tool-call-trigger"[^>]*aria-expanded="true"/);
+  assert.match(html, /File missing/);
+  assert.match(html, /class="markdown-code-action markdown-code-copy"/);
+  const success = renderMessage(message, { toolResults: new Map([[block.toolCallId, { ...result, isError: false }]]) });
+  assert.match(success, /class="tool-call-trigger"[^>]*aria-expanded="false"/);
+  assert.doesNotMatch(success, /File missing/);
+});
+
 test("renders subagents as standard tool calls with only an extra session button", () => {
   const block = {
     type: "toolCall",
@@ -181,7 +332,7 @@ test("renders subagents as standard tool calls with only an extra session button
     onOpenSession() {},
   });
 
-  assert.match(html, /border:1px solid rgba\(34,197,94,0\.25\)/);
+  assert.match(html, /class="tool-call-row" data-status="success"/);
   assert.match(html, />Agent</);
   assert.match(html, />Explore</);
   assert.match(html, /aria-label="Open sub-agent session"/);
@@ -448,9 +599,9 @@ test("marks apply_patch returned failures as errors even when isError is unset",
     content: [block],
   }, { toolResults: new Map([[block.toolCallId, failed]]) });
 
-  assert.match(html, /border:1px solid rgba\(248,113,113,0\.45\)/);
+  assert.match(html, /class="tool-call-row" data-status="error"/);
   assert.match(html, />apply_patch</);
-  assert.doesNotMatch(html, /border:1px solid rgba\(34,197,94,0\.25\)/);
+  assert.match(html, /aria-expanded="true"/);
 });
 
 test("renders custom-message images as buttons that open a larger preview", () => {
@@ -519,13 +670,13 @@ function codemodeCall(toolCallId, code) {
   return { type: "toolCall", toolCallId, toolName: "codemode", input: { code } };
 }
 
-function renderCodemode(block, result) {
+function renderCodemode(block, result, props = {}) {
   return renderMessage({
     role: "assistant",
     provider: "anthropic",
     model: "claude-test",
     content: [block],
-  }, { toolResults: new Map(result ? [[block.toolCallId, result]] : []) });
+  }, { toolResults: new Map(result ? [[block.toolCallId, result]] : []), ...props });
 }
 
 const CODEMODE_SCRIPT = "// @options: {\"timeoutMs\": 5000}\nconst files = await tools.ls({ path: \".\" });\nreturn files.length;";
@@ -610,12 +761,22 @@ test("shows a running script's calls without an empty output", (t) => {
       calls: [{ id: "call-codemode-running/201", name: "read", args: "{\"path\":\"a\"}", status: "running" }],
       omittedCalls: 200,
     },
-  });
+  }, { runningToolCallIds: new Set([block.toolCallId]), partialToolCallIds: new Set([block.toolCallId]) });
   const text = textOf(html);
   assert.match(text, /201 calls/);
   assert.match(text, /200 earlier calls not shown/);
   assert.match(html, /aria-label="Running"/);
   assert.doesNotMatch(text, /No output/i);
+});
+
+test("a completed codemode call with empty output shows the empty state", (t) => {
+  const block = codemodeCall("empty-completed-codemode", "return undefined;");
+  setToolCallExpanded(block.toolCallId, true);
+  t.after(() => setToolCallExpanded(block.toolCallId, false));
+  const result = { role: "toolResult", toolCallId: block.toolCallId, content: [] };
+  const html = renderCodemode(block, result);
+  assert.match(textOf(html), /No output/i);
+  assert.match(html, /data-status="success"/);
 });
 
 test("keeps the generic view for a codemode call whose input is still streaming or has no script", (t) => {

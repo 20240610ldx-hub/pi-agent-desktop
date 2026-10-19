@@ -4,7 +4,7 @@ import test from "node:test";
 import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url, { jsx: { runtime: "automatic" }, tsconfigPaths: true });
-const { getFinalSplit, getTurnWrittenFiles } = await jiti.import("./ChatWindow.tsx");
+const { getFinalSplit, getTurnWrittenFiles, findFinalAssistantIndex, getProcessState } = await jiti.import("./ChatWindow.tsx");
 const source = await readFile(new URL("./ChatWindow.tsx", import.meta.url), "utf8");
 const markdownSource = await readFile(new URL("./MarkdownBody.tsx", import.meta.url), "utf8");
 
@@ -32,6 +32,53 @@ test("final answer and process messages are stable per assistant message", () =>
 
   const errorOnly = { role: "assistant", content: [], stopReason: "error", errorMessage: "boom" };
   assert.ok(getFinalSplit(errorOnly).answerMessage, "an error-only final entry still renders its notice");
+});
+
+test("an empty answer prefix does not reset an in-flight process disclosure", () => {
+  const message = { role: "assistant", content: [{ type: "thinking", thinking: "Live plan" }, { type: "text", text: "" }] };
+  assert.equal(getFinalSplit(message).answerMessage, null, "text_start alone is not an available answer");
+  assert.deepEqual(getFinalSplit(message).processMessage.content, [message.content[0]]);
+  const answered = { ...message, content: [message.content[0], { type: "text", text: "Ready." }] };
+  assert.deepEqual(getFinalSplit(answered).answerMessage.content, [answered.content[1]]);
+});
+
+test("only the latest assistant entry can supply a turn's final answer", () => {
+  const messages = [
+    { role: "user", content: "Check this." },
+    { role: "assistant", content: [{ type: "text", text: "I will check the file." }] },
+    { role: "assistant", content: [{ type: "toolCall", toolCallId: "t2", toolName: "read", input: { path: "a.txt" } }] },
+    { role: "toolResult", toolCallId: "t2", content: [{ type: "text", text: "file" }] },
+  ];
+  const latest = findFinalAssistantIndex(messages, 0, messages.length);
+  assert.equal(latest, 2, "an earlier narration is process when later tool work follows");
+  assert.equal(getFinalSplit(messages[latest]).answerMessage, null, "a tool-only latest entry has no final answer");
+  messages.push({ role: "assistant", content: [{ type: "text", text: "Checked." }] });
+  assert.equal(findFinalAssistantIndex(messages, 0, messages.length), 4, "a later actual answer becomes the final bubble");
+});
+
+test("process status counts confirmed results and never treats partial live output as success", () => {
+  const call = (id) => ({ role: "assistant", content: [{ type: "toolCall", toolCallId: id, toolName: "bash", input: {} }] });
+  const turn = [call("a"), call("b")];
+  const partial = { role: "toolResult", toolCallId: "a", content: [{ type: "text", text: "partial" }] };
+  const live = getProcessState(turn, new Map([["a", partial]]), new Set(["a"]), true);
+  assert.equal(live.status, "running");
+  assert.equal(live.completedCount, 0);
+  assert.equal(live.pendingCount, 1);
+  const stopped = getProcessState(turn, new Map([["a", partial]]), new Set(), false, new Set(["a"]));
+  assert.equal(stopped.completedCount, 0, "stopping a run cannot turn retained partial output into successful completion");
+  assert.equal(stopped.status, "pending");
+  const results = new Map([["a", { ...partial, isError: false }], ["b", { ...partial, toolCallId: "b", isError: true }]]);
+  assert.deepEqual(getProcessState(turn, results, new Set(), false), { status: "error", toolCallCount: 2, completedCount: 2, failedCount: 1, pendingCount: 0 });
+  assert.equal(getProcessState(turn, new Map(), new Set(), false).status, "pending", "missing results never imply completed success");
+});
+
+test("process summary recognizes a confirmed apply_patch partial failure", () => {
+  const turn = [{ role: "assistant", content: [{ type: "toolCall", toolCallId: "patch", toolName: "apply_patch", input: {} }] }];
+  const result = { role: "toolResult", toolCallId: "patch", isError: false, content: [], details: { result: { failures: [{ path: "a.txt", error: "context mismatch" }] } } };
+  const state = getProcessState(turn, new Map([["patch", result]]), new Set(), false);
+  assert.equal(state.status, "error", "a partial patch failure never receives a successful group checkmark");
+  assert.equal(state.failedCount, 1);
+  assert.equal(state.completedCount, 1);
 });
 
 test("a turn's written-files list keeps its identity until its inputs change", () => {

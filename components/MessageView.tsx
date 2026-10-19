@@ -1,10 +1,11 @@
 "use client";
 
-import { memo, useState, useRef, useEffect, useMemo } from "react";
+import { memo, useState, useRef, useEffect, useMemo, useId } from "react";
 import ReactMarkdown from "react-markdown";
 import { MarkdownBody } from "./MarkdownBody";
 import { ImagePreview } from "./ImagePreview";
 import { ThinkingDisclosure } from "./ThinkingDisclosure";
+import { CodeCopyButton } from "./CodeCopyButton";
 import { copyText } from "@/lib/clipboard";
 import { useI18n } from "@/hooks/useI18n";
 import { useDiffViewMode } from "@/hooks/useDiffViewMode";
@@ -189,6 +190,12 @@ function loadThinkingContent(sessionId: string, entryId: string, blockIndex: num
 interface Props {
   message: AgentMessage;
   isStreaming?: boolean;
+  liveTurn?: boolean;
+  activeThinkingIndex?: number | null;
+  activeTextIndex?: number | null;
+  partialToolCallIds?: ReadonlySet<string>;
+  runningToolCallIds?: ReadonlySet<string>;
+  activeToolCallId?: string | null;
   toolResults?: Map<string, ToolResultMessage>;
   modelNames?: Record<string, string>;
   cwd?: string;
@@ -302,12 +309,18 @@ function haveSameRelevantToolResults(
   return true;
 }
 
-export const MessageView = memo(function MessageView({ message, isStreaming, toolResults, modelNames, cwd, onOpenFile, onOpenSession, onOpenModelsConfig, entryId, searchBlock, onFork, forking, onEditContent, onCancelEdit, isEditing, showTimestamp, prevTimestamp, sessionId, writtenFiles, onCompact, isCompacting, compactError }: Props) {
+function haveSameRelevantRunningTools(message: AgentMessage, previous?: ReadonlySet<string>, next?: ReadonlySet<string>): boolean {
+  if (previous === next || message.role !== "assistant") return true;
+  return (message as AssistantMessage).content.every(block => block.type !== "toolCall"
+    || Boolean(previous?.has(block.toolCallId)) === Boolean(next?.has(block.toolCallId)));
+}
+
+export const MessageView = memo(function MessageView({ message, isStreaming, liveTurn, activeThinkingIndex, activeTextIndex, partialToolCallIds, runningToolCallIds, activeToolCallId, toolResults, modelNames, cwd, onOpenFile, onOpenSession, onOpenModelsConfig, entryId, searchBlock, onFork, forking, onEditContent, onCancelEdit, isEditing, showTimestamp, prevTimestamp, sessionId, writtenFiles, onCompact, isCompacting, compactError }: Props) {
   if (message.role === "user") {
     return <UserMessageView message={message as UserMessage} cwd={cwd} onOpenFile={onOpenFile} entryId={entryId} onFork={onFork} forking={forking} onEditContent={onEditContent} onCancelEdit={onCancelEdit} isEditing={isEditing} />;
   }
   if (message.role === "assistant") {
-    return <AssistantMessageView message={message as AssistantMessage} isStreaming={isStreaming} toolResults={toolResults} modelNames={modelNames} cwd={cwd} onOpenFile={onOpenFile} onOpenSession={onOpenSession} onOpenModelsConfig={onOpenModelsConfig} showTimestamp={showTimestamp} prevTimestamp={prevTimestamp} sessionId={sessionId} entryId={entryId} onFork={onFork} forking={forking} searchBlock={searchBlock} writtenFiles={writtenFiles} onCompact={onCompact} isCompacting={isCompacting} compactError={compactError} />;
+    return <AssistantMessageView message={message as AssistantMessage} isStreaming={isStreaming} liveTurn={liveTurn} activeThinkingIndex={activeThinkingIndex} activeTextIndex={activeTextIndex} partialToolCallIds={partialToolCallIds} runningToolCallIds={runningToolCallIds} activeToolCallId={activeToolCallId} toolResults={toolResults} modelNames={modelNames} cwd={cwd} onOpenFile={onOpenFile} onOpenSession={onOpenSession} onOpenModelsConfig={onOpenModelsConfig} showTimestamp={showTimestamp} prevTimestamp={prevTimestamp} sessionId={sessionId} entryId={entryId} onFork={onFork} forking={forking} searchBlock={searchBlock} writtenFiles={writtenFiles} onCompact={onCompact} isCompacting={isCompacting} compactError={compactError} />;
   }
   if (message.role === "toolResult") {
     // Rendered inline under its toolCall — skip standalone rendering if paired
@@ -329,6 +342,12 @@ export const MessageView = memo(function MessageView({ message, isStreaming, too
 }, (prev, next) => {
   return prev.message === next.message
     && prev.isStreaming === next.isStreaming
+    && prev.liveTurn === next.liveTurn
+    && prev.activeThinkingIndex === next.activeThinkingIndex
+    && prev.activeTextIndex === next.activeTextIndex
+    && haveSameRelevantRunningTools(prev.message, prev.partialToolCallIds, next.partialToolCallIds)
+    && prev.activeToolCallId === next.activeToolCallId
+    && haveSameRelevantRunningTools(prev.message, prev.runningToolCallIds, next.runningToolCallIds)
     && haveSameRelevantToolResults(prev.message, prev.toolResults, next.toolResults)
     && prev.modelNames === next.modelNames
     && prev.cwd === next.cwd
@@ -643,6 +662,12 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
 function AssistantMessageView({
   message,
   isStreaming,
+  liveTurn,
+  activeThinkingIndex,
+  activeTextIndex,
+  partialToolCallIds,
+  runningToolCallIds,
+  activeToolCallId,
   toolResults,
   modelNames,
   cwd,
@@ -663,6 +688,12 @@ function AssistantMessageView({
 }: {
   message: AssistantMessage;
   isStreaming?: boolean;
+  liveTurn?: boolean;
+  activeThinkingIndex?: number | null;
+  activeTextIndex?: number | null;
+  partialToolCallIds?: ReadonlySet<string>;
+  runningToolCallIds?: ReadonlySet<string>;
+  activeToolCallId?: string | null;
   toolResults?: Map<string, ToolResultMessage>;
   modelNames?: Record<string, string>;
   cwd?: string;
@@ -687,6 +718,7 @@ function AssistantMessageView({
     .map((block, originalIndex) => ({ block, originalIndex }))
     .filter(({ block }) => !isEmptyThinkingBlock(block, { isStreaming })), [message.content, isStreaming]);
   const blocks = useMemo(() => blockItems.map(({ block }) => block), [blockItems]);
+  const lastTextIndex = blockItems.findLast(item => item.block.type === "text")?.originalIndex;
   const providerError = getAssistantErrorMessage(message, { isStreaming });
   const truncated = isAssistantTruncated(message, { isStreaming });
   const unansweredTruncation = truncated && !hasAssistantAnswer(message);
@@ -860,7 +892,7 @@ function AssistantMessageView({
 
       <div className="message-assistant-content" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {blockItems.map(({ block, originalIndex }) => (
-          <BlockView key={`${entryId ?? "stream"}-${originalIndex}`} block={block} searchTarget={block === searchBlock} toolResults={toolResults} isStreaming={isStreaming} streamingDuration={streamingDurations.get(originalIndex) ?? (block.type === "thinking" ? thinkingDurationFromFile : undefined)} toolCallDurations={toolCallDurations} cwd={cwd} onOpenFile={onOpenFile} onOpenSession={onOpenSession} sessionId={sessionId} entryId={entryId} blockIndex={originalIndex} />
+          <BlockView key={`${entryId ?? "stream"}-${originalIndex}`} block={block} searchTarget={block === searchBlock} toolResults={toolResults} isStreaming={isStreaming} liveTurn={liveTurn} activeThinking={Boolean(isStreaming && originalIndex === activeThinkingIndex)} activeText={Boolean(isStreaming && originalIndex === activeTextIndex && originalIndex === lastTextIndex && activeThinkingIndex == null && activeToolCallId == null)} partialToolCallIds={partialToolCallIds} runningToolCallIds={runningToolCallIds} activeToolCallId={activeToolCallId} streamingDuration={streamingDurations.get(originalIndex) ?? (block.type === "thinking" ? thinkingDurationFromFile : undefined)} toolCallDurations={toolCallDurations} cwd={cwd} onOpenFile={onOpenFile} onOpenSession={onOpenSession} sessionId={sessionId} entryId={entryId} blockIndex={originalIndex} />
         ))}
       </div>
 
@@ -981,31 +1013,32 @@ function AssistantMessageView({
   );
 }
 
-function BlockView({ block, searchTarget, toolResults, isStreaming, streamingDuration, toolCallDurations, cwd, onOpenFile, onOpenSession, sessionId, entryId, blockIndex }: { block: AssistantContentBlock; searchTarget?: boolean; toolResults?: Map<string, ToolResultMessage>; isStreaming?: boolean; streamingDuration?: number; toolCallDurations?: Map<string, number>; cwd?: string; onOpenFile?: (filePath: string, page?: number) => void; onOpenSession?: (sessionId: string) => void; sessionId?: string; entryId?: string; blockIndex: number }) {
+function BlockView({ block, searchTarget, toolResults, isStreaming, liveTurn, activeThinking, activeText, partialToolCallIds, runningToolCallIds, activeToolCallId, streamingDuration, toolCallDurations, cwd, onOpenFile, onOpenSession, sessionId, entryId, blockIndex }: { block: AssistantContentBlock; searchTarget?: boolean; toolResults?: Map<string, ToolResultMessage>; isStreaming?: boolean; liveTurn?: boolean; activeThinking?: boolean; activeText?: boolean; partialToolCallIds?: ReadonlySet<string>; runningToolCallIds?: ReadonlySet<string>; activeToolCallId?: string | null; streamingDuration?: number; toolCallDurations?: Map<string, number>; cwd?: string; onOpenFile?: (filePath: string, page?: number) => void; onOpenSession?: (sessionId: string) => void; sessionId?: string; entryId?: string; blockIndex: number }) {
   if (block.type === "text") {
-    return <div data-message-text data-search-target={searchTarget || undefined}><TextBlock block={block as TextContent} isStreaming={isStreaming} cwd={cwd} onOpenFile={onOpenFile} /></div>;
+    return <div data-message-text data-message-streaming={activeText || undefined} data-search-target={searchTarget || undefined}><TextBlock block={block as TextContent} isStreaming={isStreaming} activeText={activeText} cwd={cwd} onOpenFile={onOpenFile} /></div>;
   }
   if (block.type === "thinking") {
-    return <ThinkingBlock block={block as ThinkingContent} duration={streamingDuration} sessionId={sessionId} entryId={entryId} blockIndex={blockIndex} />;
+    return <ThinkingBlock block={block as ThinkingContent} searchTarget={searchTarget} active={activeThinking} duration={streamingDuration} sessionId={sessionId} entryId={entryId} blockIndex={blockIndex} />;
   }
   if (block.type === "toolCall") {
     const tc = block as ToolCallContent;
     const result = toolResults?.get(tc.toolCallId);
-    const duration = toolCallDurations?.get(tc.toolCallId);
-    // A loaded (non-streaming) message whose toolCall has no paired result
-    // means the run was interrupted before the tool finished — render that
-    // honestly instead of the success styling.
-    return <ToolCallBlock block={tc} result={result} duration={duration} onOpenSession={onOpenSession} aborted={!isStreaming && !result} />;
+    const running = runningToolCallIds?.has(tc.toolCallId) ?? false;
+    const partial = partialToolCallIds?.has(tc.toolCallId) ?? false;
+    const duration = !partial && !running ? toolCallDurations?.get(tc.toolCallId) : undefined;
+    return <ToolCallBlock block={tc} result={result} duration={duration} onOpenSession={onOpenSession} running={running} partial={partial} live={isStreaming || liveTurn} active={tc.toolCallId === activeToolCallId && (running || tc.rawInput !== undefined)} aborted={!liveTurn && !isStreaming && !result && !running} />;
   }
   return null;
 }
 
-function TextBlock({ block, isStreaming, cwd, onOpenFile }: { block: TextContent; isStreaming?: boolean; cwd?: string; onOpenFile?: (filePath: string, page?: number) => void }) {
-  return <SafeMarkdownBody isStreaming={isStreaming} cwd={cwd} onOpenFile={onOpenFile} artifacts>{block.text}</SafeMarkdownBody>;
+function TextBlock({ block, isStreaming, activeText, cwd, onOpenFile }: { block: TextContent; isStreaming?: boolean; activeText?: boolean; cwd?: string; onOpenFile?: (filePath: string, page?: number) => void }) {
+  return <SafeMarkdownBody className={activeText ? "message-streaming-caret" : undefined} isStreaming={isStreaming} cwd={cwd} onOpenFile={onOpenFile} artifacts>{block.text}</SafeMarkdownBody>;
 }
 
-export function ThinkingBlock({ block, duration, sessionId, entryId, blockIndex }: {
+export function ThinkingBlock({ block, searchTarget, active, duration, sessionId, entryId, blockIndex }: {
   block: ThinkingContent;
+  searchTarget?: boolean;
+  active?: boolean;
   duration?: number;
   sessionId?: string;
   entryId?: string;
@@ -1058,12 +1091,14 @@ export function ThinkingBlock({ block, duration, sessionId, entryId, blockIndex 
     };
   }, [expanded, block.deferred, content, sessionId, entryId, blockIndex]);
 
+  const previewLabel = expanded ? t("i18n.thinking") : preview ? <ReactMarkdown allowedElements={[]} unwrapDisallowed skipHtml>{preview}</ReactMarkdown> : "...";
   return <ThinkingDisclosure
+    searchTarget={searchTarget}
     expanded={expanded}
     onToggle={() => setExpanded(value => !value)}
     label={`${t("i18n.thinking")}${preview ? `: ${preview}` : ""}`}
     title={t("i18n.thinking")}
-    preview={expanded ? t("i18n.thinking") : preview ? <ReactMarkdown allowedElements={[]} unwrapDisallowed skipHtml>{preview}</ReactMarkdown> : "..."}
+    preview={active ? <span className="activity-shimmer" data-active="true">{previewLabel}</span> : previewLabel}
     metadata={duration !== undefined ? `${duration}s` : undefined}
     error={Boolean(error)}
   >{loading ? t("i18n.loadingThinking") : error ?? (block.deferred ? content : block.thinking)}</ThinkingDisclosure>;
@@ -1075,11 +1110,29 @@ function isSubagentToolDetails(value: unknown): value is SubagentToolDetails {
   return details.kind === "pi-web-subagent" && typeof details.sessionId === "string";
 }
 
-function ToolCallBlock({ block, result, duration, aborted, defaultExpanded, onOpenSession }: { block: ToolCallContent; result?: ToolResultMessage; duration?: number; aborted?: boolean; defaultExpanded?: boolean; onOpenSession?: (sessionId: string) => void }) {
+type ToolCallStatus = "pending" | "running" | "generating" | "success" | "error" | "cancelled";
+const dismissedToolErrors = new Set<string>();
+
+function ToolCallBlock({ block, result, duration, running, partial, live, active, aborted, defaultExpanded, onOpenSession }: { block: ToolCallContent; result?: ToolResultMessage; duration?: number; running?: boolean; partial?: boolean; live?: boolean; active?: boolean; aborted?: boolean; defaultExpanded?: boolean; onOpenSession?: (sessionId: string) => void }) {
   const { t } = useI18n();
-  const [expanded, setExpanded] = useState(() => defaultExpanded ?? isToolCallExpanded(block.toolCallId));
+  const isError = (result?.isError ?? false)
+    || (isApplyPatchToolName(block.toolName) && applyPatchResultHasFailures(result?.details));
+  const autoExpandError = isError && !dismissedToolErrors.has(block.toolCallId);
+  const [expanded, setExpanded] = useState(() => autoExpandError || (defaultExpanded ?? isToolCallExpanded(block.toolCallId)));
+  const [previousIsError, setPreviousIsError] = useState(isError);
+  if (isError !== previousIsError) {
+    setPreviousIsError(isError);
+    if (isError) setExpanded(true);
+  }
+  useEffect(() => {
+    if (!isError) dismissedToolErrors.delete(block.toolCallId);
+  }, [isError, block.toolCallId]);
   const toggleExpanded = () => {
     const next = !expanded;
+    if (isError) {
+      if (next) dismissedToolErrors.delete(block.toolCallId);
+      else dismissedToolErrors.add(block.toolCallId);
+    }
     setToolCallExpanded(block.toolCallId, next);
     setExpanded(next);
   };
@@ -1095,8 +1148,8 @@ function ToolCallBlock({ block, result, duration, aborted, defaultExpanded, onOp
   // still incomplete JSON and keeps the generic view.
   const codemodeCode = block.toolName === CODEMODE_TOOL_NAME && !isStreamingInput ? codemodeScript(block.input) : null;
   const codemode = codemodeCode === null ? null : { code: codemodeCode, ...codemodeCalls(result?.details) };
-  // A running script's progress snapshot has calls but no content yet.
-  const codemodeRunning = codemode !== null && result !== undefined && result.content.length === 0;
+  // Progress is identified by live metadata; a final empty result is still complete.
+  const codemodeRunning = codemode !== null && (running || partial);
 
   // `server/tool` instead of the registered `mcp__server__tool`, as pi's TUI shows it.
   const mcpLabel = mcpToolLabel(block.toolName, result?.details);
@@ -1109,66 +1162,51 @@ function ToolCallBlock({ block, result, duration, aborted, defaultExpanded, onOp
   const resultText = mcpLabel && joinedResultText !== null ? prettyMcpResultText(joinedResultText) : joinedResultText;
   const resultImages = getMessageImages(resultContent);
   const resultIsEmpty = resultText === null ? false : (resultText.trim() === "(no output)" || resultText.trim() === "");
-  const isError = (result?.isError ?? false)
-    || (isApplyPatchToolName(block.toolName) && applyPatchResultHasFailures(result?.details));
   const subagent = isSubagentToolDetails(result?.details) ? result.details : null;
   const codemodeCallCount = codemode ? codemode.calls.length + codemode.omitted : 0;
+  // Progress snapshots are paired results too; execution metadata wins until end.
+  const status: ToolCallStatus = running ? "running"
+    : partial ? (live ? "pending" : "cancelled")
+    : aborted ? "cancelled"
+    : result ? (isError ? "error" : "success")
+    : isStreamingInput ? "generating"
+    : live ? "pending" : "cancelled";
+  const statusLabel = t(status === "pending" ? "chat.toolPending"
+    : status === "running" ? "chat.toolRunning"
+    : status === "generating" ? "chat.generatingToolInput"
+    : status === "success" ? "chat.toolSuccess"
+    : status === "error" ? "chat.toolError" : "chat.toolCancelled");
+  const disclosureId = useId();
 
   return (
-    <div
-      style={{
-        borderRadius: 7,
-        overflow: "hidden",
-        fontSize: 12,
-        border: isError
-          ? "1px solid rgba(248,113,113,0.45)"
-          : aborted
-            ? "1px solid rgba(148,163,184,0.4)"
-            : "1px solid rgba(34,197,94,0.25)",
-        background: isError
-          ? "rgba(248,113,113,0.05)"
-          : aborted
-            ? "rgba(148,163,184,0.06)"
-            : "rgba(34,197,94,0.04)",
-      }}
-    >
+    <div className="tool-call-row" data-status={status} data-tool-call-id={block.toolCallId}>
       {/* ── Tool call header ── */}
-      <div style={{ display: "flex", alignItems: "stretch", minWidth: 0 }}>
+      <div className="tool-call-header" style={{ display: "flex", alignItems: "stretch", minWidth: 0 }}>
         <button
+          type="button"
+          id={`${disclosureId}-toggle`}
           className="tool-call-trigger"
+          aria-expanded={expanded}
+          aria-controls={`${disclosureId}-body`}
+          aria-label={`${mcpLabel ? `${mcpLabel.server}/${mcpLabel.tool}` : block.toolName}: ${statusLabel}`}
           onClick={toggleExpanded}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            flex: 1,
-            minWidth: 0,
-            padding: "6px 10px",
-            background: "none",
-            border: "none",
-            color: "var(--text-muted)",
-            cursor: "pointer",
-            fontSize: 12,
-            textAlign: "left",
-          }}
         >
-          <span
-            title={mcpLabel ? block.toolName : undefined}
-            style={{ color: isError ? "var(--danger)" : aborted ? "var(--text-dim)" : "var(--success)", fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 11, flexShrink: 0 }}
-          >
-            {mcpLabel ? (
-              <>
-                <span style={{ fontWeight: 500, opacity: 0.75 }}>{mcpLabel.server}/</span>
-                {mcpLabel.tool}
-              </>
-            ) : block.toolName}
+          <svg className="tool-call-status-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {status === "success" ? <path d="m3 8 3.2 3.2L13 4.5" />
+              : status === "error" ? <path d="m4 4 8 8M12 4l-8 8" />
+              : status === "cancelled" ? <rect x="4" y="4" width="8" height="8" rx="1" />
+              : <circle cx="8" cy="8" r={status === "running" ? 3 : 4.5} fill={status === "running" ? "currentColor" : "none"} />}
+          </svg>
+          <span className="tool-call-name" title={mcpLabel ? block.toolName : undefined}>
+            {active ? <span className="activity-shimmer" data-active="true">{mcpLabel ? `${mcpLabel.server}/${mcpLabel.tool}` : block.toolName}</span>
+              : mcpLabel ? <><span style={{ fontWeight: 500, opacity: 0.75 }}>{mcpLabel.server}/</span>{mcpLabel.tool}</> : block.toolName}
           </span>
           {aborted && (
             <span title={t("chat.toolCancelled")} style={{ flexShrink: 0, fontSize: 10, color: "var(--text-dim)", border: "var(--hairline) solid var(--border)", borderRadius: 4, padding: "1px 5px" }}>
               {t("chat.toolCancelled")}
             </span>
           )}
-          <span className="tool-call-preview" style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+          <span className="tool-call-preview">
             {isStreamingInput
               ? t("chat.generatingToolInput")
               : (patchLabel ?? (codemode ? codemodeScriptPreview(codemode.code) : getToolPreview(block)))}
@@ -1181,8 +1219,8 @@ function ToolCallBlock({ block, result, duration, aborted, defaultExpanded, onOp
           {duration !== undefined && (
             <span className="tool-call-metadata" style={{ fontSize: 11, color: "var(--text-dim)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{duration}s</span>
           )}
-          <svg className="tool-call-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--text-dim)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
-            <polyline points="2 3.5 5 6.5 8 3.5" />
+          <svg className="tool-call-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="3.5 2 6.5 5 3.5 8" />
           </svg>
         </button>
         {subagent && onOpenSession && (
@@ -1198,9 +1236,15 @@ function ToolCallBlock({ block, result, duration, aborted, defaultExpanded, onOp
         )}
       </div>
 
+      {/* Result images stay visible even when the argument/result disclosure is closed. */}
+      {resultImages.length > 0 && <ResultImages images={resultImages} isError={isError} />}
+      <div id={`${disclosureId}-body`} className="tool-call-body" role="region" aria-labelledby={`${disclosureId}-toggle`} hidden={!expanded}>
       {/* ── Expanded: input args (only when no richer view exists); a codemode script in place of its JSON ── */}
       {expanded && (isStreamingInput || !isEditTool) && !patchFiles && (
+        <>
+        <CodeCopyButton code={codemode ? codemode.code : inputStr} />
         <pre
+          className="tool-call-input"
           style={{
             margin: 0,
             padding: "8px 10px",
@@ -1209,22 +1253,20 @@ function ToolCallBlock({ block, result, duration, aborted, defaultExpanded, onOp
             lineHeight: 1.5,
             overflow: "auto",
             background: "var(--bg-subtle)",
-            borderTop: isError ? "1px solid rgba(248,113,113,0.25)" : "1px solid rgba(34,197,94,0.2)",
+            fontFamily: "var(--font-mono)",
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
           }}
         >
           {codemode ? codemode.code.replace(/\r/g, "").trimEnd() : inputStr}
         </pre>
+        </>
       )}
 
       {/* ── Expanded: the calls a codemode script made ── */}
       {expanded && codemode && (
         <CodemodeCallList calls={codemode.calls} omitted={codemode.omitted} isError={isError} />
       )}
-
-      {/* ── Result images — always visible, independent of the collapsed details ── */}
-      {resultImages.length > 0 && <ResultImages images={resultImages} isError={isError} />}
 
       {/* ── Expanded: applied-patch split diff ── */}
       {expanded && patchFiles && (
@@ -1254,6 +1296,7 @@ function ToolCallBlock({ block, result, duration, aborted, defaultExpanded, onOp
           />
         )
       )}
+      </div>
     </div>
   );
 }
@@ -1693,6 +1736,7 @@ function PairedResult({ text, isEmpty, isError }: {
         background: isError ? "rgba(248,113,113,0.04)" : "var(--bg-subtle)",
       }}
     >
+      {!isEmpty && <CodeCopyButton code={text} />}
       <pre
         style={{
           margin: 0,
@@ -2148,7 +2192,7 @@ function BashExecutionView({ message, sessionId }: { message: BashExecutionMessa
       };
   return (
     <div style={{ margin: "6px 0" }}>
-      <ToolCallBlock block={block} result={result} defaultExpanded={isRunning} />
+      <ToolCallBlock block={block} result={result} running={isRunning} partial={isRunning} aborted={message.cancelled} defaultExpanded={isRunning} />
       {message.truncated && fullOutputUrl && (
         <div style={{ padding: "4px 10px", fontSize: 11, marginTop: -1 }}>
           {showFullButton && (

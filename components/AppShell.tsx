@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useNativeAppMenu } from "@/hooks/useNativeAppMenu";
 import { selectProjectDirectoryNative } from "./ProjectPicker";
-import { SessionSidebar } from "./SessionSidebar";
+import { SessionSidebar, type SidebarArchiveActions } from "./SessionSidebar";
 import { PilaudeWelcome } from "./PilaudeWelcome";
 import { PilaudeWorkspaceContext } from "./PilaudeWorkspaceContext";
 import { PilaudeIcon } from "./PilaudeIcon";
@@ -44,9 +44,11 @@ import { APP_PREF_KEYS, getPrefBool, getPrefJson, setPref, setPrefJson } from "@
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import { useResizablePanel } from "@/hooks/useResizablePanel";
 import { useDesktopConnection } from "@/lib/desktop-connection";
-import { isTauriDesktop, openChangesWindow, setCloseQuitsNative } from "@/lib/desktop-native";
+import { isTauriDesktop, openChangesWindow, revealItemInDirNative, setCloseQuitsNative } from "@/lib/desktop-native";
 import { subscribeChangesFeedback } from "@/lib/changes-feedback";
-import { canUseNativeMenu, menuPointBelow, showNativeMenu } from "@/lib/desktop-menu";
+import { canUseNativeMenu, menuPointBelow, showNativeMenu, type NativeMenuEntry } from "@/lib/desktop-menu";
+import { closeDomMenu, getDomMenu, openDomMenu, subscribeDomMenu } from "@/lib/dom-menu-store";
+import { focusModalPanel, listenForStackedDialogEscape } from "@/lib/stacked-dialog";
 import { useNativeContextMenu } from "@/hooks/useNativeContextMenu";
 import { DomContextMenuHost } from "./DomContextMenuHost";
 import { getFileName } from "@/lib/file-paths";
@@ -182,6 +184,20 @@ export function AppShell() {
     if (soundEnabledRef.current) playDoneSound();
   }, [playDoneSound, soundEnabledRef]);
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
+  const [titleMenuOpen, setTitleMenuOpen] = useState(false);
+  const titleMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const [titleRename, setTitleRename] = useState<{ session: SessionInfo; value: string } | null>(null);
+  const titleRenameInputRef = useRef<HTMLInputElement>(null);
+  const titleRenameCommitRef = useRef(false);
+  const [titleDeleteSession, setTitleDeleteSession] = useState<SessionInfo | null>(null);
+  const titleDeleteDialogRef = useRef<HTMLDivElement>(null);
+  const [titleActionBusy, setTitleActionBusy] = useState(false);
+  const titleActionBusyRef = useRef(false);
+  const titleActionContextRef = useRef({ sessionId: null as string | null, scheduled: false, welcome: false, generation: 0 });
+  const [titleActionError, setTitleActionError] = useState<string | null>(null);
+  const [titleFileManager, setTitleFileManager] = useState<{ supported: boolean; platform?: string } | null>(null);
+  const [titleArchiveActions, setTitleArchiveActions] = useState<SidebarArchiveActions | null>(null);
+  const handleArchiveActionsChange = useCallback((actions: SidebarArchiveActions) => setTitleArchiveActions(actions), []);
   // The Scheduled page covers the chat area without unmounting it, so the open session keeps its state.
   const [scheduledOpen, setScheduledOpen] = useState(() => searchParams?.get("view") === "scheduled");
   // Read by restoreWorkspaceContext and handleSelectSession; those identities
@@ -193,6 +209,10 @@ export function AppShell() {
   const [welcomeOpen, setWelcomeOpen] = useState(() => searchParams?.get("view") === "new");
   const welcomeOpenRef = useRef(welcomeOpen);
   welcomeOpenRef.current = welcomeOpen;
+  const titleActionContext = titleActionContextRef.current;
+  if (titleActionContext.sessionId !== (selectedSession?.id ?? null) || titleActionContext.scheduled !== scheduledOpen || titleActionContext.welcome !== welcomeOpen) {
+    titleActionContextRef.current = { sessionId: selectedSession?.id ?? null, scheduled: scheduledOpen, welcome: welcomeOpen, generation: titleActionContext.generation + 1 };
+  }
   const [explorerUploadBusy, setExplorerUploadBusy] = useState(false);
   const fileExplorerRef = useRef<FileExplorerHandle>(null);
   // The panel is a preview surface; keep the file index hidden until asked for.
@@ -1480,6 +1500,142 @@ export function AppShell() {
     }
   }, [invalidateWorkspaceRestore, selectedSession, router]);
 
+  const runTitleAction = useCallback(async (action: () => Promise<void>) => {
+    if (titleActionBusyRef.current) return;
+    titleActionBusyRef.current = true;
+    setTitleActionBusy(true);
+    setTitleActionError(null);
+    const sourceGeneration = titleActionContextRef.current.generation;
+    try { await action(); }
+    catch (error) {
+      if (titleActionContextRef.current.generation === sourceGeneration) setTitleActionError(translate("sidebar.actionFailed", { error: error instanceof Error ? error.message : String(error) }));
+    }
+    finally { titleActionBusyRef.current = false; setTitleActionBusy(false); }
+  }, [translate]);
+
+  useEffect(() => {
+    if (getDomMenu()?.appearance === "conversation") closeDomMenu();
+    setTitleRename(null);
+    setTitleDeleteSession(null);
+    setTitleActionError(null);
+  }, [selectedSession?.id, scheduledOpen, welcomeOpen]);
+
+  useEffect(() => subscribeDomMenu(() => setTitleMenuOpen(getDomMenu()?.opener === titleMenuButtonRef.current && Boolean(getDomMenu()))), []);
+
+  const titleRenameSessionId = titleRename?.session.id;
+  useEffect(() => {
+    if (!titleRenameSessionId) return;
+    titleRenameCommitRef.current = false;
+    titleRenameInputRef.current?.focus({ preventScroll: true });
+    titleRenameInputRef.current?.select();
+  }, [titleRenameSessionId]);
+
+  useEffect(() => {
+    if (!titleDeleteSession) return;
+    const restoreFocus = focusModalPanel(document, titleDeleteDialogRef.current);
+    const stopEscape = listenForStackedDialogEscape(document, () => {
+      if (!titleActionBusyRef.current) setTitleDeleteSession(null);
+    });
+    return () => { stopEscape(); restoreFocus(); };
+  }, [titleDeleteSession]);
+
+  const commitTitleRename = useCallback(() => {
+    const edit = titleRename;
+    if (!edit || titleActionBusyRef.current || titleRenameCommitRef.current) return;
+    titleRenameCommitRef.current = true;
+    setTitleRename(null);
+    titleMenuButtonRef.current?.focus({ preventScroll: true });
+    const name = edit.value.trim();
+    if (name === (edit.session.name ?? "")) return;
+    void runTitleAction(async () => {
+      const response = await fetch(`/api/sessions/${encodeURIComponent(edit.session.id)}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }),
+      });
+      if (!response.ok) { const data = await response.json().catch(() => ({})) as { error?: string }; throw new Error(data.error ?? `HTTP ${response.status}`); }
+      setSessionCatalog((current) => current.map((item) => item.id === edit.session.id ? { ...item, name } : item));
+      setSelectedSession((current) => current?.id === edit.session.id ? { ...current, name } : current);
+      setRefreshKey((key) => key + 1);
+    });
+  }, [titleRename, runTitleAction]);
+
+  useEffect(() => {
+    if (desktopMode) return;
+    const controller = new AbortController();
+    void fetch("/api/open-in-explorer", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => response.ok ? await response.json() as { supported?: boolean; platform?: string } : null)
+      .then((data) => { if (!controller.signal.aborted) setTitleFileManager({ supported: data?.supported === true, platform: data?.platform }); })
+      .catch(() => { if (!controller.signal.aborted) setTitleFileManager({ supported: false }); });
+    return () => controller.abort();
+  }, [desktopMode]);
+
+  const openTitleMenu = useCallback((button: HTMLButtonElement) => {
+    if (!selectedSession || selectedSession.transient || titleActionBusyRef.current) return;
+    if (getDomMenu()?.opener === button) { closeDomMenu(); return; }
+    const session = selectedSession;
+    const archived = titleArchiveActions?.archivedIds.includes(session.id) ?? false;
+    const show = (fileManager: { supported: boolean; platform?: string } | null) => {
+      const unavailable = (label: string, reason: string): Extract<NativeMenuEntry, { kind?: "item" }> => ({ label, disabled: true, disabledReason: reason });
+      const entries: NativeMenuEntry[] = [
+        { kind: "submenu", label: translate("titleMenu.openIn"), items: [
+          { label: translate("titleMenu.newWindow"), shortcut: "1", disabled: desktopMode, disabledReason: desktopMode ? translate("titleMenu.nativeWindowUnavailable") : undefined, onSelect: () => {
+            const url = new URL(window.location.pathname, window.location.origin);
+            url.searchParams.set("session", session.id);
+            // Keep the browser open synchronous with the user gesture; the detached
+            // same-origin window cannot retain access to its opener.
+            const opened = window.open(url.href, "_blank");
+            if (opened) opened.opener = null;
+            else setTitleActionError(translate("titleMenu.popupBlocked"));
+          } },
+          { kind: "separator" },
+          { ...unavailable("VS Code", translate("sidebar.editorUnavailable")), shortcut: "2" },
+          { label: fileManager?.platform === "darwin" ? "Finder" : translate("titleMenu.explorer"), shortcut: "3", disabled: !desktopMode && !fileManager?.supported, disabledReason: !desktopMode && !fileManager?.supported ? translate(fileManager ? "sidebar.fileManagerUnavailable" : "titleMenu.checkingFileManager") : undefined, onSelect: () => void runTitleAction(async () => {
+            if (desktopMode) return revealItemInDirNative(session.cwd);
+            const response = await fetch("/api/open-in-explorer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cwd: session.cwd }) });
+            if (!response.ok) { const data = await response.json().catch(() => ({})) as { error?: string }; throw new Error(data.error ?? `HTTP ${response.status}`); }
+          }) },
+        ] },
+        { kind: "separator" },
+        { label: translate("titleMenu.rename"), shortcut: "R", onSelect: () => setTitleRename({ session, value: session.name ?? "" }) },
+        { label: translate("titleMenu.fork"), shortcut: "F", disabled: runningSessionIds.has(session.id), disabledReason: runningSessionIds.has(session.id) ? translate("sidebar.forkBusy") : undefined, onSelect: () => void runTitleAction(async () => {
+          const sourceGeneration = titleActionContextRef.current.generation;
+          const response = await fetch(`/api/sessions/${encodeURIComponent(session.id)}?tree=summary`, { cache: "no-store" });
+          const data = await response.json() as { leafId?: string; error?: string };
+          if (!response.ok || !data.leafId) throw new Error(data.error ?? translate("sidebar.forkUnavailable"));
+          const fork = await sendAgentCommand<{ cancelled?: boolean; newSessionId?: string }>(session.id, { type: "fork_branch", entryId: data.leafId });
+          if (fork?.cancelled || !fork?.newSessionId) throw new Error(translate("sidebar.forkUnavailable"));
+          const childResponse = await fetch(`/api/sessions/${encodeURIComponent(fork.newSessionId)}?tree=summary`, { cache: "no-store" });
+          const child = await childResponse.json() as { info?: SessionInfo; error?: string };
+          if (!childResponse.ok || !child.info) throw new Error(child.error ?? translate("sidebar.forkUnavailable"));
+          setRefreshKey((key) => key + 1);
+          if (titleActionContextRef.current.generation === sourceGeneration) handleSelectSession(child.info);
+        }) },
+        { kind: "separator" },
+        { kind: "submenu", label: translate("titleMenu.transcriptView"), items: ["normal", "thinking", "verbose"].map((name) => unavailable(translate(`titleMenu.${name}`), translate("titleMenu.transcriptUnavailable"))) },
+        { kind: "submenu", label: translate("titleMenu.outputStyle"), items: [
+          ...["default", "proactive", "concise", "explanatory", "learning"].map((name) => unavailable(translate(`titleMenu.${name}`), translate("titleMenu.outputUnavailable"))),
+          { kind: "separator" }, unavailable(translate("titleMenu.newStyle"), translate("titleMenu.outputUnavailable")),
+        ] },
+        { kind: "separator" },
+        { label: translate(archived ? "titleMenu.restore" : "titleMenu.archive"), shortcut: "A", disabled: !titleArchiveActions, onSelect: () => titleArchiveActions?.setArchived(session.id, !archived) },
+        { label: translate("titleMenu.delete"), shortcut: "D", danger: true, onSelect: () => setTitleDeleteSession(session) },
+      ];
+      openDomMenu(entries, menuPointBelow(button), "conversation", { label: translate("titleMenu.actions"), opener: button });
+    };
+    show(titleFileManager);
+  }, [selectedSession, titleArchiveActions, desktopMode, titleFileManager, runningSessionIds, translate, runTitleAction, handleSelectSession]);
+
+  const performTitleDelete = useCallback(() => {
+    if (!titleDeleteSession) return;
+    const session = titleDeleteSession;
+    void runTitleAction(async () => {
+      const response = await fetch(`/api/sessions/${encodeURIComponent(session.id)}`, { method: "DELETE" });
+      if (!response.ok) { const data = await response.json().catch(() => ({})) as { error?: string }; throw new Error(data.error ?? `HTTP ${response.status}`); }
+      setTitleDeleteSession(null);
+      if (activeSessionIdRef.current === session.id) handleSessionDeleted(session.id);
+      else setRefreshKey((key) => key + 1);
+    });
+  }, [titleDeleteSession, runTitleAction, handleSessionDeleted]);
+
   const handleOpenFile = useCallback((
     filePath: string,
     fileName: string,
@@ -1823,6 +1979,7 @@ export function AppShell() {
         onInitialRestoreDone={handleInitialRestoreDone}
         refreshKey={refreshKey}
         onSessionDeleted={handleSessionDeleted}
+        onArchiveActionsChange={handleArchiveActionsChange}
         selectedCwd={selectedSession?.cwd ?? newSessionCwd ?? null}
         onCwdChange={handleCwdChange}
         onProjectsChange={handleProjectsChange}
@@ -2099,9 +2256,17 @@ export function AppShell() {
             </button>
           )}
           <div className="app-topbar-title" title={topBarTitle}>
-            <span>{topBarTitle}</span>
-            <small>{topBarSubtitle}</small>
-            <PilaudeIcon name="chevron" size={14} />
+            {selectedSession && !scheduledOpen && !welcomeOpen && <svg className="app-topbar-title-project-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3.5 4.5h13v9h-13zM2.5 13.5h15v2h-15z" strokeLinejoin="round" /></svg>}
+            {titleRename ? <input ref={titleRenameInputRef} className="app-topbar-title-rename" aria-label={translate("titleMenu.rename")} value={titleRename.value} onChange={(event) => setTitleRename((current) => current ? { ...current, value: event.target.value } : null)} onBlur={commitTitleRename} onKeyDown={(event) => {
+              if (isImeComposing(event)) { event.stopPropagation(); return; }
+              if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); commitTitleRename(); }
+              if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); titleRenameCommitRef.current = true; setTitleRename(null); titleMenuButtonRef.current?.focus({ preventScroll: true }); }
+            }} /> : selectedSession && !scheduledOpen && !welcomeOpen ? <button type="button" className="app-topbar-title-name" title={translate("titleMenu.rename")} disabled={selectedSession.transient || titleActionBusy} onClick={() => setTitleRename({ session: selectedSession, value: selectedSession.name ?? "" })}>{topBarTitle}</button> : <span>{topBarTitle}</span>}
+            {selectedSession && !scheduledOpen && !welcomeOpen && <button ref={titleMenuButtonRef} type="button" className="app-topbar-title-trigger" aria-label={translate("titleMenu.actions")} aria-haspopup="menu" aria-expanded={titleMenuOpen} aria-busy={titleActionBusy || undefined} disabled={selectedSession.transient || titleActionBusy} onClick={(event) => openTitleMenu(event.currentTarget)} onKeyDown={(event) => {
+              if (isImeComposing(event)) { event.stopPropagation(); return; }
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); openTitleMenu(event.currentTarget); }
+            }}><PilaudeIcon name="chevron" size={14} /></button>}
+            {topBarSubtitle && <small className="app-topbar-title-project">{topBarSubtitle}</small>}
           </div>
           {showChat && !scheduledOpen && !welcomeOpen && projectTrust?.requiresTrust && !projectTrust.trusted && (
             <button
@@ -3173,6 +3338,21 @@ export function AppShell() {
       />
     )}
     <UpdateReminder onOpenSettings={() => setSettingsSection("general")} />
+    {titleActionError && <div className="app-topbar-title-action-error native-popover" role="alert"><span>{titleActionError}</span><button type="button" className="native-icon-button" aria-label={translate("common.close")} onClick={() => setTitleActionError(null)}>×</button></div>}
+    {titleDeleteSession && createPortal(<div className="app-topbar-title-delete-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !titleActionBusyRef.current) setTitleDeleteSession(null); }}>
+      <div ref={titleDeleteDialogRef} className="app-topbar-title-delete-dialog native-popover" role="alertdialog" aria-modal="true" aria-labelledby="title-menu-delete-heading" aria-describedby="title-menu-delete-description" tabIndex={-1} onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+        if (!buttons.length) { event.preventDefault(); return; }
+        const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        if ((event.shiftKey && at <= 0) || (!event.shiftKey && (at < 0 || at === buttons.length - 1))) { event.preventDefault(); buttons[event.shiftKey ? buttons.length - 1 : 0]?.focus(); }
+      }}>
+        <h2 id="title-menu-delete-heading">{translate("titleMenu.deleteHeading")}</h2>
+        <p id="title-menu-delete-description">{translate("titleMenu.deleteDescription", { title: titleDeleteSession.name || titleDeleteSession.firstMessage || titleDeleteSession.id })}</p>
+        {titleActionError && <p role="alert">{titleActionError}</p>}
+        <div className="app-topbar-title-delete-actions"><button type="button" disabled={titleActionBusy} onClick={() => setTitleDeleteSession(null)}>{translate("common.cancel")}</button><button type="button" className="is-danger" disabled={titleActionBusy} onClick={performTitleDelete}>{translate(titleActionBusy ? "titleMenu.deleting" : "titleMenu.delete")}</button></div>
+      </div>
+    </div>, document.body)}
     <DomContextMenuHost />
     </div>
     </>

@@ -126,16 +126,16 @@
     },
     "components/SessionSidebar.tsx": {
       "risk": "high",
-      "drift": 3271,
-      "reason": "New opens the existing home independently of project selection; project + remains a new-session action. Stable project-root notifications avoid render loops. Preserve extracted project selection, overflow-only full-name tooltips and accessible rows. Session actions depend on fork-owned pin/group/archive/unread metadata, source-leaf fork_branch semantics and capability-aware destinations. Persisted pin ranks and Alt+Arrow reorder only displayed pinned persisted roots in the same project/group bucket, preserving families, focus, exclusions and storage synchronization. Status precedence must retain authoritative needsInputSessionIds, blue unread and hollow idle without substituting notification history for pending blocking UI.",
-      "structuralDrift": 2737,
+      "drift": 3284,
+      "reason": "New opens the existing home independently of project selection; project + remains a new-session action. Stable project-root notifications avoid render loops. Preserve extracted project selection, overflow-only full-name tooltips and accessible rows. Session actions depend on fork-owned pin/group/archive/unread metadata, source-leaf fork_branch semantics and capability-aware destinations. Persisted pin ranks and Alt+Arrow reorder only displayed pinned persisted roots in the same project/group bucket, preserving families, focus, exclusions and storage synchronization. Title archive actions register this existing family-metadata writer; zero title matches must not suppress active content search. Status precedence must retain authoritative needsInputSessionIds, blue unread and hollow idle without substituting notification history for pending blocking UI.",
+      "structuralDrift": 2750,
       "disposition": "accepted"
     },
     "components/AppShell.tsx": {
       "risk": "high",
-      "drift": 2466,
-      "reason": "New navigates to the existing welcome view through Next-integrated local history while retaining the session/composer mount and draft identity; view=new survives reload, and home hides session Context and toolbar actions. Files (including Artifact), Terminal, real session-family tasks and Changes use stable sibling WorkspacePaneDock hosts with independent selection and hidden rather than remounted panes; Context cards remain independent. Preserve layout restoration, unique responsive controls, focus/workspace guards, terminal lifecycle and scoped acknowledged Changes feedback into drafts without submitting a model request.",
-      "structuralDrift": 2061,
+      "drift": 2639,
+      "reason": "New uses the existing welcome view with Next-integrated history while retaining the chat/composer mount and draft identity. Files/Artifact, Terminal, real family tasks and Changes retain stable sibling pane hosts; Context stays independent. Title-menu actions reuse rename, source-leaf fork, sidebar family archive and confirmed delete with generation/current-selection guards; missing runtime destinations stay explicitly unavailable. Preserve synchronous browser open, native capability checks, stacked Escape/IME/focus, layout restoration, terminal lifecycle and scoped acknowledged Changes feedback without model submission.",
+      "structuralDrift": 2225,
       "disposition": "accepted"
     },
     "components/FileViewer.tsx": {
@@ -157,8 +157,8 @@
       "reason": "Terminal appearance/theme and pane visibility preserve xterm/PTY instances and ordered input. Mounted tabs share the fork-owned terminal-events client/route so HTTP/1 SSE connections cannot starve input; per-ID replay cursors, reconnect leases, explicit-close/restart and the original 15s request deadline must survive upstream changes."
     },
     "hooks/useAgentSession.ts": {
-      "risk": "high", "drift": 451, "structuralDrift": 451, "disposition": "accepted",
-      "reason": "Session streaming, navigation generations and request settlement already diverge substantially from upstream. Queue callbacks now bind their source session ID and generation so delayed reference resolution cannot submit into another chat; preserve rejection-only draft recovery and never replay accepted or ambiguous requests."
+      "risk": "high", "drift": 474, "structuralDrift": 474, "disposition": "accepted",
+      "reason": "Session streaming, navigation generations and request settlement diverge from upstream. Preserve event-owned running tool IDs, parallel start/update/end membership, indexed thinking/text activity and Stop/error cleanup with retained partial output. Periodic reconciliation may retain proven matching growing-tail activity; mount/reconnect snapshots establish none. Queue callbacks remain bound to source session and generation; preserve rejection-only recovery and never replay accepted or ambiguous requests."
     },
     "hooks/useKeyboardShortcuts.ts": {
       "risk": "medium", "drift": 64, "structuralDrift": 64, "disposition": "accepted",
@@ -185,9 +185,9 @@
     },
     "components/ChatWindow.tsx": {
       "risk": "high",
-      "drift": 753,
-      "reason": "The empty-state branding header stays removed. Preserve real user-turn anchors, reveal of the existing history render window, truthful Session start availability, reduced-motion navigation and cancellation of pending jumps on session/branch changes. Extension-dialog option Enter/Space ignores IME composition; Escape stops propagation before its IME check so candidate dismissal cannot reach global Stop or respond to the pending request. Keep the existing permission policy and response transport.",
-      "structuralDrift": 629,
+      "drift": 935,
+      "reason": "The empty-state branding header stays removed. Live and historical process entries share the key tracker, retain manual expansion, render each streaming entry once and leave the actual final answer outside. Preserve indexed activity, canonical versus partial tool results, pending/error counts including apply_patch failures, single-visible-shimmer arbitration and original-index search reveal. Keep real turn anchors, the existing history render window, navigation gutter and session/branch jump cancellation. Extension-dialog Enter/Space ignores IME; Escape is contained before its composition check. Permission policy and response transport remain authoritative.",
+      "structuralDrift": 787,
       "disposition": "accepted"
     },
     "hooks/useTheme.ts": {
@@ -230,9 +230,9 @@
     },
     "components/MessageView.tsx": {
       "risk": "high",
-      "drift": 619,
-      "reason": "Message bubble markup, truthful actions and user-image rendering differ from upstream. Explicit tool-call trigger, preview, metadata and chevron class hooks support neutral hover without recoloring success/error labels or diff contents. ThinkingBlock mounts the fork-owned ThinkingDisclosure Grid adapter while retaining product expansion preference, deferred-history fetch/retry and source content. Preserve early-close isolation and existing IME handling without adding a synthetic block-active indicator, forced-live expansion, source clipboard actions or simulated timing. Keep source image order, natural contain geometry, independent text placement and actual preview indexes; this does not establish full source-component or Windows parity.",
-      "structuralDrift": 383,
+      "drift": 756,
+      "reason": "Message bubble markup, truthful actions and user-image rendering differ from upstream. Tool rows consume per-ID running/partial state, current-turn pending versus interrupted history, real failure reveal/manual dismissal and original-source copy controls. ThinkingBlock retains product expansion preference, deferred-history index/fetch/retry and early-close isolation through ThinkingDisclosure. Exact active thinking/text indexes control shimmer and caret; preserve relevant memo membership and search targets without forced-live expansion or simulated timing. Neutral hover preserves semantic status/diff colors. Keep source image order, natural bounds and actual preview indexes; full component/Windows parity remains separate.",
+      "structuralDrift": 492,
       "disposition": "accepted"
     },
     "lib/i18n/registry.ts": {
@@ -260,6 +260,10 @@
       "drift": 7,
       "reason": "Adds ignores for the desktop build output directories.",
       "disposition": "accepted"
+    },
+    "lib/streaming-message.ts": {
+      "risk": "medium", "drift": 73, "structuralDrift": 73, "disposition": "accepted",
+      "reason": "Indexed thinking/text start/delta/end drive exact activity; successors, terminal events and explicit cancellation clear it without discarding partial content. Continuous reconciliation can retain already-proven matching growing-tail activity only; default mount/reconnect snapshots never infer it. Preserve immutable normalization and shared-partial start reset semantics."
     },
     "lib/rpc-manager.ts": {
       "risk": "high",
@@ -373,6 +377,11 @@
     "THIRD_PARTY_NOTICES.md",
     "docs/pilaude-component-adoption.md",
     "docs/pilaude-ui-parity.md",
+    "docs/pilaude-agent-output-ui.md",
+    "e2e/activity-disclosure.mjs",
+    "e2e/conversation-navigator-layout.mjs",
+    "e2e/sidebar-content-search.mjs",
+    "e2e/title-conversation-menu.mjs",
     "lib/sidebar-session-metadata.ts",
     "lib/sidebar-session-metadata.test.mjs",
     "components/DomContextMenuHost.tsx",
@@ -528,6 +537,7 @@
     "2026-10-18 \u2014 New is a Next-integrated local home view that retains the chat/draft mount; project + keeps its new-session behavior. Project-root notifications use a stable ordered-path key to avoid render loops. The optional Pi catalogue fills the existing install form without auto-installing packages. Remeasured at 6fcd7d4: AppShell 2466 total/2061 structural, SessionSidebar 3240/2706 remain high; PluginsConfig 4/4 remains low. Modified TypeScript totals are 2117 cosmetic/11764 structural. Thresholds remain 30/250; fixed-grid ripple, revision-aware selection and extension contract checkers are fork-owned.",
     "2026-10-18 — Changes adopts exact react-diff-view 3.3.3 through the fork-owned ReviewDiff consumer and review-diff-renderer parse/tokenize/markEdits adapter; git-review-display retains product selection and feedback policy. Remove deleted review-syntax paths and register the new renderer, tests and root third-party notices. At baseline 6fcd7d4, layout measures 28 total/25 structural and remains low; package.json has 69 nonblank changed lines, including npm notice inclusion, and now records 69 structural at medium rather than retaining its stale 13-line low entry. The already fork-owned prepare-desktop script copies the root notice into resources/server for all desktop platforms. Modified TypeScript totals are 2117 cosmetic/11765 structural. Preserve the 30/250 thresholds and reviewed medium/high overlaps. Runtime-library attribution and acceptance are separate from open-claude-ui adoption counts; targeted renderer and domain regressions pass, while full visual/native acceptance remains pending.",
     "2026-10-19 — MessageView ThinkingBlock mounts the fork-owned ThinkingDisclosure adapter and test for ThinkingAccordion's Grid 0fr/1fr, 200ms cubic-bezier(.19,1,.22,1) mechanism from open-claude-ui author source 638800b8a4cee4513c8763c3df0ecf8a77b32379 (MIT). Preserve product expansion preference, deferred-history fetch/retry, early-close cancellation and IME behavior; no block-active wire flag is added, so there is no active indicator or forced-live expansion, nor source clipboard/timer behavior. MessageView measures 610 total/383 structural against 6fcd7d4 and remains high under unchanged 30/250 thresholds. Nine actual-page groups now pass the bounded Grid adoption; full source-component and Windows visual acceptance remain pending. After the separate IME freeze, ChatWindow measures 753 total/629 structural, still high: extension option Enter/Space ignores composition and Escape is contained before the IME guard, without changing permission policy or response transport. Combined modified TypeScript totals are 2139 cosmetic/11810 structural.",
-    "2026-10-19 — CodeBlock mounts fork-owned CodeCopyButton for open-claude-ui 2500ms/saved-check-decay feedback with real clipboard settlement, retry, timer cleanup and stale-result isolation; preserve Prism, streaming, exact whitespace and Mermaid actions. MarkdownBody empty code children remain empty. Pin ranks and source-backed adjacent Alt+Arrow moves update only displayed same-bucket persisted roots; successful moves expand capped previews in the same event batch to retain keyed focus. Ordinary hover uses neutral light-gray/dark-white tokens with explicit tool class hooks and preserves status/diff colors. At baseline 6fcd7d4: SessionSidebar 3271 total/2737 structural remains high, MessageView 619/383 remains high, MermaidBlock 123/113 and MarkdownBody 196/194 are accepted medium. Shared e2e/run.mjs records 173 nonblank changed lines and medium review. Modified TypeScript totals 2149 cosmetic/11859 structural; thresholds stay 30/250. Bounded actual checks and regressions pass; full E2E and native visual acceptance remain separate."
+    "2026-10-19 — CodeBlock mounts fork-owned CodeCopyButton for open-claude-ui 2500ms/saved-check-decay feedback with real clipboard settlement, retry, timer cleanup and stale-result isolation; preserve Prism, streaming, exact whitespace and Mermaid actions. MarkdownBody empty code children remain empty. Pin ranks and source-backed adjacent Alt+Arrow moves update only displayed same-bucket persisted roots; successful moves expand capped previews in the same event batch to retain keyed focus. Ordinary hover uses neutral light-gray/dark-white tokens with explicit tool class hooks and preserves status/diff colors. At baseline 6fcd7d4: SessionSidebar 3271 total/2737 structural remains high, MessageView 619/383 remains high, MermaidBlock 123/113 and MarkdownBody 196/194 are accepted medium. Shared e2e/run.mjs records 173 nonblank changed lines and medium review. Modified TypeScript totals 2149 cosmetic/11859 structural; thresholds stay 30/250. Bounded actual checks and regressions pass; full E2E and native visual acceptance remain separate.",
+    "2026-10-19 — Event-owned activity indexes and parallel running-tool membership feed one visible ShimmerText consumer; partial output never proves completion and continuous reconciliation preserves only already-proven matching growing-tail activity. Live/history process grouping preserves keys, manual/error disclosure and original-index search; title menus reuse existing actions with asynchronous generation guards, family archive writer and truthful unavailable capabilities. Navigation uses a top-left track with an independent body gutter, and zero-title-match content search remains reachable. At baseline 6fcd7d4: SessionSidebar 3284 total/2750 structural, AppShell 2639/2225, ChatWindow 935/787, MessageView 756/492 and useAgentSession 474/474 remain high; streaming-message is newly recorded medium at 73/73. Modified TypeScript totals 2210 cosmetic/12399 structural. Register the checklist and four generated-boundary browser checkers as fork-owned. Integrated 267 regressions, type/lint and bounded actual activity/navigation/menu/search checks pass; height/entry/state transitions, disabled menu capabilities, full E2E and native/visual acceptance remain pending. Baseline and 30/250 thresholds stay unchanged."
   ]
 }

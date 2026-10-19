@@ -16,7 +16,10 @@ export interface DomMenuState {
   entries: NativeMenuEntry[];
   /** Viewport coordinates (the right-click position). */
   at: { x: number; y: number };
-  appearance?: "terminal" | "session";
+  appearance?: "terminal" | "session" | "conversation";
+  label?: string;
+  /** Focus returns here for keyboard dismissal; pointer dismissal keeps the clicked target. */
+  opener?: HTMLElement;
 }
 
 type Listener = () => void;
@@ -41,9 +44,9 @@ export function domMenuEntries(entries: NativeMenuEntry[]): NativeMenuEntry[] {
   return out;
 }
 
-export function openDomMenu(entries: NativeMenuEntry[], at: { x: number; y: number }, appearance?: "terminal" | "session"): void {
+export function openDomMenu(entries: NativeMenuEntry[], at: { x: number; y: number }, appearance?: DomMenuState["appearance"], options?: Pick<DomMenuState, "label" | "opener">): void {
   const tidy = domMenuEntries(entries);
-  current = tidy.length > 0 ? { id: ++sequence, entries: tidy, at, ...(appearance ? { appearance } : {}) } : null;
+  current = tidy.length > 0 ? { id: ++sequence, entries: tidy, at, ...(appearance ? { appearance } : {}), ...options } : null;
   emit();
 }
 

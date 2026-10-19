@@ -7,6 +7,8 @@ export type NativeMenuEntry =
       onSelect?: (modifiers?: { shiftKey?: boolean }) => void;
       disabled?: boolean;
       disabledReason?: string;
+      /** A displayed menu access key, active only while this panel has focus. */
+      shortcut?: string;
       danger?: boolean;
       /** Renders a check mark; `true`/`false` both make it a check item. */
       checked?: boolean;
