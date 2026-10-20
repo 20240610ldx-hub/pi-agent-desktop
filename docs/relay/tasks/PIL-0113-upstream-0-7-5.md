@@ -3,10 +3,10 @@ id: PIL-0113
 title: 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）
 epic: E0
 priority: P0
-status: todo
-owner:
-lease_until:
-branch:
+status: in_progress
+owner: claude:sonnet-xhigh:impl
+lease_until: 2026-10-20T14:45Z
+branch: task/PIL-0113-upstream-0-7-5
 implementers: [claude:sonnet-xhigh:impl]
 depends_on: []
 files_allowed: ["**"]
@@ -55,3 +55,4 @@ waivers: []
 - 2026-10-20T11:44Z · planner · 创建
 - 2026-10-20T11:50Z · claude:opus-medium:coord · 写入目标、背景与验收；fork main 由本机 sync.ps1 补同步（GitHub Actions 同步因 release.yml 需 workflows 权限 422 失败）。用户已说"开工"。
 - 2026-10-20T11:45Z · planner · 冻结验收标准 28d865bcb364
+- 2026-10-20T11:45Z · claude:sonnet-xhigh:impl · 领取，租约至 2026-10-20T14:45Z
