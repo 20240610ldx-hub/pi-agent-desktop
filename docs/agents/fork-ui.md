@@ -29,7 +29,7 @@ The Projects header's hover-only `…` menu switches between `grouped` (project 
 
 ## Settings dialog: one tab per concern
 - The sidebar gear opens Settings directly through `openSettingsAtLastSection`, the same entry used by the keyboard shortcut. First use opens General; subsequent visits restore the last available section. Category navigation lives inside Settings; do not restore an intermediate section menu.
-- The settings dialog's tabs are exactly `general`, `models`, `skills`, `agents`, `plugins` (`SETTINGS_SECTION_VALUES`). The former `desktop` tab duplicated General's language and theme pickers, so it was removed: the product blurb and Version & Updates sit at the top of General, the custom-stylesheet and diff-display controls joined General's appearance/chat sections, and the desktop window/tray switches live in `components/desktop/DesktopAppSection.tsx`, which renders nothing in a browser (same self-hiding contract as `WindowControls`). `components/AppUpdatesSection.tsx` owns the update check and its chips.
+- The settings sections are `general`, `appearance`, `models`, `skills`, `agents`, `plugins`, `mcp` (`SETTINGS_SECTION_VALUES`). Appearance is available without a project and owns mode, background and the custom stylesheet through `AppearanceSettings.tsx`. General keeps language, chat controls, product/version information and the self-hiding desktop window/tray switches (`components/desktop/DesktopAppSection.tsx`). Do not duplicate appearance controls in General or reintroduce the former Desktop tab. `components/AppUpdatesSection.tsx` owns the update check and its chips.
 - A signed desktop update installs and relaunches the app, so `AppUpdatesSection` reports `busy` up to `SettingsPanel`, which keeps backdrop clicks and Escape from dismissing the dialog mid-upgrade. That is the reason for the `onBusyChange` prop; don't drop it when refactoring the panel.
 - `UpdateReminder` opens the panel at `general`, where the update status now lives. `components/fork-extractions.test.mjs` pins that the update/desktop code stays in those fork-owned files instead of being regrouped into `SettingsPanel.tsx`.
 
@@ -57,3 +57,23 @@ The topbar renders exactly ONE toolbar group (`app-topbar-actions`: history/bran
 - `ComposerOutbox` 把待发送消息贴在输入框上沿；每条消息支持立即发送、取回编辑、删除。窄窗口操作使用图标和完整无障碍标签，触屏点击范围至少 44px；不使用彩色描边区分队列模式。
 - 立即发送通过 SDK prompt admission 的 `steer` 在下一个可接收指令的时机引导当前任务，不承诺强制中断正在进行的工具调用。编辑通过 `restoreSubmission` 合并到原会话草稿，保留已有输入与图片。
 - 验证：`node e2e/composer-outbox.mjs`，覆盖深浅色、1280/390/320 宽度、换行同心圆角、排队/编辑/删除/引导、页面刷新及停止后的队列状态。
+
+
+## 外观与背景
+
+外观页提供花瓣、薄雾、草地、黄昏、纯色五种背景卡片，明暗模式独立选择。
+卡片预览和实际背景共用 `native-theme.css` 的 `--wash-*`，选中用蓝色边缘及圆点。
+`useBackground` 负责即时显示、串行保存与过期读取保护，`/api/appearance` 将选择保存到
+Pi Web 自身的 `pi-web/settings.json`，保留其他字段；端口改变后从该文件恢复。
+`THEME_INIT_SCRIPT` 先使用浏览器缓存避免刷新闪烁。相关回归：`node e2e/appearance.mjs`。
+
+## 设置选项细节
+
+`ConfigSidebarList` 与 `.config-sidebar-group` 都按共享 `--choice-*` 留距；模型供应商的
+子项容器同样使用 `.config-sidebar-group`，不能重新引入零间距或行内 margin。
+分段控件共用 `--segment-*`（2px 内衬和间隔，5px 内圆角、7px 外圆角），涵盖明暗、语言、
+发送快捷键、Diff 和作用域。选中状态在鼠标悬停自身或相邻项时必须保持；键盘焦点与禁用语义保留。
+`node e2e/settings-controls.mjs` 测量真实设置组件，不只断言 CSS 字符串。
+
+输入框加号沿第一行文字居中；SVG、占位文字和实际文字用同一行高计算。加号不是字符，
+不能用字形基线偏移来补偿；多行仍保留右下发送按钮的同心几何。几何回归覆盖全部字号范围。
