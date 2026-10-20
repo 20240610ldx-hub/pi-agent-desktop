@@ -10,7 +10,9 @@ import { userHome } from "./user-home";
  * What a chat (the hidden, non-project workspace) may and may not do.
  *
  * A chat loads the same extensions, skills, prompt templates and MCP servers as a
- * project session, so a skill or an MCP tool works there. What it never gets is the
+ * project session, so a skill or an MCP tool works there (an MCP server is configured by
+ * the user and is trusted like an extension: its tools may write files or run commands, and
+ * the prompt says so). What it never gets of its own is the
  * user's filesystem or a shell: the coding tools that write, run or search are blocked
  * outright, and `read` opens only skill files, files the user named by path in their own
  * messages, and files the chat saved (lib/chat-file-access.ts). Whatever else the user
@@ -75,9 +77,9 @@ export function chatUnavailableToolReason(toolName: string): string {
 
 const CHAT_PROMPT_INTRO = `You are a helpful, knowledgeable assistant in a desktop chat app. Answer directly and accurately, and ask a clarifying question only when the request is genuinely ambiguous. Reply in the language the user writes in, and use Markdown when it makes the answer easier to read.`;
 
-const CHAT_PROMPT_FILES = `This is a general chat, not a project. You cannot run shell commands or edit files on the user's computer. The user can attach images and files to a message; what they attach is included in the message itself. You can read a file only when the user writes its full path in their own message, and you can save a file they ask for into their Downloads folder with save_to_downloads (a file name only, never overwriting). You may use the tools and skills made available to you, such as MCP servers. When the task needs a shell or editing a project, tell the user to open a project instead.`;
+const CHAT_PROMPT_FILES = `This is a general chat, not a project. You have no shell and no file editing of your own. The user can attach images and files to a message; what they attach is included in the message itself. You can read a file only when the user writes its full path in their own message, and you can save a file they ask for into their Downloads folder with save_to_downloads (a file name only, never overwriting). You may use the tools and skills made available to you. Tools from MCP servers the user has set up can do more than read: some write files or run commands, so use those only for what the user asked and say what you did. When the task needs a shell or editing a project, tell the user to open a project instead.`;
 
-const CHAT_PROMPT_NO_FILES = `This is a general chat, not a project. You cannot see the user's files, run shell commands or edit anything on their computer. The user can attach images and files to a message; what they attach is included in the message itself. You may use the tools and skills made available to you, such as MCP servers. When the task needs files or a shell, tell the user to open a project instead.`;
+const CHAT_PROMPT_NO_FILES = `This is a general chat, not a project. You have no access of your own to the user's files and no shell. The user can attach images and files to a message; what they attach is included in the message itself. You may use the tools and skills made available to you. Tools from MCP servers the user has set up can do more than read: some write files or run commands, so use those only for what the user asked and say what you did. When the task needs files or a shell, tell the user to open a project instead.`;
 
 /** The chat preamble; the file lines apply only where the server may touch the user's files. */
 export function chatWorkspacePrompt(filesEnabled: boolean): string {

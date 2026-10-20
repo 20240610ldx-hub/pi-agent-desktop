@@ -82,8 +82,11 @@ Client checks are affordances only; the server enforces the policy
 (`lib/chat-workspace-policy.ts`).
 
 A chat loads extensions, skills, prompt templates and the codemode / tool-search /
-MCP built-ins like a project session, but the user's files and shell are reachable only
-in two narrow, user-bound ways (below):
+MCP built-ins like a project session, but the chat's own file and shell access is limited
+to two narrow, user-bound ways (below). MCP tools are the exception by decision: a server
+the user configured is trusted like an extension, so its tools are not limited to
+read-only (`createReadOnlyMcpPolicyExtension` is not loaded in a chat), and the chat prompt
+and the composer hint say that they may write files or run commands:
 
 - Default tools (`CHAT_DEFAULT_TOOL_NAMES`): `read` (confined), `codemode`, `tool_search`,
   `save_to_downloads`, the read-only web tools (`web_search`, `fetch_content`,
