@@ -1,6 +1,7 @@
 import { closeSync, mkdirSync, openSync, realpathSync, statSync, writeSync } from "node:fs";
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { splitAttachedFiles } from "./chat-attachments";
 import { userHome } from "./user-home";
 
 /**
@@ -131,9 +132,13 @@ export class ChatFileGrants {
   private readonly saved = new Set<string>();
   private scannedSession = false;
 
-  /** Record the paths a user message names. */
+  /**
+   * Record the paths a user message names. Attached files travel inside the message as
+   * `<attached_file>` blocks, but their text is someone else's (a downloaded document, a
+   * web page), not the user's words, so a path inside one grants nothing.
+   */
   noteUserText(text: string): void {
-    for (const path of extractUserNamedPaths(text)) {
+    for (const path of extractUserNamedPaths(splitAttachedFiles(text).text)) {
       if (this.named.size >= MAX_NAMED_PATHS) break;
       this.named.add(path);
     }

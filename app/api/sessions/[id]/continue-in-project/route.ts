@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { NextResponse } from "next/server";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
@@ -53,7 +53,15 @@ export async function POST(
     // pi restores the tool loadout the transcript declares, which for a chat is `read` and
     // `codemode` only, so the chat's system messages stay behind.
     const copiedFile = manager.getSessionFile();
-    if (copiedFile) forgetChatSystemPrompt(copiedFile);
+    if (copiedFile) {
+      try {
+        forgetChatSystemPrompt(copiedFile);
+      } catch (error) {
+        // A copy that still carries the chat's prompt and tool limits would be a broken project session.
+        rmSync(copiedFile, { force: true });
+        throw error;
+      }
+    }
     allowFileRoot(cwd);
     invalidateSessionListCache();
     return NextResponse.json({
@@ -82,7 +90,9 @@ function forgetChatSystemPrompt(file: string): void {
       return null;
     }
   });
-  if (entries.some((entry) => entry === null)) return;
+  if (entries.some((entry) => entry === null)) {
+    throw new Error("This chat's transcript is damaged and cannot be continued in a project");
+  }
   const parents = new Map<string, string | null>();
   const kept = (entries as Record<string, unknown>[]).filter((entry) => {
     const message = entry.message as { role?: string } | undefined;

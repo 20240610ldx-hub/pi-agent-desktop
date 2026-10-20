@@ -128,7 +128,10 @@ address (`isNetworkExposedServer`).
   (`extractUserNamedPaths`: absolute, `~/`, `file://`, Windows drive paths; bare, or quoted
   when they contain spaces) from `before_agent_start` events of type `user` and, once per
   reopened chat, from the transcript's user messages. Tool results, web pages and the
-  model's own text never grant anything. A grant is a candidate: at read time it must
+  model's own text never grant anything, and neither does an attached file: its
+  `<attached_file>` block is cut out (`splitAttachedFiles`) before the scan, because its text
+  is someone else's. Composer attachments live in the draft (`ChatDraft.files`, memory only,
+  never in localStorage), so they stay with the chat they were attached in. A grant is a candidate: at read time it must
   resolve (through `realpath`) to the requested existing regular file. Credentials and keys
   are never readable even when named (`isSensitivePath`: `~/.ssh`, `~/.aws`, `~/.gnupg`,
   `.netrc`/`.npmrc`, Pi's own `*.json` settings and keys).

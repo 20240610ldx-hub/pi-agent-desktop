@@ -47,6 +47,7 @@ import {
   extractDocxText,
   formatAttachmentSize,
   readChatTextAttachments,
+  splitMessageForComposer,
   type ChatAttachmentRejection,
   type ChatTextAttachment,
 } from "@/lib/chat-attachments";
@@ -860,7 +861,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>(() => (
     draftKey ? draftImagesToAttachedImages(getDraft(draftKey)?.images) : []
   ));
-  const [attachedFiles, setAttachedFiles] = useState<ChatTextAttachment[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<ChatTextAttachment[]>(() => (
+    draftKey ? getDraft(draftKey)?.files ?? [] : []
+  ));
   const attachedFilesRef = useRef(attachedFiles);
   attachedFilesRef.current = attachedFiles;
   const projectLabel = getProjectLabel(projectPath, projectOptions);
@@ -944,12 +947,16 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     replaceMessage(message: UserMessage) {
       const ta = textareaRef.current;
       const current = ta ? ta.value : value;
-      if (!canRestoreUserMessage(current, attachedImagesRef.current.length, pendingImageCountRef.current)) return;
+      if (!canRestoreUserMessage(current, attachedImagesRef.current.length + attachedFilesRef.current.length, pendingImageCountRef.current)) return;
 
-      const restoredText = getUserMessageText(message);
+      // The message's attached files come back as attachments, not as markup in the text.
+      const split = splitMessageForComposer(getUserMessageText(message));
+      const restoredText = split.text;
       const restoredImages = draftImagesToAttachedImages(getUserMessageDraftImages(message));
       valueRef.current = restoredText;
       attachedImagesRef.current = restoredImages;
+      attachedFilesRef.current = split.files;
+      setAttachedFiles(split.files);
       setValue(restoredText);
       setAtQuery(null);
       setHashQuery(null);
@@ -994,9 +1001,11 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       const currentDraft = {
         value: valueRef.current,
         images: attachedImagesRef.current.map(imageToDraftImage),
+        files: attachedFilesRef.current,
       };
       const moved = rekeyStoredDraft(previousKey, nextKey, currentDraft) ?? { value: "", images: [] };
       const unchanged = moved.value === currentDraft.value
+        && (moved.files?.length ?? 0) === currentDraft.files.length
         && moved.images.length === currentDraft.images.length
         && moved.images.every((image, index) => (
           image.data === currentDraft.images[index]?.data
@@ -1008,6 +1017,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       const movedImages = draftImagesToAttachedImages(moved.images);
       valueRef.current = moved.value;
       attachedImagesRef.current = movedImages;
+      attachedFilesRef.current = moved.files ?? [];
+      setAttachedFiles(attachedFilesRef.current);
       setValue(moved.value);
       setAttachedImages((current) => {
         current.forEach(revokeImagePreview);
@@ -1017,7 +1028,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       setHistoryMenuOpen(false);
     },
     restoreSubmission(text: string, images?: ChatDraftImage[], targetDraftKey?: string) {
-      if (!text.trim() && !images?.length) return;
+      // A queued or rejected message carries its files as markup; they return as attachments.
+      const { text: typedText, files: submittedFiles } = splitMessageForComposer(text);
+      if (!typedText.trim() && !images?.length && !submittedFiles.length) return;
 
       // clearInput is queued before the submission handler runs. Compose with
       // that queued state so a fast rejection cannot observe stale DOM text and
@@ -1029,12 +1042,14 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         ? getDraft(destinationDraftKey)
         : null;
       const restoredDraft = mergeRestoredSubmissionDraft(
-        text,
+        typedText,
         images,
         targetsCurrentComposer ? valueRef.current : (storedDraft?.value ?? ""),
         targetsCurrentComposer
           ? attachedImagesRef.current.map(imageToDraftImage)
           : (storedDraft?.images ?? []),
+        submittedFiles,
+        targetsCurrentComposer ? attachedFilesRef.current : storedDraft?.files,
       );
       // The first optimistic message switches ChatWindow out of its empty-state
       // layout and remounts this component. Persist synchronously so recovery is
@@ -1054,8 +1069,10 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       // functional updates below, so update the imperative snapshot first.
       valueRef.current = restoredDraft.value;
       attachedImagesRef.current = restoredImages;
+      attachedFilesRef.current = restoredDraft.files ?? [];
+      setAttachedFiles(attachedFilesRef.current);
       setValue((current) => {
-        const restored = mergeRestoredSubmissionText(text, current);
+        const restored = mergeRestoredSubmissionText(typedText, current);
         valueRef.current = restored;
         return restored;
       });
@@ -1109,11 +1126,19 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       processImageFiles(files);
     },
     async addTextFiles(files: File[]) {
+      // Reading a Word file asks the server, so the user may have moved to another chat by
+      // the time it answers: the files belong to the chat they were attached in.
+      const startedIn = draftKeyRef.current;
       const { accepted, rejected } = await readChatTextAttachments(files, attachedFilesRef.current, extractDocxText);
       if (accepted.length > 0) {
-        const next = [...attachedFilesRef.current, ...accepted];
-        attachedFilesRef.current = next;
-        setAttachedFiles(next);
+        if (draftKeyRef.current === startedIn) {
+          const next = [...attachedFilesRef.current, ...accepted];
+          attachedFilesRef.current = next;
+          setAttachedFiles(next);
+        } else if (startedIn) {
+          const stored = getDraft(startedIn) ?? { value: "", images: [] };
+          setDraft(startedIn, { ...stored, files: [...(stored.files ?? []), ...accepted] });
+        }
       }
       return rejected;
     },
@@ -1214,8 +1239,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     setDraft(draftKey, {
       value,
       images: attachedImages.map(imageToDraftImage),
+      files: attachedFiles,
     });
-  }, [attachedImages, draftKey, value]);
+  }, [attachedFiles, attachedImages, draftKey, value]);
 
   useEffect(() => {
     const previousDraftKey = draftKeyRef.current;
@@ -1225,6 +1251,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       setDraft(previousDraftKey, {
         value: valueRef.current,
         images: attachedImagesRef.current.map(imageToDraftImage),
+        files: attachedFilesRef.current,
       });
     }
 
@@ -1232,8 +1259,11 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     draftKeyRef.current = draftKey;
     const nextValue = draft?.value ?? "";
     const nextImages = draftImagesToAttachedImages(draft?.images);
+    const nextFiles = draft?.files ?? [];
     valueRef.current = nextValue;
     attachedImagesRef.current = nextImages;
+    attachedFilesRef.current = nextFiles;
+    setAttachedFiles(nextFiles);
     setValue(nextValue);
     setAtQuery(null);
     setHashQuery(null);

@@ -1,10 +1,10 @@
 import { realpathSync } from "node:fs";
-import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { InlineExtension, LoadExtensionsResult } from "@earendil-works/pi-coding-agent";
 import { isMcpTool } from "./mcp-read-only-policy";
 import { isSensitivePath, type ChatFileGrants } from "./chat-file-access";
 import { SAVE_TO_DOWNLOADS_TOOL_NAME } from "./chat-downloads-tool";
+import { userHome } from "./user-home";
 
 /**
  * What a chat (the hidden, non-project workspace) may and may not do.
@@ -123,8 +123,8 @@ function safeRealpath(path: string): string | null {
 function expandPath(rawPath: string, cwd: string): string {
   let value = rawPath.trim();
   if (value.startsWith("@")) value = value.slice(1);
-  if (value === "~") value = homedir();
-  else if (value.startsWith("~/") || value.startsWith("~\\")) value = join(homedir(), value.slice(2));
+  if (value === "~") value = userHome();
+  else if (value.startsWith("~/") || value.startsWith("~\\")) value = join(userHome(), value.slice(2));
   return isAbsolute(value) ? resolve(value) : resolve(cwd, value);
 }
 

@@ -229,6 +229,26 @@ export function splitAttachedFiles(content: string): SplitAttachedFiles {
   return { text: text.replace(/\n{3,}/g, "\n\n").trim(), files };
 }
 
+let restoredFileCounter = 0;
+
+/**
+ * A submitted message back as composer content: the typed text, and its attached-file
+ * blocks as attachments again (fresh ids), so editing or restoring a message never puts
+ * the files' markup into the text box.
+ */
+export function splitMessageForComposer(content: string): { text: string; files: ChatTextAttachment[] } {
+  const { text, files } = splitAttachedFiles(content);
+  return {
+    text,
+    files: files.map((file) => ({
+      id: `restored-${Date.now().toString(36)}-${(restoredFileCounter += 1)}`,
+      name: file.name,
+      size: new TextEncoder().encode(file.text).length,
+      text: file.text,
+    })),
+  };
+}
+
 /** A short label for a session list or tab: the typed text, else the file names. */
 export function attachmentAwareTitle(content: string): string {
   const { text, files } = splitAttachedFiles(content);

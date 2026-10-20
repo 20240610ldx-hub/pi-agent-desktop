@@ -40,7 +40,7 @@ async function assertChoiceGeometry(surface,rows,label){
 }
 try{
  for(const theme of ['dark','light'])for(const width of [1280,390,320]){
-  const page=await browser.newPage({viewport:{width,height:720},hasTouch:width===320,isMobile:width===320,deviceScaleFactor:2,reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width,height:720},hasTouch:width===320,isMobile:width===320,deviceScaleFactor:2,reducedMotion:'reduce'});await page.addInitScript(()=>Object.defineProperty(navigator,'platform',{get:()=>'Linux x86_64'}));/* the vertical Settings navigation is the Windows/Linux layout; macOS draws it as tabs */const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(theme=>{localStorage.setItem('pi-locale','zh-CN');localStorage.setItem('pi-theme',theme);},theme);
   await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());await page.goto(base);
   await page.evaluate(theme=>document.documentElement.classList.toggle('dark',theme==='dark'),theme);
@@ -112,6 +112,14 @@ try{
   assert.equal(starStyle.border,'0px');assert.equal(starStyle.bg,'rgba(0, 0, 0, 0)');assert.equal(starStyle.shadow,'none');
   await star.click();await low.locator('.app-default-star.is-default').waitFor();
   assert.equal(await low.locator('[role="option"]').getAttribute('aria-selected'),'true','saved reasoning is applied through the existing callback');
+  // The star is reachable and usable from the keyboard: Right from a row, Enter to save, Left back.
+  const medium=reasoningRows.filter({has:page.getByRole('option',{name:/^medium\b/})});
+  await medium.getByRole('option').focus();await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(()=>document.activeElement?.classList.contains('app-default-star'));
+  await page.keyboard.press('ArrowLeft');await page.waitForFunction(()=>document.activeElement?.getAttribute('role')==='option');
+  await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
+  await medium.locator('.app-default-star.is-default').waitFor();
+  await page.waitForFunction(()=>document.activeElement?.getAttribute('role')==='option','keyboard focus stays in the menu after saving');
   await page.getByRole('listbox').screenshot({path:`test-results/ui-send/selection-reasoning-${theme}-${width}.png`});
   await page.keyboard.press('Escape');
   await page.locator('textarea').click();
