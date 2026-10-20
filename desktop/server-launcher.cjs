@@ -24,6 +24,21 @@ for (const stream of [process.stdout, process.stderr]) {
   };
 }
 
+// Reuse V8's compiled code across launches. The server loads a few hundred
+// modules (Next, the pi SDK) and compiling them is most of its cold-start time;
+// with the cache a relaunch skips that. Needs Node 22.1+, and a cache that
+// cannot be created or read only costs the speed-up.
+try {
+  const cacheDir = process.env.PI_DESKTOP_COMPILE_CACHE_DIR;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nodeModule = require("node:module");
+  if (cacheDir && typeof nodeModule.enableCompileCache === "function") {
+    nodeModule.enableCompileCache(cacheDir);
+  }
+} catch (cacheError) {
+  console.error("[Pi Agent] compile cache unavailable:", cacheError);
+}
+
 const expectedParentPid = Number.parseInt(process.env.PI_WEB_PARENT_PID ?? "", 10);
 
 // A normal App quit is handled by the Rust shell. This small watchdog also

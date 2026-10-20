@@ -51,7 +51,7 @@ import {
 } from "@/lib/workspace-state";
 import { useDesktopWorkspaceTabs } from "@/hooks/useDesktopWorkspaceTabs";
 import { useWorkspaceAvailability } from "@/hooks/useWorkspaceAvailability";
-import { WindowControls, useDesktopChrome, useWindowDrag } from "./desktop";
+import { WindowControls, useDesktopChrome, useReportDesktopReady, useWindowDrag } from "./desktop";
 import { SystemPromptPanel } from "./SystemPromptPanel";
 import { ToolDefinitionsPanel } from "./ToolDefinitionsPanel";
 import { AgentSessionPanel } from "./AgentSessionPanel";
@@ -1663,6 +1663,9 @@ export function AppShell() {
     : selectedSession?.cwd ?? effectiveNewSessionCwd;
   // While restoring initial session from URL, don't show the placeholder
   const showPlaceholder = initialSessionRestored && !showChat;
+  // No chat to wait for: the placeholder is the final first screen. (A restored
+  // chat reports from ChatWindow once its history has loaded.)
+  useReportDesktopReady(showPlaceholder, "placeholder");
 
   useDesktopWorkspaceTabs({
     desktopMode,
