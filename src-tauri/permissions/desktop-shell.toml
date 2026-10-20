@@ -49,6 +49,11 @@ description = "Allows the UI to report that its first screen is ready, which sho
 commands.allow = ["app_ready"]
 
 [[permission]]
+identifier = "allow-window-painted"
+description = "Allows the UI to report that it painted after the window came back from hidden."
+commands.allow = ["window_painted"]
+
+[[permission]]
 identifier = "allow-set-ui-theme"
 description = "Allows the UI to persist light/dark theme for the next cold start."
 commands.allow = ["set_ui_theme"]

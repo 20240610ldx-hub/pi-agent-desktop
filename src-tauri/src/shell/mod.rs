@@ -83,12 +83,26 @@ pub fn schedule_reveal_after_page_load(app: &AppHandle) {
 pub fn show_main_window(app: &AppHandle) {
     MAIN_WINDOW_REVEALED.store(true, Ordering::SeqCst);
     if let Some(window) = app.get_webview_window(WINDOW_LABEL) {
+        #[cfg(target_os = "macos")]
+        if window_appkit::show_hidden_window_masked(app, &window) {
+            return;
+        }
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
         #[cfg(target_os = "macos")]
         window_appkit::refresh_traffic_lights(&window);
     }
+}
+
+/// The page presented its frames after the window came back from hidden: lift
+/// the alpha mask (macOS; nothing to do elsewhere).
+#[tauri::command]
+pub fn window_painted(app: AppHandle) {
+    #[cfg(target_os = "macos")]
+    window_appkit::end_paint_mask(&app, "painted");
+    #[cfg(not(target_os = "macos"))]
+    let _ = app;
 }
 
 pub fn quit_application(app: &AppHandle) {

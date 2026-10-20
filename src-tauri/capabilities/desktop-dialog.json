@@ -27,6 +27,7 @@
     "allow-quit-app",
     "allow-show-main-window-cmd",
     "allow-app-ready",
+    "allow-window-painted",
     "allow-set-ui-theme",
     "allow-clear-app-cache",
     "allow-get-desktop-api-token"
