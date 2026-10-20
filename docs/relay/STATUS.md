@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 25 张任务卡：todo 24 · in_progress 0 · verify 0 · review 0 · done 0 · blocked 0 · parked 1
+共 26 张任务卡：todo 25 · in_progress 0 · verify 0 · review 0 · done 0 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
@@ -41,6 +41,7 @@
 | --- | --- | --- | --- | --- | --- |
 | PIL-0001 | P0 | E0 | 接力治理落地与工作树分流 | 是 | — |
 | PIL-0002 | P0 | E0 | 建立可信的测试基线并逐项登记已知失败 | 是 | — |
+| PIL-0113 | P0 | E0 | 合入上游 abcwyc main 2026-10-20（desktop 0.7.5） | 是 | — |
 | PIL-0010 | P1 | E2 | Changes 面板在独立 Windows 窗口打开 | 是 | PIL-0001 |
 | PIL-0014 | P1 | E2 | 把组件复刻基准拆成逐组件任务卡 | 是 | — |
 | PIL-0030 | P1 | E4 | 统一执行前授权并接入 pi-permission-system | 是 | PIL-0001 |
