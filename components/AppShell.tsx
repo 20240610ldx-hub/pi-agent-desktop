@@ -25,6 +25,7 @@ const TerminalPanel = dynamic(() => import("./TerminalPanel").then((m) => m.Term
 const ScheduledView = dynamic(() => import("./scheduled/ScheduledView").then((m) => m.ScheduledView), { ssr: false });
 import { openFileTab, saveFileViewerState } from "./file-tab-state";
 import { SettingsPanel } from "./SettingsPanel";
+import { keepDocumentTitle } from "@/lib/document-title";
 import { ProjectTrustDialog, type ProjectTrustFailure } from "./ProjectTrustDialog";
 import { BranchNavigator, hasSessionBranches } from "./BranchNavigator";
 import { UpdateReminder } from "./UpdateReminder";
@@ -1787,16 +1788,7 @@ export function AppShell() {
       ? `${activeCwdName} - ${PRODUCT_NAME}`
       : PRODUCT_NAME;
 
-  useEffect(() => {
-    const syncWindowTitle = () => {
-      if (document.title !== windowTitle) document.title = windowTitle;
-    };
-
-    syncWindowTitle();
-    const observer = new MutationObserver(syncWindowTitle);
-    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, [windowTitle]);
+  useEffect(() => keepDocumentTitle(document, windowTitle), [windowTitle]);
 
   // Settings + collapse controls at the sidebar's own top-right (Claude Desktop
   // style). When the sidebar is closed, the topbar shows a reopen button.

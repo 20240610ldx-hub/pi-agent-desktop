@@ -135,6 +135,7 @@ jobs:
             - A path written inside an attached file no longer lets the chat read that file; only paths you type yourself count.
             - The default reasoning level can be saved from the keyboard (arrow right to the star, then Enter).
             - `dev:lan` and `start:lan` now mark the server as network-exposed, which switches off chats reading and saving files on this computer.
+            - Opening Settings from a chat whose first message contains a double space no longer freezes the app.
 
             Bundled components: pi 1.3.0, pi-web 0.10.0.
 
@@ -161,6 +162,7 @@ jobs:
             - 附件内容中写出的路径不再让对话获得读取该文件的权限，只有你自己输入的路径才算数。
             - 默认推理级别现在可以用键盘保存（方向键右移到星标，再按 Enter）。
             - `dev:lan` 与 `start:lan` 现在会把服务标记为对外开放，从而关闭对话读取和保存本机文件的能力。
+            - 修复：当对话的第一条消息含连续空格时，点击设置会导致应用卡死。
 
             内置组件版本：pi 1.3.0、pi-web 0.10.0。
           releaseDraft: true
