@@ -23,7 +23,11 @@ jobs:
     steps:
       - name: Merge the original author's main branch
         env:
-          GH_TOKEN: ${{ github.token }}
+          # GITHUB_TOKEN cannot update files under .github/workflows/, so an upstream
+          # change to any workflow makes merge-upstream fail with HTTP 422. A
+          # fine-grained PAT (Contents + Workflows: write on this fork) in the
+          # UPSTREAM_SYNC_TOKEN secret covers that case.
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
           UPSTREAM_REPOSITORY: abcwyc/pi-agent-desktop
         run: |
           set -euo pipefail
@@ -35,4 +39,7 @@ jobs:
       - name: Report a failed sync
         if: failure()
         run: |
-          echo 'Upstream sync failed. Review the run log for merge conflicts or permission errors before retrying.' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo 'Upstream sync failed. Review the run log for merge conflicts or permission errors before retrying.'
+            echo 'If the log says "without `workflows` permission", upstream changed a workflow file: add a fine-grained PAT with Contents and Workflows write access as the UPSTREAM_SYNC_TOKEN secret, or sync from a machine whose gh login has the workflow scope.'
+          } >> "$GITHUB_STEP_SUMMARY"
