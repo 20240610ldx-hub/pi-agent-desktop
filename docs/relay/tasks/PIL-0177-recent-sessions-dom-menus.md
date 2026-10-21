@@ -44,6 +44,7 @@ waivers: [R1]
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | ls lib/recent-sessions* 无文件；git grep -n recent-sessions 仅命中 docs/merge-history.md 历史、STATUS/任务卡、SessionSidebar.test.mjs 的 doesNotMatch 负向断言，代码无引用；guard 显示 R1 已豁免 | 通过 | D:/pilaude/relay-evidence/PIL-0177/verify/A1.log | 418cb12 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T07:10Z · planner · 创建
@@ -52,3 +53,4 @@ waivers: [R1]
 - 2026-10-21T06:56Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-21T09:56Z
 - 2026-10-21T07:16Z · codex-plus:gpt-xhigh:impl · 做了：删除 recent-sessions 与测试；AGENTS.md/fork-desktop.md 改为菜单默认走 DOM 并保留 Rust 硬规则、订正 DirectoryPicker/SessionSearch 说法；merge-history 一行；ChatInput 只改注释 / 状态：提交见分支 tip；npm test 新增失败 0（基线 12）、tsc/lint/guard 0（仅已豁免 R1）/ 下一步：验证 / 风险：无
 - 2026-10-21T07:16Z · codex-plus:gpt-xhigh:impl · in_progress → verify
+- 2026-10-21T07:21Z · claude:sonnet-high:verify · 证据 A1：通过
