@@ -68,3 +68,4 @@ waivers: []
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：AppShell*.test.mjs、WorkspacePaneControls.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字；G8 A3 写明走 DOM、不开原生弹出；背景按 PIL-0177 改写
 - 2026-10-21T12:38Z · planner · 冻结验收标准 b4a7bde4eca4
+- 2026-10-21T12:49Z · claude:opus-medium:planner · PIL-0180 评审非阻断意见：set_keep_awake 失败（尤其 PowerClearRequest 失败时句柄已释放但返回 Err）后，UI 应重新查询 keep_awake_status 再显示状态，不沿用旧 enabled。实现本卡保持唤醒入口时落实。
