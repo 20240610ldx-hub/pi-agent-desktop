@@ -25,13 +25,11 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 100 张任务卡：todo 94 · in_progress 0 · verify 0 · review 1 · done 4 · blocked 0 · parked 1
+共 100 张任务卡：todo 94 · in_progress 0 · verify 0 · review 0 · done 5 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
-| ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
-| --- | --- | --- | --- | --- | --- | --- |
-| PIL-0187 | P1 | review | 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定） | claude:opus-medium:impl | 已过期 2026-10-21T11:07Z | task/PIL-0187-baseline-3-1623 |
+（无）
 
 ### 阻塞
 
@@ -136,7 +134,7 @@
 | PIL-0176 | P2 | E2 | 复刻验收：C62 环境变量编辑子页 | 否 | PIL-0014, PIL-0173, PIL-0181, PIL-0182 |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
-### 已完成（4）
+### 已完成（5）
 
-PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown；PIL-0177 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
+PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown；PIL-0187 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）；PIL-0177 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
 <!-- relay:board:end -->

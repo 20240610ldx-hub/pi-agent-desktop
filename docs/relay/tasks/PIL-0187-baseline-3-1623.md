@@ -3,9 +3,9 @@ id: PIL-0187
 title: 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）
 epic: E2
 priority: P1
-status: review
+status: done
 owner: claude:opus-medium:impl
-lease_until: 2026-10-21T11:07Z
+lease_until:
 branch: task/PIL-0187-baseline-3-1623
 implementers: [claude:opus-medium:impl]
 depends_on: []
@@ -57,3 +57,4 @@ GOALS E2 的组件复刻参照版本从 Windows Claude Desktop 2.42304.0 改为 
 - 2026-10-21T11:50Z · claude:sonnet-high:verify · verify → review
 - 2026-10-21T11:50Z · claude:sonnet-high:verify · 做了：独立验证 A1（diff 阅读）、A2（单行改动、check、guard）均通过 / 状态：提交 34bbe6c，A1、A2 通过，已送 review / 下一步：评审者复核，组件卡与 parity-index 版本文字待规划修订轮 / 风险：卡片租约已过期（警告），R6 为用户批准豁免
 - 2026-10-21T11:51Z · claude:opus-high:review · 做了：评审 34bbe6c（git diff 34bbe6c^ 34bbe6c；分支相对 fusion/pi-claude-desktop 仅 GOALS.md 1 行），复跑 guard（仅 WAIVED R6）与 check（仅租约过期警告） / 状态：评审通过——第17行参照版本改为 3.1623.0.0 并注明 2026-10-21 用户决定，忠实表达用户决定；旧 2.42304.0 仅作历史参考、不混作同版本；「只接主题或功能可用不算复刻通过」原文保留（仅前置标点由；改为。，语义不变）；采样记录只泛指为私有参考的采样记录，无路径或分辨率/DPI 等私有内容；其他目标未改动、未放宽；A1、A2 证据行与 diff、提交 34bbe6c 一致；无 R4/R5/R10 警告项 / 下一步：协调者合入 / 风险：组件卡与 parity-index 的版本文字仍为 2.42304.0，需规划修订轮同步，否则卡片与 GOALS 暂时不一致；租约已过期（仅警告）
+- 2026-10-21T11:51Z · claude:opus-high:review · review → done（评审 claude:opus-high:review）
