@@ -43,7 +43,7 @@ objc2-foundation = { version = "0.3", default-features = false, features = ["std
 ksni = "0.2.2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security_Cryptography"] }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_Power", "Win32_System_Threading"] }
 
 [features]
 default = ["custom-protocol"]

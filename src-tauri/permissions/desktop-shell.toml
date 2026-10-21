@@ -97,3 +97,13 @@ commands.allow = ["show_popup_menu"]
 identifier = "allow-clear-app-cache"
 description = "Allows the UI to clear the webview's disk caches and learn how many bytes were freed."
 commands.allow = ["clear_app_cache"]
+
+[[permission]]
+identifier = "allow-keep-awake-status"
+description = "Allows the main window to query whether this app holds a keep-awake request."
+commands.allow = ["keep_awake_status"]
+
+[[permission]]
+identifier = "allow-set-keep-awake"
+description = "Allows the main window to start or stop this app's system keep-awake request."
+commands.allow = ["set_keep_awake"]
