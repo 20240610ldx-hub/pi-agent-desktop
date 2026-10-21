@@ -50,6 +50,7 @@ waivers: []
 | A2 | 同上测试；层级=夹具+真实 SDK：源以 SLOW 流式输出中（isRunning=true）触发，源仍在跑、期间无 agent_end；新会话不含 part-one/SLOW-DONE，仅含已完成条目与草稿；放行后源出现 agent_end，末条助手文本完整 'part-one part-two SLOW-DONE'、stopReason=stop，草稿未进入源；子会话自行发 1 次请求 | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log | 1ee7898 | claude:sonnet-high:verify |
 | A3 | 同上测试；层级=夹具。未持久化→source_not_persisted（真实无文件会话，无请求）；源不存在→source_not_found；shell_running（在真实 wrapper 上注入 isBashRunning=true，无分叉文件、0 请求）；fork_write_failed（注入 writeFork 抛错，0 请求、无子文件）；session_start_failed（注入 startSession 抛错，保留分叉并带 newSessionId）；prompt_rejected（真实子会话 prompt 路径因 shell 标志被拒，保留分叉、草稿未写入、源条目数不变、0 请求）。均 promptSent:false。变异验证：去掉 shell 检查时 2 例失败。后三类触发手段为注入，非自然故障 | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log; D:/pilaude/relay-evidence/PIL-0189/verify/mutant-M4-noshellcheck.log | 1ee7898 | claude:sonnet-high:verify |
 | A4 | 同上测试；层级=夹具+真实 SDK：提前中止无分叉；startSession 后中止→aborted、保留分叉并上报 newSessionId、0 请求，同键重试复用该分叉并只发 1 条提示；同键并发两次→1 个分叉文件/1 次请求，接受后再重试 0 新文件 0 新请求；异键并发两次→2 个分叉/2 次请求。变异验证：去单飞、去结果缓存、去发送前中止检查各使对应 A4 用例失败（M1/M2/M3） | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log; D:/pilaude/relay-evidence/PIL-0189/verify/mutant-M1-nosingleflight.log; D:/pilaude/relay-evidence/PIL-0189/verify/mutant-M2-noresultcache.log; D:/pilaude/relay-evidence/PIL-0189/verify/mutant-M3-noabortbeforesend.log | 1ee7898 | claude:sonnet-high:verify |
+| A5 | 同上测试；层级=夹具+真实 SDK：源固定 toolNames=[read,grep] 且 thinking=high，尾部有未回应的 toolCall；子会话 cwd/模型/思考强度/工具集与源一致（无 bash/edit/write），子会话无待批 UI、无 toolResult 条目（未执行/未批准）。源‘待批请求’是直接写入 wrapper 的 pendingUiRequests/Responses（夹具，非真实扩展弹窗），断言其仍待批且 resolver 未被调用、源文件无变化 | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log | 1ee7898 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -63,3 +64,4 @@ waivers: []
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A4：通过
+- 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A5：通过
