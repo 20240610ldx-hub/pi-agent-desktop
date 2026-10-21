@@ -193,6 +193,16 @@
     }
   },
   "forkOwnedPaths": [
+    "lib/installed-fonts.ts",
+    "lib/system-fonts.ts",
+    "lib/installed-fonts.test.mjs",
+    "app/api/desktop/fonts/",
+    "components/FontSettings.tsx",
+    "hooks/useFonts.ts",
+    "lib/font-preferences.ts",
+    "lib/font-preferences.test.mjs",
+    "lib/font-settings.ts",
+    "app/api/appearance/fonts/",
     "src-tauri/",
     "desktop/",
     "scripts/",

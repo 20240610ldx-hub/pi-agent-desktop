@@ -61,6 +61,20 @@ The topbar renders exactly ONE toolbar group (`app-topbar-actions`: history/bran
 
 ## 外观与背景
 
+外观页的 `FontSettings` 分别选择界面与代码字体；常用字体通过共享 `AppSelect` 选择，
+自定义名称显式应用，恢复默认时移除界面设置的覆盖，让原有 `custom.css` 重新接管。
+`useFonts` 在 AppShell 生命周期中恢复配置、即时应用并串行保存到
+`pi-web/settings.json` 的 `fonts`，旧读取不能覆盖新选择；失败保留本地预览并提供重试。
+`FONT_INIT_SCRIPT` 只从本地缓存恢复首屏，服务器选择负责跨端口恢复。
+界面字体同时覆盖标题，代码字体更新已有 xterm 的字体与尺寸，不重建终端会话。
+字体名称为单个本机 family，不下载字体，不改写用户样式表。
+桌面外观页通过 `listInstalledFontsNative()` 和受桌面进程 token 保护的 `/api/desktop/fonts`
+读取本机字体；Windows 使用系统字体集合及其本地化名称，macOS 使用 system_profiler，Linux 使用 fontconfig。
+两种字体选择器沿用 AppSelect 的菜单、键盘导航和间距，读取失败保留手动输入并提供重试。
+字体为默认值时隐藏恢复按钮，改动后显示可用的恢复操作；标题行保留高度。
+设置行的 `.settings-option-action` 使用 `align-self: center`，与多行说明整体居中。
+回归：`node e2e/fonts.mjs` 覆盖真实设置页、即时预览、保存/恢复、错误、菜单及按钮几何。
+
 外观页提供花瓣、薄雾、草地、黄昏、纯色五种背景卡片，明暗模式独立选择。
 卡片网格使用内容区可用宽度，默认桌面窗口五项排成一行；空间不足再换行，不能用固定宽度上限提前挤出第二行。
 卡片预览和实际背景共用 `native-theme.css` 的 `--wash-*`，选中用蓝色边缘及圆点。

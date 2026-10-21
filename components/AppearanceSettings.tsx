@@ -9,6 +9,7 @@ import { BACKGROUND_OPTIONS } from "@/lib/backgrounds";
 import { isTauriDesktop, openPathNative } from "@/lib/desktop-native";
 import { ConfigButton } from "./SettingsUi";
 import { ThemeIcon } from "./ThemeIcon";
+import { FontSettings } from "./FontSettings";
 
 export function AppearanceSettings() {
   const { t } = useI18n();
@@ -73,6 +74,8 @@ export function AppearanceSettings() {
           <ConfigButton variant="secondary" size="small" onClick={() => setBackground(background)}>{t("settings.backgroundRetry")}</ConfigButton>
         </p>}
       </section>
+
+      <FontSettings />
 
       <section className="settings-general-section">
         <div className="settings-option-list"><div className="settings-option">

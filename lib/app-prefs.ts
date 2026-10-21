@@ -8,6 +8,7 @@
 export const APP_PREF_KEYS = {
   theme: "pi-theme",
   background: "pi-background",
+  fonts: "pi-fonts",
   locale: "pi-locale",
   soundEnabled: "pi-sound-enabled",
   quoteSelectionEnabled: "pi-quote-selection-enabled",

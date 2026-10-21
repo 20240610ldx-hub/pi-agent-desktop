@@ -973,6 +973,7 @@
 
 .settings-option-action {
   flex-shrink: 0;
+  align-self: center;
 }
 
 .settings-option-list + .settings-option-action {
@@ -1038,12 +1039,15 @@
   /* Typography. "Noto Sans SC" backstops CJK on Linux builds (deb target in
      release.yml), which this stack otherwise has no CJK fallback for once it
      falls past the macOS/Windows-only names above it. */
-  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+  --font-ui-default: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
     "Segoe UI Variable", "Segoe UI", "Microsoft YaHei", "Noto Sans SC",
     sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+  --font-ui: var(--font-ui-default);
+  --font-display-default: -apple-system, BlinkMacSystemFont, "SF Pro Display",
     "PingFang SC", "Segoe UI Variable Display", "Segoe UI", "Noto Sans SC",
     sans-serif;
+
+  --font-display: var(--font-display-default);
 
   /* Shape, spacing and elevation */
   --radius-sm: 6px;
@@ -1774,8 +1778,9 @@ a:focus-visible {
 }
 
 :root {
-  --font-mono: ui-monospace, "SFMono-Regular", var(--font-noto-mono),
+  --font-mono-default: ui-monospace, "SFMono-Regular", var(--font-noto-mono, ui-monospace),
     "Cascadia Code", "JetBrains Mono", "Fira Code", Consolas, monospace;
+  --font-mono: var(--font-mono-default);
 }
 
 pre, code {
@@ -9145,7 +9150,54 @@ html.dark .settings-background-swatch {
   outline: 2px solid var(--menu-focus-ring);
   outline-offset: 3px;
 }
+
+.settings-font-heading-row {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.settings-font-heading-row .settings-general-heading { margin: 0; }
+.settings-font-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+  align-items: center;
+  gap: 12px 24px;
+  padding-block: 14px;
+}
+.settings-font-control { display: grid; min-width: 0; gap: 8px; }
+.settings-font-control .app-select-trigger { width: 100%; min-width: 0; }
+.settings-font-custom { display: flex; align-items: center; gap: 8px; }
+.settings-font-custom input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 10px;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--bg);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+.settings-font-custom input[aria-invalid="true"] { border-color: var(--danger); }
+.settings-font-custom .config-button { flex-shrink: 0; }
+.settings-font-preview {
+  display: grid;
+  gap: 6px;
+  padding: 16px 14px;
+  border-top: var(--hairline) solid var(--border);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.settings-font-preview p { margin: 0; }
+.settings-font-preview code { color: var(--text-muted); white-space: pre-wrap; }
+.settings-font-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 @media (max-width: 640px) {
+  .settings-font-option { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .settings-font-custom input { font-size: 16px; }
   .settings-background-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
   .settings-appearance .settings-theme-options { width: 100%; }
   .settings-appearance .settings-theme-option { flex: 1 1 0; padding-inline: 5px; gap: 0; }
