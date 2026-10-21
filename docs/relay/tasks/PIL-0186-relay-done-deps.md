@@ -3,7 +3,7 @@ id: PIL-0186
 title: 修复 relay set done 校验把 depends_on 误报为 unknown
 epic: E0
 priority: P1
-status: in_progress
+status: verify
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T10:25Z
 branch: task/PIL-0186-relay-done-deps
@@ -50,3 +50,4 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 - 2026-10-21T07:25Z · claude:opus-medium:planner · 用户 2026-10-21 在对话中选择「开卡修复，豁免 R6」，授权修改 scripts/relay.mjs 与 scripts/relay.test.mjs
 - 2026-10-21T07:25Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T10:25Z
 - 2026-10-21T07:32Z · claude:sonnet-high:impl · 做了：set done 改为在 loadAll 全量卡片上校验（本卡替换为 done 版本，仅保留本卡 error），relay.test.mjs 新增 2 个回归用例 / 状态：分支最后提交 6297bf3；A1 自测通过（relay.test 17/17，修复前新增用例红）、A2 既有断言未删改且通过、A3 lint 通过、guard 仅 R6 豁免；npm test 15 失败＝基线 12 同名＋3 个因共享 node_modules 缺 @radix-ui/react-select 的环境失败 / 下一步：验证 / 风险：npm test 的 pretest check:deps 因共享 junction node_modules 与 lock 不符直接失败，我用 --ignore-scripts 跑；那 3 个额外失败与本卡无关，证据在 relay-evidence/PIL-0186/impl/
+- 2026-10-21T07:32Z · claude:sonnet-high:impl · in_progress → verify
