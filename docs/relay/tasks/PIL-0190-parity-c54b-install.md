@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0014, PIL-0003, PIL-0110, PIL-0112]
 files_allowed: [components/AppUpdatesSection.tsx, components/UpdateReminder.tsx, components/AppUpdatesSection.test.mjs]
 files_shared: [components/desktop/DesktopAppSection.tsx, app/native-theme.css]
-acceptance_sha:
+acceptance_sha: 619ce281fdbb
 waivers: []
 ---
 
@@ -64,3 +64,4 @@ waivers: []
 
 - 2026-10-21T12:21Z · planner · 创建（由 PIL-0168 拆出：下载/安装/失败/重启部分，保留 0003/0110/0112 依赖）
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：新建：C54b 下载/安装/失败/重启（由 PIL-0168 拆出，保留 0003/0110/0112 依赖）
+- 2026-10-21T12:39Z · planner · 冻结验收标准 619ce281fdbb
