@@ -51,6 +51,7 @@ waivers: []
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
 | A1 | git log -1 --format='%P' (parents 11df970 dca3f6c); git merge-base --is-ancestor dca3f6c HEAD rc=0; git diff --check HEAD rc=0; no conflict markers via git grep | 通过 | D:/pilaude/relay-evidence/PIL-0113/verify/A1.log | 8389681 | claude:sonnet-high:verify |
+| A2 | node --test <6 files> => 92/93 pass; 1 fail scripts/release-workflows.test.mjs 'diff renderer notice retains exact installed licenses' (exit 1; same failure and same message on pre-merge 11df970 baseline: THIRD_PARTY_NOTICES.md is CRLF under autocrlf=true so block regex finds 0 blocks, and with LF normalization the rpiv-todo license entry still has no From-block, so it is independent of the merge). Declined-UI grep: ExtensionStatusBar/ChatMinimap(code)/getSessionListIndices/sidebar-sections(handle) absent; DirectoryPicker.tsx and SessionSearch.tsx still exist and are used but identical usage on 11df970 (not reintroduced by merge); identity (productName/identifier/updater endpoint) unchanged vs 11df970 | 失败 | D:/pilaude/relay-evidence/PIL-0113/verify/A2-tests.log; D:/pilaude/relay-evidence/PIL-0113/verify/A2-tests-baseline.log; D:/pilaude/relay-evidence/PIL-0113/verify/A2-declined-grep.log; D:/pilaude/relay-evidence/PIL-0113/verify/A2-marker-counts.log; D:/pilaude/relay-evidence/PIL-0113/verify/A2-identity.log | 8389681 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-20T11:44Z · planner · 创建
@@ -62,3 +63,4 @@ waivers: []
 - 2026-10-21T05:03Z · claude:opus-medium:planner · 范围 ["**", **] → [**]：移除残留的带引号 glob
 - 2026-10-21T05:05Z · claude:sonnet-xhigh:impl · in_progress → verify：合并提交 8389681；实现自测见卡片日志
 - 2026-10-21T05:22Z · claude:sonnet-high:verify · 证据 A1：通过
+- 2026-10-21T05:22Z · claude:sonnet-high:verify · 证据 A2：失败
