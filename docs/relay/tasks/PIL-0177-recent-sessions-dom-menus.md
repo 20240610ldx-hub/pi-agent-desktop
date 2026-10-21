@@ -50,3 +50,4 @@ waivers: [R1]
 - 2026-10-21T07:11Z · claude:opus-medium:planner · 用户 2026-10-21 决定删除 recent-sessions（R1 豁免）、菜单全走 DOM；合并 PIL-0113 评审非阻断项 1、2、5 与 AGENTS 清单订正。
 - 2026-10-21T06:56Z · planner · 冻结验收标准 6e4cea828ac8
 - 2026-10-21T06:56Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-21T09:56Z
+- 2026-10-21T07:16Z · codex-plus:gpt-xhigh:impl · 做了：删除 recent-sessions 与测试；AGENTS.md/fork-desktop.md 改为菜单默认走 DOM 并保留 Rust 硬规则、订正 DirectoryPicker/SessionSearch 说法；merge-history 一行；ChatInput 只改注释 / 状态：提交见分支 tip；npm test 新增失败 0（基线 12）、tsc/lint/guard 0（仅已豁免 R1）/ 下一步：验证 / 风险：无
