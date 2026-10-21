@@ -8,36 +8,36 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: []
-files_allowed: []
+depends_on: [PIL-0180]
+files_allowed: [src-tauri/src/shell/platform_tray.rs, src-tauri/src/shell/mod.rs]
 files_shared: []
-acceptance_sha:
+acceptance_sha: 93fcef9363a2
 waivers: []
 ---
 
 ## 目标
 
-一到三句话：完成后用户能做什么、产品哪里变了。写明对应 [GOALS](../GOALS.md) 的哪一条。
+Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit_app` 相同的退出路径（停止本地服务、触发 RunEvent::Exit、释放 keep-awake 等退出清理）。对应 GOALS E11 Windows 基线。
 
 ## 背景与现状
 
-只写接手者开工需要的事实：现有代码位置、已知失败、相关文档段落链接。不写历史流水账。
+- PIL-0180 实机验证（2026-10-21，desktop:dev）：托盘 Quit 后窗口消失，但 `pi-agent-desktop.exe` 进程仍存活，desktop.log 无 `exit` 行，keep-awake 请求仍在；同一构建 F12 调用 `quit_app` 则正常退出并写 `exit` 行。证据：`relay-evidence/PIL-0180/verify/quit-investigation.txt`、`user-4-quit.txt`、`user-5-quit-app.txt`、`quit-app-log.txt`。
+- 托盘 Quit 菜单项在 `src-tauri/src/shell/platform_tray.rs`（`quit_application_on_main_thread`），退出实现为 `src-tauri/src/shell/mod.rs` 的 `quit_application`。PIL-0180 未修改这两处。
 
 ## 验收标准
 
-每条可以被一个不了解实现过程的人独立判定通过或失败。写清验证方式。
-
-- [ ] A1 行为描述。验证：`具体命令` 退出码 0，或手动步骤 + 期望可见结果。
-- [ ] A2 失败/取消/恢复路径。验证：……
-- [ ] A3 `npm run lint`、`node_modules/.bin/tsc --noEmit` 与受影响测试文件通过；`node scripts/relay.mjs guard` 无阻断项。
+- [ ] A1 Windows 上从托盘菜单点「Quit Pilaude」后，`Get-Process pi-agent-desktop` 无进程，desktop.log 写入本次 `exit` 行，本地服务子进程无残留。验证：desktop:dev 或打包构建实机操作，记录进程列表前后对照与日志摘录。
+- [ ] A2 keep-awake 开启时用托盘 Quit 退出，管理员 `powercfg /requests` 的 SYSTEM 项不再有本进程。验证：用户管理员终端前后对照文件。
+- [ ] A3 关窗进托盘（非 Quit）仍保持进程与 keep-awake 不变；`quit_app` 命令路径行为不变。验证：同一构建实机对照。
+- [ ] A4 先写能在修复前失败的定向测试或可复现脚本说明根因（如菜单事件未到达、主线程调度丢失、server.stop 阻塞），修复后通过；`cargo test --manifest-path src-tauri/Cargo.toml`（受影响模块）、`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0197` 通过，guard 无阻断。
 
 ## 范围外
 
-明确不做的事，防止范围漂移。
+托盘菜单样式与 C52 复刻；Linux/macOS 托盘行为。
 
 ## 实现提示
 
-可选：建议入口文件、需要先读的 docs/agents 主题、已知坑。
+对比 `quit_app` 命令与托盘菜单事件进入 `quit_application` 的线程与时序；参考 docs/agents/fork-desktop.md。
 
 ## 证据
 
@@ -46,3 +46,4 @@ waivers: []
 
 ## 日志
 - 2026-10-21T12:46Z · planner · 创建
+- 2026-10-21T12:47Z · planner · 冻结验收标准 93fcef9363a2
