@@ -3,9 +3,9 @@ id: PIL-0113
 title: 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）
 epic: E0
 priority: P0
-status: review
+status: done
 owner: codex-plus:gpt-xhigh:impl
-lease_until: 2026-10-21T08:44Z
+lease_until:
 branch: task/PIL-0113-upstream-0-7-5
 implementers: [claude:sonnet-xhigh:impl, codex-plus:gpt-xhigh:impl]
 depends_on: []
@@ -95,3 +95,4 @@ waivers: []
 - 2026-10-21T06:50Z · claude:sonnet-high:verify · 证据 A6：通过
 - 2026-10-21T06:50Z · claude:sonnet-high:verify · verify → review
 - 2026-10-21T06:51Z · claude:opus-high:review · 评审通过：153789d 只在 scripts/release-workflows.test.mjs 的 homedir 守卫 guarded 列表加回 "lib/default-cwd.ts"（与两个父提交一致），B1 已解决，没有引入其他改动；复跑该文件 21/22，唯一失败是 PIL-0114 跟踪的许可声明用例，合并前基线同样失败。合并提交 8389681 的其余结论不变（见上一条评审日志）。接受的警告：R4 SettingsPanel.test 与上游 dca3f6c 字节一致；R5 desktop/server-launcher.cjs 的 eslint-disable 来自上游。保留意见（非阻断，建议另开卡）：fork-desktop.md 原生菜单描述已过时、所有菜单改走 DOM 需用户确认；recent-sessions 已无使用方；两套固定/归档存储；e2e/composer-geometry.mjs 成死文件；ChatInput restoreSubmission 注释过时；全部归档后的侧栏空状态；release.yml 的 prerelease 与更新通道；11 个合并前既有失败未跟踪。
+- 2026-10-21T06:54Z · claude:opus-high:review · review → done（评审 claude:opus-high:review）
