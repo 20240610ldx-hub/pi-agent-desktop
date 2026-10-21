@@ -11,7 +11,7 @@ implementers: [claude:sonnet-xhigh:impl]
 depends_on: []
 files_allowed: [**]
 files_shared: []
-acceptance_sha: 28d865bcb364
+acceptance_sha: c7f72dfe8913
 waivers: []
 ---
 
@@ -29,7 +29,7 @@ waivers: []
 ## 验收标准
 
 - [ ] A1 任务分支上存在一个以 `origin/main`（不早于 `dca3f6c`）为第二父提交的合并提交；`git merge-base --is-ancestor dca3f6c HEAD` 退出码 0；`git diff --check` 无冲突标记。
-- [ ] A2 fork 层未被回退：`node --test components/fork-extractions.test.mjs scripts/fork-ownership.test.mjs lib/branding.test.mjs components/AppShell.right-panel-row.test.mjs scripts/upstream-css-baseline.test.mjs scripts/release-workflows.test.mjs` 全部通过；AGENTS.md 列出的已拒绝上游 UI 没有重新出现（由验证者逐项 grep 记录）。产品名、窗口标识与更新通道仍为 Pilaude（E1）。
+- [ ] A2 fork 层未被回退：`node --test components/fork-extractions.test.mjs scripts/fork-ownership.test.mjs lib/branding.test.mjs components/AppShell.right-panel-row.test.mjs scripts/upstream-css-baseline.test.mjs scripts/release-workflows.test.mjs` 全部通过，或失败用例已在合并前基线（同命令在第一父提交上运行）证明同样失败并已另开卡跟踪；AGENTS.md 列出的已拒绝上游 UI 没有重新出现（由验证者逐项 grep 记录）。产品名、窗口标识与更新通道仍为 Pilaude（E1）。
 - [ ] A3 `npm test`、`node_modules/.bin/tsc --noEmit`、`npm run lint` 通过；任何失败须与集成分支合并前基线对照（同命令在合并前 HEAD 上的结果），只有合并前已存在的失败可登记，不得删、跳过或放宽测试。
 - [ ] A4 `package-lock.json` 中 tauri 插件版本与 `src-tauri/Cargo.lock` 同 minor；`npm run drift` 运行并记录结果；`docs/merge-history.md` 追加本次合入段落（采纳／拒绝的上游项及理由）。
 - [ ] A5 开发服务器（`npm run dev`，独立端口，取 preview 锁）首页、项目会话页、上游新增 Chats 入口可打开且控制台无报错，截图存 `relay-evidence/PIL-0113/`。
@@ -74,3 +74,4 @@ waivers: []
 - 2026-10-21T05:22Z · claude:sonnet-high:verify · 证据 A6：通过
 - 2026-10-21T05:23Z · claude:sonnet-high:verify · 做了：独立逐条验证合并提交 8389681（A1 通过；A2 失败；A3 通过（12 个失败均为合并前已有，无新增，tsc/lint 通过）；A4 通过；A5 通过（夹具 agent 目录，控制台无报错，已停服务并解锁）；A6 通过，guard 无阻断）；检查旗标判断：NATIVE_POPUP_MENUS_ENABLED=false 与上游源码一致（show_popup_menu 保留）；systemHome() 保留符合 AGENTS.md 常驻规则；字面 homedir() 集合与合并前一致；lib/recent-sessions.ts 及测试是无消费者的孤儿，已在 merge-history 记录；SettingsPanel.test.mjs -3 断言与上游 dca3f6c 完全一致。 / 状态：8389681，A2 失败只因 scripts/release-workflows.test.mjs 的 THIRD_PARTY_NOTICES 许可证测试，合并前基线同样失败（CRLF 检出使正则 0 命中，LF 下 rpiv-todo 条目仍缺 From 块）。 / 下一步：协调者或用户决定对 A2 该条豁免或修订验收，或另开卡修 THIRD_PARTY_NOTICES/测试后重验；其余无需返工。 / 风险：AGENTS.md 已拒绝清单里 DirectoryPicker、SessionSearch 实际仍在使用（合并前就在，非本次引入），清单与现实不符；SessionSidebar touch 菜单等 11 个结构性测试仍在失败（合并前已有）。
 - 2026-10-21T05:23Z · claude:sonnet-high:verify · verify → in_progress：A2 失败：指定命令 93 项中 1 项失败（release-workflows 的 THIRD_PARTY_NOTICES 许可证测试），合并前 11df970 同样失败，非合并引入；需协调者/用户豁免或修订 A2，或另卡修复后重验。其余 A1/A3-A6 通过，证据见 relay-evidence/PIL-0113/verify
+- 2026-10-21T05:25Z · user · 修订验收标准 28d865bcb364 → c7f72dfe8913：A2 与 A3 一致：允许合并前基线已证明存在的失败（release-workflows 许可声明用例），另开卡修复
