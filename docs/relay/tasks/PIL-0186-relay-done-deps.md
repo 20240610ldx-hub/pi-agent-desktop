@@ -71,3 +71,4 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 - 2026-10-21T07:59Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-21T07:59Z · claude:sonnet-high:verify · verify → review
 - 2026-10-21T07:59Z · claude:sonnet-high:verify · 做了：第二轮独立验证 8bbaf79，A1–A3 通过（relay.test 18/18；手工复现无 id 行无证据 set done 在 6297bf3 放行、8bbaf79 与父提交拒绝；新用例在 6297bf3 与父提交上红；lint 通过；npm test 12 失败均在基线、新增 0；guard 仅 R6 豁免）。/ 状态：分支最后提交 8bbaf79，A1 A2 A3 通过，已设 review。/ 下一步：评审者复审后协调者 integrate，随后修正 PIL-0177 状态。/ 风险：npm test 的 12 个基线失败与本卡无关；证据为夹具层（临时 git 仓库），未在真实任务板上跑 set done。
+- 2026-10-21T08:00Z · claude:opus-high:review · 做了：复审 git diff 6297bf3^ 8bbaf79；set done 恢复为单卡 validateCards（原有全部错误照旧阻断），仅 depends_on 存在性额外参考全量 id（knownIds，默认 [] 不影响 check）；scratch EDGE 四例对 8bbaf79 全过（缺 id 无证据拒绝、stray 文件拒绝、他卡损坏不阻断本卡、有依赖无证据拒绝），relay.test.mjs 18/18，guard 仅 R6 已豁免；新增用例有效、未删断言 / 状态：评审通过 / 下一步：协调者合入，之后修正 PIL-0177 状态 / 风险：低；单卡 done 不检测重复 id（与修复前一致，由 check 覆盖）
