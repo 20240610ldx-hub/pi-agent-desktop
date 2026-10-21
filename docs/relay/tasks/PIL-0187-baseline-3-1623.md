@@ -3,7 +3,7 @@ id: PIL-0187
 title: 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）
 epic: E2
 priority: P1
-status: verify
+status: review
 owner: claude:opus-medium:impl
 lease_until: 2026-10-21T11:07Z
 branch: task/PIL-0187-baseline-3-1623
@@ -54,3 +54,4 @@ GOALS E2 的组件复刻参照版本从 Windows Claude Desktop 2.42304.0 改为 
 - 2026-10-21T08:07Z · claude:opus-medium:impl · in_progress → verify
 - 2026-10-21T11:50Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-21T11:50Z · claude:sonnet-high:verify · 证据 A2：通过
+- 2026-10-21T11:50Z · claude:sonnet-high:verify · verify → review
