@@ -47,6 +47,7 @@ waivers: []
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
 | A1 | node --test lib/fork-send.test.mjs（15/15）；层级=夹具（本地 OpenAI 兼容服务，未调真实模型）+ 真实 Pi SDK/rpc-manager/writeForkedSession；A1 用例经真实 POST 路由：新 id≠源、parentSession=源文件、源条目 id 序列在前、其后恰好 1 条用户消息=草稿（计入 Pi 自带 system 条目）、回复来自子会话、源文件条目数不变、夹具仅 1 次请求。变异验证：把发送文本改成 +" extra" 时 A1/A2/A4/A5 共 4 例失败。图片仅在注入 deps 的 A5 用例里验透传，真实 SDK 图片路径未覆盖；真实 deepseek-flash 路径卡片写“能触发才验”，未运行 | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log; D:/pilaude/relay-evidence/PIL-0189/verify/mutant-M5-extratext.log | 1ee7898 | claude:sonnet-high:verify |
+| A2 | 同上测试；层级=夹具+真实 SDK：源以 SLOW 流式输出中（isRunning=true）触发，源仍在跑、期间无 agent_end；新会话不含 part-one/SLOW-DONE，仅含已完成条目与草稿；放行后源出现 agent_end，末条助手文本完整 'part-one part-two SLOW-DONE'、stopReason=stop，草稿未进入源；子会话自行发 1 次请求 | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log | 1ee7898 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -57,3 +58,4 @@ waivers: []
 - 2026-10-21T12:53Z · claude:sonnet-high:impl · 做了：新增 lib/fork-send.ts（单飞锁按源会话+请求键、分叉到当前叶子复用 writeForkedSession、新会话经 startRpcSession 启动并发提示、八个错误码、中止与重试复用已建分叉）、lib/fork-send-client.ts、app/api/agent/[id]/fork-send/route.ts、lib/fork-send.test.mjs（15 例，本地 OpenAI 兼容夹具服务 + 真实 Pi SDK；A3 的写文件失败/新会话启动失败为注入）；未改 rpc-manager.ts/agent-client.ts。空闲且未打开的源会话只读文件，不启动 wrapper（否则 pi 会向源文件追加 thinking_level_change）。 / 状态：分支提交 1ee7898；A1-A5 自测通过（node --test lib/fork-send.test.mjs 15/15）；tsc、lint、guard --task 通过；npm test 失败 12 例，全部在 PIL-0113 基线内，无新增；证据 D:/pilaude/relay-evidence/PIL-0189/impl/（first-run.log 为首轮失败记录） / 下一步：验证（未跑真实 deepseek-flash 路径，仅夹具） / 风险：1) 子会话第一次运行时 Pi 自己追加 developer/system 提示条目与 thinking_level_change，故'恰好一条用户消息'按用户消息计；2) 未完成工具调用的助手条目属于已完成条目，会被复制，子会话由 pi-ai 合成'No result provided'，未被执行或批准；3) 分叉后浏览器如何接到子会话事件（PIL-0122/0137）未接线
 - 2026-10-21T12:53Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A1：通过
+- 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A2：通过
