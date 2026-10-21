@@ -3,7 +3,7 @@ id: PIL-0189
 title: 在分叉会话中发送（fork-send）
 epic: E9
 priority: P1
-status: in_progress
+status: verify
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T15:40Z
 branch: task/PIL-0189-fork-send
@@ -54,3 +54,4 @@ waivers: []
 - 2026-10-21T12:39Z · planner · 冻结验收标准 3d887a1c84ac
 - 2026-10-21T12:40Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T15:40Z
 - 2026-10-21T12:53Z · claude:sonnet-high:impl · 做了：新增 lib/fork-send.ts（单飞锁按源会话+请求键、分叉到当前叶子复用 writeForkedSession、新会话经 startRpcSession 启动并发提示、八个错误码、中止与重试复用已建分叉）、lib/fork-send-client.ts、app/api/agent/[id]/fork-send/route.ts、lib/fork-send.test.mjs（15 例，本地 OpenAI 兼容夹具服务 + 真实 Pi SDK；A3 的写文件失败/新会话启动失败为注入）；未改 rpc-manager.ts/agent-client.ts。空闲且未打开的源会话只读文件，不启动 wrapper（否则 pi 会向源文件追加 thinking_level_change）。 / 状态：分支提交 1ee7898；A1-A5 自测通过（node --test lib/fork-send.test.mjs 15/15）；tsc、lint、guard --task 通过；npm test 失败 12 例，全部在 PIL-0113 基线内，无新增；证据 D:/pilaude/relay-evidence/PIL-0189/impl/（first-run.log 为首轮失败记录） / 下一步：验证（未跑真实 deepseek-flash 路径，仅夹具） / 风险：1) 子会话第一次运行时 Pi 自己追加 developer/system 提示条目与 thinking_level_change，故'恰好一条用户消息'按用户消息计；2) 未完成工具调用的助手条目属于已完成条目，会被复制，子会话由 pi-ai 合成'No result provided'，未被执行或批准；3) 分叉后浏览器如何接到子会话事件（PIL-0122/0137）未接线
+- 2026-10-21T12:53Z · claude:sonnet-high:impl · in_progress → verify
