@@ -87,12 +87,14 @@ ports. Writes are serialized and stale startup reads cannot undo a newer selecti
 **Settings choices.** Config sidebars (Agents, Models, Skills, Plugins and MCP) reuse
 the 8px choice inset, 4px row gap and 5px row radius. Selected and hovered neighbors
 must remain separate; hovering the selected row must preserve its selected fill.
-Segmented controls (mode, language, send shortcut, Diff and scope) share `--segment-*`:
-2px inset and gap, 5px inner / 7px outer corners, and a quiet raised selected surface.
+Segmented controls (mode, language, send shortcut, Diff, scope and file/artifact view mode) share `--segment-*`:
+4px inset and gap (both reference the settings row gap), 5px inner / 9px outer corners,
+and a quiet raised selected surface.
 Their normal height is 32px (24px for small scope controls); coarse pointers retain
 44px targets. Keep geometry in this shared rule, not section-specific overrides.
-`node e2e/settings-controls.mjs` measures the actual seven Settings components with
-isolated test data in both themes at 1280/390/320px, including adjacent hover and focus.
+The tool definitions list also uses the shared 4px row gap.
+`node e2e/settings-controls.mjs` measures the seven Settings sections, file view switch
+and tool definitions with isolated data in both themes at 1280/390/320px, including hover and focus.
 
 **Composer alignment.** The attach icon is an SVG. Its center follows the first text
 line, including the placeholder, at every supported font size. Text padding and icon

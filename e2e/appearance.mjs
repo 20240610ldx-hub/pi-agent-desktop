@@ -39,11 +39,23 @@ const selected=(page,id)=>page.waitForFunction(value=>document.documentElement.d
 const saved=async()=>{for(let i=0;i<200;i++){if(activeWrites===0)return;await delay(20);}throw Error('Save did not finish');};
 const names=['Petal','Mist','Meadow','Dusk','Plain'];const ids=['rex','mist','meadow','dusk','plain'];
 try{
-  for(const theme of ['light','dark'])for(const width of [1280,390,320]){
+  for(const theme of ['light','dark'])for(const width of [1464,1280,1024,800,640,390,320]){
     stored=null;const page=await browser.newPage({viewport:{width,height:820},colorScheme:theme,reducedMotion:'reduce'});
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.addInitScript(theme=>{localStorage.setItem('pi-theme',theme);localStorage.setItem('pi-locale','en');},theme);
     await page.goto(urls[0]);await page.getByRole('radio',{name:'Petal',exact:true}).waitFor();
+    const layout=await page.locator('.settings-background-grid').evaluate(grid=>{
+      const box=grid.getBoundingClientRect();
+      return {right:box.right,sectionRight:grid.parentElement.getBoundingClientRect().right,
+        cards:[...grid.children].map(card=>{const rect=card.getBoundingClientRect();return {top:rect.top,right:rect.right};})};
+    });
+    if(width>=1024){
+      assert.equal(layout.cards.length,5);
+      assert.ok(layout.cards.every(card=>Math.abs(card.top-layout.cards[0].top)<1),`All five backgrounds must fit in one row at ${width}px`);
+      assert.ok(Math.abs(layout.right-layout.sectionRight)<1,'Background choices must use the available section width');
+      assert.ok(Math.abs(layout.cards.at(-1).right-layout.right)<1,'No empty grid column may reserve room after the last background');
+    }
+    if(width<=640)assert.ok(layout.cards[2].top>layout.cards[0].top,'Narrow windows must wrap background cards');
     const gradients=[];
     for(let i=0;i<ids.length;i++){
       const response=i>0?page.waitForResponse(r=>r.url().endsWith('/api/appearance')&&r.request().method()==='PUT'):null;
@@ -87,6 +99,6 @@ try{
   await page.getByRole('radio',{name:'Mist',exact:true}).locator('..').click();await page.getByRole('alert').waitFor();
   assert.equal(await page.locator('html').getAttribute('data-background'),'mist','Failed saves keep the local preview');
   await page.close();
-  await writeFile(out+'/results.json',JSON.stringify({backgrounds:ids,themes:['light','dark'],widths:[1280,390,320],maxWrites,persistence:true,staleRead:true,saveFailure:true},null,2));
-  console.log('PASS: five backgrounds, light/dark, 1280/390/320, keyboard, reload/new-origin persistence, ordered saves, stale reads and save errors');
+  await writeFile(out+'/results.json',JSON.stringify({backgrounds:ids,themes:['light','dark'],widths:[1464,1280,1024,800,640,390,320],maxWrites,persistence:true,staleRead:true,saveFailure:true},null,2));
+  console.log('PASS: five backgrounds, light/dark, desktop single row, narrow wrapping, keyboard, reload/new-origin persistence, ordered saves, stale reads and save errors');
 }finally{await browser.close();for(const server of servers)await new Promise(r=>server.close(r));}

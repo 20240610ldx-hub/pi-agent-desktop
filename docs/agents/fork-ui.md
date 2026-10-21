@@ -62,6 +62,7 @@ The topbar renders exactly ONE toolbar group (`app-topbar-actions`: history/bran
 ## 外观与背景
 
 外观页提供花瓣、薄雾、草地、黄昏、纯色五种背景卡片，明暗模式独立选择。
+卡片网格使用内容区可用宽度，默认桌面窗口五项排成一行；空间不足再换行，不能用固定宽度上限提前挤出第二行。
 卡片预览和实际背景共用 `native-theme.css` 的 `--wash-*`，选中用蓝色边缘及圆点。
 `useBackground` 负责即时显示、串行保存与过期读取保护，`/api/appearance` 将选择保存到
 Pi Web 自身的 `pi-web/settings.json`，保留其他字段；端口改变后从该文件恢复。
@@ -71,8 +72,9 @@ Pi Web 自身的 `pi-web/settings.json`，保留其他字段；端口改变后�
 
 `ConfigSidebarList` 与 `.config-sidebar-group` 都按共享 `--choice-*` 留距；模型供应商的
 子项容器同样使用 `.config-sidebar-group`，不能重新引入零间距或行内 margin。
-分段控件共用 `--segment-*`（2px 内衬和间隔，5px 内圆角、7px 外圆角），涵盖明暗、语言、
+分段控件共用 `--segment-*`，内衬和按钮间隔都引用设置行间距的 4px（5px 内圆角、9px 外圆角），涵盖明暗、语言、
 发送快捷键、Diff 和作用域。选中状态在鼠标悬停自身或相邻项时必须保持；键盘焦点与禁用语义保留。
+文件与 Artifact 的预览／源码切换也使用这套分段控件参数，工具定义列表同样保持 4px 行间距。
 `node e2e/settings-controls.mjs` 测量真实设置组件，不只断言 CSS 字符串。
 
 输入框加号沿第一行文字居中；SVG、占位文字和实际文字用同一行高计算。加号不是字符，

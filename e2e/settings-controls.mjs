@@ -40,7 +40,9 @@ const server = createServer((req,res)=>{
   const path = new URL(req.url,'http://localhost').pathname;
   if(path.startsWith('/api/')) {
     res.setHeader('Content-Type','application/json');
-    res.end(JSON.stringify(data[path] ?? {})); return;
+    res.end(JSON.stringify(path.startsWith('/api/files/')
+      ? {content:'# Preview\n\nTest document.',language:'markdown',size:26,nextOffset:26,truncated:false}
+      : data[path] ?? {})); return;
   }
   res.setHeader('Content-Type',path==='/fixture.js'?'text/javascript':path==='/style.css'?'text/css':'text/html; charset=utf-8');
   res.end(path==='/fixture.js'?js:path==='/style.css'?css:
@@ -60,9 +62,9 @@ async function segments(page, group) {
         x:box.x,y:box.y,right:box.right,bottom:box.bottom,topInset:box.top-outer.top,bottomInset:outer.bottom-box.bottom,
         leftInset:box.left-outer.left,rightInset:outer.right-box.right,radius:parseFloat(s.borderRadius),border:parseFloat(s.borderRightWidth)};})};
   });
-  near(metrics.rows[0].leftInset,2,'segment leading inset'); near(metrics.rows.at(-1).rightInset,2,'segment trailing inset');
-  for(const row of metrics.rows){near(row.topInset,2,'segment top inset');near(row.bottomInset,2,'segment bottom inset');near(metrics.radius-row.radius,2,'concentric segment radius');near(row.border,0,'no inner divider');}
-  for(let i=1;i<metrics.rows.length;i++)near(metrics.rows[i].x-metrics.rows[i-1].right,2,'segment gap');
+  near(metrics.rows[0].leftInset,4,'segment leading inset'); near(metrics.rows.at(-1).rightInset,4,'segment trailing inset');
+  for(const row of metrics.rows){near(row.topInset,4,'segment top inset');near(row.bottomInset,4,'segment bottom inset');near(metrics.radius-row.radius,4,'concentric segment radius');near(row.border,0,'no inner divider');}
+  for(let i=1;i<metrics.rows.length;i++)near(metrics.rows[i].x-metrics.rows[i-1].right,4,'segment gap matches the outer inset and settings row gap');
   const selected = group.locator(':scope > [aria-checked="true"], :scope > [aria-pressed="true"], :scope > label:has(input:checked)');
   assert.equal(await selected.count(),1,'one selected segment');
   const fill = await selected.evaluate(el=>getComputedStyle(el).backgroundColor);
@@ -125,6 +127,21 @@ try {
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'document must not overflow');
       results.push({theme,width,section});
     }
+    await page.goto(base+'/?panel=file');
+    const modes=page.locator('.file-viewer-mode-switch');await modes.waitFor();
+    await segments(page,modes);
+    await modes.locator('button[aria-pressed="false"]').first().click();await segments(page,modes);
+    await page.goto(base+'/?panel=tools');
+    const toolRows=page.locator('.tool-definitions-item');await toolRows.nth(2).waitFor();
+    await toolRows.nth(1).click();await toolRows.nth(2).hover();
+    const toolGeometry=await toolRows.evaluateAll(rows=>rows.map(el=>{
+      const b=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();
+      return {top:b.top,bottom:b.bottom,left:b.left-p.left,right:p.right-b.right};
+    }));
+    for(const row of toolGeometry){near(row.left,8,'tool list leading inset');near(row.right,8,'tool list trailing inset');}
+    for(let i=1;i<toolGeometry.length;i++)near(toolGeometry[i].top-toolGeometry[i-1].bottom,4,'tool rows');
+    const toolFill=await toolRows.nth(1).evaluate(el=>getComputedStyle(el).backgroundColor);
+    await toolRows.nth(1).hover();assert.equal(await toolRows.nth(1).evaluate(el=>getComputedStyle(el).backgroundColor),toolFill);
     assert.deepEqual(errors,[]);await page.close();
   }
   const touch = await browser.newPage({viewport:{width:390,height:900},hasTouch:true,isMobile:true});
@@ -134,5 +151,5 @@ try {
   const heights=await touch.locator('.settings-language-option,.settings-send-mode-option,.settings-choice-option').evaluateAll(rows=>rows.map(el=>el.getBoundingClientRect().height));
   assert.ok(heights.length>0&&heights.every(h=>h>=44),'touch segments must retain 44px targets: '+heights.join(','));await touch.close();
   await writeFile(out+'/results.json',JSON.stringify(results,null,2));
-  console.log('PASS: actual settings components, seven sections, light/dark × 1280/390/320; list gaps, segment insets/radii, adjacent hover, focus and touch targets');
+  console.log('PASS: seven Settings sections, file preview/source and tool definitions, light/dark × 1280/390/320; list gaps, segment insets/radii, hover, focus and touch targets');
 } finally {await browser.close();await new Promise(r=>server.close(r));}

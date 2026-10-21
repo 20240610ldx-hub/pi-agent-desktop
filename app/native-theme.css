@@ -3295,8 +3295,8 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   --choice-inset: 8px;
   --choice-row-gap: 4px;
   --choice-row-radius: 5px;
-  --segment-inset: 2px;
-  --segment-gap: 2px;
+  --segment-inset: var(--choice-row-gap);
+  --segment-gap: var(--choice-row-gap);
   --segment-radius: calc(var(--choice-row-radius) + var(--segment-inset));
   --segment-selected: var(--surface-elevated);
   --menu-radius: calc(var(--choice-row-radius) + var(--choice-inset) + 1px);
@@ -3364,7 +3364,7 @@ html.dark {
 /* One compact segmented control: tight, even inset; concentric corners;
    a soft raised selection rather than another dark block inside a gray one. */
 :is(.settings-theme-options, .settings-language-options, .settings-send-mode-options,
-    .settings-choice-group, .config-scope-switch) {
+    .settings-choice-group, .config-scope-switch, .file-viewer-mode-switch) {
   height: auto;
   padding: var(--segment-inset);
   gap: var(--segment-gap);
@@ -3374,7 +3374,7 @@ html.dark {
   overflow: visible;
 }
 :is(.settings-theme-options, .settings-language-options, .settings-send-mode-options,
-    .settings-choice-group, .config-scope-switch) > :is(label, button) {
+    .settings-choice-group, .config-scope-switch, .file-viewer-mode-switch) > :is(label, button) {
   position: relative;
   display: flex;
   align-items: center;
@@ -3394,19 +3394,19 @@ html.dark {
   transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 :is(.settings-theme-options, .settings-language-options, .settings-send-mode-options,
-    .settings-choice-group, .config-scope-switch) > :is(label, button):not(:disabled, [aria-checked="true"], [aria-pressed="true"], :has(input:checked)):hover {
+    .settings-choice-group, .config-scope-switch, .file-viewer-mode-switch) > :is(label, button):not(:disabled, [aria-checked="true"], [aria-pressed="true"], :has(input:checked)):hover {
   background: var(--bg-hover);
   color: var(--text);
 }
 :is(.settings-theme-options, .settings-language-options, .settings-send-mode-options,
-    .settings-choice-group, .config-scope-switch) > :is([aria-checked="true"], [aria-pressed="true"], :has(input:checked)) {
+    .settings-choice-group, .config-scope-switch, .file-viewer-mode-switch) > :is([aria-checked="true"], [aria-pressed="true"], :has(input:checked)) {
   background: var(--segment-selected);
   box-shadow: var(--shadow-control);
   color: var(--text);
   font-weight: 600;
 }
 :is(.settings-theme-options, .settings-language-options, .settings-send-mode-options,
-    .settings-choice-group, .config-scope-switch) > :is(:focus-visible, :has(input:focus-visible)) {
+    .settings-choice-group, .config-scope-switch, .file-viewer-mode-switch) > :is(:focus-visible, :has(input:focus-visible)) {
   outline: 2px solid var(--menu-focus-ring);
   outline-offset: -2px;
 }
@@ -3423,7 +3423,7 @@ html.dark {
   .config-list-action-button,
   .config-scope-switch.is-small .config-scope-switch-option,
   :is(.settings-theme-options, .settings-language-options, .settings-send-mode-options,
-      .settings-choice-group, .config-scope-switch) > :is(label, button) { min-height: 44px; }
+      .settings-choice-group, .config-scope-switch, .file-viewer-mode-switch) > :is(label, button) { min-height: 44px; }
 }
 
 .app-menu {
@@ -7168,15 +7168,55 @@ span.linenumber {
 
 .file-viewer-mode-switch {
   display: flex;
-  padding: 2px;
-  overflow: hidden;
-  gap: 1px;
-  border: var(--hairline) solid var(--separator);
-  background: var(--bg-subtle);
-  height: 32px;
-  border-radius: 9px;
 }
 
+.file-viewer-mode-switch > .file-viewer-mode-button {
+  min-height: 24px;
+  padding: 2px 8px;
+  filter: none;
+}
+@media (pointer: coarse) {
+  .file-viewer-mode-switch > .file-viewer-mode-button { min-height: 44px; }
+}
+
+/* Tool definitions use the same separated rows as the settings sidebars.
+   Qualify the scope to override the upstream component's styled-jsx rules. */
+.tool-definitions-panel .tool-definitions-sidebar .tool-definitions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--choice-row-gap);
+  padding: var(--choice-inset);
+}
+.tool-definitions-panel .tool-definitions-sidebar .tool-definitions-list > .tool-definitions-item {
+  position: relative;
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--choice-row-radius);
+}
+.tool-definitions-panel .tool-definitions-sidebar .tool-definitions-item.selected {
+  background: var(--bg-selected);
+  box-shadow: none;
+  color: var(--text);
+}
+.tool-definitions-panel .tool-definitions-sidebar .tool-definitions-item.selected::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: calc(50% - 8px);
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--menu-selection-color);
+}
+.tool-definitions-panel .tool-definitions-sidebar .tool-definitions-item:focus-visible {
+  outline: 2px solid var(--menu-focus-ring);
+  outline-offset: -2px;
+}
+@media (pointer: coarse) {
+  .tool-definitions-panel .tool-definitions-sidebar .tool-definitions-list > .tool-definitions-item { min-height: 44px; }
+}
 
 .file-viewer-mode-button {
   border: 0;
@@ -9023,8 +9063,8 @@ html.dark {
 .settings-appearance .settings-theme-option-label { white-space: nowrap; }
 .settings-background-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  max-width: 584px;
+  /* Use the available content width; empty columns must not force a wrap. */
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   gap: 18px 16px;
 }
 .settings-background-option {
