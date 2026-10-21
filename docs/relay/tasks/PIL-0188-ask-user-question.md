@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0030]
 files_allowed: [lib/ask-user-question.ts, lib/ask-user-question.test.mjs, lib/ask-user-question-extension.ts, lib/ask-user-question-extension.test.mjs]
 files_shared: [lib/rpc-manager.ts, lib/types.ts, hooks/useAgentSession.ts]
-acceptance_sha:
+acceptance_sha: 84e5165da004
 waivers: []
 ---
 
@@ -54,3 +54,4 @@ waivers: []
 
 - 2026-10-21T12:16Z · planner · 创建
 - 2026-10-21T12:27Z · claude:sonnet-high:planner · 冻结前修订第3轮：新建能力卡并写满验收。调研结论：Pi SDK 无面向模型的提问工具（仅 TUI 示例，rpiv-ask-user-question 未安装），桌面端已有阻塞式扩展 UI 通道可复用；用户 2026-10-21 决定 C06 实际实现 AskUserQuestion，故建此卡，PIL-0120 依赖本卡。
+- 2026-10-21T12:39Z · planner · 冻结验收标准 84e5165da004
