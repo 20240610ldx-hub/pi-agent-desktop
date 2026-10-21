@@ -25,12 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 89 张任务卡：todo 87 · in_progress 0 · verify 1 · review 0 · done 0 · blocked 0 · parked 1
+共 89 张任务卡：todo 86 · in_progress 1 · verify 1 · review 0 · done 0 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
+| PIL-0113 | P0 | in_progress | 合入上游 abcwyc main 2026-10-20（desktop 0.7.5） | codex-plus:gpt-xhigh:impl | 2026-10-21T08:44Z | task/PIL-0113-upstream-0-7-5 |
 | PIL-0014 | P1 | verify | 把组件复刻基准拆成逐组件任务卡 | codex-plus:gpt-xhigh:impl | 2026-10-21T08:24Z | task/PIL-0014-parity-index |
 
 ### 阻塞
@@ -43,7 +44,6 @@
 | --- | --- | --- | --- | --- | --- |
 | PIL-0001 | P0 | E0 | 接力治理落地与工作树分流 | 是 | — |
 | PIL-0002 | P0 | E0 | 建立可信的测试基线并逐项登记已知失败 | 是 | — |
-| PIL-0113 | P0 | E0 | 合入上游 abcwyc main 2026-10-20（desktop 0.7.5） | 是 | — |
 | PIL-0010 | P1 | E2 | Changes 面板在独立 Windows 窗口打开 | 是 | PIL-0001 |
 | PIL-0030 | P1 | E4 | 统一执行前授权并接入 pi-permission-system | 是 | PIL-0001 |
 | PIL-0040 | P1 | E5 | 受控浏览器 | 否 | PIL-0030 |
