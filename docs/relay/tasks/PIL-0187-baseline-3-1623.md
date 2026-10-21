@@ -43,6 +43,7 @@ GOALS E2 的组件复刻参照版本从 Windows Claude Desktop 2.42304.0 改为 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
 | A1 | git diff 34bbe6c^ 34bbe6c 阅读（文档层）：第17行改为 3.1623.0.0；注明用户决定与采样条件见私有参考采样记录（未复制私有内容）；旧2.42304.0仅作历史参考、不与新批次混作同版本；「只接主题或功能可用不算复刻通过」原样保留（grep 命中1处） | 通过 | D:/pilaude/relay-evidence/PIL-0187/verify/diff-34bbe6c.txt, D:/pilaude/relay-evidence/PIL-0187/verify/verbatim-count.txt | 34bbe6c | claude:sonnet-high:verify |
+| A2 | git diff --stat：仅 GOALS.md 1行改动；node scripts/relay.mjs check 退出0（仅租约过期警告）；node scripts/relay.mjs guard --task PIL-0187 退出0，仅 WAIVED R6，无其他项 | 通过 | D:/pilaude/relay-evidence/PIL-0187/verify/diffstat.txt, D:/pilaude/relay-evidence/PIL-0187/verify/check.txt, D:/pilaude/relay-evidence/PIL-0187/verify/guard.txt | 34bbe6c | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T08:06Z · planner · 创建
@@ -52,3 +53,4 @@ GOALS E2 的组件复刻参照版本从 Windows Claude Desktop 2.42304.0 改为 
 - 2026-10-21T08:07Z · claude:opus-medium:impl · 做了：GOALS.md 第 17 行参照版本改为 3.1623.0.0，注明用户决定、采样记录出处与旧批次仅历史参考，保留复刻通过要求 / 状态：提交 34bbe6c，guard 仅已豁免 R6 / 下一步：验证 / 风险：组件卡与 parity-index 的版本文字仍为旧版，待规划修订轮同步
 - 2026-10-21T08:07Z · claude:opus-medium:impl · in_progress → verify
 - 2026-10-21T11:50Z · claude:sonnet-high:verify · 证据 A1：通过
+- 2026-10-21T11:50Z · claude:sonnet-high:verify · 证据 A2：通过
