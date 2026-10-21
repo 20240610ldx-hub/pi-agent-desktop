@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0030]
 files_allowed: [lib/side-chat-service.ts, lib/side-chat-service.test.mjs, lib/side-chat-store.ts, lib/side-chat-session-adapter.ts, app/api/side-chat/route.ts, app/api/side-chat/[id]/route.ts, app/api/side-chat/[id]/events/route.ts]
 files_shared: []
-acceptance_sha:
+acceptance_sha: b9238c755409
 waivers: []
 ---
 
@@ -55,3 +55,4 @@ SideChatPanel 布局/输入器、自动启动子代理、复制主会话全部�
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P1：PIL-0170、PIL-0171 依赖本卡，属首发能力/主组件依赖路径。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：删除 →PIL-0050（支线复用 startRpcSession，非子代理）；G3 越权用例移入 A3；G6 删除“本轮不实现、不 freeze”
+- 2026-10-21T12:39Z · planner · 冻结验收标准 b9238c755409
