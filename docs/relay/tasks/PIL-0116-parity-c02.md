@@ -68,3 +68,4 @@ waivers: []
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：SettingsUi.blocks.test.mjs、SettingsUi.group-switch.test.mjs、SettingsUi.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字
 - 2026-10-21T12:35Z · planner · 冻结验收标准 4633dd54c86e
 - 2026-10-21T12:51Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T15:51Z
+- 2026-10-21T13:07Z · claude:sonnet-high:impl · 复述：C02 按钮尺寸与状态；A1/A4 用 harness 逐状态+真实 consumer，A2 用原生 3.1623(agent-panels-light)同帧量测，A3 用 Chromium 键盘/窄宽自测，A5 跑定向测试
