@@ -46,3 +46,4 @@ GOALS E2 的组件复刻参照版本从 Windows Claude Desktop 2.42304.0 改为 
 ## 日志
 - 2026-10-21T08:06Z · planner · 创建
 - 2026-10-21T08:07Z · planner · 冻结验收标准 619f325ee013
+- 2026-10-21T08:07Z · claude:opus-medium:planner · 用户 2026-10-21 在对话中决定视觉基准迁移到 3.1623，授权修改受保护的 GOALS.md（豁免 R6）
