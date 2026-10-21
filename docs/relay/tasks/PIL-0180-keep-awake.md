@@ -50,6 +50,7 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 | A3 | cargo test --manifest-path src-tauri/Cargo.toml keep_awake：8 项全过，含五轮开关不叠加(live<=1)、失败不乐观、不支持平台报错、withdraw 失败仍释放句柄、并发开关、真实 Windows PowerCreateRequest/SetRequest 五轮往返(进程内真实 OS API，未经桌面命令/powercfg)；代码无线程/定时器。层级：夹具+Windows 原生 API 进程内；桌面应用内状态查询未运行 | 通过 | D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt | 2e6d9d1 | claude:sonnet-high:verify |
 | A4 | 三层核对部分完成：(1)清单层通过：两命令在 desktop-shell.toml 仅定义 allow-keep-awake-status/allow-set-keep-awake，desktop-dialog.json(windows:main，remote 127.0.0.1)仅追加这两项，lib.rs 注册 handler；(3)网页失败层通过：Node 下实调 lib/desktop-native.ts 的 keepAwakeStatusNative 返回 null、setKeepAwakeNative 拒绝'only available in the desktop app'；(2)桌面调用层(Tauri ACL 运行时)未运行应用，故整体记未运行 | 未运行 | D:/pilaude/relay-evidence/PIL-0180/verify/a4-browser.txt | 2e6d9d1 | claude:sonnet-high:verify |
 | A5 | cargo test keep_awake 8/8；node --test lib/keep-awake-service.test.mjs 8/8(夹具桥)；tsc --noEmit rc=0；npm run lint rc=0；relay guard --task PIL-0180 无问题；git status 干净，Cargo.lock 未改，Cargo.toml 仅给 windows-sys 增 Win32_System_Power/Threading feature，无升级；无 skip/only | 通过 | D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt;D:/pilaude/relay-evidence/PIL-0180/verify/node-test.txt;D:/pilaude/relay-evidence/PIL-0180/verify/tsc.txt;D:/pilaude/relay-evidence/PIL-0180/verify/lint.txt;D:/pilaude/relay-evidence/PIL-0180/verify/guard.txt | 2e6d9d1 | claude:sonnet-high:verify |
+| A1 | 层级：desktop:dev 实机(src-tauri/target/debug/pi-agent-desktop.exe) + 用户管理员 powercfg /requests。主窗口 F12 invoke('set_keep_awake',{enabled:true})：user-0-off 的 SYSTEM 无本进程(默认关闭)，user-1-on 的 SYSTEM 出现 pi-agent-desktop.exe 与理由文案 'Pilaude keeps the system awake...'；DISPLAY/AWAYMODE 无项，仅 SystemRequired。接替前一行未运行 | 通过 | D:/pilaude/relay-evidence/PIL-0180/verify/user-0-off.txt;D:/pilaude/relay-evidence/PIL-0180/verify/user-1-on.txt | 2e6d9d1 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -69,3 +70,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A4：未运行
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A5：通过
 - 2026-10-21T12:08Z · claude:sonnet-high:verify · 做了：对 2e6d9d1 逐项验证，A3/A5 通过；A1/A2 未运行；A4 未运行（清单层与网页失败层通过，桌面 ACL 运行时层未跑）。cargo test keep_awake 8/8，node 测试 8/8，tsc、lint、guard 全过，Cargo.lock 未改，改动均在 files_allowed/shared 内 / 状态：保持 verify，等用户证据，不记产品验收通过 / 下一步：用户在管理员终端运行应用后 powercfg /requests，前后对照并走隐藏/恢复/退出/重启，另在桌面窗口调用两命令；证据到 D:/pilaude/relay-evidence/PIL-0180/verify/ / 风险：powercfg 非管理员返回需管理员权限；A3 的 Windows 层仅进程内真实 API 往返，未经桌面命令
+- 2026-10-21T12:40Z · claude:sonnet-high:verify · 证据 A1：通过
