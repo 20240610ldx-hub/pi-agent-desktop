@@ -3,7 +3,7 @@ id: PIL-0186
 title: 修复 relay set done 校验把 depends_on 误报为 unknown
 epic: E0
 priority: P1
-status: in_progress
+status: verify
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T10:25Z
 branch: task/PIL-0186-relay-done-deps
@@ -62,3 +62,4 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 - 2026-10-21T07:44Z · claude:opus-high:review · review → in_progress：评审打回：done 校验对缺 id 字段的卡失效（fail-open）
 - 2026-10-21T07:44Z · claude:opus-high:review · 做了：评审 6297bf3（git diff 6297bf3^ 6297bf3），跑 relay.test.mjs 17/17 通过，另在 scratch 补边界用例对比父提交 / 状态：打回 / 必改：scripts/relay.mjs:781-782 按 c.fields.id===f.id 替换、按 p.id===f.id 过滤；validateCards 的 say 在 f.id 为空时用文件名作 id，于是 frontmatter 缺 id 的卡在 review 态无证据也能 set done（实测新代码 exit 0，父提交 exit 1 报 id missing＋缺证据），属于放宽 done 门禁，违反 A2。期望：按 c.file===card.file 替换（未找到则 push 进集合），过滤用 p.id===(f.id||path.basename(card.file))，或保留单卡 validateCards 的全部非 depends_on 错误、仅 depends_on 对全量 id 集合判断；并在 relay.test.mjs 加回归用例：删掉 id 行、无证据的 review 卡 set done 必须 exit 1。 / 已确认无问题：verifier≠implementer、reviewer≠implementer、证据行检查仍在；integrate/guard 路径未改；他卡错误被过滤不影响本卡阻断（预期行为）；重复 id 现在会被拦截（更严）；依赖 parked 卡与 check 语义一致；新测试有父提交红灯证据，未删断言 / 下一步：实现者修复后重走验证 / 风险：低，改动面小
 - 2026-10-21T07:50Z · claude:sonnet-high:impl · 做了：按评审打回修复，set done 恢复为只校验单卡的原语义，仅 depends_on 存在性经 validateCards 新增 knownIds 参数对全量卡片 id 判断（不再按 id 替换/过滤）；新增回归用例（缺 id 行或无证据的 review 卡 set done 必须 exit 1，先在 6297bf3 上证红） / 状态：分支最后提交 8bbaf79；relay.test 18/18，lint 通过，npm test 12 失败均在基线内（新增 0），guard 仅 R6 豁免，证据 relay-evidence/PIL-0186/impl/round2/ / 下一步：验证 / 风险：低；validateCards 签名新增可选第三参数，既有调用不受影响
+- 2026-10-21T07:50Z · claude:sonnet-high:impl · in_progress → verify
