@@ -25,13 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 90 张任务卡：todo 86 · in_progress 1 · verify 0 · review 0 · done 2 · blocked 0 · parked 1
+共 90 张任务卡：todo 86 · in_progress 0 · verify 1 · review 0 · done 2 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0177 | P2 | in_progress | 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定） | codex-plus:gpt-xhigh:impl | 2026-10-21T09:56Z | task/PIL-0177-recent-sessions-dom-menus |
+| PIL-0177 | P2 | verify | 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定） | codex-plus:gpt-xhigh:impl | 2026-10-21T09:56Z | task/PIL-0177-recent-sessions-dom-menus |
 
 ### 阻塞
 
