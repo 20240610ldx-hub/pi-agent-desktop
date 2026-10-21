@@ -71,3 +71,4 @@ waivers: []
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T08:06Z · claude:opus-medium:planner · 用户 2026-10-21 决定：AskUserQuestion 单题/多题问答卡不单独建卡，保留在 C06 邻接（参考 agent-panels-light/2026-10-21/00、06、07）
+- 2026-10-21T12:03Z · claude:opus-medium:planner · 用户 2026-10-21 澄清：C06 实际实现 AskUserQuestion 单题/多题问答卡（取代此前「仅邻接登记」的理解）；「在分叉会话中发送」建小能力卡；C25 完成音用开源方案。由规划第 3 轮落实。
