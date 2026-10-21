@@ -3,7 +3,7 @@ id: PIL-0113
 title: 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）
 epic: E0
 priority: P0
-status: review
+status: in_progress
 owner: claude:sonnet-xhigh:impl
 lease_until: 2026-10-21T07:29Z
 branch: task/PIL-0113-upstream-0-7-5
@@ -81,3 +81,4 @@ waivers: []
 - 2026-10-21T05:26Z · claude:sonnet-high:verify · in_progress → verify
 - 2026-10-21T05:26Z · claude:sonnet-high:verify · verify → review
 - 2026-10-21T06:43Z · claude:opus-high:review · 评审打回（1 项阻断）：B1 scripts/release-workflows.test.mjs:196-206『nothing reintroduces a literal homedir() into an fs call』的 guarded 列表在冲突解决时丢了 "lib/default-cwd.ts"——两个父提交（11df970 第 201 行、dca3f6c 第 201 行）都守护该文件，合并结果只在去重时删掉了它（git show --remerge-diff 8389681 可见）。这是对 Hard rule『不得字面 homedir()』回归守卫的覆盖缩减，属 RULES『削弱断言』，guard 的 R4 只数断言故未报。期望：把 "lib/default-cwd.ts" 加回 guarded（该文件仍用 userHome()，加回后测试应直接通过），重跑 node --test scripts/release-workflows.test.mjs 并由验证者补 A2/A3 证据。其余已核：41 个冲突文件逐个看过 remerge-diff；身份（Cargo 0.1.0、component-versions distribution、release.yml prerelease、bump 脚本）、systemHome/userHome、native-theme 仅 fork 外观、全高布局与右侧工作区、i18n 三语、models-config 脱敏、resolveSessionReferences（send 与 queue 两路）、请求 id 守卫均保留；已拒绝 UI 未新引入；composer 每次提交单一 beginSubmission/consumeSubmission，各分支只调一次回调，无双发；NATIVE_POPUP_MENUS_ENABLED=false、聊天行/项目行两套元数据、移除 SettingsEntryMenu（上游已删）、保留 recent-sessions、MessageView editDisabled memo、notification-store getServerSnapshot、聊天态隐藏工作区控件均可接受；SessionSidebar.test 内容搜索用例改为结构断言、chat-workspace 用例变严，均不算放宽；R4 SettingsPanel.test 与上游 dca3f6c 字节一致、R5 eslint-disable 来自上游，接受。本地复跑 11 个相关测试文件 189/189 通过。修完 B1 后可直接再送评审。
+- 2026-10-21T06:43Z · claude:opus-high:review · review → in_progress：评审打回：scripts/release-workflows.test.mjs 的 homedir 守卫 guarded 列表在合并中丢失 lib/default-cwd.ts（两个父提交都有），属削弱测试；加回后重跑并补证据
