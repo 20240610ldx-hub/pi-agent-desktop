@@ -25,11 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 100 张任务卡：todo 95 · in_progress 0 · verify 0 · review 0 · done 4 · blocked 0 · parked 1
+共 100 张任务卡：todo 94 · in_progress 1 · verify 0 · review 0 · done 4 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
-（无）
+| ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
+| --- | --- | --- | --- | --- | --- | --- |
+| PIL-0187 | P1 | in_progress | 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定） | claude:opus-medium:impl | 2026-10-21T11:07Z | task/PIL-0187-baseline-3-1623 |
 
 ### 阻塞
 
@@ -77,7 +79,6 @@
 | PIL-0183 | P1 | E4 | SSH 环境真实执行、取消与连接恢复 | 否 | PIL-0182 |
 | PIL-0184 | P1 | E4 | WSL 环境发现、执行与路径隔离 | 否 | PIL-0182 |
 | PIL-0185 | P1 | E4 | Remote Control 自有主机配对与受控执行 | 否 | PIL-0182 |
-| PIL-0187 | P1 | E2 | 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定） | 是 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0013 | P2 | E2 | Changes 面板剩余交互与视觉残差 | 否 | PIL-0010 |
