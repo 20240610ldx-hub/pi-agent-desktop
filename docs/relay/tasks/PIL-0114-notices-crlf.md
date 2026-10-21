@@ -8,8 +8,8 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: []
-files_allowed: []
+depends_on: [PIL-0113]
+files_allowed: [THIRD_PARTY_NOTICES.md, .gitattributes, scripts/generate-third-party-notices*, scripts/release-workflows.test.mjs]
 files_shared: []
 acceptance_sha:
 waivers: []
@@ -17,27 +17,25 @@ waivers: []
 
 ## 目标
 
-一到三句话：完成后用户能做什么、产品哪里变了。写明对应 [GOALS](../GOALS.md) 的哪一条。
+`scripts/release-workflows.test.mjs` 中 "the diff renderer notice retains exact installed licenses…" 在 Windows（`core.autocrlf=true`）检出下通过，安装包里的第三方许可声明完整。对应 GOALS「保留 MIT 许可和上游署名」与 E11 Windows 基线。
 
 ## 背景与现状
 
-只写接手者开工需要的事实：现有代码位置、已知失败、相关文档段落链接。不写历史流水账。
+PIL-0113 验证者发现：合并前 `11df970` 与合并后 `8389681` 同样失败。两层原因：`THIRD_PARTY_NOTICES.md` 检出成 CRLF，测试正则 0 命中；归一化为 LF 后，rpiv-todo 的许可条目仍缺 From 块。证据：`D:/pilaude/relay-evidence/PIL-0113/verify/`。
 
 ## 验收标准
 
-每条可以被一个不了解实现过程的人独立判定通过或失败。写清验证方式。
-
-- [ ] A1 行为描述。验证：`具体命令` 退出码 0，或手动步骤 + 期望可见结果。
-- [ ] A2 失败/取消/恢复路径。验证：……
-- [ ] A3 `npm run lint`、`node_modules/.bin/tsc --noEmit` 与受影响测试文件通过；`node scripts/relay.mjs guard` 无阻断项。
+- [ ] A1 `THIRD_PARTY_NOTICES.md` 的 rpiv-todo 条目包含与已安装包一致的 From 块与许可全文（由生成脚本产出，而非手写；若无生成脚本则说明来源并逐字核对已安装包的 LICENSE）。
+- [ ] A2 在 `core.autocrlf=true` 的全新 Windows 检出中，`node --test scripts/release-workflows.test.mjs` 全部通过；修复方式为 `.gitattributes` 固定换行或测试按换行无关方式读取，不得删除或放宽断言内容。
+- [ ] A3 `npm test` 相对 PIL-0113 合入后的基线无新增失败；`node scripts/relay.mjs guard` 无阻断项。
 
 ## 范围外
 
-明确不做的事，防止范围漂移。
+其他第三方包许可内容的更新。
 
 ## 实现提示
 
-可选：建议入口文件、需要先读的 docs/agents 主题、已知坑。
+先读仓库根 AGENTS.md 与 `scripts/release-workflows.test.mjs` 中该用例的断言；修改 `.gitattributes` 后需 `git add --renormalize` 相关文件。
 
 ## 证据
 
@@ -45,4 +43,6 @@ waivers: []
 | --- | --- | --- | --- | --- | --- |
 
 ## 日志
-- 2026-10-21T05:25Z · planner · 创建
+- 2026-10-21T05:30Z · planner · 创建
+- 2026-10-21T05:31Z · claude:opus-medium:planner · 由 PIL-0113 验证发现的基线失败转出（用户同意修订 PIL-0113 A2 并另开此卡）。
+- 2026-10-21T05:25Z · claude:opus-medium:planner · 写入目标、背景与验收（未冻结）
