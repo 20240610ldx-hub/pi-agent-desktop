@@ -47,6 +47,7 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 | --- | --- | --- | --- | --- | --- |
 | A1 | 需用户管理员终端 powercfg /requests 实机核对；本机非管理员 powercfg /requests 返回'此命令需要管理员权限'(rc=1)；Rust 真实 Windows 后端往返测试(cargo test keep_awake_real_windows_request_round_trip)只证明 API 调用成功，不算 OS 请求列表证据，未运行桌面应用 | 未运行 | D:/pilaude/relay-evidence/PIL-0180/verify/powercfg.txt;D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt | 2e6d9d1 | claude:sonnet-high:verify |
 | A2 | 需用户管理员终端 powercfg /requests 实机核对；隐藏/恢复/退出/重启四步未在运行的应用上执行。代码层(读 keep_awake.rs/lib.rs)：disable/Destroyed/RunEvent::Exit 都调 release，CloseRequested 隐藏不调用；单元测试 release_and_drop 通过，属夹具层非实机 | 未运行 | D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt | 2e6d9d1 | claude:sonnet-high:verify |
+| A3 | cargo test --manifest-path src-tauri/Cargo.toml keep_awake：8 项全过，含五轮开关不叠加(live<=1)、失败不乐观、不支持平台报错、withdraw 失败仍释放句柄、并发开关、真实 Windows PowerCreateRequest/SetRequest 五轮往返(进程内真实 OS API，未经桌面命令/powercfg)；代码无线程/定时器。层级：夹具+Windows 原生 API 进程内；桌面应用内状态查询未运行 | 通过 | D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt | 2e6d9d1 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -62,3 +63,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T12:05Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A1：未运行
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A2：未运行
+- 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A3：通过
