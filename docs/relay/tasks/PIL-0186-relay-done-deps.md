@@ -3,11 +3,11 @@ id: PIL-0186
 title: 修复 relay set done 校验把 depends_on 误报为 unknown
 epic: E0
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: claude:sonnet-high:impl
+lease_until: 2026-10-21T10:25Z
+branch: task/PIL-0186-relay-done-deps
+implementers: [claude:sonnet-high:impl]
 depends_on: []
 files_allowed: [scripts/relay.mjs, scripts/relay.test.mjs]
 files_shared: []
@@ -48,3 +48,4 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 - 2026-10-21T07:25Z · planner · 创建
 - 2026-10-21T07:25Z · planner · 冻结验收标准 5ebacb9adefe
 - 2026-10-21T07:25Z · claude:opus-medium:planner · 用户 2026-10-21 在对话中选择「开卡修复，豁免 R6」，授权修改 scripts/relay.mjs 与 scripts/relay.test.mjs
+- 2026-10-21T07:25Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T10:25Z
