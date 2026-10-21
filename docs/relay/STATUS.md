@@ -115,7 +115,7 @@
 | PIL-0148 | P2 | E2 | 复刻验收：C34 模型章节导航轨与目录 | 是 | PIL-0014, PIL-0137 |
 | PIL-0149 | P2 | E2 | 复刻验收：C35 多代理任务面板与真实任务状态 | 是 | PIL-0014, PIL-0050, PIL-0074, PIL-0144 |
 | PIL-0151 | P2 | E2 | 复刻验收：C37 限流、重试与错误提示 | 是 | PIL-0014, PIL-0122, PIL-0137 |
-| PIL-0152 | P2 | E2 | 复刻验收：C38 New 首页与固定字符光照 | 否 | PIL-0014 |
+| PIL-0152 | P2 | E2 | 复刻验收：C38 New 首页与固定字符光照 | 是 | PIL-0014 |
 | PIL-0153 | P2 | E2 | 复刻验收：C39 FileViewer、Source／Preview／Diff 与下载 | 否 | PIL-0014, PIL-0011 |
 | PIL-0154 | P2 | E2 | 复刻验收：C40 Context／Environment／Connectors 卡片 | 否 | PIL-0014, PIL-0181 |
 | PIL-0155 | P2 | E2 | 复刻验收：C41 标题菜单、Transcript modes 与输出风格 | 否 | PIL-0014, PIL-0169 |
