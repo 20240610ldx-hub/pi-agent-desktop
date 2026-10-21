@@ -49,6 +49,7 @@ function homeNavigationHarness(selectedSession, options = {}) {
   assert.ok(callback, "AppShell owns the explicit home navigation callback");
   const env = {
     ...draftStore, selectedSession, activeCwd: "/project", newSessionCwd: null,
+    chatWorkspaceCwd: null, newSessionWorkspaceKind: "project",
     welcomeOpen: false, scheduledOpen: false, isMobile: false, sidebarOpen: true,
     sessionKey: 4, activeNewSessionDraftKeyRef: { current: "new:kept:/project" },
     activeProjectKeyRef: { current: "/project" }, branchLeafChangeFnRef: { current: null },

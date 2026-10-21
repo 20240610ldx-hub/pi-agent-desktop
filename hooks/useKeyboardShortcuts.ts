@@ -52,6 +52,12 @@ interface UseGlobalKeyboardShortcutsOptions {
   onOpenSettings?: () => void;
   /** Called by Ctrl+Shift+\ (or ⌘+Shift+\) to expand the open panel. */
   onExpandRightPanel?: () => void;
+  /** Called by ⌘/ (macOS) / Ctrl+/ to show the shortcut reference. */
+  onShortcutHelp?: () => void;
+  /** Called by ⌘B / Ctrl+B; browsers keep their own Cmd/Ctrl+B on macOS. */
+  onToggleSidebar?: () => void;
+  /** Called by ⌘L / Ctrl+L; browsers reserve the macOS Cmd+L variant. */
+  onFocusComposer?: () => void;
 }
 
 /**
@@ -75,6 +81,15 @@ export function handleExpandRightPanelShortcut(event: KeyboardEvent, onExpand: (
   return true;
 }
 
+/** Shortcuts that behave like desktop accelerators: primary modifier required. */
+export function handleShortcutActivation(event: KeyboardEvent, key: string): boolean {
+  return event.key === key
+    && (event.metaKey || event.ctrlKey)
+    && !event.shiftKey
+    && !event.altKey
+    && !event.defaultPrevented;
+}
+
 /**
  * Register global keyboard shortcuts for the application.
  *
@@ -83,6 +98,9 @@ export function handleExpandRightPanelShortcut(event: KeyboardEvent, onExpand: (
  *   ⌘N / Ctrl+N      – create a new session in the active project directory
  *                      (Ctrl+Alt+N still works for backwards familiarity)
  *   ⌘, / Ctrl+,      – open Settings at the last section
+ *   ⌘/ / Ctrl+/      – show keyboard shortcuts
+ *   ⌘B  / Ctrl+B     – toggle the sidebar (non-macOS browsers may reserve it)
+ *   ⌘L  / Ctrl+L     – focus the composer (macOS browsers may reserve it)
  *
  * Note: Esc inside <textarea> or <input> is deliberately NOT handled here.
  * ChatInput manages its own Esc logic (closing slash / @ file menus, stopping
@@ -93,7 +111,16 @@ export function handleExpandRightPanelShortcut(event: KeyboardEvent, onExpand: (
 export function useGlobalKeyboardShortcuts(
   options: UseGlobalKeyboardShortcutsOptions,
 ): void {
-  const { onNewSession, activeCwd, onCloseRightPanel, onOpenSettings, onExpandRightPanel } = options;
+  const {
+    onNewSession,
+    activeCwd,
+    onCloseRightPanel,
+    onOpenSettings,
+    onExpandRightPanel,
+    onShortcutHelp,
+    onToggleSidebar,
+    onFocusComposer,
+  } = options;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -103,14 +130,9 @@ export function useGlobalKeyboardShortcuts(
         return;
       }
 
-      // ---- \: hide the floating preview and go back to the conversation ----
+      // ---- Cmd/Ctrl+\: hide the preview and go back to the conversation ----
       if (
-        e.key === "\\"
-        && !e.metaKey
-        && !e.ctrlKey
-        && !e.altKey
-        && !e.shiftKey
-        && !e.defaultPrevented
+        handleShortcutActivation(e, "\\")
         && onCloseRightPanel
       ) {
         const target = e.target as HTMLElement | null;
@@ -126,6 +148,24 @@ export function useGlobalKeyboardShortcuts(
       if (handleExpandRightPanelShortcut(e, onExpandRightPanel)) return;
       if (handleOpenSettingsShortcut(e, onOpenSettings)) return;
 
+      if (handleShortcutActivation(e, "/") && onShortcutHelp) {
+        e.preventDefault();
+        onShortcutHelp();
+        return;
+      }
+
+      if (handleShortcutActivation(e, "b") && onToggleSidebar) {
+        e.preventDefault();
+        onToggleSidebar();
+        return;
+      }
+
+      if (handleShortcutActivation(e, "l") && onFocusComposer) {
+        e.preventDefault();
+        onFocusComposer();
+        return;
+      }
+
       // ---- ⌘N / Ctrl+N: new session ----
       // Note: regular browsers reserve ⌘N/Ctrl+N for "new window"; this works
       // in the desktop (Tauri) build where the page receives the event.
@@ -138,5 +178,14 @@ export function useGlobalKeyboardShortcuts(
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [activeCwd, onNewSession, onCloseRightPanel, onOpenSettings, onExpandRightPanel]);
+  }, [
+    activeCwd,
+    onExpandRightPanel,
+    onFocusComposer,
+    onNewSession,
+    onCloseRightPanel,
+    onOpenSettings,
+    onShortcutHelp,
+    onToggleSidebar,
+  ]);
 }

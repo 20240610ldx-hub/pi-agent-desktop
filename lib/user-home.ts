@@ -5,7 +5,9 @@ import { homedir } from "os";
  *
  * Use userHome for Pi data paths; use systemHome when authorization or display
  * must refer to the OS home independently of PI_AGENT_HOME. Both stay dynamic
- * when the result reaches a traced filesystem call or absolute path.
+ * when the result reaches a traced filesystem call or absolute path. Path
+ * display helpers must use one of them too: NFT can infer directory assets from
+ * string operations even without an fs call (see displaySettingsPath).
  *
  * Next's file tracer (@vercel/nft) statically evaluates the arguments to fs
  * calls. When it can fold an expression down to the home directory it globs

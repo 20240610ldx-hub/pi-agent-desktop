@@ -5,7 +5,7 @@ import { Script, createContext } from "node:vm";
 import ts from "typescript";
 import { isImeComposing } from "../lib/ime.ts";
 
-const source = await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8");
+const source = (await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 const sessionItemSource = source.slice(source.indexOf("function SessionItem("));
 
 test("project-list notifications change only when ordered paths or the receiver change", () => {
@@ -55,16 +55,23 @@ test("only Shift+click bypasses session deletion confirmation", () => {
 test("keeps the project-tree sidebar without an inline explorer section", () => {
   // Upstream's resizable sidebar explorer (ed50d88) is deliberately not
   // adopted: this fork renders the file explorer in the right panel and the
-  // sidebar as a project tree. The upstream quick-filter stays.
+  // sidebar as Chats + project lists. The upstream quick-filter stays.
   assert.match(source, /sidebar-search-input/);
-  assert.match(source, /Project tree \(Codex-style\)/);
+  assert.match(source, /sidebar-chats-header/);
   assert.doesNotMatch(source, /data-resize-handle="sidebar-sections"/);
 });
 
-test("does not register row-level session deletion shortcuts", () => {
-  assert.doesNotMatch(sessionItemSource, /const handleKeyDown/);
-  assert.doesNotMatch(sessionItemSource, /onKeyDown=\{handleKeyDown\}/);
-  assert.doesNotMatch(sessionItemSource, /tabIndex=\{0\}/);
+test("the sidebar tree supports row-level keyboard navigation", () => {
+  assert.match(source, /role="tree"/);
+  assert.match(source, /data-sidebar-tree-row/);
+  assert.match(source, /case "ArrowDown":[\s\S]*?focusSidebarTreeRow\(current, 1\)/);
+  assert.match(source, /case "ArrowUp":[\s\S]*?focusSidebarTreeRow\(current, -1\)/);
+  assert.match(source, /case "Home":[\s\S]*?focusSidebarTreeRow\(current, "first"\)/);
+  assert.match(source, /case "End":[\s\S]*?focusSidebarTreeRow\(current, "last"\)/);
+  assert.match(sessionItemSource, /role="treeitem"/);
+  assert.match(sessionItemSource, /aria-selected=\{isSelected\}/);
+  assert.match(sessionItemSource, /requestDelete: beginDeleteConfirmation/);
+  assert.match(sessionItemSource, /rename: startRename/);
 });
 
 test("streams running sessions and reconnects after visibility or network changes", () => {
@@ -157,10 +164,96 @@ test("does not expose disk-backed actions for transient sessions", () => {
 });
 
 test("hides subagent rows and aggregates their state into the main session row", () => {
-  assert.match(source, /const sessionFamilies = listSessionFamilies\(filteredSessions\)/);
+  assert.match(source, /const sessionFamilies = listSessionFamilies\(projectSessions\)/);
   assert.match(source, /familySessions\.some\(\(session\) => session\.id === selectedSessionId\)/);
   assert.match(source, /familySessions\.some\(\(session\) => runningSessionIds\.has\(session\.id\)\)/);
   assert.doesNotMatch(source, /function SessionTreeItem/);
+});
+
+test("Chats sit beside Projects and never enter project grouping", () => {
+  assert.match(
+    source,
+    /const chatSessions = filteredSessions[\s\S]*?session\.workspaceKind === "chat" \|\| isChatCwd\(session\.cwd\)[\s\S]*?const projectSessions = filteredSessions\.filter\(/,
+  );
+  assert.match(source, /const allChatFamilies = listSessionFamilies\(chatSessions\)/);
+  assert.match(source, /const sessionFamilies = listSessionFamilies\(projectSessions\)/);
+  assert.match(source, /groupByProject\(projectSessions,/);
+  assert.match(source, /getRecentProjects\(allSessions\)/);
+  assert.match(source, /sidebar-project-tree-header sidebar-chats-header/);
+  assert.match(source, /handleNewSession\(chatWorkspaceCwd \?\? undefined, "chat"\)/);
+});
+
+test("Chats show five families at a time even when there are no projects", () => {
+  assert.match(source, /const MAX_VISIBLE_CHAT_SESSIONS = 5/);
+  assert.match(source, /: chatFamilies\.slice\(0, MAX_VISIBLE_CHAT_SESSIONS \* \(chatSessionPages \+ 1\)\)/);
+  assert.match(source, /setChatSessionPages\(\(pages\) => pages \+ 1\)/);
+  assert.match(source, /!loading && !error && chatFamilies\.length === 0/);
+  assert.match(source, /sidebar-chats-empty/);
+  // The Chats section renders before the Projects empty state, so it remains
+  // available when `activeProjects` is empty.
+  assert.match(
+    source,
+    /sidebar-chats-header[\s\S]*?\{allProjects\.length === 0 \? \(/,
+  );
+});
+
+test("Chats fold like a project and unfold back to the first five", () => {
+  // Folding drops the extra pages so the next unfold starts at five again.
+  assert.match(source, /const setChatsFolded = \(folded: boolean\) => \{\s*setChatsCollapsed\(folded\);\s*if \(folded\) setChatSessionPages\(0\);/);
+  // A search lists every match regardless of the fold.
+  assert.match(source, /const chatsFolded = !trimmedSessionQuery && chatsCollapsed/);
+  assert.match(source, /\{!chatsFolded && \(\s*<div className="sidebar-project-tree-children sidebar-chats-list">/);
+  // The fold and the page count survive a reload.
+  assert.match(source, /APP_PREF_KEYS\.collapsedChats/);
+  assert.match(source, /APP_PREF_KEYS\.chatSessionPages/);
+});
+
+test("the Chats header shows its menu and add buttons only on hover, like Projects", () => {
+  const header = source.slice(
+    source.indexOf("sidebar-project-tree-header sidebar-chats-header"),
+    source.indexOf("{!chatsFolded && ("),
+  );
+  // Same hover-revealed tools container the Projects header uses.
+  assert.match(header, /className="sidebar-project-tree-tools"/);
+  assert.match(header, /sidebar-project-tree-menu/);
+  assert.match(header, /sidebar-project-tree-add/);
+  assert.match(header, /handleNewSession\(chatWorkspaceCwd \?\? undefined, "chat"\)/);
+  assert.doesNotMatch(source, /sidebar-chats-add/);
+});
+
+test("chats can be pinned and archived, ordered by recency with no date groups", () => {
+  // Pinned first, then recency; archived chats leave the list unless a search is running.
+  assert.match(source, /orderChatFamilies\(allChatFamilies, pinnedChats\)/);
+  assert.match(source, /trimmedSessionQuery\s*\? orderedChatFamilies\s*: orderedChatFamilies\.filter\(\(family\) => !archivedChats\.has\(family\.root\.id\)\)/);
+  // Rows already show their own relative time, so the list has no Today / This week headings.
+  assert.doesNotMatch(source, /sidebar-chats-group-label|chatsToday|CHAT_GROUP_LABEL_KEYS/);
+  // The +5 paging still runs over the whole order.
+  assert.match(source, /: chatFamilies\.slice\(0, MAX_VISIBLE_CHAT_SESSIONS \* \(chatSessionPages \+ 1\)\)/);
+  // Archived chats stay reachable and recoverable.
+  assert.match(source, /sidebar\.showArchivedChats/);
+  assert.match(source, /APP_PREF_KEYS\.pinnedChats/);
+  assert.match(source, /APP_PREF_KEYS\.archivedChats/);
+  // Row menu: only chat rows (depth 0) get the actions, in both the native and DOM menus.
+  assert.match(source, /chatActions=\{depth === 0 \? chatActions : undefined\}/);
+  assert.match(source, /t\(chatActions\.pinned \? "sidebar\.unpinChat" : "sidebar\.pinChat"\)/);
+  assert.match(source, /t\(chatActions\.archived \? "sidebar\.unarchiveChat" : "sidebar\.archiveChat"\)/);
+});
+
+test("a chat's row menu can continue it in a project", () => {
+  // Chats only: project rows and subagent children are never given the callback.
+  assert.match(source, /onContinueInProject=\{setContinueChat\}/);
+  assert.match(source, /onContinueInProject=\{depth === 0 \? onContinueInProject : undefined\}/);
+  assert.match(source, /t\("sidebar\.continueInProject"\)/);
+  assert.match(source, /\/continue-in-project`/);
+  // The picker reuses the project picker and never offers the chat workspace itself.
+  assert.match(source, /\{continueChat && \(/);
+});
+
+test("a chat cwd skips worktree lookup and stays out of project pickers", () => {
+  assert.match(source, /if \(!selectedCwd \|\| selectedCwdIsChat\) \{\s*setWorktreeState\(null\)/);
+  assert.match(source, /const selectedProjectRoot = selectedProjectObject\?\.kind === "project"/);
+  assert.match(source, /selectedCwd=\{selectedCwdProp && !isChatCwd\(selectedCwdProp\) \? selectedCwdProp : null\}/);
+  assert.match(source, /if \(isChatCwd\(cwd\)\) return projectSelection\(cwd, cwd, "chat"\)/);
 });
 
 test("the project context menu reveals the project in the OS file manager", async () => {
@@ -213,28 +306,71 @@ test("project header follows the name/chevron/plus reference and preserves touch
   assert.match(referenceCss, /@media \(hover: none\) \{[^@]*\.sidebar-project-tree-more \{ opacity: 1; pointer-events: auto;/);
 });
 
+test("Projects header actions stay hover-only", async () => {
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  assert.match(css, /\.sidebar-project-tree-tools \{[^}]*opacity: 0;[^}]*pointer-events: none;/);
+  assert.match(css, /\.sidebar-project-tree-header:hover \.sidebar-project-tree-tools,/);
+  assert.match(css, /\.sidebar-project-tree-header\.is-menu-open \.sidebar-project-tree-tools,/);
+  assert.match(css, /\.sidebar-project-tree-header:focus-within \.sidebar-project-tree-tools \{\s*opacity: 1;\s*pointer-events: auto;/);
+  assert.match(css, /@media \(hover: none\) \{[^@]*\.sidebar-project-tree-tools \{\s*opacity: 1;\s*pointer-events: auto;/);
+});
+
 test("folded projects persist across reloads", () => {
   assert.match(source, /getPrefJson<unknown>\(APP_PREF_KEYS\.collapsedProjects\)/);
   assert.match(source, /setPrefJson\(APP_PREF_KEYS\.collapsedProjects, \[\.\.\.collapsedProjects\]\)/);
-  // "Collapse all" must look at the visible projects, not the stored set's size.
-  assert.match(source, /allProjects\.some\(\(g\) => !collapsedProjects\.has\(g\.projectRoot\)\)/);
+  // Collapse/expand-all operate on the visible project groups.
+  assert.match(source, /const canCollapseAllProjects = activeProjects\.some\(\(group\) => !collapsedProjects\.has\(group\.projectRoot\)\)/);
+  assert.match(source, /const canExpandAllProjects = activeProjects\.some\(\(group\) => collapsedProjects\.has\(group\.projectRoot\)\)/);
+  assert.match(source, /setCollapsedProjects\(new Set\(activeProjectRoots\)\)/);
+  assert.match(source, /setCollapsedProjects\(new Set\(\)\)/);
 });
 
-test("expanded session previews persist and reveal how many rows are hidden", () => {
+test("show more reveals five sessions at a time and a project toggle resets it", () => {
   assert.match(source, /getPrefJson<unknown>\(APP_PREF_KEYS\.expandedProjects\)/);
-  assert.match(source, /setPrefJson\(APP_PREF_KEYS\.expandedProjects, \[\.\.\.expandedProjectSessions\]\)/);
+  assert.match(source, /setPrefJson\(APP_PREF_KEYS\.expandedProjects, projectSessionPages\)/);
+  assert.match(source, /const visibleSessionLimit = MAX_VISIBLE_PROJECT_SESSIONS \* \(extraPages \+ 1\)/);
   assert.match(
     source,
-    /t\("sidebar\.showMoreSessions", \{ count: groupTree\.length - visibleGroupTree\.length \}\)/,
+    /\[group\.projectRoot\]: \(prev\[group\.projectRoot\] \?\? 0\) \+ 1/,
+  );
+  assert.match(
+    source,
+    /count: Math\.min\(MAX_VISIBLE_PROJECT_SESSIONS, hiddenSessionCount\)/,
+  );
+  // Reopening a project starts from its latest five sessions again.
+  assert.match(source, /setProjectSessionPages\(\(prev\) => \{[\s\S]*?delete next\[group\.projectRoot\]/);
+  // Legacy arrays meant "expanded everything"; migrate them to one extra page.
+  assert.match(source, /Array\.isArray\(stored\)[\s\S]*?\.map\(\(root\) => \[root, 1\]\)/);
+});
+
+test("Projects pane chooses between grouped and chronological views", () => {
+  // The old Recent section is replaced by a persisted display mode.
+  assert.doesNotMatch(source, /recent-sessions|sidebar-recent-section|hasTodaySessions|recentSessions/);
+  assert.match(source, /const \[projectViewMode, setProjectViewMode\] = useState<ProjectViewMode>\(loadProjectViewMode\)/);
+  assert.match(source, /setPref\(APP_PREF_KEYS\.projectViewMode, mode\)/);
+  assert.match(
+    source,
+    /projectViewMode === "timeline"\s*\? renderTimeline\(\)\s*: activeProjects\.map\(\(group\) => renderProjectGroup\(group\)\)/,
   );
 });
 
-test("shows a cross-project recent section above the project tree", () => {
-  assert.match(source, /import \{ getRecallSessions, hasRecallSessionsToday \} from "@\/lib\/recent-sessions"/);
-  assert.match(source, /const recentSessions = !trimmedSessionQuery/);
-  assert.match(source, /<section className="sidebar-recent-section" aria-label=\{t\(hasTodaySessions \? "sidebar\.today" : "sidebar\.recent"\)\}>/);
-  assert.match(source, /t\(hasTodaySessions \? "sidebar\.today" : "sidebar\.recent"\)/);
+test("the chronological view lists session families by activity with project labels", () => {
+  assert.match(source, /const timelineFamilies = projectViewMode === "timeline"/);
+  assert.match(source, /sessionFamilies\.filter\(\(family\) =>/);
+  assert.match(source, /\.sort\(\(a, b\) => b\.root\.modified\.localeCompare\(a\.root\.modified\)\)/);
+  assert.match(source, /buildSessionTree\(\[family\.root, \.\.\.family\.subagents\]\)/);
+  assert.match(source, /className="sidebar-project-timeline"/);
   assert.match(source, /subtitle=\{projectName\}/);
+});
+
+test("the Projects menu keeps grouped/timeline choices and collapse controls", async () => {
+  const menuSource = await readFile(new URL("./ProjectViewMenu.tsx", import.meta.url), "utf8");
+  assert.match(menuSource, /role="menuitemradio"/);
+  assert.match(menuSource, /sidebar\.projectViewGrouped/);
+  assert.match(menuSource, /sidebar\.projectViewTimeline/);
+  assert.match(menuSource, /sidebar\.collapseAllProjects/);
+  assert.match(menuSource, /sidebar\.expandAllProjects/);
+  assert.match(source, /canUseNativeMenu\(\)[\s\S]*?showNativeMenu\(entries, menuPointBelow\(anchor, "right"\)\)/);
 });
 
 test("the row menu shows the compaction count only when the session was compacted", () => {
@@ -288,22 +424,30 @@ const expressionFor = (name) => declarations.find((node) => node.name.getText(si
 const compileExpression = (text) => new Script(ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ESNext } }).outputText);
 
 test("requested content search renders even when the title-filtered project list is empty", () => {
-  let emptyCondition;
+  // Chats and projects share one SessionSearch consumer, so a project list that
+  // is empty after the title filter can never hide the requested content results.
+  let search;
+  let empty;
   const visit = (node) => {
+    if (ts.isJsxElement(node) && node.openingElement.tagName.getText(sidebarAst) === "SessionSearch") search = node;
     if (ts.isConditionalExpression(node)) {
       const branch = ts.isParenthesizedExpression(node.whenTrue) ? node.whenTrue.expression : node.whenTrue;
       if (ts.isJsxElement(branch) && branch.openingElement.attributes.properties.some((attribute) => ts.isJsxAttribute(attribute)
-        && attribute.name.text === "className" && attribute.initializer?.text === "sidebar-project-tree-empty")) emptyCondition = node.condition;
+        && attribute.name.text === "className" && attribute.initializer?.text === "sidebar-project-tree-empty")) empty = node;
     }
     ts.forEachChild(node, visit);
   };
   visit(sidebarAst);
-  assert.ok(emptyCondition);
-  const condition = compileExpression(`(${emptyCondition.getText(sidebarAst)})`);
-  const state = createContext({ allProjects: [], archivedSessions: [], contentSearch: false });
-  assert.equal(condition.runInContext(state), true, "Ordinary no-title-match uses the existing empty/loading/error branch");
-  state.contentSearch = true;
-  assert.equal(condition.runInContext(state), false, "Enter mounts the content-search consumer despite zero title matches");
+  assert.ok(search, "SessionSearch wraps the sidebar lists");
+  assert.ok(empty, "the empty project state still exists");
+  for (let ancestor = search.parent; ancestor; ancestor = ancestor.parent) {
+    assert.ok(!ts.isConditionalExpression(ancestor)
+      && !(ts.isBinaryExpression(ancestor) && ancestor.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken),
+    "no project-list condition may unmount the content-search consumer");
+  }
+  let inside = false;
+  for (let ancestor = empty.parent; ancestor; ancestor = ancestor.parent) if (ancestor === search) inside = true;
+  assert.equal(inside, true, "the empty/loading/error branch is a child of the content-search consumer");
 });
 
 test("the native session button moves pins only for unmodified Alt+Arrow outside IME", () => {

@@ -17,6 +17,8 @@ interface Props {
   onOpenConnectors: () => void;
   onOpenFiles: () => void;
   onOpenChanges?: () => void;
+  /** False for a chat: it has no project files to review. */
+  showChanges?: boolean;
   onOpenContext: () => void;
   onOpenTools: () => void;
   onClose: () => void;
@@ -30,7 +32,7 @@ function shortCount(value: number | null | undefined): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toLocaleString();
 }
 
-export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount, onOpenConnectors, onOpenFiles, onOpenChanges, onOpenContext, onOpenTools, onClose, rightPanelOpen, rightPanelFullWidth }: Props) {
+export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount, onOpenConnectors, onOpenFiles, onOpenChanges, showChanges = true, onOpenContext, onOpenTools, onClose, rightPanelOpen, rightPanelFullWidth }: Props) {
   const { t } = useI18n();
   const paneRef = useRef<HTMLElement>(null);
   const [presentation, setPresentation] = useState<ReturnType<typeof getContextPresentation>>("dock");
@@ -129,7 +131,7 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
         <summary>{t("pilaude.environment")}<PilaudeIcon name="chevron" size={14} /></summary>
         <div className="pilaude-context-card-body">
           <div className="pilaude-environment-row"><PilaudeIcon name="computer" /><span>{machine ?? t("pilaude.thisComputer")}</span></div>
-          <button className="pilaude-environment-row" onClick={() => open(onOpenFiles)} title={cwd}><PilaudeIcon name="folder" /><span>{projectName}</span><small>{cwd.match(/^[A-Za-z]:/)?.[0] ?? ""}</small></button>
+          {cwd && <button className="pilaude-environment-row" onClick={() => open(onOpenFiles)} title={cwd}><PilaudeIcon name="folder" /><span>{projectName}</span><small>{cwd.match(/^[A-Za-z]:/)?.[0] ?? ""}</small></button>}
           {session?.branch && <div className="pilaude-environment-row" title={session.branch}><PilaudeIcon name="branch" /><span>{session.branch}</span>{session.isWorktree && <small>Worktree</small>}</div>}
         </div>
       </details>
@@ -151,10 +153,12 @@ export function PilaudeWorkspaceContext({ session, cwd, stats, usage, toolCount,
         </div>
       </details>
       <button className="pilaude-context-card pilaude-context-card-action" onClick={() => open(onOpenConnectors)}><span>{t("pilaude.connectors")}</span><PilaudeIcon name="chevron" size={14} /></button>
-      <details className="pilaude-context-card" open>
-        <summary>{t("pilaude.changes")}<PilaudeIcon name="chevron" size={14} /></summary>
-        <button className="pilaude-environment-row pilaude-changes-link" onClick={() => open(onOpenChanges ?? onOpenFiles)}><PilaudeIcon name="changes" /><span>{t("pilaude.reviewFiles")}</span><PilaudeIcon name="chevron" size={14} /></button>
-      </details>
+      {showChanges && (
+        <details className="pilaude-context-card" open>
+          <summary>{t("pilaude.changes")}<PilaudeIcon name="chevron" size={14} /></summary>
+          <button className="pilaude-environment-row pilaude-changes-link" onClick={() => open(onOpenChanges ?? onOpenFiles)}><PilaudeIcon name="changes" /><span>{t("pilaude.reviewFiles")}</span><PilaudeIcon name="chevron" size={14} /></button>
+        </details>
+      )}
     </aside>
     </>
   );

@@ -113,7 +113,7 @@ function MenuPanel({
   return (
     <div
       ref={panelRef}
-      className={`dom-context-menu native-popover cds-menu-motion${appearance ? ` dom-context-menu--${appearance}` : ""}`}
+      className={`dom-context-menu native-popover app-menu cds-menu-motion${appearance ? ` dom-context-menu--${appearance}` : ""}`}
       data-menu-placed={position ? true : undefined}
       role="menu"
       aria-label={label}
