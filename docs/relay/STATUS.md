@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 102 张任务卡：todo 92 · in_progress 0 · verify 1 · review 0 · done 5 · blocked 0 · parked 4
+共 103 张任务卡：todo 93 · in_progress 0 · verify 1 · review 0 · done 5 · blocked 0 · parked 4
 
 ### 进行中 / 待验证 / 待评审
 
@@ -132,6 +132,7 @@
 | PIL-0174 | P2 | E2 | 复刻验收：C60 Folders 添加与选择弹层 | 否 | PIL-0014, PIL-0173, PIL-0181 |
 | PIL-0175 | P2 | E2 | 复刻验收：C61 Run in 运行目标选择 | 否 | PIL-0014, PIL-0173, PIL-0182, PIL-0184 |
 | PIL-0176 | P2 | E2 | 复刻验收：C62 环境变量编辑子页 | 否 | PIL-0014, PIL-0173, PIL-0181, PIL-0182 |
+| PIL-0190 | P2 | E2 | 复刻验收：C54b 下载、安装、失败与重启界面 | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
 ### 已完成（5）
