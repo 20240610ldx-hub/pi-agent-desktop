@@ -3,9 +3,9 @@ id: PIL-0180
 title: Windows 保持唤醒能力与退出释放
 epic: E9
 priority: P1
-status: review
+status: done
 owner: claude:sonnet-high:impl
-lease_until: 2026-10-21T14:58Z
+lease_until:
 branch: task/PIL-0180-keep-awake
 implementers: [codex-plus:gpt-xhigh:impl, claude:sonnet-high:impl]
 depends_on: []
@@ -81,3 +81,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T12:46Z · claude:sonnet-high:verify · 做了：核对 desktop.log，重启后的 pid 19728 在 12:45:02Z 写入 exit 行，进程已无，user-5-quit-app 的 SYSTEM 无本进程；A2 记通过。A1-A5 现全部通过。托盘 Quit 不结束进程判为既有缺陷（本卡未改 quit_application/托盘，调用 quit_app 正常退出），建议另开卡调查托盘 Quit 路径 / 状态：A1-A5 通过，转 review / 下一步：评审者核对；另开卡查托盘 Quit（Windows platform_tray 的 quit 事件）/ 风险：A2 第二轮开启态无 powercfg 文件；A1/A4/A2 属 desktop:dev 实机，非发布包；未对父提交实机对比托盘行为
 - 2026-10-21T12:46Z · claude:sonnet-high:impl · verify → review
 - 2026-10-21T12:48Z · claude:opus-high:review · 做了：评审 2e6d9d1（8 文件）。Rust：PowerCreateRequest 失败查 NULL/INVALID 且不建对象；PowerSetRequest 失败时 WinRequest 被 drop→CloseHandle；withdraw 失败仍 drop 关闭；Drop 仅一次 CloseHandle；REASON_CONTEXT Version=0、SIMPLE_STRING，UTF-16 缓冲活到调用结束；锁内不调用 release 无重入死锁。lib.rs：Destroyed(仅 main)与 RunEvent::Exit 调 release，CloseRequested 隐藏不释放；权限仅两条 allow 追加到 desktop-dialog(main, 127.0.0.1)；Cargo.toml 仅加 windows-sys 两个 feature，Cargo.lock 未动；窗口状态标志与插件版本未触碰；桥接窄、浏览器 status=null/set 拒绝；guard 复跑无问题。证据行与 user-0..5、quit-app-log 一致（user-4 时 PID 仍活无 exit 行，user-5 经 quit_app 有 exit 且无本进程）。托盘 Quit 在 platform_tray 中同样调用 quit_application，与成功的 quit_app 下游路径相同，本 diff 未改 shell/ 与托盘，故非本卡引入（未对父提交实跑） / 状态：评审通过 / 下一步：协调者合入；另开卡查 Windows 托盘 Quit 事件分发 / 风险：(可选)1. PowerClearRequest 失败时 Rust 已关句柄但返回 Err，TS 服务保留 enabled=true（测试亦如此断言），UI 会显示开启而 OS 已释放，实际几乎不可达，建议 PIL-0171 或后续在 set 失败后 refresh；2. 锁中毒时 status 报 false、release 不关句柄，现无锁内 panic 路径，可改 into_inner；3. 证据为 desktop:dev 非发布包，重启默认关闭仅一份 powercfg 文件；提交信息仍为 wip
+- 2026-10-21T12:48Z · claude:opus-high:review · review → done（评审 claude:opus-high:review）
