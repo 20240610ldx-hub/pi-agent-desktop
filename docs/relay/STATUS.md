@@ -31,7 +31,7 @@
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0187 | P1 | verify | 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定） | claude:opus-medium:impl | 2026-10-21T11:07Z | task/PIL-0187-baseline-3-1623 |
+| PIL-0187 | P1 | verify | 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定） | claude:opus-medium:impl | 已过期 2026-10-21T11:07Z | task/PIL-0187-baseline-3-1623 |
 
 ### 阻塞
 
