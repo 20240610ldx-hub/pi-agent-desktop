@@ -255,7 +255,8 @@ export function globsOverlap(a, b) {
 
 // ---------- validation ----------
 
-export function validateCards(cards, config) {
+// knownIds：传入集合之外也算存在的任务 id（set done 只校验单张卡，depends_on 要对全量卡片判断）
+export function validateCards(cards, config, knownIds = []) {
   const problems = [];
   const ids = new Set();
   for (const card of cards) {
@@ -298,7 +299,7 @@ export function validateCards(cards, config) {
   }
   for (const card of cards) {
     for (const dep of card.fields.depends_on) {
-      if (!ids.has(dep)) problems.push({ level: "error", id: card.fields.id, msg: `depends_on unknown ${dep}` });
+      if (!ids.has(dep) && !knownIds.includes(dep)) problems.push({ level: "error", id: card.fields.id, msg: `depends_on unknown ${dep}` });
     }
   }
   return problems;
@@ -777,9 +778,9 @@ const commands = {
     if (status === "done") {
       const reviewer = need(opts["reviewed-by"], "--reviewed-by required");
       if (f.implementers.includes(reviewer)) throw new RelayError("reviewer must not be an implementer of this task");
-      // 在全量卡片集合上校验（depends_on 需要看到其他卡），再只保留属于本卡的错误
-      const all = loadAll(ctx).map((c) => (c.fields.id === f.id ? { ...card, fields: { ...f, status: "done" } } : c));
-      const problems = validateCards(all, ctx.config).filter((p) => p.level === "error" && p.id === f.id);
+      // 仍只校验本卡（门禁语义不变），depends_on 的存在性对全量卡片的 id 判断
+      const knownIds = loadAll(ctx).map((c) => c.fields.id);
+      const problems = validateCards([{ ...card, fields: { ...f, status: "done" } }], ctx.config, knownIds).filter((p) => p.level === "error");
       if (problems.length) throw new RelayError(problems.map((p) => p.msg).join("; "));
     }
     const from = f.status;
