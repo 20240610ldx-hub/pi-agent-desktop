@@ -47,6 +47,7 @@ waivers: [R1]
 | A1 | ls lib/recent-sessions* 无文件；git grep -n recent-sessions 仅命中 docs/merge-history.md 历史、STATUS/任务卡、SessionSidebar.test.mjs 的 doesNotMatch 负向断言，代码无引用；guard 显示 R1 已豁免 | 通过 | D:/pilaude/relay-evidence/PIL-0177/verify/A1.log | 418cb12 | claude:sonnet-high:verify |
 | A2 | git diff 418cb12^ 418cb12 -- docs AGENTS.md；确认 lib/desktop-menu.ts:29 NATIVE_POPUP_MENUS_ENABLED=false；grep 全部 AGENTS.md/docs/agents 无矛盾句；Hard rule 保留 JS Menu API 禁令；DirectoryPicker/SessionSearch 订正与源码（AppShell/ProjectPicker/SessionSidebar 使用）一致；merge-history 新增一段 | 通过 | D:/pilaude/relay-evidence/PIL-0177/verify/A2.log | 418cb12 | claude:sonnet-high:verify |
 | A3 | git diff 418cb12^ 418cb12 -- components/ChatInput.tsx：仅 1 处注释（-3/+2 行），无逻辑改动；新注释与 restoreSubmission 的 mergeRestoredSubmissionDraft 行为一致 | 通过 | D:/pilaude/relay-evidence/PIL-0177/verify/A3.log | 418cb12 | claude:sonnet-high:verify |
+| A4 | npm test 3574 例 12 败（与 PIL-0113 基线 12 败名称一致，新增 0；总数 -3 即已删测试 3 例）；tsc --noEmit 退出 0；npm run lint 0 错 1 警告（既有）；relay guard --task PIL-0177 仅 WAIVED R1 | 通过 | D:/pilaude/relay-evidence/PIL-0177/verify/A4-npm-test.log、A4-tsc.log、A4-lint.log、A4-guard.log | 418cb12 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T07:10Z · planner · 创建
@@ -58,3 +59,4 @@ waivers: [R1]
 - 2026-10-21T07:21Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-21T07:21Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-21T07:21Z · claude:sonnet-high:verify · 证据 A3：通过
+- 2026-10-21T07:21Z · claude:sonnet-high:verify · 证据 A4：通过
