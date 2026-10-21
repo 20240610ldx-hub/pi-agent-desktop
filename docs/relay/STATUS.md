@@ -25,13 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 100 张任务卡：todo 90 · in_progress 1 · verify 0 · review 0 · done 5 · blocked 0 · parked 4
+共 100 张任务卡：todo 90 · in_progress 0 · verify 1 · review 0 · done 5 · blocked 0 · parked 4
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0180 | P1 | in_progress | Windows 保持唤醒能力与退出释放 | claude:sonnet-high:impl | 2026-10-21T14:58Z | task/PIL-0180-keep-awake |
+| PIL-0180 | P1 | verify | Windows 保持唤醒能力与退出释放 | claude:sonnet-high:impl | 2026-10-21T14:58Z | task/PIL-0180-keep-awake |
 
 ### 阻塞
 
