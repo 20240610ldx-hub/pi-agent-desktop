@@ -32,7 +32,7 @@
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0113 | P0 | in_progress | 合入上游 abcwyc main 2026-10-20（desktop 0.7.5） | claude:sonnet-xhigh:impl | 2026-10-21T07:29Z | task/PIL-0113-upstream-0-7-5 |
-| PIL-0014 | P1 | in_progress | 把组件复刻基准拆成逐组件任务卡 | codex-plus:gpt-xhigh:impl | 2026-10-21T08:14Z | task/PIL-0014-parity-index |
+| PIL-0014 | P1 | in_progress | 把组件复刻基准拆成逐组件任务卡 | codex-plus:gpt-xhigh:impl | 2026-10-21T08:24Z | task/PIL-0014-parity-index |
 
 ### 阻塞
 
