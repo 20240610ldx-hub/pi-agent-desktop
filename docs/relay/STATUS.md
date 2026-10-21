@@ -119,7 +119,7 @@
 | PIL-0153 | P2 | E2 | 复刻验收：C39 FileViewer、Source／Preview／Diff 与下载 | 是 | PIL-0014, PIL-0011 |
 | PIL-0154 | P2 | E2 | 复刻验收：C40 Context／Environment／Connectors 卡片 | 是 | PIL-0014, PIL-0181 |
 | PIL-0155 | P2 | E2 | 复刻验收：C41 标题菜单、Transcript modes 与输出风格 | 是 | PIL-0014, PIL-0169 |
-| PIL-0156 | P2 | E2 | 复刻验收：C42 Terminal 标签、工具栏与偏好 | 否 | PIL-0014 |
+| PIL-0156 | P2 | E2 | 复刻验收：C42 Terminal 标签、工具栏与偏好 | 是 | PIL-0014 |
 | PIL-0157 | P2 | E2 | 复刻验收：C43 General 设置与共享设置控件 | 否 | PIL-0014, PIL-0115, PIL-0116, PIL-0117 |
 | PIL-0158 | P2 | E2 | 复刻验收：C44 模型配置与提供商凭据界面 | 否 | PIL-0014, PIL-0020 |
 | PIL-0159 | P2 | E2 | 复刻验收：C45 MCP 配置、信任与登录 | 否 | PIL-0014 |
