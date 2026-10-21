@@ -47,3 +47,4 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 ## 日志
 - 2026-10-21T07:25Z · planner · 创建
 - 2026-10-21T07:25Z · planner · 冻结验收标准 5ebacb9adefe
+- 2026-10-21T07:25Z · claude:opus-medium:planner · 用户 2026-10-21 在对话中选择「开卡修复，豁免 R6」，授权修改 scripts/relay.mjs 与 scripts/relay.test.mjs
