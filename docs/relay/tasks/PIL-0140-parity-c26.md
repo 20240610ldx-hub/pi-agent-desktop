@@ -3,7 +3,7 @@ id: PIL-0140
 title: 复刻验收：C26 麦克风活动条
 epic: E2
 priority: P2
-status: todo
+status: parked
 owner:
 lease_until:
 branch:
@@ -66,4 +66,4 @@ waivers: []
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 由PIL-0014按C26补齐目标、背景、同帧量测／交互／专属残差与具体文件范围；保持todo和未冻结，无实现或通过证据，交规划者复核。主任务板待协调者统一提交。
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
-
+- 2026-10-21T12:00Z · claude:opus-medium:planner · todo → parked：用户 2026-10-21 决定首发不做（麦克风/语音转文字首发不做，隐藏麦克风）

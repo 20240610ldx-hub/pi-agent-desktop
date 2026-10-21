@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 100 张任务卡：todo 92 · in_progress 1 · verify 0 · review 0 · done 5 · blocked 0 · parked 2
+共 100 张任务卡：todo 91 · in_progress 1 · verify 0 · review 0 · done 5 · blocked 0 · parked 3
 
 ### 进行中 / 待验证 / 待评审
 
@@ -103,7 +103,6 @@
 | PIL-0136 | P2 | E2 | 复刻验收：C22 DOM 菜单进入与弹簧曲线 | 否 | PIL-0014 |
 | PIL-0138 | P2 | E2 | 复刻验收：C24 列表边缘渐隐 | 否 | PIL-0014 |
 | PIL-0139 | P2 | E2 | 复刻验收：C25 完成音与音频设置 | 否 | PIL-0014 |
-| PIL-0140 | P2 | E2 | 复刻验收：C26 麦克风活动条 | 否 | PIL-0014, PIL-0178, PIL-0122 |
 | PIL-0141 | P2 | E2 | 复刻验收：C27 多图片缩略图与上传排列 | 否 | PIL-0014, PIL-0122, PIL-0126 |
 | PIL-0142 | P2 | E2 | 复刻验收：C28 图片灯箱、缩放与共享转场 | 否 | PIL-0014 |
 | PIL-0145 | P2 | E2 | 复刻验收：C31 Changes／diff／反馈编辑器 | 否 | PIL-0014, PIL-0010, PIL-0013 |
