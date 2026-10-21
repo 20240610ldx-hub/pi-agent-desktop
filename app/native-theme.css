@@ -8595,23 +8595,61 @@ html.dark .pilaude-welcome { --pilaude-ripple-color: #7893b2; --pilaude-ripple-o
 .pilaude-welcome-description { font-size: 15px; color: var(--text-muted); line-height: 1.7; margin: 0; max-width: 430px; }
 .pilaude-welcome-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 28px; }
 .pilaude-welcome-note { font-size: 12px; color: var(--text-meta); line-height: 1.7; margin-top: 28px; }
-.cds-button { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-ui); border: 0; cursor: pointer; transition: background-color 150ms var(--ease-native), transform 100ms var(--ease-native); }
-.cds-button--xs { height: 24px; padding: 0 8px; border-radius: 6px; font-size: 11.5px; gap: 4px; }
-.cds-button--sm { height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; gap: 6px; }
-.cds-button--md, .cds-button--icon { height: 32px; padding: 0 14px; border-radius: 8px; font-size: 14px; gap: 6px; }
-.cds-button--icon { width: 32px; padding: 0; }
-.cds-button--lg { height: 40px; padding: 0 20px; border-radius: 12px; font-size: 15px; font-weight: 500; gap: 8px; }
-.cds-button--primary { background: var(--cds-clay); color: var(--cds-clay-contrast, #151515); }
-.cds-button--primary:hover { background: var(--cds-clay-hover); }
+/* ===== C02 按钮尺寸与交互状态 (PIL-0116) =====
+   尺寸、内边距、圆角、按钮间距全部走 --cds-btn-* 令牌，调用处不再逐点覆盖。
+   xs 档取自 3.1623 原生截图量测（agent-panels-light 00/06/07、rate-limit-light，原像素 ÷ 1.5）：
+   填充按钮 ≈22.7×(文字+14)，描边按钮 24 高（含 1px 边框），圆角 5.33，内边距 7，字号 13，
+   并排间距 8（宿主布局负责，不在按钮上加 margin），图标按钮 24×24。sm/md/lg 无原生同态参考，沿用旧值，待补采。 */
+:root {
+  --cds-btn-xs-h: 22.67px; --cds-btn-xs-h-outline: 24px; --cds-btn-xs-px: 7px; --cds-btn-xs-r: 5.33px; --cds-btn-xs-fs: 13px; --cds-btn-xs-gap: 4px;
+  --cds-btn-xxs-h: 20px; --cds-btn-xxs-px: 6px; --cds-btn-xxs-r: 4px; --cds-btn-xxs-fs: 11px; --cds-btn-xxs-gap: 4px;
+  --cds-btn-sm-h: 28px; --cds-btn-sm-px: 10px; --cds-btn-sm-r: 8px; --cds-btn-sm-fs: 12px; --cds-btn-sm-gap: 6px;
+  --cds-btn-md-h: 32px; --cds-btn-md-px: 14px; --cds-btn-md-r: 8px; --cds-btn-md-fs: 14px; --cds-btn-md-gap: 6px;
+  --cds-btn-lg-h: 40px; --cds-btn-lg-px: 20px; --cds-btn-lg-r: 12px; --cds-btn-lg-fs: 15px; --cds-btn-lg-gap: 8px;
+  --cds-btn-icon-xs: 24px; --cds-btn-icon: 32px;
+  --cds-btn-label-lift: -1px; /* 原生 CJK 文字基线比 line-height:1 居中高约 1.3px（量测见证据） */
+  --cds-btn-primary-bg: var(--cds-gray-900); --cds-btn-primary-bg-hover: var(--cds-gray-750); --cds-btn-primary-fg: #fff;
+  --cds-btn-outline-fg: var(--cds-gray-900);
+  --cds-btn-icon-fill: #f3f3f3;
+}
+html.dark {
+  /* 深色同态参考未采，取浅色的反相，待补采 */
+  --cds-btn-primary-bg: var(--cds-text-primary); --cds-btn-primary-bg-hover: #d9d9d6; --cds-btn-primary-fg: var(--cds-gray-900);
+  --cds-btn-outline-fg: var(--cds-text-primary);
+  --cds-btn-icon-fill: rgba(255, 255, 255, 0.08);
+}
+.cds-button { --cds-btn-h: var(--cds-btn-md-h); --cds-btn-px: var(--cds-btn-md-px); --cds-btn-r: var(--cds-btn-md-r); --cds-btn-fs: var(--cds-btn-md-fs); --cds-btn-gap: var(--cds-btn-md-gap); box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; max-width: 100%; height: var(--cds-btn-h); padding: 0 var(--cds-btn-px); border: 0; border-radius: var(--cds-btn-r); gap: var(--cds-btn-gap); font: 400 var(--cds-btn-fs)/1 var(--font-ui); white-space: nowrap; cursor: pointer; user-select: none; transition: background-color 150ms var(--ease-native), transform 100ms var(--ease-native); }
+.cds-button--xxs { --cds-btn-h: var(--cds-btn-xxs-h); --cds-btn-px: var(--cds-btn-xxs-px); --cds-btn-r: var(--cds-btn-xxs-r); --cds-btn-fs: var(--cds-btn-xxs-fs); --cds-btn-gap: var(--cds-btn-xxs-gap); }
+.cds-button--xs { --cds-btn-h: var(--cds-btn-xs-h); --cds-btn-px: var(--cds-btn-xs-px); --cds-btn-r: var(--cds-btn-xs-r); --cds-btn-fs: var(--cds-btn-xs-fs); --cds-btn-gap: var(--cds-btn-xs-gap); }
+.cds-button--sm { --cds-btn-h: var(--cds-btn-sm-h); --cds-btn-px: var(--cds-btn-sm-px); --cds-btn-r: var(--cds-btn-sm-r); --cds-btn-fs: var(--cds-btn-sm-fs); --cds-btn-gap: var(--cds-btn-sm-gap); }
+.cds-button--lg { --cds-btn-h: var(--cds-btn-lg-h); --cds-btn-px: var(--cds-btn-lg-px); --cds-btn-r: var(--cds-btn-lg-r); --cds-btn-fs: var(--cds-btn-lg-fs); --cds-btn-gap: var(--cds-btn-lg-gap); font-weight: 500; }
+.cds-button--xs.cds-button--outline { --cds-btn-h: var(--cds-btn-xs-h-outline); }
+.cds-button--icon { width: var(--cds-btn-icon); padding: 0; }
+.cds-button--icon-only { padding: 0; width: var(--cds-btn-h); }
+.cds-button--xs.cds-button--icon-only { --cds-btn-h: var(--cds-btn-icon-xs); }
+.cds-button__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; line-height: 1; }
+.cds-button__label { position: relative; top: var(--cds-btn-label-lift); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cds-button__indicator { flex: none; margin-inline-start: var(--cds-btn-gap); }
+.cds-button__spinner { flex: none; box-sizing: border-box; width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: cds-btn-spin 700ms linear infinite; }
+@keyframes cds-btn-spin { to { transform: rotate(360deg); } }
+.cds-button--primary { background: var(--cds-btn-primary-bg); color: var(--cds-btn-primary-fg); }
+.cds-button--primary:hover:not(:disabled):not(.is-loading) { background: var(--cds-btn-primary-bg-hover); }
+.cds-button--brand { background: var(--cds-clay); color: var(--cds-clay-contrast, #151515); }
+.cds-button--brand:hover:not(:disabled):not(.is-loading) { background: var(--cds-clay-hover); }
 .cds-button--secondary { background: var(--cds-fill-secondary); color: var(--text); }
-.cds-button--secondary:hover { background: var(--cds-fill-secondary-hover); }
+.cds-button--secondary:hover:not(:disabled):not(.is-loading) { background: var(--cds-fill-secondary-hover); }
 .cds-button--ghost, .cds-button--outline { background: transparent; color: var(--text-muted); }
-.cds-button--outline { border: var(--hairline) solid var(--cds-border); }
-.cds-button--ghost:hover, .cds-button--outline:hover { background: var(--cds-fill-ghost-hover); }
+.cds-button--outline { border: 1px solid var(--cds-border); color: var(--cds-btn-outline-fg); }
+.cds-button--ghost:hover:not(:disabled):not(.is-loading), .cds-button--outline:hover:not(:disabled):not(.is-loading) { background: var(--cds-fill-ghost-hover); }
+.cds-button--icon-only.cds-button--ghost:hover:not(:disabled):not(.is-loading) { background: var(--cds-btn-icon-fill); }
 .cds-button--danger { background: var(--danger); color: white; }
-.cds-button:active:not(:disabled) { transform: scale(0.98); }
+.cds-button--onContent { background: var(--cds-button-on-content, rgba(0, 0, 0, 0.5)); color: #fff; }
+.cds-button:active:not(:disabled):not(.is-loading) { transform: scale(0.98); }
 .cds-button:disabled { cursor: not-allowed; opacity: 0.35; }
-.cds-button:focus-visible { outline: 2px solid var(--cds-clay); outline-offset: 4px; }
+.cds-button.is-loading { cursor: progress; }
+.cds-button:focus-visible { outline: 2px solid var(--cds-clay); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .cds-button__spinner { animation-duration: 1.6s; } }
+/* ===== /C02 ===== */
 .chat-composer:hover { box-shadow: var(--cds-shadow-composer-hover) !important; }
 .chat-composer:focus-within { box-shadow: var(--cds-shadow-composer-focus) !important; }
 .chat-input-shell {

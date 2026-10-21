@@ -4,11 +4,10 @@
  * 逆向溯源：依据 REA v6.5.0 对 Claude Desktop 生产环境 (shared-frame-BfjMqbuN.js / c6a992d55-sXiDGMFQ.css)
  * AST 逆向提取的完整按钮阶梯与物理阻尼规范。
  *
- * 核心准则：
- *   - 严格遵循“单闭合边框原则 (The 1-Border Rule)”：卡片内部的 Secondary 按钮严禁带边框，默认采用 Surface-2 浅底填充。
- *   - 尺寸阶梯：XXS (20px)、XS (24px, 6px圆角)、SM (28px, 8px圆角)、MD (32px, 8px圆角)、LG (40px, 12px圆角)。
- *   - 物理阻尼：真实 15 阶 CSS linear() 弹簧回弹曲线 (--cds-btn-spring) 与动态按压形变 (.cds-btn-squish)。
- *   - 架构分离：外层定位外壳 + 内层独立绘景图层 (data-cds-part="paint")，杜绝内边距与边框干涉。
+ * PIL-0116 / C02：尺寸、内边距、圆角、间距与状态颜色全部由 app/native-theme.css 的
+ * “C02 按钮尺寸与交互状态”分节里的 --cds-btn-* 令牌提供，本文件只输出语义类名与可访问属性，
+ * 不再混用 Tailwind 工具类（此前两处各写一份，Tailwind 的边框会与主题边框叠成双线）。
+ * xs 档数值取自 3.1623 原生截图量测（agent-panels-light，原像素 ÷ 1.5），记录见 relay-evidence/PIL-0116。
  */
 
 import React, { forwardRef } from "react";
@@ -25,53 +24,6 @@ export interface CdsButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
   indicator?: React.ReactNode;
 }
 
-const SIZE_STYLES: Record<ButtonSize, string> = {
-  xxs: "h-5 px-1.5 rounded text-[11px] gap-1",
-  xs: "h-6 px-2 rounded-md text-[11.5px] gap-1",
-  sm: "h-7 px-2.5 rounded-lg text-xs gap-1.5",
-  md: "h-8 px-3.5 rounded-lg text-sm gap-1.5",
-  lg: "h-10 px-5 rounded-xl text-[15px] gap-2 font-medium",
-  icon: "size-8 rounded-lg p-0 flex items-center justify-center",
-};
-
-const VARIANT_STYLES: Record<ButtonVariant, { text: string; paint: string }> = {
-  // 1. 次级操作（Claude 官方默认变体）：严格无边框，采用二次表面填充 + 柔和 Hover 漫反射
-  secondary: {
-    text: "text-neutral-800 dark:text-neutral-200 font-normal",
-    paint: "bg-[var(--cds-fill-secondary,rgba(0,0,0,0.06))] group-hover/btn:bg-[var(--cds-fill-secondary-hover,rgba(0,0,0,0.1))] dark:bg-white/10 dark:hover:bg-white/15 shadow-field",
-  },
-  // 2. 主操作：陶土色实色填充 + 微光投影
-  primary: {
-    text: "text-white font-medium",
-    paint: "bg-clay hover:bg-clay-hover shadow-2xs",
-  },
-  // 3. 幽灵操作：无背景无边框，悬停时浅灰微光
-  ghost: {
-    text: "text-neutral-600 dark:text-neutral-300 font-normal",
-    paint: "bg-transparent group-hover/btn:bg-[var(--cds-fill-ghost-hover,rgba(0,0,0,0.05))] dark:group-hover/btn:bg-white/5",
-  },
-  // 4. 警示破坏操作
-  danger: {
-    text: "text-white font-medium",
-    paint: "bg-red-600 hover:bg-red-700 shadow-2xs",
-  },
-  // 5. 官方品牌操作
-  brand: {
-    text: "text-white font-medium",
-    paint: "bg-[var(--brand,#c6613f)] hover:bg-clay-hover shadow-2xs",
-  },
-  // 6. 浮动媒体操作（深色或视频内容覆层）
-  onContent: {
-    text: "text-white font-medium",
-    paint: "bg-[var(--cds-button-on-content,rgba(0,0,0,0.5))] backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)] group-hover/btn:bg-[var(--cds-button-on-content-hover,rgba(0,0,0,0.7))]",
-  },
-  // 兼容别名：仅限空白画布展示，禁止放入已带外框的卡片中
-  outline: {
-    text: "text-neutral-700 dark:text-neutral-300 font-normal",
-    paint: "bg-transparent group-hover/btn:bg-neutral-100/60 dark:group-hover/btn:bg-neutral-800/60 border border-neutral-200/90 dark:border-neutral-700/80",
-  },
-};
-
 export const CdsButton = forwardRef<HTMLButtonElement, CdsButtonProps>(
   (
     {
@@ -84,55 +36,48 @@ export const CdsButton = forwardRef<HTMLButtonElement, CdsButtonProps>(
       disabled = false,
       children,
       className = "",
+      onClick,
       ...props
     },
     ref
   ) => {
     const isIconOnly = size === "icon" || (!children && !!icon);
-    const variantStyle = VARIANT_STYLES[variant];
+    const classes = [
+      "cds-button",
+      `cds-button--${variant}`,
+      `cds-button--${size}`,
+      isIconOnly ? "cds-button--icon-only" : "",
+      isLoading ? "is-loading" : "",
+      className,
+    ].filter(Boolean).join(" ");
 
     return (
       <button
         type="button"
         ref={ref}
         data-cds="Button"
-        disabled={disabled || isLoading}
-        className={`cds-button cds-button--${variant} cds-button--${size} group/btn cds-btn-squish relative isolate inline-flex shrink-0 items-center justify-center font-sans select-none cursor-pointer border-0 outline-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-clay/50 disabled:opacity-35 disabled:cursor-not-allowed disabled:pointer-events-none transition-shadow duration-fast ${
-          SIZE_STYLES[size]
-        } ${variantStyle.text} ${className}`}
+        // 加载中不用 disabled：禁用按钮会丢失键盘焦点，操作结束后焦点无法按宿主恢复。
+        disabled={disabled}
+        aria-busy={isLoading || undefined}
+        aria-disabled={isLoading || undefined}
+        className={classes}
+        onClick={isLoading ? undefined : onClick}
         {...props}
       >
-        {/* 内层独立绘景图层 (data-cds-part="paint") */}
-        <span
-          aria-hidden="true"
-          data-cds-part="paint"
-          className={`absolute inset-0 -z-10 rounded-[inherit] transition-[background-color,box-shadow,color] duration-fast ease-out ${variantStyle.paint}`}
-        />
-
-        {/* 加载旋转指示器 */}
         {isLoading ? (
-          <span className="size-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+          <span aria-hidden="true" className="cds-button__spinner" />
         ) : (
-          icon && iconPosition === "left" && (
-            <span className="shrink-0 flex items-center justify-center leading-none">
-              {icon}
-            </span>
-          )
+          icon && iconPosition === "left" && <span className="cds-button__icon">{icon}</span>
         )}
 
-        {/* 文本内容 */}
-        {children && <span className="truncate">{children}</span>}
+        {children && <span className="cds-button__label">{children}</span>}
 
-        {/* 右侧图标 */}
         {!isLoading && icon && iconPosition === "right" && !isIconOnly && (
-          <span className="shrink-0 flex items-center justify-center leading-none">
-            {icon}
-          </span>
+          <span className="cds-button__icon">{icon}</span>
         )}
 
-        {/* 状态微点插槽 (如脉冲呼吸微点) */}
         {indicator && (
-          <span data-cds-part="indicator" className="shrink-0 ml-1">
+          <span data-cds-part="indicator" className="cds-button__indicator">
             {indicator}
           </span>
         )}
