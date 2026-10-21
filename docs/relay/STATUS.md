@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 110 张任务卡：todo 96 · in_progress 1 · verify 1 · review 0 · done 7 · blocked 0 · parked 5
+共 110 张任务卡：todo 95 · in_progress 2 · verify 1 · review 0 · done 7 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -33,6 +33,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0115 | P1 | verify | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
 | PIL-0116 | P1 | in_progress | 复刻验收：C02 按钮尺寸与交互状态 | claude:sonnet-high:impl | 2026-10-21T15:51Z | task/PIL-0116-parity-c02 |
+| PIL-0197 | P1 | in_progress | Windows 托盘 Quit 只隐藏窗口不结束进程 | claude:sonnet-high:impl | 2026-10-21T16:04Z | task/PIL-0197-tray-quit-exit |
 
 ### 阻塞
 
@@ -81,7 +82,6 @@
 | PIL-0193 | P1 | E5 | 受控浏览器提交/上传/导航审批门 | 否 | PIL-0192, PIL-0030 |
 | PIL-0194 | P1 | E5 | 受控浏览器标签页与下载 | 否 | PIL-0192, PIL-0193 |
 | PIL-0195 | P1 | E5 | 受控浏览器人工接管、取消与恢复 | 否 | PIL-0192, PIL-0193 |
-| PIL-0197 | P1 | E11 | Windows 托盘 Quit 只隐藏窗口不结束进程 | 是 | PIL-0180 |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0020 | P2 | E3 | 本地数据隔离与凭据加密验收 | 否 | — |

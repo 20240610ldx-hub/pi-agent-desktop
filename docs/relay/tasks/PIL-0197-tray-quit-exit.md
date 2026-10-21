@@ -3,11 +3,11 @@ id: PIL-0197
 title: Windows 托盘 Quit 只隐藏窗口不结束进程
 epic: E11
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: claude:sonnet-high:impl
+lease_until: 2026-10-21T16:04Z
+branch: task/PIL-0197-tray-quit-exit
+implementers: [claude:sonnet-high:impl]
 depends_on: [PIL-0180]
 files_allowed: [src-tauri/src/shell/platform_tray.rs, src-tauri/src/shell/mod.rs]
 files_shared: []
@@ -47,3 +47,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 ## 日志
 - 2026-10-21T12:46Z · planner · 创建
 - 2026-10-21T12:47Z · planner · 冻结验收标准 93fcef9363a2
+- 2026-10-21T13:04Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T16:04Z
