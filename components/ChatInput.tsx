@@ -1057,9 +1057,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       const { text: typedText, files: submittedFiles } = splitMessageForComposer(text);
       if (!typedText.trim() && !images?.length && !submittedFiles.length) return;
 
-      // clearInput is queued before the submission handler runs. Compose with
-      // that queued state so a fast rejection cannot observe stale DOM text and
-      // then get overwritten by the clear.
+      // Merge the submission into the destination draft's latest text and
+      // attachments, preserving edits made after it was sent.
       const currentDraftKey = draftKeyRef.current;
       const destinationDraftKey = targetDraftKey ?? currentDraftKey;
       const targetsCurrentComposer = destinationDraftKey === currentDraftKey;
