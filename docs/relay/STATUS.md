@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 100 张任务卡：todo 90 · in_progress 0 · verify 1 · review 0 · done 5 · blocked 0 · parked 4
+共 101 张任务卡：todo 91 · in_progress 0 · verify 1 · review 0 · done 5 · blocked 0 · parked 4
 
 ### 进行中 / 待验证 / 待评审
 
@@ -59,7 +59,7 @@
 | PIL-0117 | P1 | E2 | 复刻验收：C03 分段选择控件 | 否 | PIL-0014 |
 | PIL-0122 | P1 | E2 | 复刻验收：C08 输入器主框与提交控件 | 否 | PIL-0014, PIL-0177 |
 | PIL-0126 | P1 | E2 | 复刻验收：C12 助手正文与消息操作条 | 否 | PIL-0014 |
-| PIL-0127 | P1 | E2 | 复刻验收：C13 代码块、Mermaid source 与复制反馈 | 否 | PIL-0014, PIL-0012 |
+| PIL-0127 | P1 | E2 | 复刻验收：C13 代码块、Mermaid source 与复制反馈 | 否 | PIL-0014 |
 | PIL-0128 | P1 | E2 | 复刻验收：C14 思考摘要与展开正文 | 否 | PIL-0014 |
 | PIL-0130 | P1 | E2 | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | 否 | PIL-0014 |
 | PIL-0137 | P1 | E2 | 复刻验收：C23 长会话滚动跟随与历史恢复 | 否 | PIL-0014 |
@@ -69,13 +69,14 @@
 | PIL-0150 | P1 | E2 | 复刻验收：C36 窄容器工具栏与 roving 焦点 | 否 | PIL-0014, PIL-0010 |
 | PIL-0169 | P1 | E2 | 复刻验收：C55 会话侧栏卡片编排与 Show 菜单 | 否 | PIL-0014, PIL-0010 |
 | PIL-0170 | P1 | E2 | 复刻验收：C56 Side chat 面板与回复输入 | 否 | PIL-0014, PIL-0179, PIL-0144 |
-| PIL-0172 | P1 | E2 | 复刻验收：C58 环境选择菜单与多级子菜单 | 否 | PIL-0014, PIL-0181, PIL-0182, PIL-0183, PIL-0184, PIL-0185 |
+| PIL-0172 | P1 | E2 | 复刻验收：C58 环境选择菜单与多级子菜单 | 否 | PIL-0014, PIL-0181, PIL-0182, PIL-0183, PIL-0184 |
 | PIL-0173 | P1 | E2 | 复刻验收：C59 New environment 的 Local／SSH 对话框 | 否 | PIL-0014, PIL-0172, PIL-0181, PIL-0183 |
-| PIL-0179 | P1 | E6 | Side chat 独立会话服务与权限隔离 | 否 | PIL-0030, PIL-0050 |
-| PIL-0181 | P1 | E9 | 环境配置、Folders 与变量作用域持久化 | 否 | PIL-0020, PIL-0030 |
+| PIL-0179 | P1 | E6 | Side chat 独立会话服务与权限隔离 | 否 | PIL-0030 |
+| PIL-0181 | P1 | E3 | 环境配置、Folders 与变量作用域持久化 | 否 | PIL-0030 |
 | PIL-0182 | P1 | E4 | 环境执行契约与本机真实运行路由 | 否 | PIL-0181, PIL-0030 |
 | PIL-0183 | P1 | E4 | SSH 环境真实执行、取消与连接恢复 | 否 | PIL-0182 |
 | PIL-0184 | P1 | E4 | WSL 环境发现、执行与路径隔离 | 否 | PIL-0182 |
+| PIL-0188 | P1 | E4 | 提问能力：模型向用户提问与答案回传（AskUserQuestion） | 否 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0013 | P2 | E2 | Changes 面板剩余交互与视觉残差 | 否 | PIL-0010 |
@@ -94,7 +95,7 @@
 | PIL-0124 | P2 | E2 | 复刻验收：C10 提及、路径与斜杠建议 | 否 | PIL-0014, PIL-0122 |
 | PIL-0125 | P2 | E2 | 复刻验收：C11 用户长消息气泡与展开 | 否 | PIL-0014, PIL-0126 |
 | PIL-0129 | P2 | E2 | 复刻验收：C15 执行记录组与摘要 | 否 | PIL-0014, PIL-0137 |
-| PIL-0131 | P2 | E2 | 复刻验收：C17 流式正文／公式／Artifact 光标 | 否 | PIL-0014, PIL-0012, PIL-0127, PIL-0143 |
+| PIL-0131 | P2 | E2 | 复刻验收：C17 流式正文／公式／Artifact 光标 | 否 | PIL-0014, PIL-0127, PIL-0143 |
 | PIL-0132 | P2 | E2 | 复刻验收：C18 单处微光、新步骤及有限状态动效 | 否 | PIL-0014, PIL-0128, PIL-0130 |
 | PIL-0133 | P2 | E2 | 复刻验收：C19 模型切换菜单 | 否 | PIL-0014 |
 | PIL-0134 | P2 | E2 | 复刻验收：C20 推理强度选择 | 否 | PIL-0014, PIL-0122 |
@@ -104,14 +105,14 @@
 | PIL-0139 | P2 | E2 | 复刻验收：C25 完成音与音频设置 | 否 | PIL-0014 |
 | PIL-0141 | P2 | E2 | 复刻验收：C27 多图片缩略图与上传排列 | 否 | PIL-0014, PIL-0122, PIL-0126 |
 | PIL-0142 | P2 | E2 | 复刻验收：C28 图片灯箱、缩放与共享转场 | 否 | PIL-0014 |
-| PIL-0145 | P2 | E2 | 复刻验收：C31 Changes／diff／反馈编辑器 | 否 | PIL-0014, PIL-0010, PIL-0013 |
+| PIL-0145 | P2 | E2 | 复刻验收：C31 Changes／diff／反馈编辑器 | 否 | PIL-0014, PIL-0010 |
 | PIL-0147 | P2 | E2 | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | 否 | PIL-0014 |
 | PIL-0148 | P2 | E2 | 复刻验收：C34 模型章节导航轨与目录 | 否 | PIL-0014, PIL-0137 |
 | PIL-0149 | P2 | E2 | 复刻验收：C35 多代理任务面板与真实任务状态 | 否 | PIL-0014, PIL-0050, PIL-0074, PIL-0144 |
 | PIL-0151 | P2 | E2 | 复刻验收：C37 限流、重试与错误提示 | 否 | PIL-0014, PIL-0122, PIL-0137 |
 | PIL-0152 | P2 | E2 | 复刻验收：C38 New 首页与固定字符光照 | 否 | PIL-0014 |
 | PIL-0153 | P2 | E2 | 复刻验收：C39 FileViewer、Source／Preview／Diff 与下载 | 否 | PIL-0014, PIL-0011 |
-| PIL-0154 | P2 | E2 | 复刻验收：C40 Context／Environment／Connectors 卡片 | 否 | PIL-0014, PIL-0181, PIL-0185 |
+| PIL-0154 | P2 | E2 | 复刻验收：C40 Context／Environment／Connectors 卡片 | 否 | PIL-0014, PIL-0181 |
 | PIL-0155 | P2 | E2 | 复刻验收：C41 标题菜单、Transcript modes 与输出风格 | 否 | PIL-0014, PIL-0169 |
 | PIL-0156 | P2 | E2 | 复刻验收：C42 Terminal 标签、工具栏与偏好 | 否 | PIL-0014 |
 | PIL-0157 | P2 | E2 | 复刻验收：C43 General 设置与共享设置控件 | 否 | PIL-0014, PIL-0115, PIL-0116, PIL-0117 |
