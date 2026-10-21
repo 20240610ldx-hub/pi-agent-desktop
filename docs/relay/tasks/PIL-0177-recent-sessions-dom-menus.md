@@ -3,7 +3,7 @@ id: PIL-0177
 title: 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
 epic: E2
 priority: P2
-status: verify
+status: review
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-21T09:56Z
 branch: task/PIL-0177-recent-sessions-dom-menus
@@ -61,3 +61,4 @@ waivers: [R1]
 - 2026-10-21T07:21Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-21T07:21Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-21T07:21Z · claude:sonnet-high:verify · 验证 418cb12：A1–A4 全部通过。做了：独立核对删除与 grep（无代码引用）、文档 diff 与 desktop-menu.ts 旗标、ChatInput 仅注释变更、npm test/tsc/lint/guard。状态：418cb12，工作树干净；npm test 3574 例 12 败且与 PIL-0113 基线同名无新增（-3 为被删测试），tsc 0，lint 0 错 1 既有警告，guard 仅 WAIVED R1。下一步：送评审。风险：.github/workflows/desktop-test-build.yml 的 native_popup_menus 输入描述与 NEXT_PUBLIC_NATIVE_POPUP_MENUS 在代码中已无效，仍写着可开关，不在本卡 files_allowed 内，建议另开卡；demo/lib/desktop-menu.ts 仍为旧旗标（demo 目录非本卡范围）。
+- 2026-10-21T07:21Z · claude:sonnet-high:verify · verify → review
