@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 104 张任务卡：todo 94 · in_progress 0 · verify 1 · review 0 · done 5 · blocked 0 · parked 4
+共 105 张任务卡：todo 95 · in_progress 0 · verify 1 · review 0 · done 5 · blocked 0 · parked 4
 
 ### 进行中 / 待验证 / 待评审
 
@@ -79,6 +79,7 @@
 | PIL-0188 | P1 | E4 | 提问能力：模型向用户提问与答案回传（AskUserQuestion） | 否 | PIL-0030 |
 | PIL-0189 | P1 | E9 | 在分叉会话中发送（fork-send） | 否 | — |
 | PIL-0191 | P1 | E5 | 受控浏览器引擎与 pane 内核（含 spike） | 否 | — |
+| PIL-0192 | P1 | E5 | 受控浏览器会话核心与智能体工具注册 | 否 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0013 | P2 | E2 | Changes 面板剩余交互与视觉残差 | 否 | PIL-0010 |
