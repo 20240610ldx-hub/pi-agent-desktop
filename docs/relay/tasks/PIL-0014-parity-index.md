@@ -3,7 +3,7 @@ id: PIL-0014
 title: 把组件复刻基准拆成逐组件任务卡
 epic: E2
 priority: P1
-status: blocked
+status: in_progress
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-21T08:24Z
 branch: task/PIL-0014-parity-index
@@ -57,3 +57,4 @@ waivers: []
 - 2026-10-21T05:35Z · codex-plus:gpt-xhigh:impl · 做了：已串行创建并填写62张E2组件草案卡 / 状态：全部todo且acceptance_sha为空，主任务板未提交；索引待回填实际ID / 下一步：核对组件与卡片一一对应、具体范围及交互量测标准 / 风险：Git任务元数据目录拒写，提交仍待宿主修复；参考版本/DPI未知项保留，不记录自身通过证据。
 - 2026-10-21T05:37Z · codex-plus:gpt-xhigh:impl · 做了：从f178fa6继续补成62项索引，核对20组manifest并登记两组新增浅色18图的机制与原图尺寸；已创建PIL-0115至PIL-0176共62张E2草案并回填卡号，每卡有具体文件范围、同帧量测和适用交互验收；缺参考清单在索引末尾，未改产品代码 / 状态：分支tip仍为f178fa6530da47b008c5721429f6fa9003b8cce1，索引未提交；文档自测、guard和全板check已实际执行且未发现问题，不是独立验收；新卡全部todo且未冻结，主任务板未由本实现者提交；Git add、commit及最后add三次因任务Git元数据index.lock拒写未能提交 / 下一步：由宿主修复D:/pilaude/pi-agent-desktop/.git/worktrees/PIL-0014写权限后接手，在本worktree提交索引并附Codex co-author，再guard、写日志并set verify；协调者统一提交主任务板卡片 / 风险：本环境已列写根但操作系统ACL拒写，未更改ACL或绕过沙箱；补丁已保存D:/pilaude/relay-evidence/PIL-0014/parity-index-from-f178fa6.patch，卡号映射created-component-cards.json，文档自测document-selfcheck-20261021.json及guard-selfcheck-20261021.json均仅供验证者参考；所有组件参考全状态／版本／DPI仍不齐，不写自身通过证据，不push、不构建。
 - 2026-10-21T05:37Z · codex-plus:gpt-xhigh:impl · in_progress → blocked：Git任务元数据目录ACL拒写，git add/commit及最后add共三次无法创建index.lock；索引和62张草案卡已备，需宿主修复权限后在任务worktree提交才能送verify。
+- 2026-10-21T06:42Z · codex-plus:gpt-xhigh:impl · blocked → in_progress：协调者代为提交 bb32b34（Codex 沙箱无法写 index.lock）与 62 张卡

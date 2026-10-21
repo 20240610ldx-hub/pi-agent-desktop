@@ -25,17 +25,18 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 89 张任务卡：todo 86 · in_progress 0 · verify 0 · review 1 · done 0 · blocked 1 · parked 1
+共 89 张任务卡：todo 86 · in_progress 1 · verify 0 · review 1 · done 0 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0113 | P0 | review | 合入上游 abcwyc main 2026-10-20（desktop 0.7.5） | claude:sonnet-xhigh:impl | 2026-10-21T07:29Z | task/PIL-0113-upstream-0-7-5 |
+| PIL-0014 | P1 | in_progress | 把组件复刻基准拆成逐组件任务卡 | codex-plus:gpt-xhigh:impl | 2026-10-21T08:24Z | task/PIL-0014-parity-index |
 
 ### 阻塞
 
-- **PIL-0014** 把组件复刻基准拆成逐组件任务卡 — 2026-10-21T05:37Z · codex-plus:gpt-xhigh:impl · in_progress → blocked：Git任务元数据目录ACL拒写，git add/commit及最后add共三次无法创建index.lock；索引和62张草案卡已备，需宿主修复权限后在任务worktree提交才能送verify。
+（无）
 
 ### 待办（按优先级；未冻结验收的卡需先由规划者冻结）
 
