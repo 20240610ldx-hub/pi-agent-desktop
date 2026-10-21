@@ -69,7 +69,7 @@ export function AppearanceSettings() {
             </label>
           ))}
         </div>
-        {saving && <p className="settings-general-description" role="status">{t("settings.backgroundSaving")}</p>}
+        {saving && <p className="sr-only" role="status">{t("settings.backgroundSaving")}</p>}
         {error && <p className="settings-general-error" role="alert">{t("settings.backgroundSaveError")}
           <ConfigButton variant="secondary" size="small" onClick={() => setBackground(background)}>{t("settings.backgroundRetry")}</ConfigButton>
         </p>}

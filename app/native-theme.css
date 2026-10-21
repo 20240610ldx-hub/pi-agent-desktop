@@ -9042,6 +9042,12 @@ html.dark {
 
 .settings-dialog-surface { background: var(--canvas-background); }
 .settings-dialog-main { background: var(--surface-elevated); }
+/* Embedded editors share the General/Appearance content surface. Keep the
+   surrounding theme wash and the shared hover/selection tokens unchanged. */
+.settings-dialog-main .config-panel-root.is-embedded > .config-panel-surface,
+.settings-dialog-main .config-panel-root.is-embedded .config-sidebar {
+  background: var(--surface-elevated);
+}
 
 .settings-appearance-controls {
   padding: 16px 20px;

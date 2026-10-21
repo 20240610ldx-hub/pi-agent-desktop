@@ -89,6 +89,16 @@ try {
       await page.goto(base+'/?section='+section);
       const host = page.locator('.settings-section-host:not([hidden])');
       await host.waitFor().catch(async error=>{await page.screenshot({path:out+'/failure.png'});throw new Error(`${theme}/${width}/${section}: ${errors.join('; ')}; ${error.message}`);});
+      const surfaces=await host.evaluate(el=>{
+        const main=el.closest('.settings-dialog-main');
+        const effective=(node)=>{
+          while(node){const color=getComputedStyle(node).backgroundColor;if(color!=='rgba(0, 0, 0, 0)')return color;node=node.parentElement;}
+        };
+        return {expected:getComputedStyle(main).backgroundColor,actual:[...el.querySelectorAll('.settings-general,.config-panel-surface,.config-sidebar,.config-detail,.config-footer')].map(effective)};
+      });
+      assert.ok(surfaces.actual.length>0);
+      for(const color of surfaces.actual)assert.equal(color,surfaces.expected,`${section} content, sidebar and footer must share General/Appearance's surface`);
+      if(theme==='light')assert.equal(surfaces.expected,'rgb(255, 255, 255)');
       if(section==='general'||section==='appearance') {
         const groups = host.locator('.settings-language-options,.settings-theme-options,.settings-send-mode-options,.settings-choice-group');
         assert.ok(await groups.count()>0);

@@ -72,6 +72,8 @@ The topbar renders exactly ONE toolbar group (`app-topbar-actions`: history/bran
 读取本机字体；Windows 使用系统字体集合及其本地化名称，macOS 使用 system_profiler，Linux 使用 fontconfig。
 两种字体选择器沿用 AppSelect 的菜单、键盘导航和间距，读取失败保留手动输入并提供重试。
 字体为默认值时隐藏恢复按钮，改动后显示可用的恢复操作；标题行保留高度。
+背景和字体保存状态仅供读屏播报，不插入可见行挤动布局；错误仍显示并可重试。
+嵌入设置的配置面板与侧栏共用 `--surface-elevated`，与常规/外观内容底色一致，控件和选中态仍使用各自 token。
 设置行的 `.settings-option-action` 使用 `align-self: center`，与多行说明整体居中。
 回归：`node e2e/fonts.mjs` 覆盖真实设置页、即时预览、保存/恢复、错误、菜单及按钮几何。
 

@@ -39,6 +39,34 @@ const selected=(page,id)=>page.waitForFunction(value=>document.documentElement.d
 const saved=async()=>{for(let i=0;i<200;i++){if(activeWrites===0)return;await delay(20);}throw Error('Save did not finish');};
 const names=['Petal','Mist','Meadow','Dusk','Plain'];const ids=['rex','mist','meadow','dusk','plain'];
 try{
+  // Saving a background must not move the following settings or scroll position.
+  for (const theme of ['light', 'dark']) {
+    const page = await browser.newPage({viewport:{width:1280,height:820},colorScheme:theme,reducedMotion:'reduce'});
+    await page.addInitScript(theme=>{localStorage.setItem('pi-theme',theme);localStorage.setItem('pi-locale','en');},theme);
+    stored='rex'; putDelay=450;
+    await page.goto(urls[0]); await page.locator('.settings-font-section').waitFor();
+    await page.locator('.settings-dialog-surface').evaluate(el=>Promise.all(el.getAnimations({subtree:true}).map(a=>a.finished)));
+    const measure=()=>page.locator('.settings-appearance').evaluate(el=>({
+      fontTop:el.querySelector('.settings-font-section').getBoundingClientRect().top,
+      gridTop:el.querySelector('.settings-background-grid').getBoundingClientRect().top,
+      scrollTop:el.scrollTop,width:el.clientWidth,height:el.scrollHeight,
+    }));
+    for (const bottom of [false,true]) {
+      await page.locator('.settings-appearance').evaluate((el,bottom)=>{el.scrollTop=bottom?el.scrollHeight:0;},bottom);
+      const before=await measure();
+      const response=page.waitForResponse(r=>r.url().endsWith('/api/appearance')&&r.request().method()==='PUT');
+      response.catch(()=>{});
+      await page.locator('input[name="background"][value="mist"]').evaluate(el=>el.click());
+      await page.getByRole('status').waitFor();
+      assert.deepEqual(await measure(),before,`background save must not shift layout (${theme}, bottom=${bottom})`);
+      await response; await page.waitForFunction(()=>!document.querySelector('[role="status"]'));
+      assert.deepEqual(await measure(),before,'saved state must retain geometry');
+      await page.locator('input[name="background"][value="rex"]').evaluate(el=>el.click());
+      await page.waitForFunction(()=>!document.querySelector('[role="status"]'));
+    }
+    await page.close();
+  }
+  putDelay=0;
   for(const theme of ['light','dark'])for(const width of [1464,1280,1024,800,640,390,320]){
     stored=null;const page=await browser.newPage({viewport:{width,height:820},colorScheme:theme,reducedMotion:'reduce'});
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
