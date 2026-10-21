@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0181, PIL-0030]
 files_allowed: [lib/environment-runtime.ts, lib/environment-runtime.test.mjs, lib/environment-local-adapter.ts, lib/environment-session-routing.ts, lib/environment-execution-contract.ts, app/api/environments/[id]/run/route.ts]
 files_shared: [lib/rpc-manager.ts, lib/types.ts, app/api/agent/new/route.ts]
-acceptance_sha:
+acceptance_sha: 877d03169fcc
 waivers: []
 ---
 
@@ -56,3 +56,4 @@ waivers: []
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P1：PIL-0172、PIL-0175、PIL-0176、PIL-0183、PIL-0184、PIL-0185 依赖本卡，属首发能力/主组件依赖路径。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A2 路由 read/write/edit/bash/grep/find/ls 全部工具，未路由工具在非本机目标禁用并可见提示；子代理路径由 PIL-0050 复验；Remote 首发不含；G3 约束移入 A2；G6 删除过期文字
+- 2026-10-21T12:39Z · planner · 冻结验收标准 877d03169fcc
