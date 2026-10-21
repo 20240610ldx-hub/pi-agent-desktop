@@ -50,6 +50,7 @@ waivers: []
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | git log -1 --format='%P' (parents 11df970 dca3f6c); git merge-base --is-ancestor dca3f6c HEAD rc=0; git diff --check HEAD rc=0; no conflict markers via git grep | 通过 | D:/pilaude/relay-evidence/PIL-0113/verify/A1.log | 8389681 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-20T11:44Z · planner · 创建
@@ -60,3 +61,4 @@ waivers: []
 - 2026-10-21T05:03Z · claude:opus-medium:planner · 范围 ["**"] → ["**", **]：修正卡片书写错误：files_allowed 的引号被解析进 glob，范围本意不变
 - 2026-10-21T05:03Z · claude:opus-medium:planner · 范围 ["**", **] → [**]：移除残留的带引号 glob
 - 2026-10-21T05:05Z · claude:sonnet-xhigh:impl · in_progress → verify：合并提交 8389681；实现自测见卡片日志
+- 2026-10-21T05:22Z · claude:sonnet-high:verify · 证据 A1：通过
