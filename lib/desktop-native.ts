@@ -447,6 +447,25 @@ export async function setCloseQuitsNative(quit: boolean): Promise<void> {
   await invoke("set_close_quits", { quit });
 }
 
+/** What the OS reports about this app's keep-awake request (desktop shell only). */
+export type KeepAwakeNativeStatus = { supported: boolean; enabled: boolean };
+
+/** Current keep-awake state from the OS-backed native command; null in a browser. */
+export async function keepAwakeStatusNative(): Promise<KeepAwakeNativeStatus | null> {
+  if (!isTauriDesktop()) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<KeepAwakeNativeStatus>("keep_awake_status");
+}
+
+/** Ask the OS to start/stop the keep-awake request; rejects with the native error. */
+export async function setKeepAwakeNative(enabled: boolean): Promise<KeepAwakeNativeStatus> {
+  if (!isTauriDesktop()) {
+    throw new Error("Keep awake is only available in the desktop app.");
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<KeepAwakeNativeStatus>("set_keep_awake", { enabled });
+}
+
 /** Whether the OS currently launches Pi Agent at login (false in a browser). */
 export async function isAutostartEnabledNative(): Promise<boolean> {
   if (!isTauriDesktop()) return false;

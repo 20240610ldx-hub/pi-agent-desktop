@@ -19,6 +19,7 @@ use tauri::{AppHandle, Emitter, Manager, RunEvent, Url};
 
 mod changes_window;
 mod conversation_window;
+mod keep_awake;
 mod logging;
 #[cfg(windows)]
 pub mod credential_helper;
@@ -1072,6 +1073,7 @@ pub fn run() {
         })
         .manage(CloseQuits(Mutex::new(false)))
         .manage(PopupMenuSelection::default())
+        .manage(keep_awake::KeepAwakeState::default())
         .manage(DesktopApiToken(desktop_api_token))
         .invoke_handler(tauri::generate_handler![
             open_changes_window,
@@ -1088,6 +1090,8 @@ pub fn run() {
             open_path_with,
             show_popup_menu,
             set_close_quits,
+            keep_awake::keep_awake_status,
+            keep_awake::set_keep_awake,
             quit_app,
             show_main_window_cmd,
             app_ready,
@@ -1176,6 +1180,16 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if window.label() == WINDOW_LABEL {
+                if let tauri::WindowEvent::Destroyed = event {
+                    // The window is gone for good (hiding to the tray is not
+                    // a destroy): drop any keep-awake request with it.
+                    if let Some(state) = window
+                        .app_handle()
+                        .try_state::<keep_awake::KeepAwakeState>()
+                    {
+                        state.release();
+                    }
+                }
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     let quit = window
                         .app_handle()
@@ -1197,6 +1211,9 @@ pub fn run() {
     app.run(|app_handle, event| match event {
         RunEvent::Exit => {
             desktop_log(app_handle, "exit");
+            if let Some(state) = app_handle.try_state::<keep_awake::KeepAwakeState>() {
+                state.release();
+            }
             #[cfg(target_os = "linux")]
             remove_instance_lock();
             if let Some(server) = app_handle.try_state::<DesktopServer>() {
