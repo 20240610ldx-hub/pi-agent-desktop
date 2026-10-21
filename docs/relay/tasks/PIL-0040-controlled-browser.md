@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0030]
 files_allowed: [lib/browser*, app/api/browser/**]
 files_shared: []
-acceptance_sha: 
+acceptance_sha:
 waivers: []
 ---
 
@@ -44,3 +44,4 @@ Plan Task 5 与 Spec 第 9 节定义了要求；当前实现状态未核实。
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 草稿：验收需规划者核实现状后补全并冻结。
+- 2026-10-21T12:27Z · claude:opus-medium:planner · 用户 2026-10-21 决定：引擎改为内嵌 WebView2 子 webview + playwright-core 附着（修订 Spec 9；Tauri unstable 由 spike 决定，失败回退系统 Edge 独立窗口）；不导入日常浏览器 Cookie，受控浏览器内每项目独立 profile 手动登录；域名授权项目级、首次访问审批，提交/上传逐次审批；首发只验 Windows。调研见 relay-evidence/PIL-0040/research-2026-10-21/PROPOSAL.md
