@@ -72,3 +72,4 @@ waivers: []
 - 2026-10-21T05:22Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-21T05:22Z · claude:sonnet-high:verify · 证据 A5：通过
 - 2026-10-21T05:22Z · claude:sonnet-high:verify · 证据 A6：通过
+- 2026-10-21T05:23Z · claude:sonnet-high:verify · 做了：独立逐条验证合并提交 8389681（A1 通过；A2 失败；A3 通过（12 个失败均为合并前已有，无新增，tsc/lint 通过）；A4 通过；A5 通过（夹具 agent 目录，控制台无报错，已停服务并解锁）；A6 通过，guard 无阻断）；检查旗标判断：NATIVE_POPUP_MENUS_ENABLED=false 与上游源码一致（show_popup_menu 保留）；systemHome() 保留符合 AGENTS.md 常驻规则；字面 homedir() 集合与合并前一致；lib/recent-sessions.ts 及测试是无消费者的孤儿，已在 merge-history 记录；SettingsPanel.test.mjs -3 断言与上游 dca3f6c 完全一致。 / 状态：8389681，A2 失败只因 scripts/release-workflows.test.mjs 的 THIRD_PARTY_NOTICES 许可证测试，合并前基线同样失败（CRLF 检出使正则 0 命中，LF 下 rpiv-todo 条目仍缺 From 块）。 / 下一步：协调者或用户决定对 A2 该条豁免或修订验收，或另开卡修 THIRD_PARTY_NOTICES/测试后重验；其余无需返工。 / 风险：AGENTS.md 已拒绝清单里 DirectoryPicker、SessionSearch 实际仍在使用（合并前就在，非本次引入），清单与现实不符；SessionSidebar touch 菜单等 11 个结构性测试仍在失败（合并前已有）。
