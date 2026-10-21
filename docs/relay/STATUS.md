@@ -31,7 +31,7 @@
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0113 | P0 | in_progress | 合入上游 abcwyc main 2026-10-20（desktop 0.7.5） | claude:sonnet-xhigh:impl | 2026-10-20T14:45Z | task/PIL-0113-upstream-0-7-5 |
+| PIL-0113 | P0 | in_progress | 合入上游 abcwyc main 2026-10-20（desktop 0.7.5） | claude:sonnet-xhigh:impl | 2026-10-21T07:29Z | task/PIL-0113-upstream-0-7-5 |
 
 ### 阻塞
 

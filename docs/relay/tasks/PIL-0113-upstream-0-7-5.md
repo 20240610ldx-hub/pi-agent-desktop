@@ -5,7 +5,7 @@ epic: E0
 priority: P0
 status: in_progress
 owner: claude:sonnet-xhigh:impl
-lease_until: 2026-10-20T14:45Z
+lease_until: 2026-10-21T07:29Z
 branch: task/PIL-0113-upstream-0-7-5
 implementers: [claude:sonnet-xhigh:impl]
 depends_on: []
