@@ -42,6 +42,7 @@ waivers: []
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 逐行结构脚本核对 62 行；对 20 组 manifest 核对条数与版本/DPI 字段；R11/R12 共 18 张原图宽高与 manifest 逐一相同；抽查 ≥10 行与三份档案和源码一致；22 条 H 路径存在；索引与 62 卡隐私扫描零命中（文档/manifest/源码层，未做像素验证） | 通过 | D:/pilaude/relay-evidence/PIL-0014/verify/verify-log.md | bb32b34 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -59,3 +60,4 @@ waivers: []
 - 2026-10-21T05:37Z · codex-plus:gpt-xhigh:impl · in_progress → blocked：Git任务元数据目录ACL拒写，git add/commit及最后add共三次无法创建index.lock；索引和62张草案卡已备，需宿主修复权限后在任务worktree提交才能送verify。
 - 2026-10-21T06:42Z · codex-plus:gpt-xhigh:impl · blocked → in_progress：协调者代为提交 bb32b34（Codex 沙箱无法写 index.lock）与 62 张卡
 - 2026-10-21T06:42Z · codex-plus:gpt-xhigh:impl · in_progress → verify
+- 2026-10-21T06:46Z · claude:sonnet-high:verify · 证据 A1：通过
