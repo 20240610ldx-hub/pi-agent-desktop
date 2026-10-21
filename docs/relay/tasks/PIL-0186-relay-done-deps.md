@@ -45,6 +45,7 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 | --- | --- | --- | --- | --- | --- |
 | A1 | 读 diff：done 前用 loadAll 全量卡片、本卡替换为 done 版，只保留 p.id===本卡 的 error；node --test scripts/relay.test.mjs 17/17 通过；把父提交 6297bf3^ 的 relay.mjs 放进临时副本跑同一测试文件，'依赖存在可标 done' 用例失败(depends_on unknown PIL-0002)，'依赖不存在仍拒绝' 在新旧均通过(回归守卫)。夹具层 | 通过 | D:/pilaude/relay-evidence/PIL-0186/verify/relay-test.txt, D:/pilaude/relay-evidence/PIL-0186/verify/red-on-parent.txt | 6297bf3 | claude:sonnet-high:verify |
 | A2 | git diff 6297bf3^ 6297bf3 -- scripts/relay.test.mjs 仅新增 31 行、删除行 0；既有 done 拒绝用例（缺通过证据行/验证者是实现者/评审者是实现者）在 17/17 中全部通过；relay.mjs 中对应校验代码未改。夹具层 | 通过 | D:/pilaude/relay-evidence/PIL-0186/verify/relay-test.txt | 6297bf3 | claude:sonnet-high:verify |
+| A3 | npm run lint 退出0；npm test 3576 项 12 失败，失败名全部属于 PIL-0113 基线(A3-fail-baseline.txt)，新增失败 0；node scripts/relay.mjs guard --task PIL-0186 退出0，仅 R6 WAIVED(2 个文件) | 通过 | D:/pilaude/relay-evidence/PIL-0186/verify/lint.txt, D:/pilaude/relay-evidence/PIL-0186/verify/npm-test.txt, D:/pilaude/relay-evidence/PIL-0186/verify/fail-names.txt, D:/pilaude/relay-evidence/PIL-0186/verify/guard.txt | 6297bf3 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T07:25Z · planner · 创建
@@ -55,3 +56,4 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 - 2026-10-21T07:32Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-21T07:40Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-21T07:40Z · claude:sonnet-high:verify · 证据 A2：通过
+- 2026-10-21T07:40Z · claude:sonnet-high:verify · 证据 A3：通过
