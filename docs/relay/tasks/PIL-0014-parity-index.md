@@ -3,7 +3,7 @@ id: PIL-0014
 title: 把组件复刻基准拆成逐组件任务卡
 epic: E2
 priority: P1
-status: in_progress
+status: blocked
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-21T08:24Z
 branch: task/PIL-0014-parity-index
@@ -53,3 +53,7 @@ waivers: []
 - 2026-10-19T14:19Z · codex:gpt:coord · in_progress → todo：用户要求本批收尾暂停；54组件索引已保存task分支f178fa6，54项建卡建议尚无实际卡号，A2未完成，未独立验收或合入
 - 2026-10-19T14:19Z · codex:gpt:coord · 路径校正：实现者上一条交接的Git Bash路径展开有误。组件索引实际在D:/pilaude/wt/PIL-0014/docs/relay/parity-index.md，建卡建议为D:/pilaude/relay-evidence/PIL-0014/component-card-proposals.json，结构自测与guard分别为document-selfcheck.json、guard-result.json。实际分支task/PIL-0014-parity-index、提交f178fa6530da47b008c5721429f6fa9003b8cce1，已只读确认；本条不新增验收或改变A2未完成状态。
 - 2026-10-21T04:44Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-21T07:44Z
+- 2026-10-21T05:26Z · codex-plus:gpt-xhigh:impl · 复述：从f178fa6的54项索引继续；A1核对三份档案与只读manifest并补2026-10-20浅色组件及版本/DPI、状态、证据、残差；A2逐个未通过组件串行relay new --no-commit并填完整量测、交互验收和具体文件范围，保持未冻结；A3索引末尾列缺图补采项；A4只提交索引文档。只在当前worktree提交，不push，不写自身通过证据；全板check当前另报PIL-0113验收哈希异常，留协调者处理。
+- 2026-10-21T05:35Z · codex-plus:gpt-xhigh:impl · 做了：已串行创建并填写62张E2组件草案卡 / 状态：全部todo且acceptance_sha为空，主任务板未提交；索引待回填实际ID / 下一步：核对组件与卡片一一对应、具体范围及交互量测标准 / 风险：Git任务元数据目录拒写，提交仍待宿主修复；参考版本/DPI未知项保留，不记录自身通过证据。
+- 2026-10-21T05:37Z · codex-plus:gpt-xhigh:impl · 做了：从f178fa6继续补成62项索引，核对20组manifest并登记两组新增浅色18图的机制与原图尺寸；已创建PIL-0115至PIL-0176共62张E2草案并回填卡号，每卡有具体文件范围、同帧量测和适用交互验收；缺参考清单在索引末尾，未改产品代码 / 状态：分支tip仍为f178fa6530da47b008c5721429f6fa9003b8cce1，索引未提交；文档自测、guard和全板check已实际执行且未发现问题，不是独立验收；新卡全部todo且未冻结，主任务板未由本实现者提交；Git add、commit及最后add三次因任务Git元数据index.lock拒写未能提交 / 下一步：由宿主修复D:/pilaude/pi-agent-desktop/.git/worktrees/PIL-0014写权限后接手，在本worktree提交索引并附Codex co-author，再guard、写日志并set verify；协调者统一提交主任务板卡片 / 风险：本环境已列写根但操作系统ACL拒写，未更改ACL或绕过沙箱；补丁已保存D:/pilaude/relay-evidence/PIL-0014/parity-index-from-f178fa6.patch，卡号映射created-component-cards.json，文档自测document-selfcheck-20261021.json及guard-selfcheck-20261021.json均仅供验证者参考；所有组件参考全状态／版本／DPI仍不齐，不写自身通过证据，不push、不构建。
+- 2026-10-21T05:37Z · codex-plus:gpt-xhigh:impl · in_progress → blocked：Git任务元数据目录ACL拒写，git add/commit及最后add共三次无法创建index.lock；索引和62张草案卡已备，需宿主修复权限后在任务worktree提交才能送verify。
