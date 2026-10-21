@@ -49,6 +49,7 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 | A2 | 需用户管理员终端 powercfg /requests 实机核对；隐藏/恢复/退出/重启四步未在运行的应用上执行。代码层(读 keep_awake.rs/lib.rs)：disable/Destroyed/RunEvent::Exit 都调 release，CloseRequested 隐藏不调用；单元测试 release_and_drop 通过，属夹具层非实机 | 未运行 | D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt | 2e6d9d1 | claude:sonnet-high:verify |
 | A3 | cargo test --manifest-path src-tauri/Cargo.toml keep_awake：8 项全过，含五轮开关不叠加(live<=1)、失败不乐观、不支持平台报错、withdraw 失败仍释放句柄、并发开关、真实 Windows PowerCreateRequest/SetRequest 五轮往返(进程内真实 OS API，未经桌面命令/powercfg)；代码无线程/定时器。层级：夹具+Windows 原生 API 进程内；桌面应用内状态查询未运行 | 通过 | D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt | 2e6d9d1 | claude:sonnet-high:verify |
 | A4 | 三层核对部分完成：(1)清单层通过：两命令在 desktop-shell.toml 仅定义 allow-keep-awake-status/allow-set-keep-awake，desktop-dialog.json(windows:main，remote 127.0.0.1)仅追加这两项，lib.rs 注册 handler；(3)网页失败层通过：Node 下实调 lib/desktop-native.ts 的 keepAwakeStatusNative 返回 null、setKeepAwakeNative 拒绝'only available in the desktop app'；(2)桌面调用层(Tauri ACL 运行时)未运行应用，故整体记未运行 | 未运行 | D:/pilaude/relay-evidence/PIL-0180/verify/a4-browser.txt | 2e6d9d1 | claude:sonnet-high:verify |
+| A5 | cargo test keep_awake 8/8；node --test lib/keep-awake-service.test.mjs 8/8(夹具桥)；tsc --noEmit rc=0；npm run lint rc=0；relay guard --task PIL-0180 无问题；git status 干净，Cargo.lock 未改，Cargo.toml 仅给 windows-sys 增 Win32_System_Power/Threading feature，无升级；无 skip/only | 通过 | D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt;D:/pilaude/relay-evidence/PIL-0180/verify/node-test.txt;D:/pilaude/relay-evidence/PIL-0180/verify/tsc.txt;D:/pilaude/relay-evidence/PIL-0180/verify/lint.txt;D:/pilaude/relay-evidence/PIL-0180/verify/guard.txt | 2e6d9d1 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -66,3 +67,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A2：未运行
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A4：未运行
+- 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A5：通过
