@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0014, PIL-0090, PIL-0111]
 files_allowed: [components/desktop/DesktopAppSection.tsx, lib/desktop-notify.ts, components/desktop/DesktopAppSection.test.mjs, src-tauri/src/shell/platform_tray.rs, lib/desktop-notify.test.mjs, src-tauri/src/notification_activation.rs]
 files_shared: [src-tauri/src/lib.rs, src-tauri/Cargo.toml, src-tauri/Cargo.lock, app/native-theme.css]
-acceptance_sha:
+acceptance_sha: 2e430448ed9f
 waivers: []
 ---
 
@@ -73,3 +73,4 @@ lib/desktop-notify.ts 负责两类通知及激活路由，原生事件注册可�
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字；G4 补写 3.1623 基准与待补采；A3 写明验收机器为本机 Windows 11（记录 build 号）；点击 toast 跳转若插件不可靠允许新增原生激活模块（files_allowed 加 notification_activation.rs，files_shared 加 Cargo.toml/Cargo.lock）
+- 2026-10-21T12:38Z · planner · 冻结验收标准 2e430448ed9f
