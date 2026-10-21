@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0182]
 files_allowed: [lib/environment-wsl-adapter.ts, lib/environment-wsl-adapter.test.mjs, lib/environment-wsl-paths.ts, app/api/environments/wsl-targets/route.ts]
 files_shared: [lib/environment-types.ts, lib/environment-runtime.ts]
-acceptance_sha:
+acceptance_sha: 723a9217a6a2
 waivers: []
 ---
 
@@ -55,3 +55,4 @@ lib/environment-runtime.ts 为 PIL-0182 主卡文件，仅允许追加本 adapte
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P1：PIL-0172、PIL-0175 依赖本卡，属首发能力/主组件依赖路径。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A1/A2 改为仅验本机 Ubuntu-24.04，多发行版隔离用夹具测试，写入限定专用目录；G3 目标执行/本机无写入约束移入 A2；G6 删除过期文字
+- 2026-10-21T12:39Z · planner · 冻结验收标准 723a9217a6a2
