@@ -3,11 +3,11 @@ id: PIL-0180
 title: Windows 保持唤醒能力与退出释放
 epic: E9
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: codex-plus:gpt-xhigh:impl
+lease_until: 2026-10-21T14:57Z
+branch: task/PIL-0180-keep-awake
+implementers: [codex-plus:gpt-xhigh:impl]
 depends_on: []
 files_allowed: [src-tauri/src/keep_awake.rs, lib/keep-awake-service.ts, lib/keep-awake-service.test.mjs]
 files_shared: [src-tauri/src/lib.rs, lib/desktop-native.ts, src-tauri/permissions/desktop-shell.toml, src-tauri/capabilities/desktop-dialog.json, src-tauri/Cargo.toml, src-tauri/Cargo.lock]
@@ -53,3 +53,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P1：PIL-0171 依赖本卡，属首发能力/主组件依赖路径。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T11:57Z · planner · 冻结验收标准 0ef48e1df3f8
+- 2026-10-21T11:57Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-21T14:57Z

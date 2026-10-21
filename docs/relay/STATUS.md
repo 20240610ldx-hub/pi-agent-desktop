@@ -25,11 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 100 张任务卡：todo 94 · in_progress 0 · verify 0 · review 0 · done 5 · blocked 0 · parked 1
+共 100 张任务卡：todo 93 · in_progress 1 · verify 0 · review 0 · done 5 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
-（无）
+| ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
+| --- | --- | --- | --- | --- | --- | --- |
+| PIL-0180 | P1 | in_progress | Windows 保持唤醒能力与退出释放 | codex-plus:gpt-xhigh:impl | 2026-10-21T14:57Z | task/PIL-0180-keep-awake |
 
 ### 阻塞
 
@@ -71,7 +73,6 @@
 | PIL-0173 | P1 | E2 | 复刻验收：C59 New environment 的 Local／SSH 对话框 | 否 | PIL-0014, PIL-0172, PIL-0181, PIL-0183 |
 | PIL-0178 | P1 | E2 | 真实麦克风采集、活动采样与资源释放 | 否 | — |
 | PIL-0179 | P1 | E6 | Side chat 独立会话服务与权限隔离 | 否 | PIL-0030, PIL-0050 |
-| PIL-0180 | P1 | E9 | Windows 保持唤醒能力与退出释放 | 是 | — |
 | PIL-0181 | P1 | E9 | 环境配置、Folders 与变量作用域持久化 | 否 | PIL-0020, PIL-0030 |
 | PIL-0182 | P1 | E4 | 环境执行契约与本机真实运行路由 | 否 | PIL-0181, PIL-0030 |
 | PIL-0183 | P1 | E4 | SSH 环境真实执行、取消与连接恢复 | 否 | PIL-0182 |
