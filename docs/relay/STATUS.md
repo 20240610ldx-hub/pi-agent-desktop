@@ -78,7 +78,7 @@
 | PIL-0183 | P1 | E4 | SSH 环境真实执行、取消与连接恢复 | 否 | — |
 | PIL-0184 | P1 | E4 | WSL 环境发现、执行与路径隔离 | 否 | — |
 | PIL-0185 | P1 | E4 | Remote Control 自有主机配对与受控执行 | 否 | — |
-| PIL-0186 | P1 | E0 | 修复 relay set done 校验把 depends_on 误报为 unknown | 否 | — |
+| PIL-0186 | P1 | E0 | 修复 relay set done 校验把 depends_on 误报为 unknown | 是 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0013 | P2 | E2 | Changes 面板剩余交互与视觉残差 | 否 | PIL-0010 |

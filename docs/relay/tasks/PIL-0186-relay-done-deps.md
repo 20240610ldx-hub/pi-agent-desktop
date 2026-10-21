@@ -9,35 +9,35 @@ lease_until:
 branch:
 implementers: []
 depends_on: []
-files_allowed: []
+files_allowed: [scripts/relay.mjs, scripts/relay.test.mjs]
 files_shared: []
-acceptance_sha:
-waivers: []
+acceptance_sha: 5ebacb9adefe
+waivers: [R6]
 ---
 
 ## 目标
 
-一到三句话：完成后用户能做什么、产品哪里变了。写明对应 [GOALS](../GOALS.md) 的哪一条。
+`node scripts/relay.mjs set <id> done` 对写了 `depends_on` 的任务卡能正常标记完成（含 `integrate` 末尾自动调用的 set）。对应 GOALS 中接力协议可用、任务板真实的要求。
 
 ## 背景与现状
 
-只写接手者开工需要的事实：现有代码位置、已知失败、相关文档段落链接。不写历史流水账。
+- `scripts/relay.mjs` 约 780 行，`set` 在 status=done 时调用 `validateCards([单张卡], config)`；`validateCards` 末尾按传入集合构造 `ids` 检查 `depends_on`，单张卡时任何依赖都被报为 `depends_on unknown <id>`。
+- 已复现：PIL-0177（depends_on PIL-0113）`integrate` 合并成功（5116910）后 set done 失败，卡片停在 review；`relay check` 全量校验通过。
+- 用户 2026-10-21 授权本卡修改受保护文件 `scripts/relay.mjs`／`scripts/relay.test.mjs`（豁免 R6）。
 
 ## 验收标准
 
-每条可以被一个不了解实现过程的人独立判定通过或失败。写清验证方式。
-
-- [ ] A1 行为描述。验证：`具体命令` 退出码 0，或手动步骤 + 期望可见结果。
-- [ ] A2 失败/取消/恢复路径。验证：……
-- [ ] A3 `npm run lint`、`node_modules/.bin/tsc --noEmit` 与受影响测试文件通过；`node scripts/relay.mjs guard` 无阻断项。
+- [ ] A1 done 前校验在全量卡片集合上进行（被改卡替换为 status=done 版本），只把属于本卡的 error 作为阻断；依赖存在时不再误报，依赖确实不存在时仍报 `depends_on unknown`。验证：`scripts/relay.test.mjs` 新增回归用例覆盖"依赖存在可标 done"与"依赖不存在仍拒绝"，`node --test scripts/relay.test.mjs` 全部通过。
+- [ ] A2 done 的其他校验不变：缺通过证据行、验证者是实现者、评审者是实现者仍拒绝。验证：既有相关用例不删不放宽且通过；`git diff` 中不删除任何已有断言。
+- [ ] A3 `npm run lint` 通过；`npm test` 相对当前集成基线无新增失败；`node scripts/relay.mjs guard` 除已豁免 R6 外无阻断项。
 
 ## 范围外
 
-明确不做的事，防止范围漂移。
+relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协调者执行）。
 
 ## 实现提示
 
-可选：建议入口文件、需要先读的 docs/agents 主题、已知坑。
+先读 `docs/relay/RULES.md` 与 `scripts/relay.test.mjs` 中 set/integrate 相关用例的夹具写法；`loadAll(ctx)` 已可加载全部卡片。
 
 ## 证据
 
@@ -46,3 +46,4 @@ waivers: []
 
 ## 日志
 - 2026-10-21T07:25Z · planner · 创建
+- 2026-10-21T07:25Z · planner · 冻结验收标准 5ebacb9adefe
