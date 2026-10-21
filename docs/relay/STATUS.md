@@ -25,12 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 109 张任务卡：todo 97 · in_progress 1 · verify 1 · review 0 · done 5 · blocked 0 · parked 5
+共 109 张任务卡：todo 96 · in_progress 2 · verify 1 · review 0 · done 5 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
+| PIL-0115 | P1 | in_progress | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
 | PIL-0180 | P1 | verify | Windows 保持唤醒能力与退出释放 | claude:sonnet-high:impl | 2026-10-21T14:58Z | task/PIL-0180-keep-awake |
 | PIL-0189 | P1 | in_progress | 在分叉会话中发送（fork-send） | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0189-fork-send |
 
@@ -55,7 +56,6 @@
 | PIL-0100 | P1 | E10 | 首次使用引导：不开终端完成第一个真实任务 | 否 | — |
 | PIL-0111 | P1 | E11 | Windows 原生验收基线 | 否 | — |
 | PIL-0114 | P1 | E0 | 修复 THIRD_PARTY_NOTICES 许可声明测试（CRLF 与 rpiv-todo From 块） | 否 | PIL-0113 |
-| PIL-0115 | P1 | E2 | 复刻验收：C01 主题、文字与图标 | 是 | PIL-0014 |
 | PIL-0116 | P1 | E2 | 复刻验收：C02 按钮尺寸与交互状态 | 是 | PIL-0014 |
 | PIL-0117 | P1 | E2 | 复刻验收：C03 分段选择控件 | 是 | PIL-0014 |
 | PIL-0122 | P1 | E2 | 复刻验收：C08 输入器主框与提交控件 | 是 | PIL-0014, PIL-0177, PIL-0189 |
