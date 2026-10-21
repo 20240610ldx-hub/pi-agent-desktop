@@ -45,6 +45,7 @@ waivers: []
 | A1 | 逐行结构脚本核对 62 行；对 20 组 manifest 核对条数与版本/DPI 字段；R11/R12 共 18 张原图宽高与 manifest 逐一相同；抽查 ≥10 行与三份档案和源码一致；22 条 H 路径存在；索引与 62 卡隐私扫描零命中（文档/manifest/源码层，未做像素验证） | 通过 | D:/pilaude/relay-evidence/PIL-0014/verify/verify-log.md | bb32b34 | claude:sonnet-high:verify |
 | A2 | card-analysis.mjs 全量解析 PIL-0115..0176：62 卡一一对应 C01–C62、均 todo 未冻结，A2/A3 含全部量测与交互维度，A4 各不相同，files_allowed 具体无通配；人工细读 7 张；relay check 通过（卡片文本层，非实现验证） | 通过 | D:/pilaude/relay-evidence/PIL-0014/verify/card-analysis.out | bb32b34 | claude:sonnet-high:verify |
 | A3 | 核对索引末尾缺参考清单：8 类缺口，60 项互不重叠覆盖加 C18/C22 动态行；manifest 缺原件项已单列 | 通过 | D:/pilaude/relay-evidence/PIL-0014/verify/verify-log.md | bb32b34 | claude:sonnet-high:verify |
+| A4 | git diff --name-only fdc57d8 bb32b34 仅 docs/relay/parity-index.md；node scripts/relay.mjs guard --task PIL-0014 无问题 | 通过 | D:/pilaude/relay-evidence/PIL-0014/verify/guard-verify.txt | bb32b34 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -65,3 +66,4 @@ waivers: []
 - 2026-10-21T06:46Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-21T06:46Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-21T06:46Z · claude:sonnet-high:verify · 证据 A3：通过
+- 2026-10-21T06:46Z · claude:sonnet-high:verify · 证据 A4：通过
