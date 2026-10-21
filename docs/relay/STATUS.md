@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 90 张任务卡：todo 86 · in_progress 0 · verify 0 · review 1 · done 2 · blocked 0 · parked 1
+共 98 张任务卡：todo 94 · in_progress 0 · verify 0 · review 1 · done 2 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
@@ -70,6 +70,14 @@
 | PIL-0174 | P1 | E2 | 复刻验收：C60 Folders 添加与选择弹层 | 否 | PIL-0014 |
 | PIL-0175 | P1 | E2 | 复刻验收：C61 Run in 运行目标选择 | 否 | PIL-0014 |
 | PIL-0176 | P1 | E2 | 复刻验收：C62 环境变量编辑子页 | 否 | PIL-0014 |
+| PIL-0178 | P1 | E2 | 真实麦克风采集、活动采样与资源释放 | 否 | — |
+| PIL-0179 | P1 | E6 | Side chat 独立会话服务与权限隔离 | 否 | — |
+| PIL-0180 | P1 | E9 | Windows 保持唤醒能力与退出释放 | 否 | — |
+| PIL-0181 | P1 | E9 | 环境配置、Folders 与变量作用域持久化 | 否 | — |
+| PIL-0182 | P1 | E4 | 环境执行契约与本机真实运行路由 | 否 | — |
+| PIL-0183 | P1 | E4 | SSH 环境真实执行、取消与连接恢复 | 否 | — |
+| PIL-0184 | P1 | E4 | WSL 环境发现、执行与路径隔离 | 否 | — |
+| PIL-0185 | P1 | E4 | Remote Control 自有主机配对与受控执行 | 否 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0013 | P2 | E2 | Changes 面板剩余交互与视觉残差 | 否 | PIL-0010 |
