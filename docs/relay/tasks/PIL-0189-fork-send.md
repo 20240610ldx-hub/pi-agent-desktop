@@ -67,3 +67,4 @@ waivers: []
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A5：通过
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A6：通过
+- 2026-10-21T13:00Z · claude:sonnet-high:verify · 验证 1ee7898：(1) 做了什么：独立读 diff（仅 4 个 files_allowed 文件，复用 writeForkedSession/startRpcSession，无第二套分叉路径，rpc-manager/agent-client 未动）；跑 fork-send 测试 15/15、tsc、lint、npm test、guard；在 scratchpad 副本做 5 个变异（去单飞/去结果缓存/去发送前中止检查/去 shell 检查/发送文本加后缀），均被对应用例杀死。(2) 结果：A1-A6 全部通过；层级为夹具（本地 OpenAI 兼容服务）+ 真实 Pi SDK，未调真实模型，卡片对真实 deepseek-flash 写‘能触发才验’故记为可选未运行。npm test 失败名与 PIL-0113 的 12 个基线逐名一致，新增 0。(3) 未做/局限：shell_running 与 prompt_rejected 用注入标志、fork_write_failed/session_start_failed 用注入 deps；A5 源待批请求是直接写入 wrapper 的 map（夹具）；图片透传仅在注入 deps 的用例里验；未触真实 provider。(4) 下一步：转 review；证据在 D:/pilaude/relay-evidence/PIL-0189/verify/。
