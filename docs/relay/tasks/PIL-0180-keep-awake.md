@@ -45,6 +45,7 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 需用户管理员终端 powercfg /requests 实机核对；本机非管理员 powercfg /requests 返回'此命令需要管理员权限'(rc=1)；Rust 真实 Windows 后端往返测试(cargo test keep_awake_real_windows_request_round_trip)只证明 API 调用成功，不算 OS 请求列表证据，未运行桌面应用 | 未运行 | D:/pilaude/relay-evidence/PIL-0180/verify/powercfg.txt;D:/pilaude/relay-evidence/PIL-0180/verify/cargo-test.txt | 2e6d9d1 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -58,3 +59,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T11:58Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T14:58Z
 - 2026-10-21T12:05Z · claude:sonnet-high:impl · 做了：新增 src-tauri/src/keep_awake.rs（PowerCreateRequest+PowerSetRequest(SystemRequired)，单句柄无线程，Drop 关句柄；非 Windows 返回不支持；8 个 Rust 测试含真机往返五轮），注册 keep_awake_status/set_keep_awake 命令与权限/capability，窗口 Destroyed 与 RunEvent::Exit 释放，desktop-native 窄桥接导出，lib/keep-awake-service.ts+8 个 node 测试；windows-sys 仅追加 Power/Threading feature，Cargo.lock 未变；提交 2e6d9d1 / 状态：cargo test keep_awake、node --test、tsc、lint、guard 均通过，证据在 relay-evidence/PIL-0180/impl；未做 powercfg /requests 实机核对与托盘/退出实机 / 下一步：验证 / 风险：无 UI 消费者；SystemRequired 在 Modern Standby 机器上可能被 OS 忽略；cargo test 需存在空的 src-tauri/resources/server 与 node 目录（已清理）
 - 2026-10-21T12:05Z · claude:sonnet-high:impl · in_progress → verify
+- 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A1：未运行
