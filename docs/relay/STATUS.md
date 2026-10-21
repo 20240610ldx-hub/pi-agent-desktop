@@ -25,14 +25,14 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 109 张任务卡：todo 96 · in_progress 2 · verify 1 · review 0 · done 5 · blocked 0 · parked 5
+共 109 张任务卡：todo 96 · in_progress 2 · verify 0 · review 1 · done 5 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0115 | P1 | in_progress | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
-| PIL-0180 | P1 | verify | Windows 保持唤醒能力与退出释放 | claude:sonnet-high:impl | 2026-10-21T14:58Z | task/PIL-0180-keep-awake |
+| PIL-0180 | P1 | review | Windows 保持唤醒能力与退出释放 | claude:sonnet-high:impl | 2026-10-21T14:58Z | task/PIL-0180-keep-awake |
 | PIL-0189 | P1 | in_progress | 在分叉会话中发送（fork-send） | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0189-fork-send |
 
 ### 阻塞

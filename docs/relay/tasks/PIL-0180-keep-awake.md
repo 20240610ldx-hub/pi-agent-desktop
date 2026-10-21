@@ -3,7 +3,7 @@ id: PIL-0180
 title: Windows 保持唤醒能力与退出释放
 epic: E9
 priority: P1
-status: verify
+status: review
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T14:58Z
 branch: task/PIL-0180-keep-awake
@@ -79,3 +79,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T12:40Z · claude:sonnet-high:verify · 做了：按用户管理员 powercfg 实机结果更新证据：A1、A4 通过(desktop:dev 实机)；A2 仍未运行，退出释放未验证。user-4-quit 时 PID 20272 仍活、desktop.log 无 exit 行，quit_application/RunEvent::Exit 未被执行；本卡仅在 RunEvent::Exit 的 desktop_log 之后加 release，且未改托盘/quit_app，不似本卡引入，但未对父提交实跑 / 状态：保持 verify / 下一步：用户复测退出释放（先开启，再 invoke('quit_app')，看进程退出、desktop.log 出现 exit、powercfg 无本进程）；托盘 Quit 无效则另开卡 / 风险：未对父提交实机对比
 - 2026-10-21T12:46Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-21T12:46Z · claude:sonnet-high:verify · 做了：核对 desktop.log，重启后的 pid 19728 在 12:45:02Z 写入 exit 行，进程已无，user-5-quit-app 的 SYSTEM 无本进程；A2 记通过。A1-A5 现全部通过。托盘 Quit 不结束进程判为既有缺陷（本卡未改 quit_application/托盘，调用 quit_app 正常退出），建议另开卡调查托盘 Quit 路径 / 状态：A1-A5 通过，转 review / 下一步：评审者核对；另开卡查托盘 Quit（Windows platform_tray 的 quit 事件）/ 风险：A2 第二轮开启态无 powercfg 文件；A1/A4/A2 属 desktop:dev 实机，非发布包；未对父提交实机对比托盘行为
+- 2026-10-21T12:46Z · claude:sonnet-high:impl · verify → review
