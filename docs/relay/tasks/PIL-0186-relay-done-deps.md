@@ -48,6 +48,7 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 | A3 | npm run lint 退出0；npm test 3576 项 12 失败，失败名全部属于 PIL-0113 基线(A3-fail-baseline.txt)，新增失败 0；node scripts/relay.mjs guard --task PIL-0186 退出0，仅 R6 WAIVED(2 个文件) | 通过 | D:/pilaude/relay-evidence/PIL-0186/verify/lint.txt, D:/pilaude/relay-evidence/PIL-0186/verify/npm-test.txt, D:/pilaude/relay-evidence/PIL-0186/verify/fail-names.txt, D:/pilaude/relay-evidence/PIL-0186/verify/guard.txt | 6297bf3 | claude:sonnet-high:verify |
 | A1 | git diff 6297bf3^ 8bbaf79 -- scripts/relay.mjs：set done 仍只校验单卡(保留全部原有错误)，validateCards 新增 knownIds 参数仅用于 depends_on 存在性；node --test scripts/relay.test.mjs 18/18；手工边界复现(manual-repro.txt，独立于测试文件)：S1 删 id 行且无证据 set done 在父提交与 8bbaf79 均 exit1、在 6297bf3 错误放行 exit0；S3 依赖存在且有证据 8bbaf79 exit0；S4 依赖缺失 exit1 报 depends_on unknown；新用例在 6297bf3 上红(newtests-on-6297bf3.txt)、在父提交上红、在 8bbaf79 上绿。夹具层 | 通过 | D:/pilaude/relay-evidence/PIL-0186/verify/round2/relay-test.txt, D:/pilaude/relay-evidence/PIL-0186/verify/round2/manual-repro.txt, D:/pilaude/relay-evidence/PIL-0186/verify/round2/newtests-on-6297bf3.txt, D:/pilaude/relay-evidence/PIL-0186/verify/round2/newtests-on-parent.txt, D:/pilaude/relay-evidence/PIL-0186/verify/round2/newtests-on-8bbaf79.txt | 8bbaf79 | claude:sonnet-high:verify |
 | A2 | git diff 6297bf3^ 8bbaf79 -- scripts/relay.test.mjs 删除行 0；既有 done 拒绝用例(缺通过证据行/验证者是实现者/评审者是实现者)在 18/18 中通过；手工复现 S2(依赖存在无证据)仍拒绝并报无通过证据。夹具层 | 通过 | D:/pilaude/relay-evidence/PIL-0186/verify/round2/relay-test.txt, D:/pilaude/relay-evidence/PIL-0186/verify/round2/manual-repro.txt | 8bbaf79 | claude:sonnet-high:verify |
+| A3 | npm run lint 退出0；npm test 3577 项 12 失败，失败名全部在 PIL-0113 基线内，新增失败 0；node scripts/relay.mjs guard --task PIL-0186 退出0，仅 R6 WAIVED(2 个文件) | 通过 | D:/pilaude/relay-evidence/PIL-0186/verify/round2/lint.txt, D:/pilaude/relay-evidence/PIL-0186/verify/round2/npm-test.txt, D:/pilaude/relay-evidence/PIL-0186/verify/round2/fail-names.txt, D:/pilaude/relay-evidence/PIL-0186/verify/round2/guard.txt | 8bbaf79 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T07:25Z · planner · 创建
@@ -67,3 +68,4 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 - 2026-10-21T07:50Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-21T07:59Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-21T07:59Z · claude:sonnet-high:verify · 证据 A2：通过
+- 2026-10-21T07:59Z · claude:sonnet-high:verify · 证据 A3：通过
