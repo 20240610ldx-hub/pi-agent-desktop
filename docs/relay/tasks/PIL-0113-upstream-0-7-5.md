@@ -3,7 +3,7 @@ id: PIL-0113
 title: 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）
 epic: E0
 priority: P0
-status: verify
+status: review
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-21T08:44Z
 branch: task/PIL-0113-upstream-0-7-5
@@ -93,3 +93,4 @@ waivers: []
 - 2026-10-21T06:50Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-21T06:50Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-21T06:50Z · claude:sonnet-high:verify · 证据 A6：通过
+- 2026-10-21T06:50Z · claude:sonnet-high:verify · verify → review
