@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 100 张任务卡：todo 93 · in_progress 1 · verify 0 · review 0 · done 5 · blocked 0 · parked 1
+共 100 张任务卡：todo 92 · in_progress 1 · verify 0 · review 0 · done 5 · blocked 0 · parked 2
 
 ### 进行中 / 待验证 / 待评审
 
@@ -71,7 +71,6 @@
 | PIL-0170 | P1 | E2 | 复刻验收：C56 Side chat 面板与回复输入 | 否 | PIL-0014, PIL-0179, PIL-0144 |
 | PIL-0172 | P1 | E2 | 复刻验收：C58 环境选择菜单与多级子菜单 | 否 | PIL-0014, PIL-0181, PIL-0182, PIL-0183, PIL-0184, PIL-0185 |
 | PIL-0173 | P1 | E2 | 复刻验收：C59 New environment 的 Local／SSH 对话框 | 否 | PIL-0014, PIL-0172, PIL-0181, PIL-0183 |
-| PIL-0178 | P1 | E2 | 真实麦克风采集、活动采样与资源释放 | 否 | — |
 | PIL-0179 | P1 | E6 | Side chat 独立会话服务与权限隔离 | 否 | PIL-0030, PIL-0050 |
 | PIL-0181 | P1 | E9 | 环境配置、Folders 与变量作用域持久化 | 否 | PIL-0020, PIL-0030 |
 | PIL-0182 | P1 | E4 | 环境执行契约与本机真实运行路由 | 否 | PIL-0181, PIL-0030 |
