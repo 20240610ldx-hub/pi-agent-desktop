@@ -3,7 +3,7 @@ id: PIL-0113
 title: 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）
 epic: E0
 priority: P0
-status: in_progress
+status: verify
 owner: claude:sonnet-xhigh:impl
 lease_until: 2026-10-21T07:29Z
 branch: task/PIL-0113-upstream-0-7-5
@@ -78,3 +78,4 @@ waivers: []
 - 2026-10-21T05:25Z · user · 修订验收标准 28d865bcb364 → c7f72dfe8913：A2 与 A3 一致：允许合并前基线已证明存在的失败（release-workflows 许可声明用例），另开卡修复
 - 2026-10-21T05:26Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-21T05:26Z · claude:sonnet-high:verify · 做了：按修订后的 A2（c7f72dfe8913）复核：6 个文件 92/93 通过，唯一失败用例在第一父提交 11df970 同样失败（基线日志同名同报错）且由 PIL-0114 跟踪，记 A2 通过。 / 状态：8389681，A1–A6 全部通过（A3 为登记的合并前既有失败），已送 review。 / 下一步：评审者评审；PIL-0114 另行修复许可声明测试。 / 风险：AGENTS.md 已拒绝清单中的 DirectoryPicker、SessionSearch 实际仍在使用（合并前即如此）；A3 仍有 11 个合并前已有的结构性测试失败未被任何卡跟踪。
+- 2026-10-21T05:26Z · claude:sonnet-high:verify · in_progress → verify
