@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0014]
 files_allowed: [components/ChangelogDialog.tsx, components/ChangelogDialog.test.mjs, lib/changelog.ts, lib/changelog.test.mjs, CHANGELOG.md]
 files_shared: [components/AppUpdatesSection.tsx, components/desktop/DesktopAppSection.tsx, app/native-theme.css]
-acceptance_sha:
+acceptance_sha: 1e4fb5befe54
 waivers: []
 ---
 
@@ -71,3 +71,4 @@ waivers: []
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字；日志中的本机绝对路径改为相对名 panyin-bid-intel；拆卡：本卡改为 C54a 版本入口与更新日志，依赖只留 PIL-0014（不再依赖 0003/0110/0112）；下载/安装/重启拆为 PIL-0190；G3 几何表（624px/13:18/14px/窄屏宽/180ms/reduced-motion/focus-visible）移入 A4；A2 参考值来自 panyin 源 CSS 计算值而非 Claude 截图
+- 2026-10-21T12:38Z · planner · 冻结验收标准 1e4fb5befe54
