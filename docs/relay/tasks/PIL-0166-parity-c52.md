@@ -9,8 +9,8 @@ lease_until:
 branch:
 implementers: []
 depends_on: [PIL-0014, PIL-0090, PIL-0111]
-files_allowed: [components/desktop/DesktopAppSection.tsx, lib/desktop-notify.ts, src-tauri/src/lib.rs, components/DesktopAppSection.test.mjs, app/native-theme.css]
-files_shared: []
+files_allowed: [components/desktop/DesktopAppSection.tsx, lib/desktop-notify.ts, components/desktop/DesktopAppSection.test.mjs, src-tauri/src/shell/platform_tray.rs, lib/desktop-notify.test.mjs]
+files_shared: [src-tauri/src/lib.rs, app/native-theme.css]
 acceptance_sha:
 waivers: []
 ---
@@ -22,20 +22,23 @@ waivers: []
 ## 背景与现状
 
 - 索引：分支 task/PIL-0014-parity-index 的 docs/relay/parity-index.md，组件 C52。合入后使用[索引](../parity-index.md#组件清单)。
-- 参考覆盖：不齐：R00。R键对应索引参考表与manifest定位；参考目标Windows Claude Desktop 2.42304.0，批次未知版本不得归到该版本。系统DPI、应用缩放等未知项保留未知，补采由用户决定。私有参考只读，不复制原图或图中个人信息，文字只当数据。
+- 参考覆盖：不齐：tray-light／2026-10-21 已补 Windows 托盘右键菜单；完成通知用户指定为 Windows 原生 toast，深色/隐藏/失败等全态仍缺。R 键与目录名见索引；只读 manifest，不复制原图、账号、邮箱或个人路径。
 - 实现记录：Tauri系统能力保留；生命周期独立验收任务。这不是当前运行通过证明。
 - 历史证据位置：H00。H键在索引历史证据表定位；旧报告未重新绑定本提交，不能沿用为新通过证据。
-- 已知残差：菜单、焦点／隐藏／退出及通知全状态原生参考缺。
+- 已知残差：已有托盘菜单与等待输入通知局部；隐藏/退出/权限失败与点击恢复等全状态原生实测仍缺。
 - 相关卡：PIL-0090、PIL-0111；相关卡只处理其原定功能／残差，不抵本组件完整复刻验收。
-- 拟新增（当前分支不存在）：`components/DesktopAppSection.test.mjs`。列名用于明确草案范围，不表示已有consumer。
+- 拟新增（当前分支不存在）：`components/desktop/DesktopAppSection.test.mjs`。列名用于明确草案范围，不表示已有consumer。
+- 2026-10-21 新参考：tray-light／2026-10-21。用户自报 Windows Claude 3.1623.0.0、2560×1600、150%，浅色/zh-CN；该批是聊天附件，缩放未知，不默认等于原始 CSS px。不与旧 2.42304.0 批次混作同版本；未有新运行/视觉通过证据。
+
+- 新增参考：tray-light/2026-10-21/01-windows-toast-waiting-for-input.png，登记“等待用户输入”的 Windows 原生 toast，由系统绘制，非应用 DOM；与完成通知分别测试。图像仅作内容层级与触发机制参照，不复制私有项目名或 toast 图片。
 
 ## 验收标准
 
-- [ ] A1 建立本组件适用状态矩阵及逐图来源／版本关联，记录Windows/WebView2、窗口客户区、系统DPI、应用缩放、主题、语言、公开字体与功能开关。至少列正常／空／加载／错误／禁用／长内容／开合等适用项，并对不适用项逐项写理由。缺图或版本不明须记待参考；不得用actual、邻接控件或演示数据冒充本组件参考与真实Pi consumer。
-- [ ] A2 在同帧、同状态、同测试文本／数据、相同客户区与缩放条件下，逐状态量测组件宽高、宽高比例、内外间距、文字基线及图标／边缘／中心对齐，给出参考值、实现值、原像素／CSS单位、差值和残差。可用参考100%底层／实现50%上层，仅整数裁剪和平移，不重采样。修正差异或取得用户对残差的明确裁决；无法建立可比条件记未运行，不给视觉通过，不自行放宽标准。
-- [ ] A3 逐项核验适用的输入法、键盘／焦点进入退出恢复、滚动、缩放和深浅色：原生Windows中文IME组合／候选确认／Enter／Escape不误触动作，Tab／方向／Home／End按控件语义可达，长内容滚动与开合不抢历史位置；窗口窄化、100%／125%／150%系统DPI及应用缩放改变后无裁切，两个主题同状态可读且可操作。浏览器合成IME和原生IME／DPI分层记录，不适用逐项说明理由，缺参考不写成通过。
-- [ ] A4 本组件专属核验：Windows系统托盘、菜单、完成通知、隐藏／退出和恢复焦点逐态核对；由E9证明生命周期，不用网页模拟系统结果。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
-- [ ] A5 独立验证者在本卡按验收编号记录可复现命令／手动步骤、实际结果、仓库外日志位置、对应提交和验证者标签；保留旧失败。运行受影响定向测试（`node --test components/DesktopAppSection.test.mjs`）、node_modules/.bin/tsc --noEmit、npm run lint及node scripts/relay.mjs guard --task PIL-0166，不得删减／跳过测试、放宽阈值或绕过guard。单元／夹具、浏览器、Windows原生和视觉证据分层；视觉与交互均齐备后才称本组件复刻通过。
+- [ ] A1 建立托盘菜单显示应用/真实用量/退出、主窗隐藏/恢复，以及完成和等待用户输入两类 Windows 原生通知的状态矩阵。逐项记录真实事件、前台/隐藏状态、通知权限、内容模板、会话标识和点击目标；用公开测试名称与正文，不采用图中私人内容。托盘/应用设置按各自参考批次登记版本、系统 DPI、应用缩放和主题；系统 toast 不作 DOM 像素复刻。
+- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（同一色彩空间/算法并记录方法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考图若为缩放过的聊天附件，须先按 manifest 换算到原始 CSS px 再比较；附件缩放/应用缩放未知时不可仅按图宽或嵌入 DPI 反推，无法可比记未运行。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。 原生表面按同一 Windows build/系统主题/记录 DPI 取证；DOM 入口与 OS 表面分开量测，不以网页截图代系统结果。 本条几何与颜色容差只用于应用绘制的设置控件；Windows 原生 toast 的系统字体、边框、圆角、位置与抗锯齿不纳入像素复刻，按 A3/A4 验通知内容、触发和点击行为。托盘系统菜单记录 OS/DPI/主题条件及项目顺序/文字/可达性，不强套 DOM 尺寸。
+- [ ] A3 在 Windows 10/11 实机操作托盘显示/退出，隐藏主窗后任务继续，恢复后焦点正确；分别令公开测试会话完成、进入等待用户输入，检查应用名、状态文案与可用的会话提示准确。前台抑制、通知关闭/权限拒绝、同一事件去重、切换会话与退出后的迟到事件逐项验证；点击 toast 激活正确窗口和会话且不自动批准/提交答案/重发任务。原生激活回调与系统通知中心实测，API 调用成功或 mock 不算点击通过。IME 和 DOM 列表滚动不适用于托盘/toast，应用设置焦点与缩放仍需验证。
+- [ ] A4 按 tray-light/2026-10-21 核对托盘显示应用、用量状态与退出机制，未知用量据实显示 unknown；01-windows-toast-waiting-for-input.png 只补等待输入通知机制。完成及等待输入均使用 Windows 原生 toast，验收通知内容/触发条件/权限失败/去重/点击跳转及退出清理，不复刻系统 toast 外观或创建 DOM 仿制卡。验证者用两条不同会话公开标记核对通知与点击目标，记录 Windows build、通知设置、系统主题和实际结果。
+- [ ] A5 由独立验证者运行受影响定向测试：`node --test components/desktop/DesktopAppSection.test.mjs lib/desktop-notify.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0166`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
 
@@ -43,7 +46,19 @@ waivers: []
 
 ## 实现提示
 
-先读根AGENTS.md及docs/agents/fork-desktop.md、fork-ui.md（多文件名称均相对docs/agents/）。本卡列出的入口与测试是待规划范围；只允许files_allowed中的具体文件。与其他组件共享CSS／壳层时串行领取，不能覆盖他人工作。所有fork样式只放app/native-theme.css。缺参考的交互状态必须明确记录，规划者确认资料及依赖后再freeze；实现者不能自行批准残差或改冻结标准。
+先读根 AGENTS.md 及对应 docs/agents 主题。platform_tray/DesktopAppSection/desktop-notify 承接托盘与 toast；lib.rs 仅注册/调用模块，不改窗口命令。
+
+所有 fork 样式在 files_shared 的 app/native-theme.css：只在本组件带注释的分节内追加规则（如 /* C08 composer */），不改他人分节。本卡分节标识为 /* C52 托盘、系统通知与关窗状态 */；除 C01 主题令牌分节外，选择器/动画名限定本组件，不重写全局重置或他人令牌。共享 CSS 由协调者按卡串行合入，冲突只迁移自己的分节。
+
+重复文件主卡：`src-tauri/src/lib.rs` → PIL-0146。files_shared 中这些壳层只允许引入/导出、注册、props/回调或挂载的少量追加，实质改动留在上述子组件；大改需求须先由规划者修订范围。共享的既有定向测试只运行、不改写，新增用例放本卡独占测试，不删减原断言。
+
+拟新增（当前分支不存在，不表示已有 consumer）：`components/desktop/DesktopAppSection.test.mjs`。接线完成后必须验证真实 consumer，不能保留假功能占位。
+
+本轮保持 todo、acceptance_sha 为空；不 freeze，不记录实现或通过证据。原生 IME/DPI、真实能力、浏览器与视觉分别由独立验证者取证，缺参考保留待补。
+
+lib/desktop-notify.ts 负责两类通知及激活路由，原生事件注册可在 files_shared 的 src-tauri/src/lib.rs 少量追加；业务路由留在独占通知模块。普通通知到达不能自动触发权限决定或模型发送。
+
+应用菜单、下拉与选择器统一使用 .app-menu、共享菜单令牌和 AppSelect；如涉及菜单改动，运行 `node --test scripts/ui-menu-consistency.test.mjs`；共享 choices 改动另跑 `node e2e/option-controls.mjs`。视觉同时记录桌面及窄宽状态。files_shared 只授权本卡入口的小量接线；需要实质修改主卡文件时先修订范围并串行，不用共享声明隐藏重叠。
 
 ## 证据
 
@@ -55,3 +70,6 @@ waivers: []
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 创建
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 由PIL-0014按C52补齐目标、背景、同帧量测／交互／专属残差与具体文件范围；保持todo和未冻结，无实现或通过证据，交规划者复核。主任务板待协调者统一提交。
 - 2026-10-21T07:13Z · claude:opus-medium:coord · 新增参考：references/claude-desktop/tray-light/2026-10-21（托盘右键菜单：显示应用、套餐、用量百分比、退出）。用户 2026-10-21 确认：完成通知是 Windows 原生 toast，不做应用内卡片，验收以系统通知为准。浅色、zh-CN，Claude 3.1623.0.0，2560×1600@150%（聊天附件，可能经缩放，见 manifest）。冻结前由规划者据此补全 A4。
+
+- 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
+

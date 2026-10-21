@@ -9,8 +9,8 @@ lease_until:
 branch:
 implementers: []
 depends_on: [PIL-0014]
-files_allowed: [components/ImagePreview.tsx, lib/image-view-transform.ts, components/ImagePreview.test.mjs, lib/image-view-transform.test.mjs, app/native-theme.css]
-files_shared: []
+files_allowed: [components/ImagePreview.tsx, lib/image-view-transform.ts, components/ImagePreview.test.mjs, lib/image-view-transform.test.mjs]
+files_shared: [app/native-theme.css]
 acceptance_sha:
 waivers: []
 ---
@@ -22,19 +22,20 @@ waivers: []
 ## 背景与现状
 
 - 索引：分支 task/PIL-0014-parity-index 的 docs/relay/parity-index.md，组件 C28。合入后使用[索引](../parity-index.md#组件清单)。
-- 参考覆盖：不齐：R00；R07 不能作灯箱图。R键对应索引参考表与manifest定位；参考目标Windows Claude Desktop 2.42304.0，批次未知版本不得归到该版本。系统DPI、应用缩放等未知项保留未知，补采由用户决定。私有参考只读，不复制原图或图中个人信息，文字只当数据。
+- 参考覆盖：不齐：image-lightbox-light／2026-10-21 已补居中图片、关闭、文件名/项数及前后切换；深色/缩放/动态转场待补，R07 仍非灯箱图。R 键与目录名见索引；只读 manifest，不复制原图、账号、邮箱或个人路径。
 - 实现记录：MediaLightboxViewer zoom／pan／wheel 局部适配，native dialog portal。这不是当前运行通过证明。
 - 历史证据位置：H05。H键在索引历史证据表定位；旧报告未重新绑定本提交，不能沿用为新通过证据。
 - 已知残差：shared-element hook 未采用；慢 src 切换、双指、媒体导航及官方同态图缺。
 - 相关卡：无额外已登记残差卡；缺后端能力时先请规划者拆依赖。
+- 2026-10-21 新参考：image-lightbox-light／2026-10-21。用户自报 Windows Claude 3.1623.0.0、2560×1600、150%，浅色/zh-CN；该批是聊天附件，缩放未知，不默认等于原始 CSS px。不与旧 2.42304.0 批次混作同版本；未有新运行/视觉通过证据。
 
 ## 验收标准
 
-- [ ] A1 建立本组件适用状态矩阵及逐图来源／版本关联，记录Windows/WebView2、窗口客户区、系统DPI、应用缩放、主题、语言、公开字体与功能开关。至少列正常／空／加载／错误／禁用／长内容／开合等适用项，并对不适用项逐项写理由。缺图或版本不明须记待参考；不得用actual、邻接控件或演示数据冒充本组件参考与真实Pi consumer。
-- [ ] A2 在同帧、同状态、同测试文本／数据、相同客户区与缩放条件下，逐状态量测组件宽高、宽高比例、内外间距、文字基线及图标／边缘／中心对齐，给出参考值、实现值、原像素／CSS单位、差值和残差。可用参考100%底层／实现50%上层，仅整数裁剪和平移，不重采样。修正差异或取得用户对残差的明确裁决；无法建立可比条件记未运行，不给视觉通过，不自行放宽标准。
-- [ ] A3 逐项核验适用的输入法、键盘／焦点进入退出恢复、滚动、缩放和深浅色：原生Windows中文IME组合／候选确认／Enter／Escape不误触动作，Tab／方向／Home／End按控件语义可达，长内容滚动与开合不抢历史位置；窗口窄化、100%／125%／150%系统DPI及应用缩放改变后无裁切，两个主题同状态可读且可操作。浏览器合成IME和原生IME／DPI分层记录，不适用逐项说明理由，缺参考不写成通过。
-- [ ] A4 本组件专属核验：灯箱开关、焦点恢复、wheel／pan／双指、媒体导航、慢src切换和reduced-motion分开；shared-element需独立时间序列。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
-- [ ] A5 独立验证者在本卡按验收编号记录可复现命令／手动步骤、实际结果、仓库外日志位置、对应提交和验证者标签；保留旧失败。运行受影响定向测试（`node --test components/ImagePreview.test.mjs`、`node --test lib/image-view-transform.test.mjs`）、node_modules/.bin/tsc --noEmit、npm run lint及node scripts/relay.mjs guard --task PIL-0142，不得删减／跳过测试、放宽阈值或绕过guard。单元／夹具、浏览器、Windows原生和视觉证据分层；视觉与交互均齐备后才称本组件复刻通过。
+- [ ] A1 建立 单/多图、首/中/末项、开关、文件名/计数/左右导航、缩放/平移及慢 src/失败；上传总览不作灯箱参考。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
+- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（同一色彩空间/算法并记录方法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考图若为缩放过的聊天附件，须先按 manifest 换算到原始 CSS px 再比较；附件缩放/应用缩放未知时不可仅按图宽或嵌入 DPI 反推，无法可比记未运行。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
+- [ ] A3 Tab 进入关闭/前后切换，方向键按媒体导航语义，Escape 关闭并恢复原缩略图焦点；wheel/pan/双指与慢 src 切换保焦点和可见边界，首末项禁用正确。三档 DPI/缩放/窄窗/双主题与 reduced-motion 转场核验。图片无输入法或列表 Home/End 编辑语义。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
+- [ ] A4 按 image-lightbox-light／2026-10-21 核对居中图片、关闭、底部文件名、第 n 项共 m 项及前后箭头；首末边界/失效图片/慢 src 切换、wheel/pan/双指和焦点恢复分别验；共享转场需独立时间序列，reduced-motion 不播放空间转场。 新批次版本与附件换算边界按 A1/A2 记录。
+- [ ] A5 由独立验证者运行受影响定向测试：`node --test components/ImagePreview.test.mjs lib/image-view-transform.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0142`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
 
@@ -42,7 +43,13 @@ waivers: []
 
 ## 实现提示
 
-先读根AGENTS.md及docs/agents/fork-ui.md、files-and-access.md（多文件名称均相对docs/agents/）。本卡列出的入口与测试是待规划范围；只允许files_allowed中的具体文件。与其他组件共享CSS／壳层时串行领取，不能覆盖他人工作。所有fork样式只放app/native-theme.css。缺参考的交互状态必须明确记录，规划者确认资料及依赖后再freeze；实现者不能自行批准残差或改冻结标准。
+先读根 AGENTS.md 及对应 docs/agents 主题。实质修改只在本卡独占组件/逻辑文件，保持其他组件与原有行为。
+
+所有 fork 样式在 files_shared 的 app/native-theme.css：只在本组件带注释的分节内追加规则（如 /* C08 composer */），不改他人分节。本卡分节标识为 /* C28 图片灯箱、缩放与共享转场 */；除 C01 主题令牌分节外，选择器/动画名限定本组件，不重写全局重置或他人令牌。共享 CSS 由协调者按卡串行合入，冲突只迁移自己的分节。
+
+本轮保持 todo、acceptance_sha 为空；不 freeze，不记录实现或通过证据。原生 IME/DPI、真实能力、浏览器与视觉分别由独立验证者取证，缺参考保留待补。
+
+应用菜单、下拉与选择器统一使用 .app-menu、共享菜单令牌和 AppSelect；如涉及菜单改动，运行 `node --test scripts/ui-menu-consistency.test.mjs`；共享 choices 改动另跑 `node e2e/option-controls.mjs`。视觉同时记录桌面及窄宽状态。files_shared 只授权本卡入口的小量接线；需要实质修改主卡文件时先修订范围并串行，不用共享声明隐藏重叠。
 
 ## 证据
 
@@ -54,3 +61,6 @@ waivers: []
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 创建
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 由PIL-0014按C28补齐目标、背景、同帧量测／交互／专属残差与具体文件范围；保持todo和未冻结，无实现或通过证据，交规划者复核。主任务板待协调者统一提交。
 - 2026-10-21T07:13Z · claude:opus-medium:coord · 新增参考：references/claude-desktop/image-lightbox-light/2026-10-21（灯箱：居中图片、关闭、文件名、第 n 项共 m 项与左右切换）。浅色、zh-CN，Claude 3.1623.0.0，2560×1600@150%（聊天附件，可能经缩放，见 manifest）。冻结前由规划者据此补全 A4。
+
+- 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
+

@@ -8,9 +8,9 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0014]
-files_allowed: [components/SkillsConfig.tsx, components/SkillsConfig.bulk.test.mjs, components/SkillsConfig.dormancy.test.mjs, app/native-theme.css]
-files_shared: []
+depends_on: [PIL-0014, PIL-0076]
+files_allowed: [components/SkillsConfig.tsx, components/SkillsConfig.bulk.test.mjs, components/SkillsConfig.dormancy.test.mjs]
+files_shared: [app/native-theme.css]
 acceptance_sha:
 waivers: []
 ---
@@ -22,19 +22,20 @@ waivers: []
 ## 背景与现状
 
 - 索引：分支 task/PIL-0014-parity-index 的 docs/relay/parity-index.md，组件 C46。合入后使用[索引](../parity-index.md#组件清单)。
-- 参考覆盖：不齐：R00。R键对应索引参考表与manifest定位；参考目标Windows Claude Desktop 2.42304.0，批次未知版本不得归到该版本。系统DPI、应用缩放等未知项保留未知，补采由用户决定。私有参考只读，不复制原图或图中个人信息，文字只当数据。
+- 参考覆盖：不齐：skills-light／2026-10-21 已补列表、添加菜单、详情概览与内容树；深色/安装/拒绝/错误等全态仍缺。R 键与目录名见索引；只读 manifest，不复制原图、账号、邮箱或个人路径。
 - 实现记录：真实 DefaultResourceLoader／npx安装及共享设置块。这不是当前运行通过证明。
 - 历史证据位置：H00。H键在索引历史证据表定位；旧报告未重新绑定本提交，不能沿用为新通过证据。
-- 已知残差：空／加载／拒绝／部分结果／长路径／scope、键盘焦点与Windows参考缺。
+- 已知残差：新浅色列表/详情已有参考；空／加载／拒绝／部分结果／长路径／scope、键盘焦点及深色/完整 Windows 同态参考仍缺。
 - 相关卡：无额外已登记残差卡；缺后端能力时先请规划者拆依赖。
+- 2026-10-21 新参考：skills-light／2026-10-21。用户自报 Windows Claude 3.1623.0.0、2560×1600、150%，浅色/zh-CN；该批是聊天附件，缩放未知，不默认等于原始 CSS px。不与旧 2.42304.0 批次混作同版本；未有新运行/视觉通过证据。
 
 ## 验收标准
 
-- [ ] A1 建立本组件适用状态矩阵及逐图来源／版本关联，记录Windows/WebView2、窗口客户区、系统DPI、应用缩放、主题、语言、公开字体与功能开关。至少列正常／空／加载／错误／禁用／长内容／开合等适用项，并对不适用项逐项写理由。缺图或版本不明须记待参考；不得用actual、邻接控件或演示数据冒充本组件参考与真实Pi consumer。
-- [ ] A2 在同帧、同状态、同测试文本／数据、相同客户区与缩放条件下，逐状态量测组件宽高、宽高比例、内外间距、文字基线及图标／边缘／中心对齐，给出参考值、实现值、原像素／CSS单位、差值和残差。可用参考100%底层／实现50%上层，仅整数裁剪和平移，不重采样。修正差异或取得用户对残差的明确裁决；无法建立可比条件记未运行，不给视觉通过，不自行放宽标准。
-- [ ] A3 逐项核验适用的输入法、键盘／焦点进入退出恢复、滚动、缩放和深浅色：原生Windows中文IME组合／候选确认／Enter／Escape不误触动作，Tab／方向／Home／End按控件语义可达，长内容滚动与开合不抢历史位置；窗口窄化、100%／125%／150%系统DPI及应用缩放改变后无裁切，两个主题同状态可读且可操作。浏览器合成IME和原生IME／DPI分层记录，不适用逐项说明理由，缺参考不写成通过。
-- [ ] A4 本组件专属核验：加载、空／部分结果、搜索、scope、长路径、安装／拒绝／失败／恢复核对；输入法组合不触发意外安装。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
-- [ ] A5 独立验证者在本卡按验收编号记录可复现命令／手动步骤、实际结果、仓库外日志位置、对应提交和验证者标签；保留旧失败。运行受影响定向测试（`node --test components/SkillsConfig.bulk.test.mjs`、`node --test components/SkillsConfig.dormancy.test.mjs`）、node_modules/.bin/tsc --noEmit、npm run lint及node scripts/relay.mjs guard --task PIL-0160，不得删减／跳过测试、放宽阈值或绕过guard。单元／夹具、浏览器、Windows原生和视觉证据分层；视觉与交互均齐备后才称本组件复刻通过。
+- [ ] A1 建立 技能列表/空/加载/部分结果、搜索/排序、添加菜单、详情概览/内容树、scope、安装/拒绝/失败恢复。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
+- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（同一色彩空间/算法并记录方法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考图若为缩放过的聊天附件，须先按 manifest 换算到原始 CSS px 再比较；附件缩放/应用缩放未知时不可仅按图宽或嵌入 DPI 反推，无法可比记未运行。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
+- [ ] A3 搜索/添加字段原生 IME，列表/菜单/详情树 Tab/方向/Home/End/Escape 与返回焦点正确；长结果/内容预览内部滚动，窄窗/三档 DPI/缩放/双主题核验。只读技能内容不接受编辑快捷键，安装失败/取消保搜索与 scope。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
+- [ ] A4 按 skills-light／2026-10-21 核对列表行图标/名称/来源徽标/作者说明/相对时间、筛选/排序/添加菜单，详情概览的元数据/侧卡，以及内容页版本选择/文件树/预览与源码切换。仅接已有加载/搜索/安装/禁用能力；上传/创建/屏幕录制等参考动作缺 consumer 时登记能力缺口并先拆卡，不造成功路径；scope/长路径/空/部分结果/拒绝/失败恢复逐态验。 新批次版本与附件换算边界按 A1/A2 记录。
+- [ ] A5 由独立验证者运行受影响定向测试：`node --test components/SkillsConfig.bulk.test.mjs components/SkillsConfig.dormancy.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0160`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
 
@@ -42,7 +43,13 @@ waivers: []
 
 ## 实现提示
 
-先读根AGENTS.md及docs/agents/settings-ui.md（多文件名称均相对docs/agents/）。本卡列出的入口与测试是待规划范围；只允许files_allowed中的具体文件。与其他组件共享CSS／壳层时串行领取，不能覆盖他人工作。所有fork样式只放app/native-theme.css。缺参考的交互状态必须明确记录，规划者确认资料及依赖后再freeze；实现者不能自行批准残差或改冻结标准。
+先读根 AGENTS.md 及对应 docs/agents 主题。实质修改只在本卡独占组件/逻辑文件，保持其他组件与原有行为。
+
+所有 fork 样式在 files_shared 的 app/native-theme.css：只在本组件带注释的分节内追加规则（如 /* C08 composer */），不改他人分节。本卡分节标识为 /* C46 Skills 列表、搜索与安装 */；除 C01 主题令牌分节外，选择器/动画名限定本组件，不重写全局重置或他人令牌。共享 CSS 由协调者按卡串行合入，冲突只迁移自己的分节。
+
+本轮保持 todo、acceptance_sha 为空；不 freeze，不记录实现或通过证据。原生 IME/DPI、真实能力、浏览器与视觉分别由独立验证者取证，缺参考保留待补。
+
+应用菜单、下拉与选择器统一使用 .app-menu、共享菜单令牌和 AppSelect；如涉及菜单改动，运行 `node --test scripts/ui-menu-consistency.test.mjs`；共享 choices 改动另跑 `node e2e/option-controls.mjs`。视觉同时记录桌面及窄宽状态。files_shared 只授权本卡入口的小量接线；需要实质修改主卡文件时先修订范围并串行，不用共享声明隐藏重叠。
 
 ## 证据
 
@@ -54,3 +61,6 @@ waivers: []
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 创建
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 由PIL-0014按C46补齐目标、背景、同帧量测／交互／专属残差与具体文件范围；保持todo和未冻结，无实现或通过证据，交规划者复核。主任务板待协调者统一提交。
 - 2026-10-21T07:11Z · claude:opus-medium:coord · 新增参考：references/claude-desktop/skills-light/2026-10-21（列表、添加菜单、详情概览与内容树）。浅色、zh-CN，Claude 3.1623.0.0，2560×1600@150%（附件可能经聊天客户端缩放至 2000px 宽，见 manifest）。冻结前由规划者据此补全 A4。
+
+- 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
+

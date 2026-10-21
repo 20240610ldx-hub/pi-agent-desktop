@@ -2,15 +2,15 @@
 id: PIL-0165
 title: 复刻验收：C51 受控 Browser pane 与控制条
 epic: E2
-priority: P1
+priority: P2
 status: todo
 owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0014, PIL-0040]
-files_allowed: [components/BrowserPanel.tsx, components/BrowserPanel.test.mjs, components/WorkspacePaneDock.tsx, app/native-theme.css]
-files_shared: []
+depends_on: [PIL-0014, PIL-0040, PIL-0144]
+files_allowed: [components/BrowserPanel.tsx, components/BrowserPanel.test.mjs]
+files_shared: [components/WorkspacePaneDock.tsx, app/native-theme.css]
 acceptance_sha:
 waivers: []
 ---
@@ -31,11 +31,11 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立本组件适用状态矩阵及逐图来源／版本关联，记录Windows/WebView2、窗口客户区、系统DPI、应用缩放、主题、语言、公开字体与功能开关。至少列正常／空／加载／错误／禁用／长内容／开合等适用项，并对不适用项逐项写理由。缺图或版本不明须记待参考；不得用actual、邻接控件或演示数据冒充本组件参考与真实Pi consumer。
-- [ ] A2 在同帧、同状态、同测试文本／数据、相同客户区与缩放条件下，逐状态量测组件宽高、宽高比例、内外间距、文字基线及图标／边缘／中心对齐，给出参考值、实现值、原像素／CSS单位、差值和残差。可用参考100%底层／实现50%上层，仅整数裁剪和平移，不重采样。修正差异或取得用户对残差的明确裁决；无法建立可比条件记未运行，不给视觉通过，不自行放宽标准。
-- [ ] A3 逐项核验适用的输入法、键盘／焦点进入退出恢复、滚动、缩放和深浅色：原生Windows中文IME组合／候选确认／Enter／Escape不误触动作，Tab／方向／Home／End按控件语义可达，长内容滚动与开合不抢历史位置；窗口窄化、100%／125%／150%系统DPI及应用缩放改变后无裁切，两个主题同状态可读且可操作。浏览器合成IME和原生IME／DPI分层记录，不适用逐项说明理由，缺参考不写成通过。
+- [ ] A1 建立 Browser 新标签/地址栏/控制条、Cookie 导入确认/取消/失败、导航/下载/停止/接管与权限拒绝。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
+- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（同一色彩空间/算法并记录方法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考图若为缩放过的聊天附件，须先按 manifest 换算到原始 CSS px 再比较；附件缩放/应用缩放未知时不可仅按图宽或嵌入 DPI 反推，无法可比记未运行。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
+- [ ] A3 地址/真实网页字段原生 IME，Tab 在控制条与受控浏览器间可进可退，取消/接管/返回应用恢复焦点；网页滚动与 pane 独立。窄 pane/三档 DPI/缩放/双主题核验；Cookie 导入拒绝/取消不上传，iframe 通过不抵受控 Chromium 验收。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
 - [ ] A4 本组件专属核验：Browser新标签／控制条与Cookie导入确认、取消／错误需参考；须接PIL-0040受控能力，iframe不作Chromium真实consumer或授权证据。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
-- [ ] A5 独立验证者在本卡按验收编号记录可复现命令／手动步骤、实际结果、仓库外日志位置、对应提交和验证者标签；保留旧失败。运行受影响定向测试（`node --test components/BrowserPanel.test.mjs`）、node_modules/.bin/tsc --noEmit、npm run lint及node scripts/relay.mjs guard --task PIL-0165，不得删减／跳过测试、放宽阈值或绕过guard。单元／夹具、浏览器、Windows原生和视觉证据分层；视觉与交互均齐备后才称本组件复刻通过。
+- [ ] A5 由独立验证者运行受影响定向测试：`node --test components/BrowserPanel.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0165`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
 
@@ -43,7 +43,17 @@ waivers: []
 
 ## 实现提示
 
-先读根AGENTS.md及docs/agents/fork-desktop.md、fork-ui.md（多文件名称均相对docs/agents/）。本卡列出的入口与测试是待规划范围；只允许files_allowed中的具体文件。与其他组件共享CSS／壳层时串行领取，不能覆盖他人工作。所有fork样式只放app/native-theme.css。缺参考的交互状态必须明确记录，规划者确认资料及依赖后再freeze；实现者不能自行批准残差或改冻结标准。
+先读根 AGENTS.md 及对应 docs/agents 主题。实质修改只在本卡独占组件/逻辑文件，保持其他组件与原有行为。
+
+所有 fork 样式在 files_shared 的 app/native-theme.css：只在本组件带注释的分节内追加规则（如 /* C08 composer */），不改他人分节。本卡分节标识为 /* C51 受控 Browser pane 与控制条 */；除 C01 主题令牌分节外，选择器/动画名限定本组件，不重写全局重置或他人令牌。共享 CSS 由协调者按卡串行合入，冲突只迁移自己的分节。
+
+重复文件主卡：`components/WorkspacePaneDock.tsx` → PIL-0144。files_shared 中这些壳层只允许引入/导出、注册、props/回调或挂载的少量追加，实质改动留在上述子组件；大改需求须先由规划者修订范围。共享的既有定向测试只运行、不改写，新增用例放本卡独占测试，不删减原断言。
+
+拟新增（当前分支不存在，不表示已有 consumer）：`components/BrowserPanel.test.mjs`。接线完成后必须验证真实 consumer，不能保留假功能占位。
+
+本轮保持 todo、acceptance_sha 为空；不 freeze，不记录实现或通过证据。原生 IME/DPI、真实能力、浏览器与视觉分别由独立验证者取证，缺参考保留待补。
+
+应用菜单、下拉与选择器统一使用 .app-menu、共享菜单令牌和 AppSelect；如涉及菜单改动，运行 `node --test scripts/ui-menu-consistency.test.mjs`；共享 choices 改动另跑 `node e2e/option-controls.mjs`。视觉同时记录桌面及窄宽状态。files_shared 只授权本卡入口的小量接线；需要实质修改主卡文件时先修订范围并串行，不用共享声明隐藏重叠。
 
 ## 证据
 
@@ -54,3 +64,6 @@ waivers: []
 
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 创建
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 由PIL-0014按C51补齐目标、背景、同帧量测／交互／专属残差与具体文件范围；保持todo和未冻结，无实现或通过证据，交规划者复核。主任务板待协调者统一提交。
+
+- 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
+
