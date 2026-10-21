@@ -70,4 +70,4 @@ waivers: []
 - 2026-10-21T07:13Z · claude:opus-medium:coord · 新增参考：references/claude-desktop/permission-card-light/2026-10-21（权限决定卡、分裂按钮菜单：允许一次／允许并切换 Auto、自动模式引导气泡、切换后的会话内提示）。浅色、zh-CN，Claude 3.1623.0.0，2560×1600@150%（聊天附件，可能经缩放，见 manifest）。冻结前由规划者据此补全 A4。
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
-
+- 2026-10-21T08:06Z · claude:opus-medium:planner · 用户 2026-10-21 决定：AskUserQuestion 单题/多题问答卡不单独建卡，保留在 C06 邻接（参考 agent-panels-light/2026-10-21/00、06、07）
