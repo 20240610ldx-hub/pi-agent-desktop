@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0030]
 files_allowed: [lib/environment-types.ts, lib/environment-store.ts, lib/environment-store.test.mjs, lib/environment-variables.ts, lib/environment-variables.test.mjs, app/api/environments/route.ts, app/api/environments/[id]/route.ts, app/api/environments/[id]/folders/route.ts, app/api/environments/[id]/variables/route.ts]
 files_shared: []
-acceptance_sha:
+acceptance_sha: eb08ed7e3c8c
 waivers: []
 ---
 
@@ -54,3 +54,4 @@ waivers: []
 
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P1：PIL-0154、PIL-0172、PIL-0173、PIL-0174、PIL-0176、PIL-0182 依赖本卡，属首发能力/主组件依赖路径。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：明确环境记录用户级（项目只存 environmentId 引用）；Folders/执行受项目授权；删除 →PIL-0020（所需导出已存在）；Epic 改 E3；G3 变量语法/行号报错/保留标记移入 A3；Remote 首发不含；G6 删除过期文字
+- 2026-10-21T12:39Z · planner · 冻结验收标准 eb08ed7e3c8c
