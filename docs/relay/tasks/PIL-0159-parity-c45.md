@@ -53,3 +53,4 @@ waivers: []
 
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 创建
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 由PIL-0014按C45补齐目标、背景、同帧量测／交互／专属残差与具体文件范围；保持todo和未冻结，无实现或通过证据，交规划者复核。主任务板待协调者统一提交。
+- 2026-10-21T07:11Z · claude:opus-medium:coord · 新增参考：references/claude-desktop/connectors-light/2026-10-21（我的/发现、添加菜单与自定义连接器对话框、连接器详情的工具权限与设置表单）。浅色、zh-CN，Claude 3.1623.0.0，2560×1600@150%（附件可能经聊天客户端缩放至 2000px 宽，见 manifest）。冻结前由规划者据此补全 A4。
