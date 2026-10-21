@@ -25,13 +25,14 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 109 张任务卡：todo 98 · in_progress 0 · verify 1 · review 0 · done 5 · blocked 0 · parked 5
+共 109 张任务卡：todo 97 · in_progress 1 · verify 1 · review 0 · done 5 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0180 | P1 | verify | Windows 保持唤醒能力与退出释放 | claude:sonnet-high:impl | 2026-10-21T14:58Z | task/PIL-0180-keep-awake |
+| PIL-0189 | P1 | in_progress | 在分叉会话中发送（fork-send） | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0189-fork-send |
 
 ### 阻塞
 
@@ -77,7 +78,6 @@
 | PIL-0183 | P1 | E4 | SSH 环境真实执行、取消与连接恢复 | 是 | PIL-0182 |
 | PIL-0184 | P1 | E4 | WSL 环境发现、执行与路径隔离 | 是 | PIL-0182 |
 | PIL-0188 | P1 | E4 | 提问能力：模型向用户提问与答案回传（AskUserQuestion） | 是 | PIL-0030 |
-| PIL-0189 | P1 | E9 | 在分叉会话中发送（fork-send） | 是 | — |
 | PIL-0191 | P1 | E5 | 受控浏览器引擎与 pane 内核（含 spike） | 否 | PIL-0001 |
 | PIL-0192 | P1 | E5 | 受控浏览器会话核心与智能体工具注册 | 否 | PIL-0191 |
 | PIL-0193 | P1 | E5 | 受控浏览器提交/上传/导航审批门 | 否 | PIL-0192, PIL-0030 |

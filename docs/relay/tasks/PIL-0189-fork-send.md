@@ -3,11 +3,11 @@ id: PIL-0189
 title: 在分叉会话中发送（fork-send）
 epic: E9
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: claude:sonnet-high:impl
+lease_until: 2026-10-21T15:40Z
+branch: task/PIL-0189-fork-send
+implementers: [claude:sonnet-high:impl]
 depends_on: []
 files_allowed: [lib/fork-send.ts, lib/fork-send.test.mjs, lib/fork-send-client.ts, app/api/agent/[id]/fork-send/route.ts]
 files_shared: [lib/rpc-manager.ts, lib/agent-client.ts]
@@ -52,3 +52,4 @@ waivers: []
 - 2026-10-21T12:16Z · planner · 创建
 - 2026-10-21T12:27Z · claude:sonnet-high:planner · 冻结前修订第3轮：新建能力卡并写满验收；基于 Pi 现有 fork_branch 与 keepSource，从当前叶子分叉后在新会话发送草稿，含失败/取消/幂等路径；用户 2026-10-21 决定建本卡，PIL-0122 依赖它。
 - 2026-10-21T12:39Z · planner · 冻结验收标准 3d887a1c84ac
+- 2026-10-21T12:40Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T15:40Z
