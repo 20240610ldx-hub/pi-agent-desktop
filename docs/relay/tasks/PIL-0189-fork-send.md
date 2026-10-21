@@ -48,6 +48,7 @@ waivers: []
 | --- | --- | --- | --- | --- | --- |
 | A1 | node --test lib/fork-send.test.mjs（15/15）；层级=夹具（本地 OpenAI 兼容服务，未调真实模型）+ 真实 Pi SDK/rpc-manager/writeForkedSession；A1 用例经真实 POST 路由：新 id≠源、parentSession=源文件、源条目 id 序列在前、其后恰好 1 条用户消息=草稿（计入 Pi 自带 system 条目）、回复来自子会话、源文件条目数不变、夹具仅 1 次请求。变异验证：把发送文本改成 +" extra" 时 A1/A2/A4/A5 共 4 例失败。图片仅在注入 deps 的 A5 用例里验透传，真实 SDK 图片路径未覆盖；真实 deepseek-flash 路径卡片写“能触发才验”，未运行 | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log; D:/pilaude/relay-evidence/PIL-0189/verify/mutant-M5-extratext.log | 1ee7898 | claude:sonnet-high:verify |
 | A2 | 同上测试；层级=夹具+真实 SDK：源以 SLOW 流式输出中（isRunning=true）触发，源仍在跑、期间无 agent_end；新会话不含 part-one/SLOW-DONE，仅含已完成条目与草稿；放行后源出现 agent_end，末条助手文本完整 'part-one part-two SLOW-DONE'、stopReason=stop，草稿未进入源；子会话自行发 1 次请求 | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log | 1ee7898 | claude:sonnet-high:verify |
+| A3 | 同上测试；层级=夹具。未持久化→source_not_persisted（真实无文件会话，无请求）；源不存在→source_not_found；shell_running（在真实 wrapper 上注入 isBashRunning=true，无分叉文件、0 请求）；fork_write_failed（注入 writeFork 抛错，0 请求、无子文件）；session_start_failed（注入 startSession 抛错，保留分叉并带 newSessionId）；prompt_rejected（真实子会话 prompt 路径因 shell 标志被拒，保留分叉、草稿未写入、源条目数不变、0 请求）。均 promptSent:false。变异验证：去掉 shell 检查时 2 例失败。后三类触发手段为注入，非自然故障 | 通过 | D:/pilaude/relay-evidence/PIL-0189/verify/fork-send-test.log; D:/pilaude/relay-evidence/PIL-0189/verify/mutant-M4-noshellcheck.log | 1ee7898 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -59,3 +60,4 @@ waivers: []
 - 2026-10-21T12:53Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A2：通过
+- 2026-10-21T13:00Z · claude:sonnet-high:verify · 证据 A3：通过
