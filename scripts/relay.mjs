@@ -777,7 +777,9 @@ const commands = {
     if (status === "done") {
       const reviewer = need(opts["reviewed-by"], "--reviewed-by required");
       if (f.implementers.includes(reviewer)) throw new RelayError("reviewer must not be an implementer of this task");
-      const problems = validateCards([{ ...card, fields: { ...f, status: "done" } }], ctx.config).filter((p) => p.level === "error");
+      // 在全量卡片集合上校验（depends_on 需要看到其他卡），再只保留属于本卡的错误
+      const all = loadAll(ctx).map((c) => (c.fields.id === f.id ? { ...card, fields: { ...f, status: "done" } } : c));
+      const problems = validateCards(all, ctx.config).filter((p) => p.level === "error" && p.id === f.id);
       if (problems.length) throw new RelayError(problems.map((p) => p.msg).join("; "));
     }
     const from = f.status;
