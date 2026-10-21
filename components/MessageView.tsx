@@ -24,6 +24,9 @@ import { isThinkingExpandedByDefault, THINKING_EXPANDED_EVENT } from "@/lib/thin
 import { TurnWrittenFiles } from "./TurnWrittenFiles";
 import type { WrittenFile } from "@/lib/turn-written-files";
 import { skillExpansionToCommand } from "@/lib/slash-display";
+import { splitAttachedFiles } from "@/lib/chat-attachments";
+import { AttachedFileList } from "./AttachedFileList";
+import { SavedFileCard, isSavedFileInfo } from "./SavedFileCard";
 import type { SubagentToolDetails } from "@/lib/subagent-extension";
 import { CODEMODE_TOOL_NAME, codemodeCalls, codemodeScript, codemodeScriptPreview, stripCodemodeHeader } from "@/lib/codemode-view";
 import { CodemodeCallList } from "./CodemodeToolView";
@@ -213,6 +216,8 @@ interface Props {
   onFork?: (entryId: string, position?: "after") => void;
   forking?: boolean;
   onEditContent?: (message: UserMessage, entryId: string) => void;
+  /** Shared with MessageView so the disabled reason can travel with the button. */
+  editDisabled?: boolean;
   onCancelEdit?: () => void;
   isEditing?: boolean;
   showTimestamp?: boolean;
@@ -321,9 +326,9 @@ function haveSameRelevantRunningTools(message: AgentMessage, previous?: Readonly
     || Boolean(previous?.has(block.toolCallId)) === Boolean(next?.has(block.toolCallId)));
 }
 
-export const MessageView = memo(function MessageView({ message, isStreaming, liveTurn, activeThinkingIndex, activeTextIndex, partialToolCallIds, runningToolCallIds, activeToolCallId, toolResults, chapterIds, modelNames, cwd, onOpenFile, onOpenSession, onOpenModelsConfig, entryId, searchBlock, onFork, forking, onEditContent, onCancelEdit, isEditing, showTimestamp, prevTimestamp, sessionId, writtenFiles, onCompact, isCompacting, compactError }: Props) {
+export const MessageView = memo(function MessageView({ message, isStreaming, liveTurn, activeThinkingIndex, activeTextIndex, partialToolCallIds, runningToolCallIds, activeToolCallId, toolResults, chapterIds, modelNames, cwd, onOpenFile, onOpenSession, onOpenModelsConfig, entryId, searchBlock, onFork, forking, onEditContent, editDisabled, onCancelEdit, isEditing, showTimestamp, prevTimestamp, sessionId, writtenFiles, onCompact, isCompacting, compactError }: Props) {
   if (message.role === "user") {
-    return <UserMessageView message={message as UserMessage} cwd={cwd} onOpenFile={onOpenFile} entryId={entryId} onFork={onFork} forking={forking} onEditContent={onEditContent} onCancelEdit={onCancelEdit} isEditing={isEditing} />;
+    return <UserMessageView message={message as UserMessage} cwd={cwd} onOpenFile={onOpenFile} entryId={entryId} onFork={onFork} forking={forking} onEditContent={onEditContent} editDisabled={editDisabled} onCancelEdit={onCancelEdit} isEditing={isEditing} />;
   }
   if (message.role === "assistant") {
     return <AssistantMessageView message={message as AssistantMessage} isStreaming={isStreaming} liveTurn={liveTurn} activeThinkingIndex={activeThinkingIndex} activeTextIndex={activeTextIndex} partialToolCallIds={partialToolCallIds} runningToolCallIds={runningToolCallIds} activeToolCallId={activeToolCallId} toolResults={toolResults} chapterIds={chapterIds} modelNames={modelNames} cwd={cwd} onOpenFile={onOpenFile} onOpenSession={onOpenSession} onOpenModelsConfig={onOpenModelsConfig} showTimestamp={showTimestamp} prevTimestamp={prevTimestamp} sessionId={sessionId} entryId={entryId} onFork={onFork} forking={forking} searchBlock={searchBlock} writtenFiles={writtenFiles} onCompact={onCompact} isCompacting={isCompacting} compactError={compactError} />;
@@ -368,6 +373,7 @@ export const MessageView = memo(function MessageView({ message, isStreaming, liv
     && prev.onFork === next.onFork
     && prev.forking === next.forking
     && prev.onEditContent === next.onEditContent
+    && prev.editDisabled === next.editDisabled
     && prev.onCancelEdit === next.onCancelEdit
     && prev.isEditing === next.isEditing
     && prev.showTimestamp === next.showTimestamp
@@ -379,7 +385,7 @@ export const MessageView = memo(function MessageView({ message, isStreaming, liv
     && prev.compactError === next.compactError;
 });
 
-function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, onEditContent, onCancelEdit, isEditing }: {
+function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, onEditContent, editDisabled, onCancelEdit, isEditing }: {
   message: UserMessage;
   cwd?: string;
   onOpenFile?: (filePath: string, page?: number) => void;
@@ -387,11 +393,11 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
   onFork?: (entryId: string, position?: "after") => void;
   forking?: boolean;
   onEditContent?: (message: UserMessage, entryId: string) => void;
+  editDisabled?: boolean;
   onCancelEdit?: () => void;
   isEditing?: boolean;
 }) {
   const { t } = useI18n();
-  const [hovered, setHovered] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -411,6 +417,9 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
     typeof message.content === "string"
       ? []
       : message.content.filter((b): b is ImageContent => b.type === "image");
+
+  // Files attached in a chat travel inside the text; show them as chips, not a wall of text.
+  const { text: bodyText, files: attachedFiles } = splitAttachedFiles(content);
 
   const commandText = skillExpansionToCommand(content);
   const commandSeparator = commandText?.search(/\s/) ?? -1;
@@ -440,6 +449,10 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
     </div>
   );
   const canEdit = !!entryId && !!onEditContent;
+  const editBlocked = canEdit && editDisabled;
+  const editTitle = editBlocked
+    ? t("i18n.editFromHereBusyTitle")
+    : t("i18n.editFromHereTitle");
   const canCancelEdit = !!isEditing && !!onCancelEdit;
 
   const copyContent = () => {
@@ -453,8 +466,6 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
     <div
       className="message-user"
       style={{ marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "flex-end" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       <div
         className={imageBlocks.length ? "message-user-content has-images" : "message-user-content"}
@@ -529,7 +540,10 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
               )}
             </div>
           ) : (
-            <CollapsibleUserText text={content} cwd={cwd} onOpenFile={onOpenFile} />
+            <>
+              {attachedFiles.length > 0 && <AttachedFileList files={attachedFiles} />}
+              {bodyText && <CollapsibleUserText text={bodyText} cwd={cwd} onOpenFile={onOpenFile} />}
+            </>
           )}
         </div>}
       </div>
@@ -540,15 +554,11 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
           display: "flex", alignItems: "center", justifyContent: "flex-end",
           gap: 6, marginTop: 3,
         }}>
-          <div style={{
-            display: "flex", gap: 3,
-            opacity: hovered ? 1 : 0,
-            pointerEvents: hovered ? "auto" : "none",
-            transition: "opacity 0.12s",
-          }}>
+          <div className="message-copy-actions">
             <button
               onClick={copyContent}
                title={t("i18n.copyMessage")}
+              aria-live="polite"
               style={{
                 display: "flex", alignItems: "center", gap: 4,
                 padding: "3px 8px", height: 22,
@@ -577,23 +587,23 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
             </button>
           </div>
           {(canFork || canEdit || canCancelEdit) && (
-            <div className="user-msg-actions" style={{
-              display: "flex", gap: 3,
-              opacity: (hovered || forking || canCancelEdit) ? 1 : 0,
-              pointerEvents: (hovered || forking || canCancelEdit) ? "auto" : "none",
-              transition: "opacity 0.12s",
-            }}>
+            <div
+              className="user-msg-actions"
+              style={{ opacity: forking || canCancelEdit ? 1 : undefined }}
+            >
               {canEdit && !canCancelEdit && (
                 <button
                   onClick={() => onEditContent!(editTarget, entryId!)}
-                   title={t("i18n.editFromHereTitle")}
+                  disabled={editBlocked}
+                  aria-disabled={editBlocked || undefined}
+                  title={editTitle}
                   style={{
                     display: "flex", alignItems: "center", gap: 4,
                     padding: "3px 8px", height: 22,
                     background: "none", border: "none",
                     borderRadius: 5,
                     color: "var(--text-dim)",
-                    cursor: "pointer",
+                    cursor: editBlocked ? "not-allowed" : "pointer",
                     fontSize: 11, fontWeight: 400,
                     whiteSpace: "nowrap",
                     transition: "color 0.12s",
@@ -975,6 +985,8 @@ function AssistantMessageView({
           <button
             onClick={copyContent}
             aria-label={copied ? t("i18n.copied") : t("i18n.copyMessage")}
+            className="message-copy-action"
+            aria-live="polite"
             style={{
               display: "flex", alignItems: "center", gap: 4,
               padding: "3px 8px", height: 22,
@@ -1181,6 +1193,9 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
     && block.input && !Array.isArray(block.input) && Object.keys(block.input).length === 1
     && Object.prototype.hasOwnProperty.call(block.input, "command") && typeof block.input.command === "string" && block.input.command.trim()
       ? block.input.command : null;
+  const savedFile = block.toolName === "save_to_downloads" && !isError && isSavedFileInfo(result?.details)
+    ? result.details
+    : null;
   const codemodeCallCount = codemode ? codemode.calls.length + codemode.omitted : 0;
   // Progress snapshots are paired results too; execution metadata wins until end.
   const status: ToolCallStatus = running ? "running"
@@ -1256,6 +1271,8 @@ function ToolCallBlock({ block, result, duration, running, partial, live, active
 
       {/* Result images stay visible even when the argument/result disclosure is closed. */}
       {resultImages.length > 0 && <ResultImages images={resultImages} isError={isError} />}
+      {/* A file the chat saved to Downloads stays visible as well. */}
+      {savedFile && <SavedFileCard file={savedFile} />}
       <DisclosureBody id={`${disclosureId}-body`} labelledBy={`${disclosureId}-toggle`} expanded={expanded} className="tool-call-grid" contentClassName="tool-call-body">
       {/* A validated completed shell call needs one command pill and plain output,
           with the existing exact-payload copy controls retained for each. */}

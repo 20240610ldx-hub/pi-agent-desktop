@@ -4,4 +4,5 @@
 *.mjs text eol=lf
 *.css text eol=lf
 *.yml text eol=lf
+# Keep generated JavaScript byte counts consistent with its checked-in manifest.
 public/preview-runtime/*.js text eol=lf

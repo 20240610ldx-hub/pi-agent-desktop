@@ -202,6 +202,7 @@ export interface EnabledModelsSettings {
 
 /** `~/.pi/agent/settings.json` reads better in a banner than the full path. */
 export function displaySettingsPath(path: string): string {
+  // Even path display logic can make Next's tracer enumerate a static home path.
   const home = systemHome();
   if (!home || !path.startsWith(home)) return path;
   const rest = path.slice(home.length);

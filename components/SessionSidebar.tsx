@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState, useCallback, useRef, type ReactNode } from "react";
-import type { SessionInfo } from "@/lib/types";
+import { Fragment, useEffect, useLayoutEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import type { SessionInfo, SessionWorkspaceKind } from "@/lib/types";
 import { PRODUCT_NAME } from "@/lib/branding";
 import { listSessionFamilies } from "@/lib/session-family";
 import { dispatchSessionRowContextMenu } from "@/lib/session-row-context-menu";
@@ -24,17 +24,25 @@ import {
 } from "./ProjectContextMenu";
 import { useProjectWorktreeActions } from "@/hooks/useProjectWorktreeActions";
 import { getRecentProjects } from "./path-ui";
-import { APP_PREF_KEYS, getPrefJson, removePref, setPrefJson } from "@/lib/app-prefs";
+import { APP_PREF_KEYS, getPref, getPrefJson, removePref, setPref, setPrefJson } from "@/lib/app-prefs";
 import { groupByProject } from "@/lib/project-group";
 import { getProjectDisplayName, getProjectDisplayNames } from "@/lib/project-display";
-import { getRecallSessions, hasRecallSessionsToday } from "@/lib/recent-sessions";
 import { notifyDesktop } from "@/lib/desktop-notify";
 import { revealItemInDirNative } from "@/lib/desktop-native";
 import { isTauriDesktop } from "@/lib/desktop-updater";
-import { canUseNativeMenu, menuPointBelow, showNativeMenu, type NativeMenuPoint, type NativeMenuEntry } from "@/lib/desktop-menu";
+import {
+  canUseNativeMenu,
+  menuPointBelow,
+  showNativeMenu,
+  type NativeMenuEntry,
+  type NativeMenuPoint,
+} from "@/lib/desktop-menu";
 import { getDesktopPlatform, type DesktopPlatform } from "@/lib/desktop-window";
 import { useWindowDrag } from "./desktop";
 import { SessionSearch } from "./SessionSearch";
+import { ProjectViewMenu, type ProjectViewMode } from "./ProjectViewMenu";
+import { ChatsSectionMenu } from "./ChatsSectionMenu";
+import { orderChatFamilies, toggleId } from "@/lib/chat-groups";
 import { ScheduledSidebarRow } from "./scheduled/ScheduledSidebarRow";
 import { isScheduledRunSession } from "@/hooks/useScheduledTasks";
 import { prefetchSessionData } from "@/lib/session-data-cache";
@@ -48,6 +56,7 @@ import {
   moveSidebarSessionsToGroup, addSidebarSessionGroup, sidebarSessionFamilyIds,
   orderSidebarSessions, moveSidebarPinnedSession, sidebarSessionStatus, type SidebarSessionMetadata,
 } from "@/lib/sidebar-session-metadata";
+import { appNotify } from "@/lib/notification-store";
 
 function sessionListUrl(summary: boolean, force: boolean): string {
   if (summary) return "/api/sessions?summary=1";
@@ -63,7 +72,7 @@ interface Props {
   onArchiveActionsChange?: (actions: SidebarArchiveActions) => void;
   selectedSessionId: string | null;
   onSelectSession: (session: SessionInfo, isRestore?: boolean, entryId?: string, blockIndex?: number) => void;
-  onNewSession?: (sessionId: string, cwd: string) => void;
+  onNewSession?: (sessionId: string, cwd: string, workspaceKind?: SessionWorkspaceKind) => void;
   onOpenWelcome?: () => void;
   initialSessionId?: string | null;
   skipInitialProjectSelection?: boolean;
@@ -75,7 +84,9 @@ interface Props {
     cwd: string | null,
     projectRoot?: string | null,
     projectKey?: string | null,
+    workspaceKind?: SessionWorkspaceKind,
   ) => void;
+  onChatWorkspaceCwdChange?: (cwd: string | null) => void;
   onOpenTerminal?: (cwd: string) => void;
   /** Fired when a session that is not currently selected finishes running.
    *  Lets the app play a cross-workspace completion tone. */
@@ -111,6 +122,7 @@ interface WorktreeState {
 interface ProjectSelection {
   root: string;
   key: string;
+  kind: SessionWorkspaceKind;
 }
 
 // Server error codes with a translation; any other code is shown verbatim.
@@ -134,6 +146,10 @@ function saveUnreadSessionIds(ids: Set<string>): void {
   else setPrefJson(APP_PREF_KEYS.unreadSessionIds, [...ids]);
 }
 
+function loadProjectViewMode(): ProjectViewMode {
+  return getPref(APP_PREF_KEYS.projectViewMode) === "timeline" ? "timeline" : "grouped";
+}
+
 
 
 
@@ -154,8 +170,78 @@ interface SidebarSessionActions {
 }
 
 const MAX_VISIBLE_PROJECT_SESSIONS = 5;
+const MAX_VISIBLE_CHAT_SESSIONS = 5;
 
 const SESSION_LIST_ITEM_HEIGHT = 54;
+
+function focusSidebarTreeRow(current: HTMLElement, offset: number | "first" | "last") {
+  const rows = Array.from(
+    current.closest(".sidebar-project-tree")?.querySelectorAll<HTMLElement>("[data-sidebar-tree-row]") ?? [],
+  );
+  if (rows.length === 0) return;
+  const index = rows.indexOf(current);
+  const next = offset === "first" || index < 0
+    ? rows[0]
+    : offset === "last"
+      ? rows[rows.length - 1]
+      : rows[Math.max(0, Math.min(rows.length - 1, index + offset))];
+  next.focus();
+}
+
+function handleSidebarTreeKeyDown(
+  event: React.KeyboardEvent<HTMLElement>,
+  handlers: {
+    activate?: () => void;
+    expand?: () => void;
+    collapse?: () => void;
+    rename?: () => void;
+    requestDelete?: () => void;
+  },
+) {
+  if (event.target !== event.currentTarget || isImeComposing(event)) return;
+  // Alt+Arrow reorders pinned rows and Ctrl/Meta combinations belong to the browser.
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  const current = event.currentTarget;
+  switch (event.key) {
+    case "ArrowDown":
+      event.preventDefault();
+      focusSidebarTreeRow(current, 1);
+      break;
+    case "ArrowUp":
+      event.preventDefault();
+      focusSidebarTreeRow(current, -1);
+      break;
+    case "Home":
+      event.preventDefault();
+      focusSidebarTreeRow(current, "first");
+      break;
+    case "End":
+      event.preventDefault();
+      focusSidebarTreeRow(current, "last");
+      break;
+    case "ArrowRight":
+      event.preventDefault();
+      handlers.expand?.();
+      break;
+    case "ArrowLeft":
+      event.preventDefault();
+      handlers.collapse?.();
+      break;
+    case "Enter":
+    case " ":
+      event.preventDefault();
+      handlers.activate?.();
+      break;
+    case "F2":
+      event.preventDefault();
+      handlers.rename?.();
+      break;
+    case "Delete":
+      event.preventDefault();
+      handlers.requestDelete?.();
+      break;
+  }
+}
 
 function treeContainsSession(node: SessionTreeNode, sessionId: string): boolean {
   return node.session.id === sessionId || node.children.some((child) => treeContainsSession(child, sessionId));
@@ -205,9 +291,31 @@ function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
   return roots;
 }
 
-export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSelectSession, onNewSession, onOpenWelcome, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, onOpenCustomize, onOpenSettings, onOpenArtifacts, onOpenMore, scheduledOpen = false }: Props) {
+function readIdSetPref(key: Parameters<typeof getPrefJson>[0]): Set<string> {
+  const stored = getPrefJson<unknown>(key);
+  return Array.isArray(stored)
+    ? new Set(stored.filter((id): id is string => typeof id === "string"))
+    : new Set();
+}
+
+export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSelectSession, onNewSession, onOpenWelcome, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onChatWorkspaceCwdChange, onProjectsChange, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange, headerControls, onOpenTerminal, onOpenScheduled, onOpenCustomize, onOpenSettings, onOpenArtifacts, onOpenMore, scheduledOpen = false }: Props) {
   const { t } = useI18n();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
+  const [chatWorkspaceCwd, setChatWorkspaceCwd] = useState<string | null>(null);
+  // Same fold model as a project: folding drops the extra pages, so the next
+  // unfold starts again from the first five chats.
+  const [chatsCollapsed, setChatsCollapsed] = useState(() => getPref(APP_PREF_KEYS.collapsedChats) === "1");
+  const [chatSessionPages, setChatSessionPages] = useState(() => {
+    const stored = getPrefJson<unknown>(APP_PREF_KEYS.chatSessionPages);
+    return typeof stored === "number" && Number.isInteger(stored) && stored > 0 ? stored : 0;
+  });
+  const [pinnedChats, setPinnedChats] = useState<Set<string>>(() => readIdSetPref(APP_PREF_KEYS.pinnedChats));
+  const [archivedChats, setArchivedChats] = useState<Set<string>>(() => readIdSetPref(APP_PREF_KEYS.archivedChats));
+  const [showArchivedChats, setShowArchivedChats] = useState(false);
+  const [chatsMenuOpen, setChatsMenuOpen] = useState(false);
+  const [chatsMenuPos, setChatsMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const chatsMenuRef = useRef<HTMLDivElement>(null);
+  const chatsMenuButtonRef = useRef<HTMLButtonElement>(null);
   // Tracked in a ref only: the version is compared against the polled value to
   // decide whether the list needs reloading, and no render reads it.
   const sessionListVersionRef = useRef<number | null>(null);
@@ -230,7 +338,11 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
   const [contentSearch, setContentSearch] = useState(false);
   // Worktree switcher state
   const [worktreeState, setWorktreeState] = useState<WorktreeState | null>(null);
-  const lastNotifiedProjectRef = useRef<{ cwd: string | null; key: string | null } | null>(null);
+  const lastNotifiedProjectRef = useRef<{
+    cwd: string | null;
+    key: string | null;
+    kind: SessionWorkspaceKind;
+  } | null>(null);
 
   // The checked-out worktree for the current selection (falls back to the
   // project's main worktree when the selection is not itself a worktree).
@@ -245,16 +357,26 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
     : undefined;
   const currentWorktreePath = currentWorktree?.path ?? null;
 
+  /** Chat detection always comes from server-provided identity or the exact
+   *  chat cwd the server returned. The browser never derives the hidden path. */
+  const isChatCwd = useCallback((cwd: string | null): boolean => {
+    if (!cwd) return false;
+    if (chatWorkspaceCwd && cwd === chatWorkspaceCwd) return true;
+    return allSessions.some((session) => session.workspaceKind === "chat" && session.cwd === cwd);
+  }, [allSessions, chatWorkspaceCwd]);
+  const selectedCwdIsChat = selectedCwd ? isChatCwd(selectedCwd) : false;
+
   /** Resolve the project root for a cwd from the freshest data available */
   const projectRootFor = useCallback((cwd: string | null): string | null => {
     if (!cwd) return null;
+    if (isChatCwd(cwd)) return null;
     if (worktreeState && worktreeState.forCwd === cwd) return worktreeState.projectRoot;
     // Any path in the loaded worktree list belongs to that project — covers
     // worktrees without sessions, so switching to them keeps the row mounted.
     if (worktreeState?.worktrees.some((w) => w.path === cwd)) return worktreeState.projectRoot;
     const match = allSessions.find((s) => s.cwd === cwd);
     return match?.projectRoot ?? cwd;
-  }, [worktreeState, allSessions]);
+  }, [allSessions, isChatCwd, worktreeState]);
   // Branch currently being checked out (name shown dimmed with a spinner)
   const [wtSwitchingBranch, setWtSwitchingBranch] = useState<string | null>(null);
   // Ticked by the poll/focus effect below so the worktree row reflects
@@ -266,11 +388,25 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
       ? new Set(stored.filter((root): root is string => typeof root === "string"))
       : new Set();
   });
-  const [expandedProjectSessions, setExpandedProjectSessions] = useState<Set<string>>(() => {
+  const [projectSessionPages, setProjectSessionPages] = useState<Record<string, number>>(() => {
     const stored = getPrefJson<unknown>(APP_PREF_KEYS.expandedProjects);
-    return Array.isArray(stored)
-      ? new Set(stored.filter((root): root is string => typeof root === "string"))
-      : new Set();
+    if (Array.isArray(stored)) {
+      // Older builds stored a set of fully expanded projects. Start those at
+      // one extra page instead of restoring the unbounded list.
+      return Object.fromEntries(
+        stored
+          .filter((root): root is string => typeof root === "string")
+          .map((root) => [root, 1]),
+      );
+    }
+    if (!stored || typeof stored !== "object") return {};
+    return Object.fromEntries(
+      Object.entries(stored).flatMap(([root, pages]) => (
+        typeof pages === "number" && Number.isFinite(pages) && pages > 0
+          ? [[root, Math.floor(pages)]]
+          : []
+      )),
+    );
   });
   const [archivedProjectRoots, setArchivedProjectRoots] = useState<Set<string>>(() => {
     const stored = getPrefJson<unknown>(APP_PREF_KEYS.archivedProjects);
@@ -278,6 +414,11 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
       ? new Set(stored.filter((root): root is string => typeof root === "string"))
       : new Set();
   });
+  const [projectViewMode, setProjectViewMode] = useState<ProjectViewMode>(loadProjectViewMode);
+  const [projectViewMenuOpen, setProjectViewMenuOpen] = useState(false);
+  const [projectViewMenuPos, setProjectViewMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const projectViewMenuRef = useRef<HTMLDivElement>(null);
+  const projectViewMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [projectMenu, setProjectMenu] = useState<{ root: string } | null>(null);
   const [projectMenuPos, setProjectMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [projectBranchMenu, setProjectBranchMenu] = useState<ProjectBranchMenuState | null>(null);
@@ -338,6 +479,8 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
   );
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
+  // The chat whose conversation is being copied into a project (the picker is open for it).
+  const [continueChat, setContinueChat] = useState<SessionInfo | null>(null);
   const [runningSessionIds, setRunningSessionIds] = useState<Set<string>>(() => new Set());
   const [needsInputSessionIds, setNeedsInputSessionIds] = useState<Set<string>>(() => new Set());
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => loadUnreadSessionIds());
@@ -384,10 +527,12 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
         runningSessionIds?: string[];
         needsInputSessionIds?: string[];
         completionNotificationSuppressedSessionIds?: string[];
+        chatWorkspaceCwd?: string | null;
       };
       if (loadId !== sessionLoadIdRef.current) return;
       sessionListVersionRef.current = data.sessionListVersion;
       setAllSessions(data.sessions);
+      setChatWorkspaceCwd(data.chatWorkspaceCwd ?? null);
       // Treat the fetched running set as an initial fallback only. Once the
       // live SSE stream is connected, a slow session-list fetch cannot overwrite it.
       if (!sseAuthoritativeRef.current) {
@@ -413,6 +558,13 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
       if (loadId === sessionLoadIdRef.current) setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    // The server always returns the hidden cwd. Do not publish the initial
+    // null before the first list load, or it would overwrite the shell's
+    // earlier /api/chat-workspace answer.
+    if (chatWorkspaceCwd) onChatWorkspaceCwdChange?.(chatWorkspaceCwd);
+  }, [chatWorkspaceCwd, onChatWorkspaceCwdChange]);
 
   const initialLoadDone = useRef(false);
   useEffect(() => {
@@ -486,9 +638,29 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
   }, [collapsedProjects]);
 
   useEffect(() => {
-    if (expandedProjectSessions.size === 0) removePref(APP_PREF_KEYS.expandedProjects);
-    else setPrefJson(APP_PREF_KEYS.expandedProjects, [...expandedProjectSessions]);
-  }, [expandedProjectSessions]);
+    if (chatsCollapsed) setPref(APP_PREF_KEYS.collapsedChats, "1");
+    else removePref(APP_PREF_KEYS.collapsedChats);
+  }, [chatsCollapsed]);
+
+  useEffect(() => {
+    if (pinnedChats.size === 0) removePref(APP_PREF_KEYS.pinnedChats);
+    else setPrefJson(APP_PREF_KEYS.pinnedChats, [...pinnedChats]);
+  }, [pinnedChats]);
+
+  useEffect(() => {
+    if (archivedChats.size === 0) removePref(APP_PREF_KEYS.archivedChats);
+    else setPrefJson(APP_PREF_KEYS.archivedChats, [...archivedChats]);
+  }, [archivedChats]);
+
+  useEffect(() => {
+    if (chatSessionPages === 0) removePref(APP_PREF_KEYS.chatSessionPages);
+    else setPrefJson(APP_PREF_KEYS.chatSessionPages, chatSessionPages);
+  }, [chatSessionPages]);
+
+  useEffect(() => {
+    if (Object.keys(projectSessionPages).length === 0) removePref(APP_PREF_KEYS.expandedProjects);
+    else setPrefJson(APP_PREF_KEYS.expandedProjects, projectSessionPages);
+  }, [projectSessionPages]);
 
   useEffect(() => {
     // Live running status via SSE — no polling. The server pushes the current
@@ -558,6 +730,64 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [projectMenu]);
+
+  useEffect(() => {
+    if (!projectViewMenuOpen || !projectViewMenuPos) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (projectViewMenuRef.current?.contains(target)) return;
+      if (projectViewMenuButtonRef.current?.contains(target)) return;
+      setProjectViewMenuOpen(false);
+      setProjectViewMenuPos(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isImeComposing(event)) {
+        setProjectViewMenuOpen(false);
+        setProjectViewMenuPos(null);
+      }
+    };
+    const closeOnViewportChange = () => {
+      setProjectViewMenuOpen(false);
+      setProjectViewMenuPos(null);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", closeOnViewportChange, true);
+    window.addEventListener("resize", closeOnViewportChange);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", closeOnViewportChange, true);
+      window.removeEventListener("resize", closeOnViewportChange);
+    };
+  }, [projectViewMenuOpen, projectViewMenuPos]);
+
+  useEffect(() => {
+    if (!chatsMenuOpen || !chatsMenuPos) return;
+    const close = () => {
+      setChatsMenuOpen(false);
+      setChatsMenuPos(null);
+    };
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (chatsMenuRef.current?.contains(target)) return;
+      if (chatsMenuButtonRef.current?.contains(target)) return;
+      close();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isImeComposing(event)) close();
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [chatsMenuOpen, chatsMenuPos]);
 
   useEffect(() => {
     onRunningSessionIdsChange?.(runningSessionIds);
@@ -653,14 +883,16 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
 
   const restoredRef = useRef(false);
 
-  const projectSelection = useCallback((root: string, key: string): ProjectSelection => ({
+  const projectSelection = useCallback((root: string, key: string, kind: SessionWorkspaceKind = "project"): ProjectSelection => ({
     root,
     key,
+    kind,
   }), []);
 
   /** Resolve both display root and stable identity from server-provided data. */
   const projectFor = useCallback((cwd: string | null): ProjectSelection | null => {
     if (!cwd) return null;
+    if (isChatCwd(cwd)) return projectSelection(cwd, cwd, "chat");
     // Custom-path identity validation lives in ProjectPicker (the extraction
     // boundary this file's sentinel test guards); identity here resolves from
     // server-provided worktree and session data only.
@@ -675,10 +907,13 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
     const match = allSessions.find((session) => (
       session.cwd === cwd || (session.projectRoot ?? session.cwd) === cwd
     ));
+    if (match?.workspaceKind === "chat") {
+      return projectSelection(match.cwd, match.cwd, "chat");
+    }
     return match
       ? projectSelection(match.projectRoot ?? match.cwd, workspaceKeyOf(match))
       : projectSelection(cwd, cwd);
-  }, [worktreeState, allSessions, projectSelection]);
+  }, [worktreeState, allSessions, isChatCwd, projectSelection]);
 
   // Selecting a directory is also the explicit "add project" action. If the
   // project was previously removed from the sidebar, make it visible again
@@ -699,12 +934,14 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
   useEffect(() => {
     const project = projectFor(selectedCwd);
     const previous = lastNotifiedProjectRef.current;
-    if (previous?.cwd === selectedCwd && previous.key === (project?.key ?? null)) return;
-    lastNotifiedProjectRef.current = { cwd: selectedCwd, key: project?.key ?? null };
+    const kind = project?.kind ?? "project";
+    if (previous?.cwd === selectedCwd && previous.key === (project?.key ?? null) && previous.kind === kind) return;
+    lastNotifiedProjectRef.current = { cwd: selectedCwd, key: project?.key ?? null, kind };
     onCwdChange?.(
       selectedCwd,
       project?.root ?? null,
       project?.key ?? null,
+      project?.kind,
     );
   }, [selectedCwd, onCwdChange, projectFor]);
 
@@ -723,7 +960,7 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
   // Load worktrees for the current effective cwd
   const [wtRefreshKey, setWtRefreshKey] = useState(0);
   useLayoutEffect(() => {
-    if (!selectedCwd) {
+    if (!selectedCwd || selectedCwdIsChat) {
       setWorktreeState(null);
       return;
     }
@@ -750,7 +987,7 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
         if (!cancelled) setWorktreeState(null);
       });
     return () => { cancelled = true; };
-  }, [selectedCwd, wtRefreshKey, refreshKey, wtPollTick]);
+  }, [selectedCwd, selectedCwdIsChat, wtRefreshKey, refreshKey, wtPollTick]);
 
   // Keep the worktree/branch display honest when branches are switched outside
   // pi (terminal, IDE, another client): poll while the tab is visible and
@@ -775,7 +1012,7 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
   const recentProjects = getRecentProjects(allSessions);
   // Auto-select cwd and restore session from URL on first load
   useEffect(() => {
-    if (allSessions.length === 0 || skipInitialProjectSelection) return;
+    if (loading || skipInitialProjectSelection) return;
 
     if (selectedCwd === null) {
       // If restoring a session, set cwd to match that session
@@ -792,8 +1029,9 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
       }
       const projects = recentProjects;
       if (projects.length > 0) setSelectedCwd(projects[0]);
+      else if (chatWorkspaceCwd) setSelectedCwd(chatWorkspaceCwd);
     }
-  }, [allSessions, selectedCwd, initialSessionId, skipInitialProjectSelection, onSelectSession, onInitialRestoreDone, recentProjects]);
+  }, [allSessions, chatWorkspaceCwd, loading, selectedCwd, initialSessionId, skipInitialProjectSelection, onSelectSession, onInitialRestoreDone, recentProjects]);
 
   // The worktree behind the active project's branch subtitle; falls back to
   // the main worktree while worktreeState catches up with a new selection.
@@ -927,18 +1165,50 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
     onSelectSession(s, false, entryId, blockIndex);
   }, [allSessions, onSelectSession]);
 
-  const handleNewSession = useCallback((cwdOverride?: string) => {
-    const cwd = cwdOverride ?? selectedCwd;
+  const continueChatInProject = useCallback(async (chat: SessionInfo, cwd: string) => {
+    setContinueChat(null);
+    try {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(chat.id)}/continue-in-project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cwd }),
+      });
+      const data = await res.json().catch(() => ({})) as { sessionId?: string; path?: string | null; cwd?: string; error?: string };
+      if (!res.ok || !data.sessionId) throw new Error(data.error ?? `HTTP ${res.status}`);
+      const now = new Date().toISOString();
+      activateProject(cwd);
+      handleSelectSessionFromList({
+        ...chat,
+        id: data.sessionId,
+        path: data.path ?? "",
+        cwd: data.cwd ?? cwd,
+        workspaceKind: "project",
+        projectRoot: projectRootFor(cwd) ?? cwd,
+        created: now,
+        modified: now,
+        parentSessionId: chat.id,
+      });
+      void loadSessions(false, true);
+    } catch (e) {
+      appNotify.error({ message: t("sidebar.continueInProjectFailed", { error: e instanceof Error ? e.message : String(e) }) });
+    }
+  }, [activateProject, handleSelectSessionFromList, loadSessions, projectRootFor, t]);
+
+  const handleNewSession = useCallback((cwdOverride?: string, workspaceKindOverride?: SessionWorkspaceKind) => {
+    const cwd = cwdOverride ?? selectedCwd ?? chatWorkspaceCwd;
     if (!cwd) return;
+    const workspaceKind = workspaceKindOverride ?? (isChatCwd(cwd) ? "chat" : "project");
     // Creating a session is also the activation gesture for an archived
     // project. This keeps the archive list useful without a second step.
-    const projectRoot = projectRootFor(cwd) ?? cwd;
-    if (archivedProjectRoots.has(projectRoot)) {
-      setArchivedProjectRoots((prev) => {
-        const next = new Set(prev);
-        next.delete(projectRoot);
-        return next;
-      });
+    if (workspaceKind === "project") {
+      const projectRoot = projectRootFor(cwd) ?? cwd;
+      if (archivedProjectRoots.has(projectRoot)) {
+        setArchivedProjectRoots((prev) => {
+          const next = new Set(prev);
+          next.delete(projectRoot);
+          return next;
+        });
+      }
     }
     if (cwd !== selectedCwd) setSelectedCwd(cwd);
     // Generate a temporary UUID client-side — no backend call needed.
@@ -946,8 +1216,8 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
     const tempId = typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
-    onNewSession?.(tempId, cwd);
-  }, [selectedCwd, archivedProjectRoots, onNewSession, projectRootFor]);
+    onNewSession?.(tempId, cwd, workspaceKind);
+  }, [selectedCwd, chatWorkspaceCwd, archivedProjectRoots, onNewSession, projectRootFor, isChatCwd]);
 
   const handleAddProject = useCallback(async () => {
     if (!isTauriDesktop()) {
@@ -1101,28 +1371,111 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
   // hourly task would otherwise bury the sessions the user started themselves.
   const treeSessions = allSessions.filter((session) => session.relation?.kind !== "scheduled");
   const archivedSessionIds = new Set(sessionMetadata.archivedIds);
-  const archivedSessions = treeSessions.filter((session) => archivedSessionIds.has(session.id));
+  const archivedSessions = treeSessions.filter((session) => archivedSessionIds.has(session.id)
+    && session.workspaceKind !== "chat" && !isChatCwd(session.cwd));
   const visibleTreeSessions = treeSessions.filter((session) => !archivedSessionIds.has(session.id));
   const filteredSessions = trimmedSessionQuery
     ? visibleTreeSessions.filter((session) =>
         (session.name ?? "").toLowerCase().includes(trimmedSessionQuery)
         || session.firstMessage.toLowerCase().includes(trimmedSessionQuery))
     : visibleTreeSessions;
-  const sessionFamilies = listSessionFamilies(filteredSessions);
-  const allProjects = groupByProject(filteredSessions, { runningIds: runningSessionIds, unreadIds: unreadSessionIds });
+  const chatSessions = filteredSessions
+    .filter((session) => session.workspaceKind === "chat" || isChatCwd(session.cwd))
+    .sort((a, b) => b.modified.localeCompare(a.modified));
+  const projectSessions = filteredSessions.filter(
+    (session) => session.workspaceKind !== "chat" && !isChatCwd(session.cwd),
+  );
+  const allChatFamilies = listSessionFamilies(chatSessions);
+  // Pinned first, then by recency. Archived chats leave the list unless a search is looking for them.
+  const orderedChatFamilies = orderChatFamilies(allChatFamilies, pinnedChats);
+  const chatFamilies = trimmedSessionQuery
+    ? orderedChatFamilies
+    : orderedChatFamilies.filter((family) => !archivedChats.has(family.root.id));
+  const archivedChatFamilies = trimmedSessionQuery
+    ? []
+    : orderedChatFamilies.filter((family) => archivedChats.has(family.root.id));
+  const sessionFamilies = listSessionFamilies(projectSessions);
+  const allProjects = groupByProject(projectSessions, { runningIds: runningSessionIds, unreadIds: unreadSessionIds });
   const activeProjects = allProjects.filter((group) => !archivedProjectRoots.has(group.projectRoot));
-  const projectDisplayNames = getProjectDisplayNames(activeProjects.map((group) => group.projectRoot));
-  const hasTodaySessions = !trimmedSessionQuery && hasRecallSessionsToday(visibleTreeSessions);
-  const recentSessions = !trimmedSessionQuery
-    ? getRecallSessions(visibleTreeSessions)
+  const activeProjectRoots = activeProjects.map((group) => group.projectRoot);
+  const projectDisplayNames = getProjectDisplayNames(activeProjectRoots);
+  const canCollapseAllProjects = activeProjects.some((group) => !collapsedProjects.has(group.projectRoot));
+  const canExpandAllProjects = activeProjects.some((group) => collapsedProjects.has(group.projectRoot));
+  const timelineFamilies = projectViewMode === "timeline"
+    ? sessionFamilies.filter((family) => (
+        !archivedProjectRoots.has(family.root.projectRoot ?? family.root.cwd)
+      )).sort((a, b) => b.root.modified.localeCompare(a.root.modified))
     : [];
   const projectRootsKey = JSON.stringify(activeProjects.map((group) => group.projectRoot));
+  const timelineRootNodes = new Map<string, SessionTreeNode>();
+  for (const family of timelineFamilies) {
+    const [rootNode] = buildSessionTree([family.root, ...family.subagents]);
+    if (rootNode) timelineRootNodes.set(family.root.id, rootNode);
+  }
   useEffect(() => {
     // Tree groups are rebuilt each render; only changed paths notify the shell.
     onProjectsChange?.(JSON.parse(projectRootsKey) as string[]);
   }, [projectRootsKey, onProjectsChange]);
   // Sessions of every worktree in the selected project are shown together
   const selectedProjectObject = projectFor(selectedCwd);
+  const selectedProjectRoot = selectedProjectObject?.kind === "project"
+    ? selectedProjectObject.root
+    : null;
+  // A search always lists every match, folded or not.
+  const chatsFolded = !trimmedSessionQuery && chatsCollapsed;
+  let visibleChatFamilies = trimmedSessionQuery
+    ? chatFamilies
+    : chatFamilies.slice(0, MAX_VISIBLE_CHAT_SESSIONS * (chatSessionPages + 1));
+  if (!trimmedSessionQuery && selectedSessionId) {
+    const selectedFamily = chatFamilies.find((family) => (
+      family.root.id === selectedSessionId
+      || family.subagents.some((session) => session.id === selectedSessionId)
+    ));
+    if (selectedFamily && !visibleChatFamilies.includes(selectedFamily)) {
+      visibleChatFamilies = [...visibleChatFamilies.slice(0, -1), selectedFamily];
+    }
+  }
+  const hiddenChatFamilyCount = chatFamilies.length - visibleChatFamilies.length;
+  const chatRunningCount = chatFamilies.filter((family) => (
+    [family.root, ...family.subagents].some((session) => runningSessionIds.has(session.id))
+  )).length;
+  const chatUnreadCount = chatFamilies.filter((family) => (
+    [family.root, ...family.subagents].some((session) => unreadSessionIds.has(session.id))
+  )).length;
+  const setChatsFolded = (folded: boolean) => {
+    setChatsCollapsed(folded);
+    if (folded) setChatSessionPages(0);
+  };
+
+  const renderChatFamily = (family: (typeof chatFamilies)[number]) => {
+    const [node] = buildSessionTree([family.root, ...family.subagents]);
+    if (!node) return null;
+    const id = family.root.id;
+    return (
+      <SessionFamilyItem
+        node={node}
+        familySessions={[family.root, ...family.subagents]}
+        selectedSessionId={selectedSessionId}
+        runningSessionIds={runningSessionIds}
+        unreadSessionIds={unreadSessionIds}
+        needsInputSessionIds={needsInputSessionIds}
+        actions={sidebarActions}
+        onSelectSession={handleSelectSessionFromList}
+        onRenamed={loadSessions}
+        onContinueInProject={setContinueChat}
+        chatActions={{
+          pinned: pinnedChats.has(id),
+          archived: archivedChats.has(id),
+          onTogglePin: () => setPinnedChats((current) => toggleId(current, id)),
+          onToggleArchive: () => setArchivedChats((current) => toggleId(current, id)),
+        }}
+        onSessionDeleted={(deletedId) => {
+          onSessionDeleted?.(deletedId);
+          loadSessions();
+        }}
+      />
+    );
+  };
 
   const renderProjectGroup = (group: ReturnType<typeof groupByProject>[number]) => {
     const isCollapsed = !trimmedSessionQuery && collapsedProjects.has(group.projectRoot);
@@ -1130,14 +1483,14 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
     const runningCount = group.runningIds.size;
     const unreadCount = group.unreadIds.size;
     const groupTree = orderSidebarSessions(buildSessionTree(group.sessions).map((node) => ({ ...node, id: node.session.id })), sessionMetadata.pinnedIds);
-    const showSessionOverflow = groupTree.length > MAX_VISIBLE_PROJECT_SESSIONS;
-    const isSessionOverflowExpanded = Boolean(trimmedSessionQuery) || expandedProjectSessions.has(group.projectRoot);
-    let visibleGroupTree = isSessionOverflowExpanded
+    const extraPages = projectSessionPages[group.projectRoot] ?? 0;
+    const visibleSessionLimit = MAX_VISIBLE_PROJECT_SESSIONS * (extraPages + 1);
+    let visibleGroupTree = trimmedSessionQuery
       ? groupTree
-      : groupTree.slice(0, MAX_VISIBLE_PROJECT_SESSIONS);
+      : groupTree.slice(0, visibleSessionLimit);
     // Keep the selected session reachable even when it is older than the
     // collapsed preview window.
-    if (!isSessionOverflowExpanded && selectedSessionId) {
+    if (!trimmedSessionQuery && selectedSessionId) {
       const selectedRoot = groupTree.find((node) => treeContainsSession(node, selectedSessionId));
       if (selectedRoot && !visibleGroupTree.includes(selectedRoot)) {
         visibleGroupTree = [...visibleGroupTree.slice(0, -1), selectedRoot];
@@ -1147,6 +1500,7 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
       { id: "", name: "", nodes: visibleGroupTree.filter((node) => !sessionMetadata.memberships.some((item) => item.sessionId === node.session.id)) },
       ...sessionMetadata.groups.map((localGroup) => ({ ...localGroup, nodes: visibleGroupTree.filter((node) => sessionMetadata.memberships.some((item) => item.sessionId === node.session.id && item.groupId === localGroup.id)) })),
     ];
+    const hiddenSessionCount = groupTree.length - visibleGroupTree.length;
     const branchSubtitle = isActive && currentWt?.branch
       ? currentWt.branch
       : group.branches.length === 1
@@ -1161,6 +1515,12 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
         else next.add(group.projectRoot);
         return next;
       });
+      setProjectSessionPages((prev) => {
+        if (!(group.projectRoot in prev)) return prev;
+        const next = { ...prev };
+        delete next[group.projectRoot];
+        return next;
+      });
       if (!isActive) setSelectedCwd(group.projectRoot);
     };
 
@@ -1173,9 +1533,22 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
           <button
             type="button"
             className="sidebar-project-tree-row-main"
+            data-sidebar-tree-row
+            tabIndex={0}
+            role="treeitem"
+            aria-selected={isActive}
             onClick={toggleCollapse}
             aria-expanded={!isCollapsed}
             aria-label={rowLabel}
+            onKeyDown={(e) => handleSidebarTreeKeyDown(e, {
+              activate: toggleCollapse,
+              expand: () => {
+                if (isCollapsed) toggleCollapse();
+              },
+              collapse: () => {
+                if (!isCollapsed) toggleCollapse();
+              },
+            })}
           >
             <SidebarTitle
               className="sidebar-project-tree-name"
@@ -1222,12 +1595,13 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
             </button>
-            <button
+              <button
               type="button"
               className="sidebar-project-tree-action sidebar-project-tree-more"
               onClick={(e) => openProjectMenu(e, group.projectRoot)}
               title={t("sidebar.moreActions")}
               aria-label={t("sidebar.moreActions")}
+                aria-haspopup="menu"
               aria-expanded={isMenuOpen}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -1261,8 +1635,12 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
                       if (moveSidebarPinnedSession(sessionMetadata, eligibleRootIds, node.session.id, direction) === sessionMetadata) return;
                       // A selected overflow root can replace a preview slot. Keep
                       // the moved keyed row mounted when that selection enters the cap.
-                      if (showSessionOverflow && !isSessionOverflowExpanded) {
-                        setExpandedProjectSessions((current) => new Set(current).add(group.projectRoot));
+                      if (hiddenSessionCount > 0 && !trimmedSessionQuery) {
+                        const pagesToShowAll = Math.ceil(groupTree.length / MAX_VISIBLE_PROJECT_SESSIONS) - 1;
+                        setProjectSessionPages((current) => ({
+                          ...current,
+                          [group.projectRoot]: Math.max(current[group.projectRoot] ?? 0, pagesToShowAll),
+                        }));
                       }
                       setSessionMetadata((current) => moveSidebarPinnedSession(current, eligibleRootIds, node.session.id, direction));
                     } : undefined}
@@ -1271,26 +1649,193 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
                 })}
               </div>;
             })}
-            {showSessionOverflow && (
+            {hiddenSessionCount > 0 && (
               <button
                 type="button"
                 className="sidebar-project-tree-show-more"
-                onClick={() => setExpandedProjectSessions((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(group.projectRoot)) next.delete(group.projectRoot);
-                  else next.add(group.projectRoot);
-                  return next;
-                })}
+                onClick={() => setProjectSessionPages((prev) => ({
+                  ...prev,
+                  [group.projectRoot]: (prev[group.projectRoot] ?? 0) + 1,
+                }))}
               >
-                {isSessionOverflowExpanded
-                  ? t("sidebar.showLessSessions")
-                  : t("sidebar.showMoreSessions", { count: groupTree.length - visibleGroupTree.length })}
+                {t("sidebar.showMoreSessions", {
+                  count: Math.min(MAX_VISIBLE_PROJECT_SESSIONS, hiddenSessionCount),
+                })}
               </button>
             )}
           </div>
         )}
       </div>
     );
+  };
+
+  const renderTimeline = () => (
+    <div className="sidebar-project-timeline">
+      {timelineFamilies.map((family) => {
+        const node = timelineRootNodes.get(family.root.id);
+        if (!node) return null;
+        const projectRoot = family.root.projectRoot ?? family.root.cwd;
+        const projectName = projectDisplayNames.get(projectRoot)
+          ?? getProjectDisplayName(projectRoot, activeProjectRoots);
+        const familySessions = [family.root, ...family.subagents];
+        return (
+          <SessionFamilyItem
+            key={family.root.id}
+            node={node}
+            familySessions={familySessions}
+            subtitle={projectName}
+            selectedSessionId={selectedSessionId}
+            runningSessionIds={runningSessionIds}
+            unreadSessionIds={unreadSessionIds}
+            needsInputSessionIds={needsInputSessionIds}
+            actions={sidebarActions}
+            onSelectSession={handleSelectSessionFromList}
+            onRenamed={loadSessions}
+            onSessionDeleted={(id) => {
+              onSessionDeleted?.(id);
+              loadSessions();
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+
+  const closeProjectViewMenu = () => {
+    setProjectViewMenuOpen(false);
+    setProjectViewMenuPos(null);
+  };
+
+  const changeProjectViewMode = (mode: ProjectViewMode) => {
+    setProjectViewMode(mode);
+    setPref(APP_PREF_KEYS.projectViewMode, mode);
+    closeProjectViewMenu();
+  };
+
+  const collapseAllProjects = () => {
+    setCollapsedProjects(new Set(activeProjectRoots));
+    setProjectSessionPages({});
+    closeProjectViewMenu();
+  };
+
+  const expandAllProjects = () => {
+    setCollapsedProjects(new Set());
+    closeProjectViewMenu();
+  };
+
+  const closeChatsMenu = () => {
+    setChatsMenuOpen(false);
+    setChatsMenuPos(null);
+  };
+
+  const openChatsDomMenu = (anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    const width = 216;
+    const estimatedHeight = 96;
+    const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+    const top = rect.bottom + 4 + estimatedHeight > window.innerHeight - 8
+      ? Math.max(8, rect.top - estimatedHeight - 4)
+      : rect.bottom + 4;
+    setChatsMenuPos({ top, left });
+    setChatsMenuOpen(true);
+  };
+
+  const toggleChatsMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (chatsMenuOpen && chatsMenuPos) {
+      closeChatsMenu();
+      return;
+    }
+    if (chatsMenuOpen) return;
+    closeProjectViewMenu();
+    const anchor = event.currentTarget;
+    if (!canUseNativeMenu()) {
+      openChatsDomMenu(anchor);
+      return;
+    }
+    const entries: NativeMenuEntry[] = [
+      {
+        label: t("sidebar.collapseChats"),
+        disabled: chatsCollapsed,
+        onSelect: () => setChatsFolded(true),
+      },
+      {
+        label: t("sidebar.expandChats"),
+        disabled: !chatsCollapsed,
+        onSelect: () => setChatsFolded(false),
+      },
+    ];
+    setChatsMenuOpen(true);
+    setChatsMenuPos(null);
+    void showNativeMenu(entries, menuPointBelow(anchor, "right")).then((shown) => {
+      if (shown) {
+        setChatsMenuOpen(false);
+        return;
+      }
+      openChatsDomMenu(anchor);
+    });
+  };
+
+  const openProjectViewDomMenu = (anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    const width = 216;
+    const estimatedHeight = 180;
+    const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+    const top = rect.bottom + 4 + estimatedHeight > window.innerHeight - 8
+      ? Math.max(8, rect.top - estimatedHeight - 4)
+      : rect.bottom + 4;
+    setProjectViewMenuPos({ top, left });
+    setProjectViewMenuOpen(true);
+  };
+
+  const toggleProjectViewMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (projectViewMenuOpen && projectViewMenuPos) {
+      closeProjectViewMenu();
+      return;
+    }
+    if (projectViewMenuOpen) return;
+    closeChatsMenu();
+    setProjectMenu(null);
+    setProjectMenuPos(null);
+    const anchor = event.currentTarget;
+    const controlsDisabled = projectViewMode !== "grouped";
+    if (!canUseNativeMenu()) {
+      openProjectViewDomMenu(anchor);
+      return;
+    }
+    const entries: NativeMenuEntry[] = [
+      {
+        label: t("sidebar.projectViewGrouped"),
+        checked: projectViewMode === "grouped",
+        onSelect: () => changeProjectViewMode("grouped"),
+      },
+      {
+        label: t("sidebar.projectViewTimeline"),
+        checked: projectViewMode === "timeline",
+        onSelect: () => changeProjectViewMode("timeline"),
+      },
+      { kind: "separator" },
+      {
+        label: t("sidebar.collapseAllProjects"),
+        disabled: controlsDisabled || !canCollapseAllProjects,
+        onSelect: collapseAllProjects,
+      },
+      {
+        label: t("sidebar.expandAllProjects"),
+        disabled: controlsDisabled || !canExpandAllProjects,
+        onSelect: expandAllProjects,
+      },
+    ];
+    setProjectViewMenuOpen(true);
+    setProjectViewMenuPos(null);
+    void showNativeMenu(entries, menuPointBelow(anchor, "right")).then((shown) => {
+      if (shown) {
+        setProjectViewMenuOpen(false);
+        return;
+      }
+      openProjectViewDomMenu(anchor);
+    });
   };
 
   return (
@@ -1390,133 +1935,243 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
           the confirmation for the server-side content search across every
           session; there is no mode button, so Escape (or the clear button) is
           the way back to the title filter. */}
-      {/* Project tree (Codex-style) — replaces the old CHATS/FILES tabs. Every
-          project is rendered as a flat row whose chats nest directly beneath.
-          Clicking a project header toggles collapse; the ⋯ menu offers sort
-          and collapse/expand-all; the + button opens the project picker to
-          add a new project. The FileExplorer has moved to the right panel. */}
-      {!contentSearch && allProjects.length === 0 && archivedSessions.length === 0 ? (
-        <div className="sidebar-project-tree-empty">
-          {loading
-            ? t("sidebar.loading")
-            : error
-              ? (
-                // A failed list load must not read as "no projects": that
-                // offers "Add project" as if the user's sessions were gone.
-                <div className="sidebar-empty-action" role="alert">
-                  <span className="sidebar-empty-text" title={error}>{t("sidebar.loadFailed")}</span>
-                  <button
-                    type="button"
-                    className="sidebar-empty-add"
-                    onClick={() => void loadSessions(true, true)}
-                  >
-                    <span>{t("common.retry")}</span>
-                  </button>
-                </div>
-              )
-            : trimmedSessionQuery
-              ? t("sidebar.noMatchingSessions")
-              : (
-                <div className="sidebar-empty-action">
-                  <span className="sidebar-empty-text">{t("sidebar.noProjects")}</span>
-                  <button
-                    type="button"
-                    className="sidebar-empty-add"
-                    onClick={() => void handleAddProject()}
-                    title={t("sidebar.addProject")}
-                    aria-label={t("sidebar.addProject")}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    <span>{t("sidebar.addProject")}</span>
-                  </button>
-                </div>
-              )}
-        </div>
-      ) : (
-        <SessionSearch
-          open={contentSearch}
-          query={sessionQuery}
-          selectedSessionId={selectedSessionId}
-          onSelectSession={handleSelectSessionFromList}
-        >
-        <div ref={listScrollRef} className="sidebar-project-tree" onScroll={handleListScroll}>
-          {recentSessions.length > 0 && (
-            <section className="sidebar-recent-section" aria-label={t(hasTodaySessions ? "sidebar.today" : "sidebar.recent")}>
-              <div className="sidebar-project-tree-header sidebar-recent-header">
-                <span className="sidebar-project-tree-title">{t(hasTodaySessions ? "sidebar.today" : "sidebar.recent")}</span>
-              </div>
-              <div className="sidebar-recent-items">
-                {recentSessions.map((session) => {
-                  const projectRoot = session.projectRoot ?? session.cwd;
-                  const projectName = projectDisplayNames.get(projectRoot)
-                    ?? getProjectDisplayName(projectRoot, activeProjects.map((group) => group.projectRoot));
-                  return (
-                    <SessionItem
-                      key={`recent-${session.id}`}
-                      session={session}
-                      isSelected={session.id === selectedSessionId}
-                      isRunning={runningSessionIds.has(session.id)}
-                      isUnread={unreadSessionIds.has(session.id)}
-                      needsInput={needsInputSessionIds.has(session.id)}
-                      actions={sidebarActions}
-                      onClick={() => handleSelectSessionFromList(session)}
-                      subtitle={projectName}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          )}
-          <div className="sidebar-project-tree-header">
-            <span className="sidebar-project-tree-title">{t("sidebar.projects")}</span>
-            <div className="sidebar-project-tree-tools">
-              <button
-                className="sidebar-project-tree-menu"
-                title={t("sidebar.moreActions")}
-                aria-label={t("sidebar.moreActions")}
-                onClick={() => {
-                  if (allProjects.some((g) => !collapsedProjects.has(g.projectRoot))) {
-                    setCollapsedProjects(new Set(allProjects.map((g) => g.projectRoot)));
-                  } else {
-                    setCollapsedProjects(new Set());
-                  }
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <circle cx="5" cy="12" r="1.6" />
-                  <circle cx="12" cy="12" r="1.6" />
-                  <circle cx="19" cy="12" r="1.6" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                className="sidebar-project-tree-add"
-                onClick={() => void handleAddProject()}
-                title={t("sidebar.addProject")}
-                aria-label={t("sidebar.addProject")}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
-            </div>
+      {/* Chats sit beside Projects: the same session model and event stream,
+          but a model-only workspace that never enters project grouping. */}
+      <SessionSearch
+        open={contentSearch}
+        query={sessionQuery}
+        selectedSessionId={selectedSessionId}
+        onSelectSession={handleSelectSessionFromList}
+      >
+      <div
+        ref={listScrollRef}
+        className="sidebar-project-tree"
+        role="tree"
+        aria-label={`${t("sidebar.chats")} / ${t("sidebar.projects")}`}
+        onScroll={handleListScroll}
+      >
+        <div className={`sidebar-project-tree-header sidebar-chats-header${chatsMenuOpen ? " is-menu-open" : ""}`}>
+          <button
+            type="button"
+            className="sidebar-chats-title"
+            data-sidebar-tree-row
+            aria-expanded={!chatsFolded}
+            title={t(chatsFolded ? "sidebar.expandChats" : "sidebar.collapseChats")}
+            onClick={() => setChatsFolded(!chatsCollapsed)}
+          >
+            <span className="sidebar-project-tree-title">{t("sidebar.chats")}</span>
+            {/* A folded section hides its rows, so the count and any running or
+                unread chips stay readable on the header, like a folded project. */}
+            {chatsFolded && chatFamilies.length > 0 && (
+              <span className="sidebar-project-tree-count" title={t("sidebar.sessionCount", { count: chatFamilies.length })}>
+                ({chatFamilies.length})
+              </span>
+            )}
+            {chatsFolded && (
+              <span className="sidebar-project-tree-meta">
+                {chatRunningCount > 0 && (
+                  <span className="sidebar-project-tree-chip is-running" title={t("sidebar.runningCount", { count: chatRunningCount })}>
+                    {chatRunningCount}
+                  </span>
+                )}
+                {chatUnreadCount > 0 && (
+                  <span className="sidebar-project-tree-chip is-unread" title={t("sidebar.unreadCount", { count: chatUnreadCount })}>
+                    {chatUnreadCount}
+                  </span>
+                )}
+              </span>
+            )}
+          </button>
+          <div className="sidebar-project-tree-tools">
+            <button
+              ref={chatsMenuButtonRef}
+              type="button"
+              className={`sidebar-project-tree-menu${chatsMenuOpen ? " is-open" : ""}`}
+              title={t("sidebar.chatsMenu")}
+              aria-label={t("sidebar.chatsMenu")}
+              aria-haspopup="menu"
+              aria-expanded={chatsMenuOpen}
+              onClick={toggleChatsMenu}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.6" />
+                <circle cx="12" cy="12" r="1.6" />
+                <circle cx="19" cy="12" r="1.6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="sidebar-project-tree-add"
+              onClick={() => handleNewSession(chatWorkspaceCwd ?? undefined, "chat")}
+              disabled={!chatWorkspaceCwd}
+              title={t("sidebar.newChatTitle")}
+              aria-label={t("sidebar.newChatTitle")}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
           </div>
-          {activeProjects.map((group) => renderProjectGroup(group))}
-          {archivedSessions.length > 0 && <section className="sidebar-archived-sessions">
-            <button type="button" className="sidebar-archived-toggle" aria-expanded={archivedSessionsOpen} onClick={() => setArchivedSessionsOpen((open) => !open)}>{t("sidebar.archivedSessions", { count: archivedSessions.length })}</button>
-            {archivedSessionsOpen && archivedSessions.filter((session) => !archivedSessionIds.has(session.parentSessionId ?? "")).map((session) => <SessionItem
-              key={session.id} session={session} isSelected={session.id === selectedSessionId}
-              isRunning={runningSessionIds.has(session.id)} isUnread={unreadSessionIds.has(session.id)} needsInput={needsInputSessionIds.has(session.id)}
-              actions={sidebarActions} onClick={() => handleSelectSessionFromList(session)} onRenamed={loadSessions}
-              onDeleted={(id) => { onSessionDeleted?.(id); loadSessions(); }}
-            />)}
-          </section>}
         </div>
-        </SessionSearch>
+        {!chatsFolded && (
+        <div className="sidebar-project-tree-children sidebar-chats-list">
+          {visibleChatFamilies.map((family) => (
+            <Fragment key={family.root.id}>{renderChatFamily(family)}</Fragment>
+          ))}
+          {!loading && !error && chatFamilies.length === 0 && (
+            <div className="sidebar-chats-empty">
+              {trimmedSessionQuery ? t("sidebar.noMatchingSessions") : t("sidebar.noChats")}
+            </div>
+          )}
+          {hiddenChatFamilyCount > 0 && (
+            <button
+              type="button"
+              className="sidebar-project-tree-show-more"
+              onClick={() => setChatSessionPages((pages) => pages + 1)}
+            >
+              {t("sidebar.showMoreSessions", {
+                count: Math.min(MAX_VISIBLE_CHAT_SESSIONS, hiddenChatFamilyCount),
+              })}
+            </button>
+          )}
+          {archivedChatFamilies.length > 0 && (
+            <button
+              type="button"
+              className="sidebar-project-tree-show-more sidebar-chats-archived-toggle"
+              aria-expanded={showArchivedChats}
+              onClick={() => setShowArchivedChats((open) => !open)}
+            >
+              {t(showArchivedChats ? "sidebar.hideArchivedChats" : "sidebar.showArchivedChats", {
+                count: archivedChatFamilies.length,
+              })}
+            </button>
+          )}
+          {showArchivedChats && archivedChatFamilies.map((family) => (
+            <div key={family.root.id} className="sidebar-chats-archived-row">
+              {renderChatFamily(family)}
+            </div>
+          ))}
+        </div>
+        )}
+
+        <div className={`sidebar-project-tree-header${projectViewMenuOpen ? " is-menu-open" : ""}`}>
+          <span className="sidebar-project-tree-title">{t("sidebar.projects")}</span>
+          <div className="sidebar-project-tree-tools">
+            <button
+              ref={projectViewMenuButtonRef}
+              type="button"
+              className={`sidebar-project-tree-menu${projectViewMenuOpen ? " is-open" : ""}`}
+              title={t("sidebar.projectViewMenu")}
+              aria-label={t("sidebar.projectViewMenu")}
+              aria-haspopup="menu"
+              aria-expanded={projectViewMenuOpen}
+              onClick={toggleProjectViewMenu}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.6" />
+                <circle cx="12" cy="12" r="1.6" />
+                <circle cx="19" cy="12" r="1.6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="sidebar-project-tree-add"
+              onClick={() => void handleAddProject()}
+              title={t("sidebar.addProject")}
+              aria-label={t("sidebar.addProject")}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        {allProjects.length === 0 ? (
+          <div className="sidebar-project-tree-empty">
+            {loading
+              ? t("sidebar.loading")
+              : error
+                ? (
+                  // A failed list load must not read as "no projects": that
+                  // offers "Add project" as if the user's sessions were gone.
+                  <div className="sidebar-empty-action" role="alert">
+                    <span className="sidebar-empty-text" title={error}>{t("sidebar.loadFailed")}</span>
+                    <button
+                      type="button"
+                      className="sidebar-empty-add"
+                      onClick={() => void loadSessions(true, true)}
+                    >
+                      <span>{t("common.retry")}</span>
+                    </button>
+                  </div>
+                )
+              : trimmedSessionQuery
+                ? t("sidebar.noMatchingSessions")
+                : (
+                  <div className="sidebar-empty-action">
+                    <span className="sidebar-empty-text">{t("sidebar.noProjects")}</span>
+                    <button
+                      type="button"
+                      className="sidebar-empty-add"
+                      onClick={() => void handleAddProject()}
+                      title={t("sidebar.addProject")}
+                      aria-label={t("sidebar.addProject")}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      <span>{t("sidebar.addProject")}</span>
+                    </button>
+                  </div>
+                )}
+          </div>
+        ) : projectViewMode === "timeline"
+          ? renderTimeline()
+          : activeProjects.map((group) => renderProjectGroup(group))}
+        {archivedSessions.length > 0 && <section className="sidebar-archived-sessions">
+          <button type="button" className="sidebar-archived-toggle" aria-expanded={archivedSessionsOpen} onClick={() => setArchivedSessionsOpen((open) => !open)}>{t("sidebar.archivedSessions", { count: archivedSessions.length })}</button>
+          {archivedSessionsOpen && archivedSessions.filter((session) => !archivedSessionIds.has(session.parentSessionId ?? "")).map((session) => <SessionItem
+            key={session.id} session={session} isSelected={session.id === selectedSessionId}
+            isRunning={runningSessionIds.has(session.id)} isUnread={unreadSessionIds.has(session.id)} needsInput={needsInputSessionIds.has(session.id)}
+            actions={sidebarActions} onClick={() => handleSelectSessionFromList(session)} onRenamed={loadSessions}
+            onDeleted={(id) => { onSessionDeleted?.(id); loadSessions(); }}
+          />)}
+        </section>}
+      </div>
+      </SessionSearch>
+      {chatsMenuOpen && chatsMenuPos && (
+        <ChatsSectionMenu
+          menuRef={chatsMenuRef}
+          pos={chatsMenuPos}
+          onClose={closeChatsMenu}
+          canCollapse={!chatsCollapsed}
+          canExpand={chatsCollapsed}
+          onCollapse={() => {
+            setChatsFolded(true);
+            closeChatsMenu();
+          }}
+          onExpand={() => {
+            setChatsFolded(false);
+            closeChatsMenu();
+          }}
+        />
+      )}
+      {projectViewMenuOpen && projectViewMenuPos && (
+        <ProjectViewMenu
+          menuRef={projectViewMenuRef}
+          pos={projectViewMenuPos}
+          mode={projectViewMode}
+          canCollapseAll={canCollapseAllProjects}
+          canExpandAll={canExpandAllProjects}
+          controlsDisabled={projectViewMode !== "grouped"}
+          onModeChange={changeProjectViewMode}
+          onCollapseAll={collapseAllProjects}
+          onExpandAll={expandAllProjects}
+          onClose={() => setProjectViewMenuPos(null)}
+        />
       )}
       {onOpenSettings && <div className="pilaude-sidebar-footer"><button type="button" className="pilaude-local-profile" onClick={onOpenSettings}><span className="pilaude-profile-avatar">P</span><span>{PRODUCT_NAME}<small> · {t("pilaude.local")}</small></span><PilaudeIcon name="chevron" size={14} /></button><button type="button" className="sidebar-chrome-button" onClick={onOpenSettings} title={t("pilaude.appearance")} aria-label={t("pilaude.appearance")}><PilaudeIcon name="sun" /></button></div>}
       {projectMenu && projectMenuPos && (
@@ -1542,6 +2197,7 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
           onShowWorktrees={() => showProjectMenuView(projectMenu.root, "worktrees")}
           onShowNewWorktree={() => showProjectMenuView(projectMenu.root, "new-worktree")}
           onBackToActions={() => showProjectMenuView(projectMenu.root, "actions")}
+          onClose={closeProjectMenu}
           onOpenTerminal={onOpenTerminal ? () => {
             const cwd = projectMenu.root;
             closeProjectMenu();
@@ -1563,7 +2219,7 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
         />
       )}
       {newGroupSessionId && createPortal(<div className="sidebar-group-dialog-backdrop" onClick={() => setNewGroupSessionId(null)}>
-        <form className="sidebar-group-dialog native-popover" role="dialog" aria-modal="true" aria-label={t("sidebar.newGroup")} onClick={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); commitNewGroup(); }} onKeyDown={(event) => {
+        <form className="sidebar-group-dialog native-popover app-menu" role="dialog" aria-modal="true" aria-label={t("sidebar.newGroup")} onClick={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); commitNewGroup(); }} onKeyDown={(event) => {
           if (isImeComposing(event)) return;
           if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setNewGroupSessionId(null); }
           if (event.key === "Tab") {
@@ -1578,13 +2234,27 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
           <div><button type="button" onClick={() => setNewGroupSessionId(null)}>{t("sidebar.cancel")}</button><button type="submit" disabled={!newGroupName.trim()}>{t("sidebar.createGroup")}</button></div>
         </form>
       </div>, document.body)}
+      {continueChat && (
+        <div className="project-picker-modal-overlay" role="dialog" aria-modal="true" aria-label={t("sidebar.continueInProject")} onClick={() => setContinueChat(null)}>
+          <div className="project-picker-modal-shell" onClick={(e) => e.stopPropagation()}>
+            <ProjectPicker
+              recentProjects={recentProjects}
+              selectedCwd={null}
+              selectedProject={null}
+              homeDir={homeDir}
+              onSelectCwd={(cwd) => void continueChatInProject(continueChat, cwd)}
+              variant="block"
+            />
+          </div>
+        </div>
+      )}
       {projectPickerOpen && (
         <div className="project-picker-modal-overlay" role="dialog" aria-modal="true" onClick={() => setProjectPickerOpen(false)}>
           <div className="project-picker-modal-shell" onClick={(e) => e.stopPropagation()}>
             <ProjectPicker
               recentProjects={recentProjects}
-              selectedCwd={selectedCwdProp ?? null}
-              selectedProject={selectedProjectObject?.root ?? null}
+              selectedCwd={selectedCwdProp && !isChatCwd(selectedCwdProp) ? selectedCwdProp : null}
+              selectedProject={selectedProjectRoot}
               homeDir={homeDir}
               onSelectCwd={(cwd) => {
                 activateProject(cwd);
@@ -1610,8 +2280,11 @@ function SessionFamilyItem({
   onSelectSession,
   onRenamed,
   onSessionDeleted,
+  onContinueInProject,
+  chatActions,
   familySessions,
   onMovePinned,
+  subtitle,
 }: {
   node: SessionTreeNode;
   familySessions?: SessionInfo[];
@@ -1625,6 +2298,12 @@ function SessionFamilyItem({
   onSelectSession: (s: SessionInfo) => void;
   onRenamed?: () => void;
   onSessionDeleted?: (id: string) => void;
+  /** Chats only: copy the conversation into a project. */
+  onContinueInProject?: (session: SessionInfo) => void;
+  /** Chats only: pin and archive, which the row menu offers beside the other actions. */
+  chatActions?: ChatRowActions;
+  /** Cross-project context, shown by the chronological sidebar view. */
+  subtitle?: string;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const hasChildren = node.children.length > 0;
@@ -1653,9 +2332,12 @@ function SessionFamilyItem({
           onMovePinned={onMovePinned}
           onRenamed={onRenamed}
           onDeleted={(id) => onSessionDeleted?.(id)}
+          onContinueInProject={depth === 0 ? onContinueInProject : undefined}
+          chatActions={depth === 0 ? chatActions : undefined}
           hasChildren={hasChildren}
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed((v) => !v)}
+          subtitle={subtitle}
         />
       </div>
       {hasChildren && !collapsed && (
@@ -1673,6 +2355,7 @@ function SessionFamilyItem({
               onSelectSession={onSelectSession}
               onRenamed={onRenamed}
               onSessionDeleted={onSessionDeleted}
+              subtitle={subtitle}
             />
           ))}
         </div>
@@ -1729,6 +2412,13 @@ function showProjectActivity(
   );
 }
 
+interface ChatRowActions {
+  pinned: boolean;
+  archived: boolean;
+  onTogglePin: () => void;
+  onToggleArchive: () => void;
+}
+
 function SessionItem({
   session,
   isSelected,
@@ -1739,6 +2429,8 @@ function SessionItem({
   onClick,
   onRenamed,
   onDeleted,
+  onContinueInProject,
+  chatActions,
   hasChildren = false,
   collapsed = false,
   onToggleCollapse,
@@ -1755,6 +2447,8 @@ function SessionItem({
   onClick: () => void;
   onRenamed?: () => void;
   onDeleted?: (id: string) => void;
+  onContinueInProject?: (session: SessionInfo) => void;
+  chatActions?: ChatRowActions;
   hasChildren?: boolean;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -1769,7 +2463,6 @@ function SessionItem({
   // Coarse pointers have no hover: the "…" action menu must be permanently
   // visible there, otherwise rename/delete are unreachable on touch.
   const [touchMode, setTouchMode] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
   // Downstream hook (extensions/desktop) may claim the row's context menu;
   // when it handles the event the built-in menu never opens.
   const [renaming, setRenaming] = useState(false);
@@ -1808,9 +2501,13 @@ function SessionItem({
     setRenaming(true);
   }, [session.name, session.transient]);
 
+  const beginDeleteConfirmation = useCallback(() => {
+    if (session.transient) return;
+    setConfirmDelete(true);
+  }, [session.transient]);
+
   const reportActionError = useCallback((message: string) => {
-    setActionError(message);
-    window.setTimeout(() => setActionError((current) => current === message ? null : current), 3500);
+    appNotify.error({ message });
   }, []);
 
   const commitRename = useCallback(async () => {
@@ -1880,7 +2577,27 @@ function SessionItem({
       }
     } catch (error) { reportActionError(t("sidebar.actionFailed", { error: error instanceof Error ? error.message : String(error) })); }
   };
-  const sessionMenuEntries = (): NativeMenuEntry[] => [
+  // A chat has no folder, branch or worktree: it offers no Open in, Fork or local
+  // groups, only what its model-only workspace supports.
+  const chatMenuEntries = (): NativeMenuEntry[] => [
+    ...(chatActions
+      ? [{ label: t(chatActions.pinned ? "sidebar.unpinChat" : "sidebar.pinChat"), onSelect: chatActions.onTogglePin }]
+      : []),
+    { label: t("sidebar.markUnread"), onSelect: () => actions.onMarkUnread(session.id) },
+    { label: t("sidebar.rename"), onSelect: startRename },
+    ...(onContinueInProject
+      ? [{ label: t("sidebar.continueInProject"), onSelect: () => onContinueInProject(session) }]
+      : []),
+    { kind: "separator" },
+    ...(chatActions
+      ? [{ label: t(chatActions.archived ? "sidebar.unarchiveChat" : "sidebar.archiveChat"), onSelect: chatActions.onToggleArchive }]
+      : []),
+    { label: t("sidebar.delete"), danger: true, onSelect: (modifiers) => { if (modifiers?.shiftKey) void performDelete(); else beginDeleteConfirmation(); } },
+    { kind: "separator" },
+    { label: `${formatRelativeTime(session.modified, locale)} · ${t("sidebar.messagesCount", { count: session.messageCount })}`, disabled: true },
+    ...((session.compactionCount ?? 0) > 0 ? [{ label: t("sidebar.compactionCount", { count: session.compactionCount ?? 0 }), disabled: true }] : []),
+  ];
+  const sessionMenuEntries = (): NativeMenuEntry[] => session.workspaceKind === "chat" ? chatMenuEntries() : [
     { kind: "submenu", label: t("sidebar.openIn"), items: [
       { label: t("sidebar.openSplitView"), disabled: true, disabledReason: t("sidebar.openUnavailable") },
       { label: t("sidebar.openNewWindow"), disabled: true, disabledReason: t("sidebar.openUnavailable") },
@@ -2000,7 +2717,7 @@ function SessionItem({
         cursor: confirmDelete || renaming ? "default" : "pointer",
         background: confirmDelete
           ? "color-mix(in srgb, var(--danger) 6%, transparent)"
-          : isSelected ? "var(--bg-selected)" : (hovered || menuOpen) ? "var(--bg-hover)" : "transparent",
+          : isSelected ? "var(--bg-selected)" : (hovered || focusWithin || menuOpen) ? "var(--bg-hover)" : "transparent",
         borderLeft: confirmDelete
           ? "2px solid var(--danger)"
           : isSelected ? "2px solid var(--accent)" : "2px solid transparent",
@@ -2082,8 +2799,24 @@ function SessionItem({
           <button
             type="button"
             className="session-item-main"
+            data-sidebar-tree-row
+            role="treeitem"
+            aria-selected={isSelected}
             aria-label={subtitle ? `${title} · ${subtitle}` : title}
             aria-current={isSelected ? "page" : undefined}
+            onKeyDownCapture={(e) => handleSidebarTreeKeyDown(e, {
+              activate: () => {
+                if (!confirmDelete && !renaming) onClick();
+              },
+              expand: () => {
+                if (hasChildren && collapsed) onToggleCollapse?.();
+              },
+              collapse: () => {
+                if (hasChildren && !collapsed) onToggleCollapse?.();
+              },
+              rename: startRename,
+              requestDelete: beginDeleteConfirmation,
+            })}
             onKeyDown={(e) => {
               if (e.target !== e.currentTarget || e.defaultPrevented || isImeComposing(e) || !onMovePinned || !e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
               if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
@@ -2098,6 +2831,11 @@ function SessionItem({
             {status === "needs-input" ? <span className="session-activity-dot is-needs-input" aria-label={t("sidebar.needsInput")} title={t("sidebar.needsInput")} /> : status === "running" ? <RunningSessionIndicator /> : status === "unread" ? <UnreadSessionIndicator /> : <span className="session-activity-dot is-idle" aria-hidden="true" />}
             <SidebarTitle className="session-item-title" text={title} />
           </button>
+          {chatActions?.pinned && (
+            <svg className="session-item-pin" aria-label={t("sidebar.unpinChat")} width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z" />
+            </svg>
+          )}
           {subtitle && (
             <span className="session-item-project" title={subtitle}>
               {subtitle}
@@ -2150,24 +2888,6 @@ function SessionItem({
             </div>
           )}
 
-          {actionError && createPortal(
-            <div
-              role="alert"
-              style={{
-                position: "fixed", bottom: 26, left: "50%", transform: "translateX(-50%)",
-                zIndex: 1000, maxWidth: "80vw",
-                background: "color-mix(in srgb, var(--bg-panel) 94%, #000)",
-                color: "var(--danger)",
-                border: "var(--hairline) solid color-mix(in srgb, var(--danger) 35%, transparent)",
-                padding: "8px 14px", borderRadius: 8, fontSize: 12,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {actionError}
-            </div>,
-            document.body,
-          )}
         </>
       )}
     </div>

@@ -15,8 +15,8 @@ const { getLocalePlugin, getSupportedLocales } = await jiti.import("@/lib/i18n/r
 const locales = Object.fromEntries(getSupportedLocales().map((id) => [id, getLocalePlugin(id).messages]));
 const { McpConfigView } = await jiti.import("./McpConfig.tsx");
 const { EMPTY_MCP_ADD_DRAFT } = await jiti.import("./mcp-add-helpers.ts");
-const configSource = await readFile(new URL("./McpConfig.tsx", import.meta.url), "utf8");
-const paneSource = await readFile(new URL("./McpAddServer.tsx", import.meta.url), "utf8");
+const configSource = (await readFile(new URL("./McpConfig.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+const paneSource = (await readFile(new URL("./McpAddServer.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 
 const h = React.createElement;
 const noop = () => {};

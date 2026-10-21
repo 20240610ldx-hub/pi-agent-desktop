@@ -71,9 +71,12 @@ test("server supports the automation command set end to end", () => {
 
 test("streaming Stop stays in the editor instead of the collapsed narrow settings", () => {
   const html = render({ isStreaming: true });
-  assert.match(html, /class="composer-primary-actions"[\s\S]*class="composer-abort-button"/);
+  // Send, Queue and Stop are one control; the fork keeps it in the editor's primary actions.
+  assert.match(html, /class="composer-primary-actions"[\s\S]*data-action="stop"/);
+  assert.equal((html.match(/data-action="stop"/g) ?? []).length, 1);
   assert.equal((html.match(/aria-label="Stop agent"/g) ?? []).length, 1);
-  assert.ok(html.indexOf('class="composer-abort-button"') < html.indexOf('class="chat-composer-controls"'));
+  assert.ok(html.indexOf('data-action="stop"') < html.indexOf('class="chat-composer-controls"'), "Stop stays in the editor, outside collapsed controls");
+  assert.doesNotMatch(html, /composer-stop-button/);
 });
 
 test("tool preset control dims instead of vanishing while streaming", () => {

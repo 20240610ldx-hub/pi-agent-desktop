@@ -2,30 +2,27 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const panelSource = await readFile(new URL("./SettingsPanel.tsx", import.meta.url), "utf8");
-const cssSource = await readFile(new URL("../app/settings.css", import.meta.url), "utf8");
-const globalCssSource = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-const shellSource = await readFile(new URL("./AppShell.tsx", import.meta.url), "utf8");
-// The sidebar settings-entry menu is fork-owned; AppShell keeps the button and mounts it.
-const entryMenuSource = await readFile(new URL("./SettingsEntryMenu.tsx", import.meta.url), "utf8");
-const sidebarSource = await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8");
-const themeSource = await readFile(new URL("../hooks/useTheme.ts", import.meta.url), "utf8");
-const themeOptionsSource = await readFile(new URL("../lib/theme.ts", import.meta.url), "utf8");
+const panelSource = (await readFile(new URL("./SettingsPanel.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+const cssSource = (await readFile(new URL("../app/settings.css", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+const globalCssSource = (await readFile(new URL("../app/globals.css", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+const shellSource = (await readFile(new URL("./AppShell.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+const sidebarSource = (await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+const themeSource = (await readFile(new URL("../hooks/useTheme.ts", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+const themeOptionsSource = (await readFile(new URL("../lib/theme.ts", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 const { createJiti } = await import("jiti");
 const jiti = createJiti(import.meta.url);
 const { englishMessages: enMessages, forkLocalePlugins } = await jiti.import("../lib/i18n/locale-plugins.ts");
 const zhMessages = Object.fromEntries(forkLocalePlugins.map(({ id, messages }) => [id, messages]))["zh-CN"];
-const loginSource = await readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8");
-const stackedDialogSource = await readFile(new URL("../lib/stacked-dialog.ts", import.meta.url), "utf8");
+const loginSource = (await readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+const stackedDialogSource = (await readFile(new URL("../lib/stacked-dialog.ts", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 
 test("opens one settings panel from a single sidebar settings entry", () => {
   assert.match(shellSource, /<SettingsPanel/);
   assert.match(shellSource, /initialSection=\{settingsSection\}/);
   assert.match(shellSource, /translate\("common\.settings"\)/);
-  assert.match(shellSource, /aria-haspopup="menu"/);
-  assert.match(entryMenuSource, /SETTINGS_SECTION_ITEMS\.map/);
-  assert.match(entryMenuSource, /onSelectSection\(item\.id\)/);
-  assert.match(shellSource, /<SettingsEntryMenu menu=\{settingsEntryMenu\} hasProject=\{Boolean\(projectTrustCwd\)\} onSelectSection=\{setSettingsSection\} \/>/);
+  assert.match(shellSource, /onClick=\{openSettingsAtLastSection\}/);
+  assert.match(shellSource, /aria-haspopup="dialog"/);
+  assert.doesNotMatch(shellSource, /SettingsEntryMenu|toggleSettingsMenu/);
   assert.doesNotMatch(shellSource, /\["models", translate\("common\.models"\)\]/);
   assert.doesNotMatch(shellSource, /\["plugins", translate\("common\.plugins"\)\]/);
   assert.doesNotMatch(shellSource, /setModelsConfigOpen|setSkillsConfigOpen|setAgentsConfigOpen|setPluginsConfigOpen/);
@@ -60,11 +57,6 @@ test("Settings › MCP works without a project, and only project sections fall b
   assert.match(panelSource, /const sectionRequiresProject = settingsSectionRequiresProject\(section\);/);
   assert.match(panelSource, /if \(cwd \|\| !sectionRequiresProject\) return;/);
   assert.doesNotMatch(panelSource, /section !== "skills" && section !== "agents"/);
-  // The fork's settings-entry menu derives the flag from SETTINGS_SECTION_ITEMS
-  // (which itself asks settingsSectionRequiresProject), instead of naming
-  // sections by hand.
-  assert.match(panelSource, /requiresProject: settingsSectionRequiresProject\(item\.id\)/);
-  assert.match(entryMenuSource, /const disabled = item\.requiresProject && !hasProject;/);
   assert.doesNotMatch(shellSource, /section !== "models"/);
   // Its own glyph, not the Plugins fallback.
   assert.match(panelSource, /if \(section === "mcp"\) return <svg \{\.\.\.common\}>/);
@@ -78,14 +70,14 @@ test("restores the settings section and each list detail selection", async () =>
   assert.match(panelSource, /setLastSettingsSection\(nextSection\)/);
   for (const name of ["ModelsConfig", "SkillsConfig", "AgentsConfig", "PluginsConfig", "McpConfig"]) {
     assert.match(
-      await readFile(new URL(`./${name}.tsx`, import.meta.url), "utf8"),
+      ((await readFile(new URL(`./${name}.tsx`, import.meta.url), "utf8")).replace(/\r\n/g, "\n")).replace(/\r\n/g, "\n"),
       /getLastSettingsSelection/,
     );
   }
 });
 
 test("keeps visited settings sections mounted and contains nested Escape handling", async () => {
-  const modelsSource = await readFile(new URL("./ModelsConfig.tsx", import.meta.url), "utf8");
+  const modelsSource = ((await readFile(new URL("./ModelsConfig.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n")).replace(/\r\n/g, "\n");
   assert.match(panelSource, /mountedSections\.has\(id\)/);
   assert.match(panelSource, /hidden=\{section !== id\}/);
   // Settings closes on an Escape nothing nearer handled (lib/stacked-dialog.test.mjs pins the phases).
@@ -137,7 +129,7 @@ test("trusting from Settings › MCP reloads, in place, the other mounted sectio
   for (const name of ["SkillsConfig", "AgentsConfig", "PluginsConfig"]) {
     assert.match(panelSource, new RegExp(`<${name} embedded key=\\{cwd\\} cwd=\\{cwd\\}[^\\n]*? trust=\\{projectTrust\\} `), name);
   }
-  const read = (name) => readFile(new URL(`./${name}.tsx`, import.meta.url), "utf8");
+  const read = async (name) => ((await readFile(new URL(`./${name}.tsx`, import.meta.url), "utf8")).replace(/\r\n/g, "\n")).replace(/\r\n/g, "\n");
   const [skills, plugins, agents] = await Promise.all(["SkillsConfig", "PluginsConfig", "AgentsConfig"].map(read));
   // Skills and Plugins report "not loaded" and disable the Project scope from the trust at load
   // time: a new decision loads the list again, keeping the selection and update checks; the
