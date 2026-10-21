@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 110 张任务卡：todo 96 · in_progress 1 · verify 2 · review 0 · done 6 · blocked 0 · parked 5
+共 110 张任务卡：todo 96 · in_progress 1 · verify 1 · review 1 · done 6 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -33,7 +33,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0115 | P1 | verify | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
 | PIL-0116 | P1 | in_progress | 复刻验收：C02 按钮尺寸与交互状态 | claude:sonnet-high:impl | 2026-10-21T15:51Z | task/PIL-0116-parity-c02 |
-| PIL-0189 | P1 | verify | 在分叉会话中发送（fork-send） | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0189-fork-send |
+| PIL-0189 | P1 | review | 在分叉会话中发送（fork-send） | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0189-fork-send |
 
 ### 阻塞
 
