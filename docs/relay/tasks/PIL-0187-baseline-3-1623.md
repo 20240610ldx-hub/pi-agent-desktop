@@ -3,7 +3,7 @@ id: PIL-0187
 title: 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: claude:opus-medium:impl
 lease_until: 2026-10-21T11:07Z
 branch: task/PIL-0187-baseline-3-1623
@@ -49,3 +49,4 @@ GOALS E2 的组件复刻参照版本从 Windows Claude Desktop 2.42304.0 改为 
 - 2026-10-21T08:07Z · claude:opus-medium:planner · 用户 2026-10-21 在对话中决定视觉基准迁移到 3.1623，授权修改受保护的 GOALS.md（豁免 R6）
 - 2026-10-21T08:07Z · claude:opus-medium:impl · 领取，租约至 2026-10-21T11:07Z
 - 2026-10-21T08:07Z · claude:opus-medium:impl · 做了：GOALS.md 第 17 行参照版本改为 3.1623.0.0，注明用户决定、采样记录出处与旧批次仅历史参考，保留复刻通过要求 / 状态：提交 34bbe6c，guard 仅已豁免 R6 / 下一步：验证 / 风险：组件卡与 parity-index 的版本文字仍为旧版，待规划修订轮同步
+- 2026-10-21T08:07Z · claude:opus-medium:impl · in_progress → verify

@@ -25,13 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 100 张任务卡：todo 94 · in_progress 1 · verify 0 · review 0 · done 4 · blocked 0 · parked 1
+共 100 张任务卡：todo 94 · in_progress 0 · verify 1 · review 0 · done 4 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0187 | P1 | in_progress | 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定） | claude:opus-medium:impl | 2026-10-21T11:07Z | task/PIL-0187-baseline-3-1623 |
+| PIL-0187 | P1 | verify | 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定） | claude:opus-medium:impl | 2026-10-21T11:07Z | task/PIL-0187-baseline-3-1623 |
 
 ### 阻塞
 
