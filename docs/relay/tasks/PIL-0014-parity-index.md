@@ -3,11 +3,11 @@ id: PIL-0014
 title: 把组件复刻基准拆成逐组件任务卡
 epic: E2
 priority: P1
-status: todo
-owner:
-lease_until:
+status: in_progress
+owner: codex-plus:gpt-xhigh:impl
+lease_until: 2026-10-21T07:44Z
 branch: task/PIL-0014-parity-index
-implementers: [claude:sonnet-high:impl]
+implementers: [claude:sonnet-high:impl, codex-plus:gpt-xhigh:impl]
 depends_on: []
 files_allowed: [docs/relay/parity-index.md]
 files_shared: []
@@ -52,3 +52,4 @@ waivers: []
 - 2026-10-19T14:18Z · claude:sonnet-high:impl · 做了：仅新增docs\relay\parity-index.md，54项组件逐行列参考覆盖\版本与DPI未知性\历史实现\证据定位\残差，附33源模块映射及缺参考补采清单；仓库外D;C:\Program Files\Git\pilaude\relay-evidence\PIL-0014\component-card-proposals.json有54份E2-C01..54逐卡建议，含同帧宽高\比例\间距\基线\对齐和输入法\焦点\滚动\缩放\深浅色标准。 \ 状态：task\PIL-0014-parity-index最后提交f178fa6530da47b008c5721429f6fa9003b8cce1，工作树干净；A1\A3\A4文档自测完成，A2未完成，实际逐组件卡片未创建且actual_task_id均null，不进入verify；初始索引缺失RED和13项结构\范围自测保存initial-red.json、document-selfcheck.json；guard-result.json记录完整guard退出0、1文件、无finding。 \ 下一步：按用户本轮收尾暂停，协调者保存本条日志并交还租约；后续获得继续指示后由协调者串行建卡、规划者补标准\冻结并回填真实ID，A2齐备再独立验证，不把本轮实现者自测写成通过证据。 \ 风险：历史报告\截图未重新读取或核存在及提交对应，旧证据不绑定本提交；所有组件Windows完整一致性未通过，多批参考版本与所有OS DPI等元数据未知\不齐，缺参考及公开素材方案需用户决定；未读取复制私人图文\字体，未改产品代码，未跑产品测试\preview\构建，未修改其他任务卡。
 - 2026-10-19T14:19Z · codex:gpt:coord · in_progress → todo：用户要求本批收尾暂停；54组件索引已保存task分支f178fa6，54项建卡建议尚无实际卡号，A2未完成，未独立验收或合入
 - 2026-10-19T14:19Z · codex:gpt:coord · 路径校正：实现者上一条交接的Git Bash路径展开有误。组件索引实际在D:/pilaude/wt/PIL-0014/docs/relay/parity-index.md，建卡建议为D:/pilaude/relay-evidence/PIL-0014/component-card-proposals.json，结构自测与guard分别为document-selfcheck.json、guard-result.json。实际分支task/PIL-0014-parity-index、提交f178fa6530da47b008c5721429f6fa9003b8cce1，已只读确认；本条不新增验收或改变A2未完成状态。
+- 2026-10-21T04:44Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-21T07:44Z
