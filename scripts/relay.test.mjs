@@ -314,3 +314,64 @@ test("suppression and empty-catch checks apply to code, not prose", () => {
   assert.match(r.stdout, /R5 suppression-added\s+lib\/demo\/b\.ts/);
   assert.match(r.stdout, /R10 empty-catch-added\s+lib\/demo\/b\.ts/);
 });
+
+function toReview(t, id, deps) {
+  t.run(["freeze", id]);
+  t.run(["claim", id, "--owner", "a:impl"]);
+  t.run(["set", id, "verify"]);
+  for (const ac of ["A1", "A2"]) t.run(["evidence", id, "--ac", ac, "--result", "通过", "--how", "node -e 0", "--owner", "v:verify"]);
+  t.run(["set", id, "review"]);
+  if (deps) {
+    const rel = `docs/relay/tasks/${id}-demo.md`;
+    t.write(rel, t.read(rel).replace("depends_on: []", `depends_on: [${deps}]`));
+    t.g("add", "-A");
+    t.g("commit", "-q", "-m", "deps");
+  }
+}
+
+test("set done validates depends_on against all cards, not only the one being closed", () => {
+  const t = setup();
+  toReview(t, "PIL-0001", "PIL-0002");
+  const r = t.run(["set", "PIL-0001", "done", "--reviewed-by", "r:review"]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.doesNotMatch(r.stderr, /depends_on unknown/);
+  assert.equal(t.run(["check"]).status, 0);
+});
+
+test("set done still rejects a depends_on that does not exist", () => {
+  const t = setup();
+  toReview(t, "PIL-0001", "PIL-0099");
+  const r = t.run(["set", "PIL-0001", "done", "--reviewed-by", "r:review"]);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /depends_on unknown PIL-0099/);
+});
+
+test("set done on a review card with no id line or no evidence is still refused", () => {
+  // 缺 id 行：validateCards 用文件名作错误 id，done 门禁不能因此失效
+  let t = setup();
+  t.run(["freeze", "PIL-0001"]);
+  t.run(["claim", "PIL-0001", "--owner", "a:impl"]);
+  t.run(["set", "PIL-0001", "verify"]);
+  t.run(["set", "PIL-0001", "review"]);
+  const rel = "docs/relay/tasks/PIL-0001-demo.md";
+  t.write(rel, t.read(rel).replace(/^id: PIL-0001\n/m, ""));
+  t.g("add", "-A");
+  t.g("commit", "-q", "-m", "drop id");
+  let r = t.run(["set", "PIL-0001", "done", "--reviewed-by", "r:review"]);
+  assert.equal(r.status, 1, r.stderr);
+  assert.match(r.stderr, /id missing or malformed/);
+  assert.match(r.stderr, /no passing evidence/);
+  // 有 id 但无证据，且依赖存在：仍拒绝
+  t = setup();
+  t.run(["freeze", "PIL-0001"]);
+  t.run(["claim", "PIL-0001", "--owner", "a:impl"]);
+  t.run(["set", "PIL-0001", "verify"]);
+  t.run(["set", "PIL-0001", "review"]);
+  t.write(rel, t.read(rel).replace("depends_on: []", "depends_on: [PIL-0002]"));
+  t.g("add", "-A");
+  t.g("commit", "-q", "-m", "deps");
+  r = t.run(["set", "PIL-0001", "done", "--reviewed-by", "r:review"]);
+  assert.equal(r.status, 1, r.stderr);
+  assert.match(r.stderr, /no passing evidence/);
+  assert.doesNotMatch(r.stderr, /depends_on unknown/);
+});
