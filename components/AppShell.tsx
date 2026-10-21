@@ -2740,6 +2740,7 @@ export function AppShell() {
               workspaceUnavailable={unavailableWorkspace}
               onRecheckWorkspace={recheckWorkspace}
               chatInputRef={chatInputRef}
+              conversationNavigatorEnabled={!rightPanelOpen}
               onBranchDataChange={isChatWorkspaceActive ? undefined : handleBranchDataChange}
               onSystemPromptChange={handleSystemPromptChange}
               onSystemToolsChange={handleSystemToolsChange}

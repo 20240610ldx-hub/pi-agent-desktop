@@ -2,7 +2,14 @@
 
 Fork-owned notes moved out of `AGENTS.md` to keep it short. The upstream doc on the same topic (`docs/agents/*.md` without the `fork-` prefix) may describe the same area in other words; where they disagree, these notes describe this fork. Hard rules that must survive a merge are also listed in `AGENTS.md` under **Hard rules**.
 
+## Conversation navigation
+ConversationNavigator 仅在右侧工作面板关闭、对话滚动区宽度至少 1024px，且正文左边距至少 64px 时显示。
+沿用 ResizeObserver 同时观察滚动区和实际正文列，因此侧栏缩放、窗口变化和正文宽度设置都会重新判断；
+不可仅用窗口媒体查询推测可用空间。隐藏时移除导航及其键盘入口，并清理悬停预览，恢复显示时不主动滚动正文。
+`node e2e/conversation-navigator.mjs` 覆盖真实导航组件的几何、面板开关、正文宽度及键盘交互。
+
 ## Touch affordances
+
 Session rows render the "…" action menu when `(hovered || touchMode)` — `touchMode` is a post-mount `matchMedia("(hover: none)")` check, so hover styling is untouched on desktop and rename/delete stay reachable on touch. The composer's single circular action shows Stop while a run is active and the draft is empty; typing switches it to queued Send, including on narrow screens. Escape remains available to stop while drafting. Rename/delete failures use the global shell notice shelf (`appNotify.error` with `sidebar.renameFailed` / `sidebar.deleteFailed`) instead of being swallowed.
 Message-row copy/edit/fork actions use CSS hover/focus-within reveal instead of JS hover state, and are always visible under `(hover: none)`. They must remain pointer-enabled when focused so keyboard tabbing does not land on invisible controls.
 While a session runs, in-session "Edit from here" stays visible but disabled with the Esc hint; fork stays available because it copies to an independent file.
