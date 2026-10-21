@@ -75,3 +75,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T12:40Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-21T12:40Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-21T12:40Z · claude:sonnet-high:verify · 证据 A2：未运行
+- 2026-10-21T12:40Z · claude:sonnet-high:verify · 做了：按用户管理员 powercfg 实机结果更新证据：A1、A4 通过(desktop:dev 实机)；A2 仍未运行，退出释放未验证。user-4-quit 时 PID 20272 仍活、desktop.log 无 exit 行，quit_application/RunEvent::Exit 未被执行；本卡仅在 RunEvent::Exit 的 desktop_log 之后加 release，且未改托盘/quit_app，不似本卡引入，但未对父提交实跑 / 状态：保持 verify / 下一步：用户复测退出释放（先开启，再 invoke('quit_app')，看进程退出、desktop.log 出现 exit、powercfg 无本进程）；托盘 Quit 无效则另开卡 / 风险：未对父提交实机对比
