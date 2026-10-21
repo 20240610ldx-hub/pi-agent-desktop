@@ -68,3 +68,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A4：未运行
 - 2026-10-21T12:07Z · claude:sonnet-high:verify · 证据 A5：通过
+- 2026-10-21T12:08Z · claude:sonnet-high:verify · 做了：对 2e6d9d1 逐项验证，A3/A5 通过；A1/A2 未运行；A4 未运行（清单层与网页失败层通过，桌面 ACL 运行时层未跑）。cargo test keep_awake 8/8，node 测试 8/8，tsc、lint、guard 全过，Cargo.lock 未改，改动均在 files_allowed/shared 内 / 状态：保持 verify，等用户证据，不记产品验收通过 / 下一步：用户在管理员终端运行应用后 powercfg /requests，前后对照并走隐藏/恢复/退出/重启，另在桌面窗口调用两命令；证据到 D:/pilaude/relay-evidence/PIL-0180/verify/ / 风险：powercfg 非管理员返回需管理员权限；A3 的 Windows 层仅进程内真实 API 往返，未经桌面命令
