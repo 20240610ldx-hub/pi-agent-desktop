@@ -62,3 +62,5 @@ Merged `origin/main` (`dca3f6c`, which carries abcwyc `d414e9d`, 29 commits) int
 - Upstream deleted `lib/recent-sessions.ts` and its test with the Recent block. The module has no consumer now but both files were kept: deleting a test file is a guard R1 block that needs a user waiver.
 - Two pin/archive stores coexist (fork metadata for project rows, `pinnedChats`/`archivedChats` for chats). Unifying them would also give chats local groups.
 - Test fixtures repaired (additive): `chatInputCallback` and `homeNavigationHarness` gained the chat/attachment refs, and the workspace-memory cleanup fixture gained `cancelPendingSubmissionRef`, which had been failing before the merge.
+
+**PIL-0177 follow-up (2026-10-21, user decision)**: removed the unused `lib/recent-sessions.ts` and its test under the task card's R1 waiver; documented all popup menus as themed DOM menus (`NATIVE_POPUP_MENUS_ENABLED = false`, Rust `show_popup_menu` kept as an inactive backup), clarified that the fork uses `DirectoryPicker` / `SessionSearch` and declined only their upstream placement, and corrected the composer's stale restoration comment.
