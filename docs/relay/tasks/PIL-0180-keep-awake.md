@@ -3,11 +3,11 @@ id: PIL-0180
 title: Windows 保持唤醒能力与退出释放
 epic: E9
 priority: P1
-status: todo
-owner:
-lease_until:
+status: in_progress
+owner: claude:sonnet-high:impl
+lease_until: 2026-10-21T14:58Z
 branch: task/PIL-0180-keep-awake
-implementers: [codex-plus:gpt-xhigh:impl]
+implementers: [codex-plus:gpt-xhigh:impl, claude:sonnet-high:impl]
 depends_on: []
 files_allowed: [src-tauri/src/keep_awake.rs, lib/keep-awake-service.ts, lib/keep-awake-service.test.mjs]
 files_shared: [src-tauri/src/lib.rs, lib/desktop-native.ts, src-tauri/permissions/desktop-shell.toml, src-tauri/capabilities/desktop-dialog.json, src-tauri/Cargo.toml, src-tauri/Cargo.lock]
@@ -55,3 +55,4 @@ C57 菜单样式、屏幕永久常亮、阻止用户手动睡眠、退出后服�
 - 2026-10-21T11:57Z · planner · 冻结验收标准 0ef48e1df3f8
 - 2026-10-21T11:57Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-21T14:57Z
 - 2026-10-21T11:58Z · coord · in_progress → todo：Codex 额度耗尽约 3 小时，改由 Claude Sonnet 实现
+- 2026-10-21T11:58Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T14:58Z
