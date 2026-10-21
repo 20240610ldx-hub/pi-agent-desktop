@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 26 张任务卡：todo 23 · in_progress 2 · verify 0 · review 0 · done 0 · blocked 0 · parked 1
+共 27 张任务卡：todo 24 · in_progress 2 · verify 0 · review 0 · done 0 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
@@ -54,6 +54,7 @@
 | PIL-0074 | P1 | E8 | pi-background-tasks 接入界面与普通会话 | 是 | PIL-0001 |
 | PIL-0100 | P1 | E10 | 首次使用引导：不开终端完成第一个真实任务 | 否 | — |
 | PIL-0111 | P1 | E11 | Windows 原生验收基线 | 否 | — |
+| PIL-0114 | P1 | E0 | 修复 THIRD_PARTY_NOTICES 许可声明测试（CRLF 与 rpiv-todo From 块） | 否 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0013 | P2 | E2 | Changes 面板剩余交互与视觉残差 | 否 | PIL-0010 |
