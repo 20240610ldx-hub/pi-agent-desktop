@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0014, PIL-0030, PIL-0188]
 files_allowed: [components/ToolPermissionDecisionCard.tsx, components/ToolPermissionDecisionCard.test.mjs, components/AskUserQuestionCard.tsx, components/AskUserQuestionCard.test.mjs]
 files_shared: [components/ChatWindow.tsx, lib/i18n/messages/*.ts, app/native-theme.css]
-acceptance_sha:
+acceptance_sha: 2ec85a002a42
 waivers: []
 ---
 
@@ -74,3 +74,4 @@ waivers: []
 - 2026-10-21T08:06Z · claude:opus-medium:planner · 用户 2026-10-21 决定：AskUserQuestion 单题/多题问答卡不单独建卡，保留在 C06 邻接（参考 agent-panels-light/2026-10-21/00、06、07）
 - 2026-10-21T12:03Z · claude:opus-medium:planner · 用户 2026-10-21 澄清：C06 实际实现 AskUserQuestion 单题/多题问答卡（取代此前「仅邻接登记」的理解）；「在分叉会话中发送」建小能力卡；C25 完成音用开源方案。由规划第 3 轮落实。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：ChatWindow*.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字；按用户决定实际实现 AskUserQuestion 提问卡：加 AskUserQuestionCard 文件、A1/A3 扩展、新增 A5（分页/其他/跳过/提交/胶囊/答案非授权）；依赖加 PIL-0188；参考归属 agent-panels-light 00/06/07（原生可量测）；files_shared 加 lib/i18n/messages/*.ts，提问卡文案三语言同步
+- 2026-10-21T12:35Z · planner · 冻结验收标准 2ec85a002a42
