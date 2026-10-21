@@ -25,13 +25,12 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 99 张任务卡：todo 94 · in_progress 0 · verify 0 · review 2 · done 2 · blocked 0 · parked 1
+共 99 张任务卡：todo 94 · in_progress 0 · verify 0 · review 1 · done 3 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0186 | P1 | review | 修复 relay set done 校验把 depends_on 误报为 unknown | claude:sonnet-high:impl | 2026-10-21T10:25Z | task/PIL-0186-relay-done-deps |
 | PIL-0177 | P2 | review | 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定） | codex-plus:gpt-xhigh:impl | 2026-10-21T09:56Z | task/PIL-0177-recent-sessions-dom-menus |
 
 ### 阻塞
@@ -137,7 +136,7 @@
 | PIL-0168 | P2 | E2 | 复刻验收：C54 安装、更新与版本提示界面 | 否 | PIL-0014, PIL-0003, PIL-0110, PIL-0112 |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
-### 已完成（2）
+### 已完成（3）
 
-PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡
+PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown
 <!-- relay:board:end -->
