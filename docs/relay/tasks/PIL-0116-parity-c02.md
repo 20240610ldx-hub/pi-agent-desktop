@@ -9,7 +9,7 @@ lease_until: 2026-10-21T15:51Z
 branch: task/PIL-0116-parity-c02
 implementers: [claude:sonnet-high:impl]
 depends_on: [PIL-0014]
-files_allowed: [vendor/open-claude-ui/CdsButton.tsx, vendor/open-claude-ui/CdsButton.test.mjs]
+files_allowed: [vendor/open-claude-ui/CdsButton.tsx, vendor/open-claude-ui/CdsButton.test.mjs, package.json, scripts/release-workflows.test.mjs]
 files_shared: [components/PilaudeDataSection.tsx, components/SettingsUi.tsx, app/native-theme.css]
 acceptance_sha: 4633dd54c86e
 waivers: []
@@ -68,3 +68,8 @@ waivers: []
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：SettingsUi.blocks.test.mjs、SettingsUi.group-switch.test.mjs、SettingsUi.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字
 - 2026-10-21T12:35Z · planner · 冻结验收标准 4633dd54c86e
 - 2026-10-21T12:51Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T15:51Z
+- 2026-10-21T13:07Z · claude:sonnet-high:impl · 复述：C02 按钮尺寸与状态；A1/A4 用 harness 逐状态+真实 consumer，A2 用原生 3.1623(agent-panels-light)同帧量测，A3 用 Chromium 键盘/窄宽自测，A5 跑定向测试
+- 2026-10-21T13:07Z · claude:sonnet-high:impl · 做了：CdsButton 去 Tailwind 混用、仅输出语义类（加载中 aria-busy+不触发 onClick 且保持可聚焦；图标钮 icon-only 类），app/native-theme.css 新增带注释分节 C02（--cds-btn-* 令牌；xs=22.67/24高、内边距 7、圆角 5.33、字号 13、图标钮 24；primary 改为原生黑 #0b0b0b/悬停 #2c2c2a，clay 移到 brand；描边钮文字/边框色；focus offset 4→2）；新增 CdsButton.test.mjs(5 例)。量测前后 ΔE：primary 51.4→0、描边文字 29→0，尺寸/圆角全部入容差，见 relay-evidence/PIL-0116/impl/measurements.md。 / 状态：提交 c2d458a；定向测试 40/40、tsc、lint、guard、ui-menu-consistency 通过；npm test 13 失败=12 基线+1 新增 'no test file is left out of npm test'（原因：卡片指定的 vendor/open-claude-ui/CdsButton.test.mjs 不在 npm test glob，需 scope 加 package.json 与 scripts/release-workflows.test.mjs 的 vendor/ 覆盖，我未越界）。 / 下一步：交验证；协调者 relay scope 后补 glob。 / 风险：sm/md/lg/xxs、pressed、focus 环、disabled、loading、深色、kbd 键帽槽无 3.1623 原生参考，未量测待补采；07 帧 #2c2c2a 推定为悬停未确认；primary 由陶土改黑会改变设置页 Import 按钮观感；范围外松散候选（未量测对照实现）：AskUserQuestion 卡底部按钮到卡边约 12.7/13.3px(原生)，PilaudeDataSection 段落/按钮间距未量测。
+- 2026-10-21T13:07Z · claude:sonnet-high:impl · in_progress → verify
+- 2026-10-21T13:08Z · claude:opus-medium:planner · 范围 [vendor/open-claude-ui/CdsButton.tsx, vendor/open-claude-ui/CdsButton.test.mjs] → [vendor/open-claude-ui/CdsButton.tsx, vendor/open-claude-ui/CdsButton.test.mjs, package.json, scripts/release-workflows.test.mjs]：卡定测试路径 vendor/open-claude-ui/CdsButton.test.mjs 不在 npm test glob 内，需把 vendor/**/*.test.mjs 纳入 npm test 与覆盖检查
+- 2026-10-21T13:08Z · claude:sonnet-high:impl · verify → in_progress：补 npm test glob 覆盖 vendor 测试

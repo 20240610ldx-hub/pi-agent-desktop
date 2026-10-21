@@ -25,15 +25,15 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 110 张任务卡：todo 96 · in_progress 3 · verify 0 · review 0 · done 6 · blocked 0 · parked 5
+共 110 张任务卡：todo 95 · in_progress 2 · verify 1 · review 0 · done 7 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0115 | P1 | in_progress | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
+| PIL-0115 | P1 | verify | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
 | PIL-0116 | P1 | in_progress | 复刻验收：C02 按钮尺寸与交互状态 | claude:sonnet-high:impl | 2026-10-21T15:51Z | task/PIL-0116-parity-c02 |
-| PIL-0189 | P1 | in_progress | 在分叉会话中发送（fork-send） | claude:sonnet-high:impl | 2026-10-21T15:40Z | task/PIL-0189-fork-send |
+| PIL-0197 | P1 | in_progress | Windows 托盘 Quit 只隐藏窗口不结束进程 | claude:sonnet-high:impl | 2026-10-21T16:04Z | task/PIL-0197-tray-quit-exit |
 
 ### 阻塞
 
@@ -82,7 +82,6 @@
 | PIL-0193 | P1 | E5 | 受控浏览器提交/上传/导航审批门 | 否 | PIL-0192, PIL-0030 |
 | PIL-0194 | P1 | E5 | 受控浏览器标签页与下载 | 否 | PIL-0192, PIL-0193 |
 | PIL-0195 | P1 | E5 | 受控浏览器人工接管、取消与恢复 | 否 | PIL-0192, PIL-0193 |
-| PIL-0197 | P1 | E11 | Windows 托盘 Quit 只隐藏窗口不结束进程 | 是 | PIL-0180 |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0020 | P2 | E3 | 本地数据隔离与凭据加密验收 | 否 | — |
@@ -140,7 +139,7 @@
 | PIL-0196 | P2 | E5 | 受控浏览器 pane 桥接契约 | 否 | PIL-0191, PIL-0195 |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
-### 已完成（6）
+### 已完成（7）
 
-PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0180 Windows 保持唤醒能力与退出释放；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown；PIL-0187 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）；PIL-0177 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
+PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0180 Windows 保持唤醒能力与退出释放；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown；PIL-0187 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）；PIL-0189 在分叉会话中发送（fork-send）；PIL-0177 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
 <!-- relay:board:end -->

@@ -64,3 +64,4 @@ waivers: []
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P1：PIL-0121、PIL-0123、PIL-0124、PIL-0134、PIL-0140、PIL-0141、PIL-0151 依赖本卡，属首发能力/主组件依赖路径。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：ChatInput.automation.test.mjs、ime.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字；并入 composer-tooltips-light 01 发送提示；依赖加 PIL-0189（分叉发送，A1/A3/A4 验证快捷键与文案）；麦克风首发隐藏（00 号参考仅登记）；files_shared 加 lib/i18n/messages/*.ts（发送提示三语言同步）
 - 2026-10-21T12:35Z · planner · 冻结验收标准 042e78bfeb93
+- 2026-10-21T13:04Z · claude:opus-medium:planner · PIL-0189 评审非阻断意见供本卡落实：源会话运行中分叉会把未回复的用户消息一并复制，子会话出现连续两条用户消息，界面需说明；分叉后接入新会话事件流（onSessionForked）属本卡/0137。
