@@ -5,7 +5,7 @@ epic: E2
 priority: P1
 status: in_progress
 owner: codex-plus:gpt-xhigh:impl
-lease_until: 2026-10-21T07:44Z
+lease_until: 2026-10-21T08:14Z
 branch: task/PIL-0014-parity-index
 implementers: [claude:sonnet-high:impl, codex-plus:gpt-xhigh:impl]
 depends_on: []
