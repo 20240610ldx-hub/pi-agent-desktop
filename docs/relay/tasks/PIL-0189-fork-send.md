@@ -11,7 +11,7 @@ implementers: []
 depends_on: []
 files_allowed: [lib/fork-send.ts, lib/fork-send.test.mjs, lib/fork-send-client.ts, app/api/agent/[id]/fork-send/route.ts]
 files_shared: [lib/rpc-manager.ts, lib/agent-client.ts]
-acceptance_sha:
+acceptance_sha: 3d887a1c84ac
 waivers: []
 ---
 
@@ -51,3 +51,4 @@ waivers: []
 
 - 2026-10-21T12:16Z · planner · 创建
 - 2026-10-21T12:27Z · claude:sonnet-high:planner · 冻结前修订第3轮：新建能力卡并写满验收；基于 Pi 现有 fork_branch 与 keepSource，从当前叶子分叉后在新会话发送草稿，含失败/取消/幂等路径；用户 2026-10-21 决定建本卡，PIL-0122 依赖它。
+- 2026-10-21T12:39Z · planner · 冻结验收标准 3d887a1c84ac
