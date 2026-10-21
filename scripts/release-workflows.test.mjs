@@ -201,6 +201,7 @@ test("nothing reintroduces a literal homedir() into an fs call", async () => {
     "lib/skill-lock.ts",
     "app/api/cwd/validate/route.ts",
     "app/api/skills/route.ts",
+    "lib/default-cwd.ts",
     "lib/chat-workspace-policy.ts",
     "lib/chat-file-access.ts",
   ];
