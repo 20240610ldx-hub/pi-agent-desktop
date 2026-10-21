@@ -54,3 +54,4 @@ waivers: []
 
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 创建
 - 2026-10-21T05:34Z · codex-plus:gpt-xhigh:impl · 由PIL-0014按C06补齐目标、背景、同帧量测／交互／专属残差与具体文件范围；保持todo和未冻结，无实现或通过证据，交规划者复核。主任务板待协调者统一提交。
+- 2026-10-21T07:13Z · claude:opus-medium:coord · 新增参考：references/claude-desktop/permission-card-light/2026-10-21（权限决定卡、分裂按钮菜单：允许一次／允许并切换 Auto、自动模式引导气泡、切换后的会话内提示）。浅色、zh-CN，Claude 3.1623.0.0，2560×1600@150%（聊天附件，可能经缩放，见 manifest）。冻结前由规划者据此补全 A4。
