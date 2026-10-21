@@ -3,7 +3,7 @@ id: PIL-0186
 title: 修复 relay set done 校验把 depends_on 误报为 unknown
 epic: E0
 priority: P1
-status: verify
+status: review
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T10:25Z
 branch: task/PIL-0186-relay-done-deps
@@ -57,3 +57,4 @@ relay 其他命令的行为调整；PIL-0177 的状态修正（合入后由协�
 - 2026-10-21T07:40Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-21T07:40Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-21T07:40Z · claude:sonnet-high:verify · 证据 A3：通过
+- 2026-10-21T07:40Z · claude:sonnet-high:verify · verify → review
