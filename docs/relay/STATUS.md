@@ -25,11 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 90 张任务卡：todo 87 · in_progress 0 · verify 0 · review 0 · done 2 · blocked 0 · parked 1
+共 90 张任务卡：todo 86 · in_progress 1 · verify 0 · review 0 · done 2 · blocked 0 · parked 1
 
 ### 进行中 / 待验证 / 待评审
 
-（无）
+| ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
+| --- | --- | --- | --- | --- | --- | --- |
+| PIL-0177 | P2 | in_progress | 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定） | codex-plus:gpt-xhigh:impl | 2026-10-21T09:56Z | task/PIL-0177-recent-sessions-dom-menus |
 
 ### 阻塞
 
@@ -124,7 +126,6 @@
 | PIL-0166 | P2 | E2 | 复刻验收：C52 托盘、系统通知与关窗状态 | 否 | PIL-0014, PIL-0090, PIL-0111 |
 | PIL-0167 | P2 | E2 | 复刻验收：C53 原生文件选择、保存与路径入口 | 否 | PIL-0014, PIL-0011, PIL-0111 |
 | PIL-0168 | P2 | E2 | 复刻验收：C54 安装、更新与版本提示界面 | 否 | PIL-0014, PIL-0003, PIL-0110, PIL-0112 |
-| PIL-0177 | P2 | E2 | 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定） | 是 | PIL-0113 |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
 ### 已完成（2）

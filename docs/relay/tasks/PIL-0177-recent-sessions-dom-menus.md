@@ -3,11 +3,11 @@ id: PIL-0177
 title: 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
 epic: E2
 priority: P2
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: codex-plus:gpt-xhigh:impl
+lease_until: 2026-10-21T09:56Z
+branch: task/PIL-0177-recent-sessions-dom-menus
+implementers: [codex-plus:gpt-xhigh:impl]
 depends_on: [PIL-0113]
 files_allowed: [lib/recent-sessions.ts, lib/recent-sessions.test.mjs, docs/agents/fork-desktop.md, AGENTS.md, docs/merge-history.md, components/ChatInput.tsx]
 files_shared: []
@@ -49,3 +49,4 @@ waivers: [R1]
 - 2026-10-21T07:10Z · planner · 创建
 - 2026-10-21T07:11Z · claude:opus-medium:planner · 用户 2026-10-21 决定删除 recent-sessions（R1 豁免）、菜单全走 DOM；合并 PIL-0113 评审非阻断项 1、2、5 与 AGENTS 清单订正。
 - 2026-10-21T06:56Z · planner · 冻结验收标准 6e4cea828ac8
+- 2026-10-21T06:56Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-21T09:56Z
