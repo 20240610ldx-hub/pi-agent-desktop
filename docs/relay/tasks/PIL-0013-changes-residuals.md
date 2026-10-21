@@ -3,7 +3,7 @@ id: PIL-0013
 title: Changes 面板剩余交互与视觉残差
 epic: E2
 priority: P2
-status: todo
+status: parked
 owner:
 lease_until:
 branch:
@@ -11,7 +11,7 @@ implementers: []
 depends_on: [PIL-0010]
 files_allowed: [components/ChangesPane*, components/ReviewDiff*, e2e/changes-focus.mjs]
 files_shared: []
-acceptance_sha: 
+acceptance_sha:
 waivers: []
 ---
 
@@ -44,3 +44,4 @@ Changes 独立窗口（PIL-0010）。
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 草稿：验收需规划者核实现状后补全并冻结。
+- 2026-10-21T12:34Z · claude:opus-medium:planner · todo → parked：范围已并入 PIL-0145（第3轮修订）
