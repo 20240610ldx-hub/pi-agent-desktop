@@ -78,3 +78,4 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 - 2026-10-22T13:21Z · claude-cli:opus-high:review · 证据 A5：通过
 - 2026-10-22T13:21Z · claude-cli:sonnet-high:verify · 证据 A6：通过
 - 2026-10-22T13:21Z · claude-cli:opus-high:review APPROVE · review → done（评审 claude-cli:opus-high:review APPROVE）
+- 2026-10-22T13:21Z · codex-plus:sol-high:impl · 后续：F4 弹窗失败残留视图记录、F2 isChangesViewId 直接断言，待建小卡（Opus 评审建议）
