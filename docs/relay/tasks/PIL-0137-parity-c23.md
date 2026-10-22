@@ -3,7 +3,7 @@ id: PIL-0137
 title: 复刻验收：C23 长会话滚动跟随与历史恢复
 epic: E2
 priority: P1
-status: verify
+status: review
 owner: codex-plus:luna-high:impl
 lease_until: 2026-10-22T12:04Z
 branch: task/PIL-0137-parity-c23
@@ -78,3 +78,4 @@ waivers: []
 - 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A3：通过
 - 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A4：通过
 - 2026-10-22T11:16Z · claude-cli:sonnet-high:review · 证据 A5：通过
+- 2026-10-22T11:16Z · codex-plus:luna-high:impl · verify → review
