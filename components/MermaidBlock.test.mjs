@@ -260,8 +260,10 @@ test("code copy browser lifecycle preserves source, focus and the current attemp
           await page.evaluate(theme => document.documentElement.classList.toggle("dark", theme === "dark"), theme);
           const first = page.locator('[data-entry-id="c13-first"]');
           const other = page.locator('[data-entry-id="c13-other"]');
-          await first.getByRole("button", { name: "Source", exact: true }).click();
-          await page.locator("#message-start").hover();
+          // Keyboard only: a pointer resting on a message makes focus-driven scrolls re-hover it asynchronously.
+          const source = first.getByRole("button", { name: "Source", exact: true });
+          await source.focus();
+          await page.keyboard.press("Enter");
           await page.locator("#message-start").focus();
           await page.keyboard.press("Tab");
           assert.equal(await first.locator(".markdown-code-copy").first().evaluate(el => el === document.activeElement), true);
