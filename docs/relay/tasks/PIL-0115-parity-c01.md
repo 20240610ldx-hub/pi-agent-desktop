@@ -62,6 +62,7 @@ waivers: []
 | A1 | amend 后范围：原生 00/01（3.1623，2559px，150% 显示/100% 应用缩放，zh-CN，浅/深）与同帧 next dev 渲染（1706x1017 DSF1.5）逐图登记；主区正文/顶栏标题/侧栏导航/占位/分区标题三档令牌+行距已覆盖（侧栏消费者归 PIL-0147，无参考状态归 PIL-0199） | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md; D:/pilaude/relay-evidence/PIL-0115/verify/native-light-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-dark-ink.txt | 2525b0d | claude:sonnet-high:verify |
 | A2 | 浏览器层+原生像素：ink 色 CIEDE2000 亮 primary/secondary/dim 0.00，暗 primary 0.21~0.42、secondary/dim 0.00；行距参考 19.97 vs 实现 20（差 0.03，≤1）；大写T高 10.0=10.0；令牌值=原生极值色。侧栏消费者偏差按 amend 归 PIL-0147 不计；字体差异为残差 | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/compare-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-light-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-dark-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/ours.json | 2525b0d | claude:sonnet-high:verify |
 | A3 | 浏览器层（next dev，合成媒体/localStorage，非原生）：pi-theme=light/dark 与 auto 下 emulateMedia 实时跟随，文字色随之变；pi-chat-content-font-size 13/14/16 → 行高 19/20/22px、段落两行高 38/40/44（20px+偏移）。原生DPI/缩放/字体回退转 PIL-0199 | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/A3-browser.json; D:/pilaude/relay-evidence/PIL-0115/verify/A3-auto.json; D:/pilaude/relay-evidence/PIL-0115/verify/a3-measure.mjs; D:/pilaude/relay-evidence/PIL-0115/verify/a3-auto.mjs | 2525b0d | claude:sonnet-high:verify |
+| A4 | 改前改后表：亮 dim 4.18→3.50:1（气泡底 3.76→3.15，12px 小字见 'D:'/'No file open'，侧栏仍 #6c6c71 5.04:1），暗 dim 4.10→5.08，secondary 亮 5.56→7.73/暗 6.85→10.19；ΔE 改前 2.0~13.4→改后 0；行距 22.4→20 vs 19.97。残差：图标描边/disabled 不透明度未改转 PIL-0147/0199，markdown 旧 1.6（native-theme.css:5080）双源仍在。亮 dim 低于 AA 为已披露取舍，请评审确认；小字清查未穷尽 | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/A4-before-after.txt; D:/pilaude/relay-evidence/PIL-0115/verify/dimscan.json; D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md | 2525b0d | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -89,3 +90,4 @@ waivers: []
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A3：通过
+- 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A4：通过
