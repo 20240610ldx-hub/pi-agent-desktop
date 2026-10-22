@@ -43,6 +43,7 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | Windows 原生。用户实机托盘 Quit：进程消失(Get-Process)；验证者重跑 repro -WhileMenuOpen（desktop:dev 构建，fix 提交）：Quit 后 3.5s 进程已退出（修复前 impl 记录为存活）。失败部分：卡片要求 desktop.log 写入本次 exit 行，托盘路径实际只有 'quit requested' + 'exit forced: event loop did not stop within 2000ms'，无 exit 行（强制路径 process::exit 绕过 RunEvent::Exit 的 desktop_log）；本地服务子进程残留未验证（desktop:dev 无子进程，打包构建未测） | 失败 | D:/pilaude/relay-evidence/PIL-0197/verify/quit-log.txt, D:/pilaude/relay-evidence/PIL-0197/verify/user-4-quit.txt, D:/pilaude/relay-evidence/PIL-0197/verify/repro-whilemenuopen-rerun.txt | 02a0ce6 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T12:46Z · planner · 创建
@@ -51,3 +52,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T02:41Z · claude:sonnet-high:impl · 复述：A1 托盘 Quit 后进程/exit 行/子进程；A2 keep-awake 随进程释放；A3 关窗进托盘与 quit_app 不变；A4 修复前失败的复现脚本 + 测试 + cargo/tsc/lint/guard。
 - 2026-10-22T02:41Z · claude:sonnet-high:impl · 做了：根因=Quit 事件在事件循环被托盘弹出菜单的模态循环(TrackPopupMenu)占住时到达，app.exit 只是排队的 RequestExit，循环不服务→无 RunEvent::Exit、进程和 keep-awake 残留（复现：D:/pilaude/relay-evidence/PIL-0197/impl/repro-tray-quit.ps1 -WhileMenuOpen，修复前 before-fix-whilemenuopen.txt 日志停在 'exit requested' 且进程存活，与 PIL-0180 证据一致）。修复=quit_application 加 2s 看门狗线程，超时执行 Exit 清理(keep-awake release、server.stop)并 process::exit(0)；新增 'quit requested'/'exit forced' 日志；2 个单测。正常路径(右键菜单点 Quit，窗口可见/已隐藏)实测立即写 exit 行。/ 状态：分支最后提交 02a0ce6；自测 cargo test 30 过、tsc、lint、guard 通过，证据在 relay-evidence/PIL-0197/impl/；A1-A3 真实托盘实机待用户。/ 下一步：交验证+用户手测。/ 风险：未能在合成消息下复现'正常点击也卡住'，若用户实机仍无 exit 行但出现 'quit requested' 则说明有别的原因；看门狗会在 2s 后强杀，属兜底。
 - 2026-10-22T02:41Z · claude:sonnet-high:impl · in_progress → verify
+- 2026-10-22T02:53Z · claude:sonnet-high:verify · 证据 A1：失败
