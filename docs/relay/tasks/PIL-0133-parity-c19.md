@@ -55,6 +55,7 @@ waivers: []
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
 | A1 | 浏览器夹具状态矩阵（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0133\verify\VERIFY-2.md | bdae54c | claude-cli:sonnet-high:verify |
+| A2 | 深色参考像素量测 ÷1.5，对勾/正文 ΔE00=0 | 通过 | D:\pilaude\relay-evidence\PIL-0133\verify\VERIFY-2.md | bdae54c | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -71,3 +72,4 @@ waivers: []
 - 2026-10-22T03:43Z · user · 修订验收标准 a4cb17ca21d9 → 2a97764096d2：用户 2026-10-22 拆卡政策（移出项见 PIL-0204）：浅色/分组/搜索/无结果/不可用/长名/错误/星按钮行同态参考、真实 Pi 切换与失败恢复、WebView2 IME、三档 DPI、浅色对勾色移至 PIL-0204
 - 2026-10-22T03:49Z · codex-plus:gpt-xhigh:impl · FIX2: 修复面板内点击误关菜单、删除硬编码 muted 色、星按钮方向键定位；新增2回归测试，13/13 通过
 - 2026-10-22T03:53Z · claude-cli:sonnet-high:verify · 证据 A1：通过
+- 2026-10-22T03:53Z · claude-cli:sonnet-high:verify · 证据 A2：通过
