@@ -88,6 +88,17 @@ async function assistantFixture(config = {}) {
   return page;
 }
 
+test("assistant inline code uses the C12 theme colors without changing C13 code blocks", async () => {
+  const page = await assistantFixture({ text: "Inline `token`.\n\n```txt\nblock\n```" });
+  try {
+    for (const [theme, expected] of [["light", "rgb(142, 38, 38)"], ["dark", "rgb(236, 126, 126)"]]) {
+      await page.evaluate(value => document.documentElement.classList.toggle("dark", value === "dark"), theme);
+      assert.equal(await page.locator(".markdown-inline-code").evaluate(el => getComputedStyle(el).color), expected);
+      assert.equal(await page.locator(".c13-code-content").evaluate(el => getComputedStyle(el).color), theme === "dark" ? "rgb(229, 231, 235)" : "rgb(32, 32, 32)");
+    }
+  } finally { await page.close(); }
+});
+
 test("assistant copy reports pending, failure and recovery without losing fallback focus", async () => {
   const page = await assistantFixture();
   const errors = [];

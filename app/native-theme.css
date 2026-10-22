@@ -10530,6 +10530,10 @@ html.dark .app-shell {
   --c12-prose-gap: 10px;
   --c12-action-gap: 8px;
   --c12-inline-inset: 4px;
+  --c12-inline-code-text: #8e2626;
+}
+html.dark .message-assistant {
+  --c12-inline-code-text: #ec7e7e;
 }
 .message-assistant-content { gap: var(--c12-prose-gap) !important; }
 .message-assistant-content > [data-message-text] > .markdown-body > p:not(:last-child) {
@@ -10539,6 +10543,7 @@ html.dark .app-shell {
    4px side insets retain that compact width (was 5px on each side). */
 .message-assistant-content > [data-message-text] > .markdown-body .markdown-inline-code {
   padding-inline: var(--c12-inline-inset);
+  color: var(--c12-inline-code-text);
 }
 .message-assistant-footer {
   display: flex;
