@@ -15,7 +15,7 @@ import { projectToolResultDetails, slimToolResultMessage } from "./tool-result-d
 import { resolveProject, type ProjectInfo } from "./worktree";
 import { readSubagentRun, SUBAGENT_META_TYPE } from "./subagents";
 import { listSessionsIncremental, type ScannedSessionInfo } from "./session-list-scanner";
-import { isChatWorkspacePath } from "./chat-workspace";
+import { isChatFolderPath, isChatWorkspacePath } from "./chat-workspace";
 
 export { getAgentDir };
 
@@ -167,6 +167,7 @@ export async function attachSessionProjectInfo(sessions: SessionInfo[]): Promise
       return {
         ...session,
         workspaceKind: "chat" as const,
+        ...(isChatFolderPath(session.cwd) ? { chatFolder: true } : {}),
         projectRoot: undefined,
         projectKey: undefined,
         branch: undefined,
