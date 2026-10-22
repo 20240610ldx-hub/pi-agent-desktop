@@ -67,3 +67,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T03:56Z · claude-cli:sonnet-high:impl · 复述：A1 用 Rust 运行期 PILAUDE_DEV_URL 覆盖(devUrl 为编译期写死)+harness 回环代理证明；A2 用 native-window-probe.ps1 对真实窗口证明；A3 用实测缩放对标签；A4 用 node --test+真实 exe 前后进程表；A5 文档表格与 --list 对齐。
 - 2026-10-22T03:58Z · claude-cli:sonnet-high:impl · 进度：lib.rs development_server_url+运行期覆盖(cargo test origin 9/9 过)、window probe 已提交；cargo build exe 进行中。
 - 2026-10-22T04:07Z · claude-cli:sonnet-high:impl · 进度：harness+CLI 已提交；真实 exe 在 150% 跑通 N1/N2/N3（run-window-3），错误标签退出码 3；下一步：node --test、文档、gating。
+- 2026-10-22T04:09Z · claude-cli:sonnet-high:impl · 进度：native-harness.test.mjs 23/23 过、A5 文档已提交；下一步：tsc/lint/guard/npm test 基线、真实运行证据。
