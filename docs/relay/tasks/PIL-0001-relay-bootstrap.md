@@ -46,6 +46,7 @@ waivers: [R6:user-requested-initial-governance-2026-10-19]
 | --- | --- | --- | --- | --- | --- |
 | A1 | relay*.test 18/18、relay check、hooksPath .githooks、.claude/agents 5 个 | 通过 | D:\pilaude\relay-evidence\PIL-0001\verify\VERIFY.md | 6fb90a4 | claude-cli:sonnet-medium:verify |
 | A2 | 两个快照分支 tree 与 preservation 清单逐字节一致 | 通过 | D:\pilaude\relay-evidence\PIL-0001\verify\VERIFY.md | 6fb90a4 | claude-cli:sonnet-medium:verify |
+| A3 | wip-mapping 未归属 0（148 归属 + 9 用户裁定归档） | 通过 | D:\pilaude\relay-evidence\PIL-0001\verify\VERIFY.md | 6fb90a4 | claude-cli:sonnet-medium:verify |
 
 ## 日志
 
@@ -64,3 +65,4 @@ waivers: [R6:user-requested-initial-governance-2026-10-19]
 - 2026-10-22T09:47Z · claude-cli:haiku:impl · 2026-10-22 用户裁定：9 条 docs/engineering/** 历史档案归档、无需任务卡归属；快照映射未归属数 9→0（证据 D:\pilaude\relay-evidence\PIL-0001\wip-mapping.md）。提交守卫因 files_allowed 不含新增文件被阻断，未提交归档文件；待用户批准 scope 豁免后再提交。
 - 2026-10-22T09:53Z · claude-cli:sonnet-medium:verify · 证据 A1：通过
 - 2026-10-22T09:53Z · claude-cli:sonnet-medium:verify · 证据 A2：通过
+- 2026-10-22T09:53Z · claude-cli:sonnet-medium:verify · 证据 A3：通过
