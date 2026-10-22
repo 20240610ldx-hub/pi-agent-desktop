@@ -63,6 +63,7 @@ waivers: []
 | A2 | 无 3.1623 原生同态参考或帧状态未确认：Submit 宽(键帽槽缺)、icon 高/纵向中心(tooltip 遮挡)、agent-panels 07 悬停归属、md/lg/xxs、深色 primary、secondary/ghost/danger 等其余态 | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
 | A3 | 浏览器合成事件层 node h/keys.mjs：light/dark x DPR1/1.5/2 x 宽900/320；Tab 到 skip，Enter/Space 各 1 次，disabled/loading 不触发，loading 可聚焦，长标签省略无溢出 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/keys-result.json | 8b5bdcc | claude:sonnet-high:verify |
 | A3 | Windows 原生/WebView2、DPI 100/125/150 真机、真实 consumer 操作后焦点恢复、无原生同态参考的视觉项 | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
+| A4 | 逐尺寸×逐状态矩阵不完整：pressed/focus/disabled/loading 全尺寸及 md/lg/xxs 无 3.1623 原生参考；仅 xs 文本/图标钮与 sm secondary 深色默认有参考 | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -86,3 +87,4 @@ waivers: []
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A2：未运行
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A3：未运行
+- 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A4：未运行
