@@ -3,7 +3,7 @@ id: PIL-0197
 title: Windows 托盘 Quit 只隐藏窗口不结束进程
 epic: E11
 priority: P1
-status: verify
+status: in_progress
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T16:04Z
 branch: task/PIL-0197-tray-quit-exit
@@ -60,3 +60,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T02:53Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T02:53Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T02:53Z · claude:sonnet-high:verify · 验证(02a0ce6)：A2/A3/A4 通过，A1 失败。目标：托盘Quit结束进程。做法：复跑repro -WhileMenuOpen、cargo test/tsc/lint/guard、审阅用户实机证据。结果：进程退出、powercfg释放、检查全绿；但托盘路径日志无 exit 行（只有 exit forced）。下一步：force_exit 完成清理后补写 exit 行（或由规划者 amend A1 接受 exit forced），并在打包构建确认服务子进程无残留。
+- 2026-10-22T02:53Z · claude:sonnet-high:impl · verify → in_progress：A1 失败：托盘 Quit 日志无 exit 行(只有 exit forced)；见 verify/quit-log.txt
