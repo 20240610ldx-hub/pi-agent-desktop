@@ -3,7 +3,7 @@ id: PIL-0072
 title: pi-powerline-footer 状态行接入并修复短窗叠字
 epic: E8
 priority: P1
-status: in_progress
+status: verify
 owner: claude-cli:sonnet-high:impl
 lease_until: 2026-10-22T14:17Z
 branch: task/PIL-0072-powerline-footer
@@ -56,3 +56,4 @@ waivers: []
 - 2026-10-22T12:11Z · claude:opus:coordinator · 范围 [lib/builtin-powerline-extension*, components/ExtensionWidgets*, components/ExtensionStatusLine*, e2e/powerline-footer-*.mjs] → [lib/builtin-powerline-extension*, components/ExtensionWidgets*, components/ExtensionStatusLine*, e2e/powerline-footer-*.mjs, next.config.ts]：验证 F1：webpack 静态改写 createRequire.resolve，需把 pi-powerline-footer 加入 serverExternalPackages（同 rpiv-todo）；只允许改该数组
 - 2026-10-22T12:54Z · claude-cli:sonnet-high:impl · 用户 2026-10-22 决定：pi-powerline-footer 随安装包打包（含许可信息）
 - 2026-10-22T13:32Z · claude-cli:sonnet-high:impl · FIX2：真实 next dev 状态行修复（serverExternalPackages）、整包入口接入、随安装包打包、MIT 依据 manifest 记入 NOTICES；真实层脚本修复前失败/后通过；npm test 11 败均在基线
+- 2026-10-22T13:33Z · claude-cli:sonnet-high:impl · in_progress → verify
