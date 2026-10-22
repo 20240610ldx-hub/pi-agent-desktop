@@ -3,11 +3,11 @@ id: PIL-0030
 title: 统一执行前授权并接入 pi-permission-system（普通 coding 会话授权门）
 epic: E4
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: codex-plus:sol-xhigh:impl
+lease_until: 2026-10-22T12:54Z
+branch: task/PIL-0030-permission-gate
+implementers: [codex-plus:sol-xhigh:impl]
 depends_on: [PIL-0001]
 files_allowed: [lib/builtin-permission-extension*, lib/permission-gate*, lib/permission-policy*, e2e/permission-gate*.mjs]
 files_shared: [lib/rpc-manager*, lib/extension-ui-queue*, hooks/useAgentSession*, lib/agent-event-stream*, lib/agent-event-wire*, lib/types.ts, lib/session-reader*, lib/i18n/messages/*.ts, components/ChatWindow.tsx, package.json, package-lock.json, next.config.ts, scripts/prepare-desktop.mjs, scripts/stage-package*, scripts/web-package-layout.test.mjs, scripts/release-workflows.test.mjs, THIRD_PARTY_NOTICES.md, scripts/fork-ownership.json, docs/pilaude-pi-extensions.md]
@@ -75,3 +75,4 @@ waivers: []
 - 2026-10-19T14:21Z · codex:gpt:coord · 做了：恢复原权限owner上下文并收只读迁移材料，D:/pilaude/relay-evidence/PIL-0001/recovery-permissions/handoff.md及manifest.json含六条原字节/source映射，均与working23329458一致，共享RPC两条与既有Plan owner快照一致；本轮无源码或index改动。状态：最后initial-health单hunk确有独立CLEAN，普通coding permission唯一注册已接，位于read-only MCP policy后，因此本卡背景未接线说明已过时；这不是本卡实际执行前授权验收通过。下一步：暂停，PIL-0001完成且用户恢复工作后再按任务worktree迁入精确权限hunks，优先真实normal操作计数及未覆盖入口默认拒绝，再独立验证。风险：!bash直executeBash、PowerShell原生AST、child权限上限/parent absent、真实MCP和scheduled同门、审批重放仍未覆盖；不把旧6/9/定向证据拼成完整AC通过。
 - 2026-10-22T00:00Z · claude:sonnet-high:planner · 做了：核对主线（无授权门、无依赖）与备份，重写验收为授权门本体 A1–A6；拆出 PIL-0202（child）与 PIL-0203（公开审批服务与覆盖清单）；写入默认策略表。状态：未冻结（acceptance_sha 已清空，原冻结文本作废，需协调者重新 freeze，范围收窄与默认策略表需用户确认）。下一步：协调者审阅后 freeze；PIL-0188/0193/0179/0182/0120 依赖 PIL-0203，PIL-0050 依赖 PIL-0202。风险：官方包默认 ask 与默认策略表的衔接方式（包配置或宿主层）需实现者先在日志写明。
 - 2026-10-22T03:35Z · planner · 冻结验收标准 d45dc5cf7fcd
+- 2026-10-22T09:54Z · codex-plus:sol-xhigh:impl · 领取，租约至 2026-10-22T12:54Z
