@@ -3,9 +3,9 @@ id: PIL-0001
 title: 接力治理落地与工作树分流
 epic: E0
 priority: P0
-status: review
+status: done
 owner: claude-cli:haiku:impl
-lease_until: 2026-10-22T12:45Z
+lease_until:
 branch: task/PIL-0001-relay-bootstrap
 implementers: [claude:sonnet-high:impl, claude-cli:haiku:impl]
 depends_on: []
@@ -73,3 +73,4 @@ waivers: [R6:user-requested-initial-governance-2026-10-19]
 - 2026-10-22T09:53Z · claude-cli:haiku:impl · 限制：wip 快照只含 2026-10-19 14:07 前状态，之后新增内容无另存证据。归档说明与 wip-mapping 保存在 relay-evidence/PIL-0001（仓库外证据），无需仓库提交。
 - 2026-10-22T09:54Z · claude-cli:haiku:impl · in_progress → verify
 - 2026-10-22T09:54Z · claude-cli:haiku:impl · verify → review（评审 claude-cli:sonnet-medium:review）
+- 2026-10-22T09:54Z · claude-cli:sonnet-medium:review · review → done（评审 claude-cli:sonnet-medium:review）
