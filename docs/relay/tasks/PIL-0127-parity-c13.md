@@ -3,7 +3,7 @@ id: PIL-0127
 title: 复刻验收：C13 代码块、Mermaid source 与复制反馈
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-22T05:42Z
 branch: task/PIL-0127-parity-c13
@@ -67,3 +67,4 @@ waivers: []
 - 2026-10-21T12:35Z · planner · 冻结验收标准 d96107ef040c
 - 2026-10-22T02:42Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-22T05:42Z
 - 2026-10-22T03:22Z · codex-plus:gpt-xhigh:impl · Codex 实现提交：代码块高32.656、复制按钮24x24、浮签68x24、pending/成功/失败重试/焦点恢复；定向70项、npm test 无新增失败。证据 relay-evidence/PIL-0127/impl/HANDOFF.md。转验证（CLI 账号 Sonnet）。
+- 2026-10-22T03:22Z · codex-plus:gpt-xhigh:impl · in_progress → verify
