@@ -56,6 +56,7 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 | --- | --- | --- | --- | --- | --- |
 | A1 | 定向 66/66；三语工具条与 tooltip、Files 禁用原因截图 | 通过 | D:\pilaude\relay-evidence\PIL-0010\verify\VERIFY.md | 721036d1 | claude-cli:sonnet-high:verify |
 | A2 | changes-window.mjs 7 组与 changes-window-restore.mjs 通过，无页面/控制台错误、无外部请求 | 通过 | D:\pilaude\relay-evidence\PIL-0010\verify\VERIFY.md | 721036d1 | claude-cli:sonnet-high:verify |
+| A3 | 原 textarea 同节点草稿不变；IME 组合不提交；添加到草稿经 ACK 只追加一次 | 通过 | D:\pilaude\relay-evidence\PIL-0010\verify\VERIFY.md | 721036d1 | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -69,3 +70,4 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 - 2026-10-22T13:17Z · codex-plus:sol-high:impl · verify → review
 - 2026-10-22T13:20Z · claude-cli:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T13:20Z · claude-cli:sonnet-high:verify · 证据 A2：通过
+- 2026-10-22T13:21Z · claude-cli:sonnet-high:verify · 证据 A3：通过
