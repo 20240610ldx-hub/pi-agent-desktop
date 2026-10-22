@@ -3,7 +3,7 @@ id: PIL-0072
 title: pi-powerline-footer 状态行接入并修复短窗叠字
 epic: E8
 priority: P1
-status: verify
+status: in_progress
 owner: claude-cli:sonnet-high:impl
 lease_until: 2026-10-22T14:17Z
 branch: task/PIL-0072-powerline-footer
@@ -52,3 +52,4 @@ waivers: []
 - 2026-10-22T11:46Z · claude-cli:sonnet-high:impl · 做了：带入 wip 的 powerline 适配与 e2e，装 pi-powerline-footer@0.20.2，primary 行加不透明 CSS 与重叠断言，THIRD_PARTY_NOTICES 记 LICENSE 缺口 / 状态：分支最后提交 59655a70，A1-A5 自测完成，A4 待用户决定打包，npm test 11 失败均在基线 12 内 / 下一步：交验证 / 风险：installer 不含该包时 factory 会抛错；无 3.1623 参考，量测待参考；交接 relay-evidence/PIL-0072/impl/HANDOFF.md
 - 2026-10-22T11:49Z · claude-cli:sonnet-high:impl · 缺包时跳过 powerline 扩展(不抛错,警告一次),补单测
 - 2026-10-22T11:49Z · claude-cli:sonnet-high:impl · in_progress → verify
+- 2026-10-22T12:11Z · claude-cli:sonnet-high:impl · verify → in_progress
