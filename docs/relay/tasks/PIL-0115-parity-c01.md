@@ -3,7 +3,7 @@ id: PIL-0115
 title: 复刻验收：C01 主题、文字与图标
 epic: E2
 priority: P1
-status: verify
+status: in_progress
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T15:40Z
 branch: task/PIL-0115-parity-c01
@@ -66,3 +66,4 @@ waivers: []
 - 2026-10-21T12:40Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T15:40Z
 - 2026-10-21T12:54Z · claude:sonnet-high:impl · 做了：无 3.1623 C01 同态参考，故未改 native-theme.css/组件值，不伪造。新增 ChatAppearance.test.mjs 4 条 C01 源码契约测试（夹具层：双主题文字令牌与字体栈、跟随系统仅 auto、PilaudeIcon 24 栅格/currentColor/18px 默认/aria-hidden、图标名全在表中）；浏览器层自测：键盘切主题（Light/Dark/System 方向键切换、System 跟随 OS、手动不跟随、Esc 后焦点回 profile、刷新保持）、DPR1/1.25/1.5 + 深浅 + 390 窄宽的令牌/图标/文字 canvas 度量（measure-c01.json）。收紧间距请求：唯一原生参考 ask 卡行距 20 CSS px，与现有 13px×1.5=19.5 差≤0.5，在容差内，未改全局 token，改前改后对照见 C01-findings.md。自测：本卡测试 8/8，tsc 0，lint 0，guard 无问题，npm test 12 失败均在 PIL-0113 基线内无新增。证据 D:/pilaude/relay-evidence/PIL-0115/impl/。 / 状态：分支最后提交 ce0b821；A1/A2 全部待 3.1623 补采（未运行）；A3 仅浏览器合成层，原生 DPI/应用缩放未运行；A4 私人字体未用；A5 自测通过 / 下一步：交验证；验证者对 A1–A4 缺参考项记未运行，补采见 PIL-0014 round3 RECAPTURE C01 / 风险：残差记录——图标描边 1.55 与上游图标 1.8/2 不一；disabled 不透明度各 consumer 0.35/0.45/0.5 不一，无统一令牌（需参考后另卡）；Windows 字体回退 Segoe UI Variable+微软雅黑与 Claude 3.1623 未对证。间距偏松需 3.1623 原生同态参考才能量化，可疑组件待对应卡量测：ask 卡/选项行（C-ask 对应卡）、侧栏 .sidebar-header-row、.pilaude-environment-row/.pilaude-context-card（PilaudeWorkspaceContext）、.composer-menu-row、.native-toolbar-button，均超出本卡 files。dev server 已停，AGENTS.md 已还原为已提交版本（next dev 会追加生成块）。
 - 2026-10-21T12:54Z · claude:sonnet-high:impl · in_progress → verify
+- 2026-10-22T02:28Z · claude:sonnet-high:impl · verify → in_progress：新参考到位，继续量测收紧
