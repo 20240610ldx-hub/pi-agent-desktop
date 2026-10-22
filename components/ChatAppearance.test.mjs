@@ -97,3 +97,15 @@ test("every PilaudeIcon name used by a component exists in the icon table", asyn
     }
   }
 });
+
+test("C01 text tiers use the measured native ramp rungs and 20px prose pitch", () => {
+  const section = nativeTheme.slice(nativeTheme.indexOf("/* C01 主题、文字与图标"), nativeTheme.indexOf("/* end C01 */"));
+  assert.ok(section.length > 100, "C01 section missing");
+  const rungs = (selector) => {
+    const block = section.slice(section.indexOf(`${selector} {`));
+    return [...block.slice(0, block.indexOf("}")).matchAll(/--cds-text-(primary|secondary|muted): var\(--cds-gray-(\d+)\)/g)].map((m) => `${m[1]}:${m[2]}`);
+  };
+  assert.deepEqual(rungs(":root"), ["primary:900", "secondary:600", "muted:400"]);
+  assert.deepEqual(rungs("html.dark"), ["primary:50", "secondary:200", "muted:400"]);
+  assert.match(section, /\.markdown-body \{\n  line-height: calc\(20px \+ var\(--chat-font-size-offset, 0px\)\);/);
+});
