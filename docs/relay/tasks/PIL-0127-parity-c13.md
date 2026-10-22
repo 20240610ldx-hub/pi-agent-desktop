@@ -69,3 +69,4 @@ waivers: []
 - 2026-10-22T03:22Z · codex-plus:gpt-xhigh:impl · Codex 实现提交：代码块高32.656、复制按钮24x24、浮签68x24、pending/成功/失败重试/焦点恢复；定向70项、npm test 无新增失败。证据 relay-evidence/PIL-0127/impl/HANDOFF.md。转验证（CLI 账号 Sonnet）。
 - 2026-10-22T03:22Z · codex-plus:gpt-xhigh:impl · in_progress → verify
 - 2026-10-22T03:55Z · codex-plus:gpt-xhigh:impl · 返工 FIX1(7158931)：代码文字色→#e5e7eb(ΔE00 3.69→0)、浮签上内距→2/4px(Δ+0.67css)、消息级 hover/focus 显示工具栏；定向74/74、tsc、lint、guard 通过、浏览器矩阵54/54；npm test 受共享 node_modules 缺 @earendil-works 影响未得可比结果
+- 2026-10-22T04:25Z · codex-plus:gpt-xhigh:impl · A5 修复：键盘聚焦用例改为纯键盘激活 Source、去掉 hover，MermaidBlock 连跑 5 次全过，npm test 仅剩基线 12 失败
