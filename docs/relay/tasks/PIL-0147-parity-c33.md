@@ -11,7 +11,7 @@ implementers: [claude:sonnet-high:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/SessionSidebar.tsx, components/SidebarTitle.tsx, components/SessionSidebar.test.mjs, components/SessionSidebar.session-search.test.mjs]
 files_shared: [app/native-theme.css]
-acceptance_sha: a61465879994
+acceptance_sha: 086c3471a705
 waivers: []
 ---
 
@@ -30,10 +30,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 项目/Chats 分组、空/有会话、搜索/无结果、running/needs-input/unread、长名称、固定/归档和重排。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0147/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 搜索/重命名测原生 IME；Tab/方向/Home/End 导航树与菜单，键盘重排/指针拖放/取消后焦点跟随真实项。长树/搜索列表滚动、固定/归档后位置、窄窗/三档 DPI/缩放/双主题核验；Chats 不暴露项目工作台动作。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：区分项目树与固定根会话，核对搜索、状态、长名称、浮签、键盘重排／指针拖放；真实元数据与全文结果不被演示替代。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
+- [ ] A1 本卡范围（用户 2026-10-22 决定拆卡）：仅已有 3.1623 原生同态参考的状态——选中会话行、子项缩进、导航行、悬停 `···`、浅/深配色，及选中行静止态右内距、组间距、会话行圆角（main-window-native/2026-10-22 的 00 浅、01 深、03 悬停）。逐图登记来源/版本、Windows/WebView2、客户区、系统 DPI、应用缩放、主题。Chats 分组、空态、搜索/无结果、running/needs-input/unread 标记、长名称、固定/归档、show-more/分组名/折叠箭头、浅色悬停底、重排、项目行与导航行 8px 圆角待参考：移至 PIL-0205。
+- [ ] A2 本卡范围（用户 2026-10-22 决定拆卡）：仅 A1 所列有 3.1623 参考的状态；无参考的状态（搜索框、分节标题、运行/未读/需要输入标记、show-more/分组名/固定/归档行、长名渐隐、折叠箭头/分支计数、浅色悬停底、项目行与导航行 8px 圆角）移至 PIL-0205。在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0147/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
+- [ ] A3 本卡范围（用户 2026-10-22 决定拆卡）：浏览器合成事件层——Tab/方向/Home/End 在树内移动焦点，Alt+↑/↓ 键盘重排且焦点跟随被移动行并可撤回，搜索命中与无结果提示，行菜单开/Esc 关且焦点回到 `···`，窄窗触屏行高与无横向溢出，DPR 1/1.25/1.5 × 浅/深无差异。原生与浏览器合成事件分层记录。原生 IME、Windows 原生 DPI/应用缩放、Chats 浏览器层不暴露项目工作台动作、running/needs-input/unread 状态对照、指针拖放（本卡已知未采用）移至 PIL-0205。
+- [ ] A4 本组件专属核验（夹具层）：在生成夹具上区分项目树与固定根会话，核对键盘重排；已知残差中本卡已处理者（`···` 贴行右缘、选中行静止态不预留 trailing、会话行圆角 6px）逐条给出处理结果与可复现操作，其余残差（标记槽位／警告三角、长名遮罩与参考截断、浮签字形边界、指针拖放）登记为移至 PIL-0205。夹具结果不称为真实 Pi consumer 通过；真实元数据／全文搜索与真实状态来源核验移至 PIL-0205。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test components/SessionSidebar.test.mjs components/SessionSidebar.session-search.test.mjs components/SessionSidebar.file-search.test.mjs components/SessionSidebar.project-identity.test.mjs components/SessionSidebar.worktree.test.mjs components/SidebarTitle.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0147`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -71,3 +71,4 @@ waivers: []
 - 2026-10-22T03:13Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-22T03:52Z · claude:sonnet-high:impl · 返工：会话行圆角 8→6，··· 按钮贴行右缘（标记中心仍 12.3），组间距同文本复测 39.0 vs 39.33 不改；测试/tsc/lint/guard 通过，npm test 失败 12 个同基线
 - 2026-10-22T04:21Z · claude:sonnet-high:impl · 返工2：选中行静止态不预留 trailing，标题右端距行右缘 9.33/10.0（参考 9.33）；测试 63/63、tsc/lint/guard 通过、npm test 新增失败 0（基线 12）
+- 2026-10-22T04:23Z · user · 修订验收标准 a61465879994 → 086c3471a705：用户2026-10-22拆卡政策：已验部分留本卡（有3.1623参考的夹具层与深/浅色项），缺参考与原生项移至PIL-0205
