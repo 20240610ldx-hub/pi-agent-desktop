@@ -47,6 +47,7 @@ waivers: []
 | A2 | 有界运行 5m3.5s<30min，超时用例逐个列出 | 通过 | D:\pilaude\relay-evidence\PIL-0002\verify\VERIFY-3.md | 4a8ae575 | claude-cli:haiku:verify |
 | A3 | 每个失败的文件/用例/首行/upstream 对比/归类逐行对照 upstream-*.log | 通过 | D:\pilaude\relay-evidence\PIL-0002\verify\VERIFY-3.md | 4a8ae575 | claude-cli:haiku:verify |
 | A4 | 修复卡 PIL-0213–0216/0218 存在且与基线卡号一致，notices 归 PIL-0114，未改测试/产品代码 | 通过 | D:\pilaude\relay-evidence\PIL-0002\review\REVIEW.md | 4a8ae575 | claude-cli:sonnet-medium:review |
+| A5 | 用户授权草稿 PR #1，两次推送 actions/runs=0、无 github-actions 套件；Actions 不可运行，未取得 Linux 结果，未与 Windows 混合 | 通过（条件款不成立：未取得 Linux 结果） | D:\pilaude\relay-evidence\PIL-0002\verify\A5-ci.md | 4a8ae575 | claude-cli:sonnet-medium:review |
 
 ## 日志
 
@@ -59,3 +60,4 @@ waivers: []
 - 2026-10-22T13:13Z · claude-cli:haiku:verify · 证据 A2：通过
 - 2026-10-22T13:13Z · claude-cli:haiku:verify · 证据 A3：通过
 - 2026-10-22T13:14Z · claude-cli:sonnet-medium:review · 证据 A4：通过
+- 2026-10-22T13:14Z · claude-cli:sonnet-medium:review · 证据 A5：通过（条件款不成立：未取得 Linux 结果）
