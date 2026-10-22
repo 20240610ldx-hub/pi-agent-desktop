@@ -3,7 +3,7 @@ id: PIL-0010
 title: Changes 面板在独立窗口打开（功能迁入与浏览器层验证）
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: codex-plus:sol-high:impl
 lease_until: 2026-10-22T12:54Z
 branch: task/PIL-0010-changes-popout-window
@@ -63,3 +63,4 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 - 2026-10-22T00:00Z · claude:sonnet-high:planner · 做了：重写验收标准为浏览器层 A1–A6，原生窗口实测拆到 PIL-0200，初始导航隔离难题归入 PIL-0111 的夹具代理方案；核对 19 文件可干净迁移（除 fork-ownership.json）。状态：未冻结（acceptance_sha 已清空，原冻结文本作废，需协调者重新 freeze，缩小范围的部分需用户确认）。下一步：协调者审阅后 freeze。风险：A1 的通用 pane 工具条改动落在 WorkspacePaneDock／Controls 等复刻卡拥有的文件，合入需依赖顺序。
 - 2026-10-22T03:34Z · planner · 冻结验收标准 b6c8d8d40ea3
 - 2026-10-22T09:54Z · codex-plus:sol-high:impl · 领取，租约至 2026-10-22T12:54Z
+- 2026-10-22T12:56Z · codex-plus:sol-high:impl · in_progress → verify
