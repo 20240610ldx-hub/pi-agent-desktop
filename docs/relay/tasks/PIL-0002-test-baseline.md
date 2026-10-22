@@ -45,6 +45,7 @@ waivers: []
 | --- | --- | --- | --- | --- | --- |
 | A1 | 复核 check-deps/tsc/lint/npm test 命令、退出码、耗时与 impl 日志一致 | 通过 | D:\pilaude\relay-evidence\PIL-0002\verify\VERIFY-3.md | 4a8ae575 | claude-cli:haiku:verify |
 | A2 | 有界运行 5m3.5s<30min，超时用例逐个列出 | 通过 | D:\pilaude\relay-evidence\PIL-0002\verify\VERIFY-3.md | 4a8ae575 | claude-cli:haiku:verify |
+| A3 | 每个失败的文件/用例/首行/upstream 对比/归类逐行对照 upstream-*.log | 通过 | D:\pilaude\relay-evidence\PIL-0002\verify\VERIFY-3.md | 4a8ae575 | claude-cli:haiku:verify |
 
 ## 日志
 
@@ -55,3 +56,4 @@ waivers: []
 - 2026-10-22T12:54Z · codex-plus:luna-medium:impl · 用户 2026-10-22 同意在 GitHub Actions 跑一次 Linux CI（草稿 PR 触发，被自动模式拦截，待用户执行）
 - 2026-10-22T13:13Z · claude-cli:haiku:verify · 证据 A1：通过
 - 2026-10-22T13:13Z · claude-cli:haiku:verify · 证据 A2：通过
+- 2026-10-22T13:13Z · claude-cli:haiku:verify · 证据 A3：通过
