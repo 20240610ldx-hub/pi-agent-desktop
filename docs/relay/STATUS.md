@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 125 张任务卡：todo 94 · in_progress 3 · verify 1 · review 0 · done 20 · blocked 2 · parked 5
+共 125 张任务卡：todo 93 · in_progress 4 · verify 1 · review 0 · done 20 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -34,6 +34,7 @@
 | PIL-0002 | P0 | verify | 建立可信的测试基线并逐项登记已知失败 | codex-plus:luna-medium:impl | 2026-10-22T12:04Z | task/PIL-0002-test-baseline |
 | PIL-0010 | P1 | in_progress | Changes 面板在独立窗口打开（功能迁入与浏览器层验证） | codex-plus:sol-high:impl | 2026-10-22T12:54Z | task/PIL-0010-changes-popout-window |
 | PIL-0030 | P1 | in_progress | 统一执行前授权并接入 pi-permission-system（普通 coding 会话授权门） | codex-plus:sol-xhigh:impl | 2026-10-22T12:54Z | task/PIL-0030-permission-gate |
+| PIL-0072 | P1 | in_progress | pi-powerline-footer 状态行接入并修复短窗叠字 | claude-cli:sonnet-high:impl | 2026-10-22T14:17Z | task/PIL-0072-powerline-footer |
 | PIL-0011 | P2 | in_progress | 查清并修复 FileViewer 窄 pane 下载被取消 | codex-plus:sol-high:impl | 2026-10-22T12:35Z | task/PIL-0011-fileviewer-download |
 
 ### 阻塞
@@ -48,7 +49,6 @@
 | PIL-0040 | P1 | E5 | 受控浏览器 | 否 | PIL-0030 |
 | PIL-0050 | P1 | E6 | 多代理完整流程与 pi-subagents 适配 | 否 | PIL-0030, PIL-0202 |
 | PIL-0071 | P1 | E8 | pi-web-access 接入普通会话 | 是 | PIL-0001 |
-| PIL-0072 | P1 | E8 | pi-powerline-footer 状态行接入并修复短窗叠字 | 是 | PIL-0001 |
 | PIL-0073 | P1 | E8 | Plannotator 计划审阅接入 | 是 | PIL-0001 |
 | PIL-0074 | P1 | E8 | pi-background-tasks 接入界面与普通会话 | 是 | PIL-0001 |
 | PIL-0100 | P1 | E10 | 首次使用引导：不开终端完成第一个真实任务 | 否 | — |
