@@ -20,6 +20,17 @@ test("C33 session corners and trailing controls match the native reference geome
   assert.match(c33, /\.session-item-main \.session-activity-dot:not\(\.is-idle\) \{[^}]*right: 8\.7px;/);
 });
 
+test("C33 selected idle row reserves no trailing width; hover, menu and marker rows keep it", async () => {
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  const c33 = css.slice(css.indexOf("/* C33 侧栏项目／会话、搜索、状态及重排"));
+  // Resting selected row: hidden "···" and the title ends ~9.3 from the row edge (reference 9.33).
+  const rest = ".session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open, .session-activity-dot:not(.is-idle)))";
+  assert.ok(c33.includes(`${rest} .session-item-main { padding-right: 8px; }`));
+  // The generic 27.2px reservation stays for hover / focus / open menu / marker rows (and unselected rows).
+  assert.match(css, /\.app-shell \.session-item:has\(\.session-item-trailing:not\(\[hidden\]\)\) \.session-item-main \{ padding-right: 27\.2px; \}/);
+  assert.ok(css.indexOf("padding-right: 27.2px; }") < css.indexOf(rest), "override must come after the generic reservation");
+});
+
 test("project-list notifications change only when ordered paths or the receiver change", () => {
   const ast = ts.createSourceFile("SessionSidebar.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const component = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "SessionSidebar");

@@ -10876,6 +10876,10 @@ html.dark .app-shell .session-sidebar {
 .app-shell .session-sidebar .session-item:is(:hover, :focus-within, :has(.session-item-more.is-open)) .session-item-main .session-activity-dot:not(.is-idle) { opacity: 0; }
 /* A selected row at rest carries no "···"; hover, focus and an open menu show it. */
 .app-shell .session-sidebar .session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open)) .session-item-trailing { display: none; }
+/* ...and so reserves no trailing width either: the reference title ends 9.33 from the
+   row edge. A running / unread mark still sits there, so those rows keep the inset; the
+   title stays clipped (ellipsis-free fade) at the content edge, never overflowing. */
+.app-shell .session-sidebar .session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open, .session-activity-dot:not(.is-idle))) .session-item-main { padding-right: 8px; }
 .app-shell .session-sidebar .session-item-more svg { display: block; }
 
 /* Children: text at 38.2 (row padding 30 + 20 per extra level) and an elbow guide. */
