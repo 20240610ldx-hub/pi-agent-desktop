@@ -1,6 +1,6 @@
 ---
 id: PIL-0217
-title: tmp-branch-summary-fixture
+title: 已作废：branch-summary-guard 夹具（PIL-0137 已修复）
 epic: E0
 priority: P2
 status: parked
