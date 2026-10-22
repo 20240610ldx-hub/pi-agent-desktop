@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 110 张任务卡：todo 92 · in_progress 3 · verify 3 · review 0 · done 7 · blocked 0 · parked 5
+共 111 张任务卡：todo 93 · in_progress 3 · verify 3 · review 0 · done 7 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -137,6 +137,7 @@
 | PIL-0176 | P2 | E2 | 复刻验收：C62 环境变量编辑子页 | 是 | PIL-0014, PIL-0173, PIL-0181, PIL-0182 |
 | PIL-0190 | P2 | E2 | 复刻验收：C54b 下载、安装、失败与重启界面 | 是 | PIL-0014, PIL-0003, PIL-0110, PIL-0112 |
 | PIL-0196 | P2 | E5 | 受控浏览器 pane 桥接契约 | 否 | PIL-0191, PIL-0195 |
+| PIL-0198 | P2 | E2 | 复刻验收补采：C02 按钮其余尺寸、变体与交互状态 | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
 ### 已完成（7）
