@@ -3,11 +3,11 @@ id: PIL-0001
 title: 接力治理落地与工作树分流
 epic: E0
 priority: P0
-status: todo
-owner:
-lease_until:
+status: in_progress
+owner: claude-cli:haiku:impl
+lease_until: 2026-10-22T12:45Z
 branch: task/PIL-0001-relay-bootstrap
-implementers: [claude:sonnet-high:impl]
+implementers: [claude:sonnet-high:impl, claude-cli:haiku:impl]
 depends_on: []
 files_allowed: [AGENTS.md, CLAUDE.md, scripts/relay.mjs, scripts/relay.test.mjs, .githooks/**, docs/relay/GOALS.md, docs/relay/README.md, docs/relay/RULES.md, docs/relay/STATUS.md, docs/relay/claude/agents/pil-debugger.md, docs/relay/claude/agents/pil-implementer.md, docs/relay/claude/agents/pil-planner.md, docs/relay/claude/agents/pil-reviewer.md, docs/relay/claude/agents/pil-verifier.md, docs/relay/claude/settings.json, docs/relay/claude/skills/relay/SKILL.md, docs/relay/relay.config.json, docs/relay/roles/coordinator.md, docs/relay/roles/implementer.md, docs/relay/roles/planner.md, docs/relay/roles/reviewer.md, docs/relay/roles/verifier.md, docs/relay/tasks/PIL-0001-relay-bootstrap.md, docs/relay/tasks/PIL-0002-test-baseline.md, docs/relay/tasks/PIL-0003-identity-finish.md, docs/relay/tasks/PIL-0010-changes-popout-window.md, docs/relay/tasks/PIL-0011-fileviewer-download.md, docs/relay/tasks/PIL-0012-formula-caret-special.md, docs/relay/tasks/PIL-0013-changes-residuals.md, docs/relay/tasks/PIL-0014-parity-index.md, docs/relay/tasks/PIL-0020-data-credentials.md, docs/relay/tasks/PIL-0030-permission-gate.md, docs/relay/tasks/PIL-0040-controlled-browser.md, docs/relay/tasks/PIL-0050-multi-agent.md, docs/relay/tasks/PIL-0060-scheduled-tasks-grants.md, docs/relay/tasks/PIL-0070-todo-finish.md, docs/relay/tasks/PIL-0071-web-access.md, docs/relay/tasks/PIL-0072-powerline-footer.md, docs/relay/tasks/PIL-0073-plannotator.md, docs/relay/tasks/PIL-0074-background-tasks.md, docs/relay/tasks/PIL-0075-usage-real-account.md, docs/relay/tasks/PIL-0076-extension-management.md, docs/relay/tasks/PIL-0090-lifecycle-recovery.md, docs/relay/tasks/PIL-0100-first-run.md, docs/relay/tasks/PIL-0110-release-pipeline.md, docs/relay/tasks/PIL-0111-windows-native-baseline.md, docs/relay/tasks/PIL-0112-signing-material.md, docs/relay/templates/task.md]
 files_shared: []
@@ -58,3 +58,4 @@ waivers: [R6:user-requested-initial-governance-2026-10-19]
 - 2026-10-19T14:16Z · codex:gpt:coord · in_progress → todo：用户要求本批收尾后暂停；快照、预检和hook演示已保存，A3仍有9条历史文档未归属，A4未获清理同意，保留现场与任务分支
 - 2026-10-19T14:19Z · codex:gpt:coord · 路径校正：上一条实现者日志中的反斜杠和D;为终端转义结果。实际证据目录为D:/pilaude/relay-evidence/PIL-0001/，包括wip-mapping.md、wip-mapping.json、cleanup-review.json、a5-hook-probe.json和bootstrap-precheck/relay-test.metadata.json。14:07后新增材料应另存，不能覆盖已有快照。原日志保留，本条为可接续的准确路径。
 - 2026-10-22T09:42Z · unknown · 2026-10-22 用户决定：9 条 docs/engineering/** 历史文档标为归档、无需任务卡归属（AGENTS.md 已定为历史档案）；用户书面追认 A4：主 checkout 已恢复干净，旧改动以 wip/pre-relay-2026-10-19 与 -index 快照分支为准。审计见 relay-evidence/PIL-0001/audit-2026-10-22.md。
+- 2026-10-22T09:45Z · claude-cli:haiku:impl · 领取，租约至 2026-10-22T12:45Z

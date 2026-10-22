@@ -25,12 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 122 张任务卡：todo 94 · in_progress 3 · verify 2 · review 0 · done 16 · blocked 2 · parked 5
+共 122 张任务卡：todo 93 · in_progress 4 · verify 2 · review 0 · done 16 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
+| PIL-0001 | P0 | in_progress | 接力治理落地与工作树分流 | claude-cli:haiku:impl | 2026-10-22T12:45Z | task/PIL-0001-relay-bootstrap |
 | PIL-0002 | P0 | verify | 建立可信的测试基线并逐项登记已知失败 | codex-plus:luna-medium:impl | 2026-10-22T12:04Z | task/PIL-0002-test-baseline |
 | PIL-0130 | P1 | in_progress | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | codex-plus:luna-high:impl | 2026-10-22T10:57Z | task/PIL-0130-parity-c16 |
 | PIL-0137 | P1 | verify | 复刻验收：C23 长会话滚动跟随与历史恢复 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0137-parity-c23 |
@@ -46,7 +47,6 @@
 
 | ID | 优先级 | Epic | 标题 | 验收已冻结 | 依赖 |
 | --- | --- | --- | --- | --- | --- |
-| PIL-0001 | P0 | E0 | 接力治理落地与工作树分流 | 是 | — |
 | PIL-0010 | P1 | E2 | Changes 面板在独立窗口打开（功能迁入与浏览器层验证） | 是 | PIL-0001 |
 | PIL-0030 | P1 | E4 | 统一执行前授权并接入 pi-permission-system（普通 coding 会话授权门） | 是 | PIL-0001 |
 | PIL-0040 | P1 | E5 | 受控浏览器 | 否 | PIL-0030 |
