@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 131 张任务卡：todo 97 · in_progress 4 · verify 0 · review 0 · done 22 · blocked 2 · parked 6
+共 132 张任务卡：todo 98 · in_progress 4 · verify 0 · review 0 · done 22 · blocked 2 · parked 6
 
 ### 进行中 / 待验证 / 待评审
 
@@ -140,6 +140,7 @@
 | PIL-0215 | P2 | E0 | 修复子 agent 标签图标与推荐扩展目录数量测试 | 否 | PIL-0002 |
 | PIL-0216 | P2 | E0 | 修复侧栏触屏菜单可达与中断工具调用标记契约测试 | 否 | PIL-0002 |
 | PIL-0218 | P2 | E0 | 修复 Windows 下 PATH 键与 project-trust 隔离主目录测试 | 否 | PIL-0002 |
+| PIL-0219 | P2 | PIL-0010 | Changes 弹窗记录残留与校验断言 | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 | PIL-0207 | P3 | E2 | C08 分叉发送入口（待用户开启） | 是 | PIL-0122, PIL-0189 |
 
