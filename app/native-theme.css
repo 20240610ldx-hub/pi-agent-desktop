@@ -10492,3 +10492,38 @@ html.dark .changes-pane {
 .saved-file-card-reveal:hover {
   background: var(--bg-hover);
 }
+
+/* C01 主题、文字与图标 -------------------------------------------------------
+   Tokens measured on the Windows Claude Desktop 3.1623.0.0 native captures
+   (main-window-native/2026-10-22, 00 light / 01 dark; CSS px = raw px / 1.5).
+   Ink colours are the extreme-coverage pixels of text and icon glyphs, which
+   equal the glyph colour: light primary #0b0b0b, secondary #52514e, muted
+   #898781; dark primary #f0efec, secondary #c3c2b7, muted #898781. All values
+   are rungs of the vendored gray ramp. The tiers are set once here, on the
+   shared tokens, so components inherit them without per-component overrides. */
+:root {
+  --cds-text-primary: var(--cds-gray-900);
+  --cds-text-secondary: var(--cds-gray-600);
+  --cds-text-muted: var(--cds-gray-400);
+  --text-muted: var(--cds-text-secondary);
+  --text-dim: var(--cds-text-muted);
+}
+html.dark {
+  --cds-text-primary: var(--cds-gray-50);
+  --cds-text-secondary: var(--cds-gray-200);
+  --cds-text-muted: var(--cds-gray-400);
+  --text-muted: var(--cds-text-secondary);
+  --text-dim: var(--cds-text-muted);
+}
+.app-shell,
+html.dark .app-shell {
+  --text: var(--cds-text-primary);
+  --text-muted: var(--cds-text-secondary);
+  --text-dim: var(--cds-text-muted);
+}
+/* Assistant prose: 14px glyphs on a 20px pitch (reference 30 raw px per line,
+   was 22.4px at 1.6). The offset keeps the Small/Large chat sizes in step. */
+.markdown-body {
+  line-height: calc(20px + var(--chat-font-size-offset, 0px));
+}
+/* end C01 */

@@ -49,3 +49,63 @@ test("conversation size normalizes legacy preferences to small, medium or large"
     assert.equal(clampChatContentFontSize(value), expected);
   }
 });
+
+// C01 theme / icon source contracts (fixture layer: reads source, not a rendered page).
+const nativeTheme = (await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8")).replaceAll("\r\n", "\n");
+const iconSource = await readFile(new URL("./PilaudeIcon.tsx", import.meta.url), "utf8");
+const themeHook = await readFile(new URL("../hooks/useTheme.ts", import.meta.url), "utf8");
+
+const cssBlock = (selector, scheme) => {
+  const start = nativeTheme.indexOf(`\n${selector} {\n  color-scheme: ${scheme};`);
+  assert.notEqual(start, -1, `${selector} block missing`);
+  return nativeTheme.slice(start, nativeTheme.indexOf("\n}", start));
+};
+
+test("light and dark themes both define every text tier and the UI font stack once", () => {
+  for (const block of [cssBlock(":root", "light"), cssBlock("html.dark", "dark")]) {
+    for (const token of ["--text", "--text-muted", "--text-dim", "--text-meta", "--accent"]) {
+      assert.match(block, new RegExp(`\n  ${token}:`), `${token} missing`);
+    }
+  }
+  const root = cssBlock(":root", "light");
+  assert.match(root, /--font-ui:[^;]*"PingFang SC"[^;]*"Segoe UI Variable"/);
+  assert.match(root, /--font-ui:[^;]*"Microsoft YaHei"[^;]*"Noto Sans SC"[^;]*sans-serif;/);
+});
+
+test("theme preference follows the system only while it is auto", () => {
+  assert.match(themeHook, /if \(current\.preference !== "auto"\) return;/);
+  assert.match(themeHook, /matchMedia\("\(prefers-color-scheme: dark\)"\)/);
+  assert.match(themeHook, /classList\.toggle\("dark", isDarkTheme\(theme\)\)/);
+});
+
+test("PilaudeIcon is a 24-grid currentColor stroke icon that defaults to 18px and is hidden from AT", () => {
+  assert.match(iconSource, /size = 18/);
+  assert.match(iconSource, /viewBox="0 0 24 24"/);
+  assert.match(iconSource, /stroke="currentColor"/);
+  assert.match(iconSource, /aria-hidden="true"/);
+});
+
+test("every PilaudeIcon name used by a component exists in the icon table", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const table = new Set([...iconSource.matchAll(/^  (\w+): "/gm)].map((m) => m[1]));
+  assert.ok(table.size >= 19);
+  for (const file of await readdir(new URL(".", import.meta.url))) {
+    if (!file.endsWith(".tsx")) continue;
+    const source = await readFile(new URL(`./${file}`, import.meta.url), "utf8");
+    for (const [, name] of source.matchAll(/<PilaudeIcon name="(\w+)"/g)) {
+      assert.ok(table.has(name), `${file} uses unknown icon ${name}`);
+    }
+  }
+});
+
+test("C01 text tiers use the measured native ramp rungs and 20px prose pitch", () => {
+  const section = nativeTheme.slice(nativeTheme.indexOf("/* C01 主题、文字与图标"), nativeTheme.indexOf("/* end C01 */"));
+  assert.ok(section.length > 100, "C01 section missing");
+  const rungs = (selector) => {
+    const block = section.slice(section.indexOf(`${selector} {`));
+    return [...block.slice(0, block.indexOf("}")).matchAll(/--cds-text-(primary|secondary|muted): var\(--cds-gray-(\d+)\)/g)].map((m) => `${m[1]}:${m[2]}`);
+  };
+  assert.deepEqual(rungs(":root"), ["primary:900", "secondary:600", "muted:400"]);
+  assert.deepEqual(rungs("html.dark"), ["primary:50", "secondary:200", "muted:400"]);
+  assert.match(section, /\.markdown-body \{\n  line-height: calc\(20px \+ var\(--chat-font-size-offset, 0px\)\);/);
+});
