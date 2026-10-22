@@ -55,6 +55,7 @@ waivers: []
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
 | A1 | 已验子集：状态登记与夹具层呈现 | 通过 | D:\pilaude\relay-evidence\PIL-0126\verify\VERIFY.md | 2be4b18 | claude-cli:sonnet-medium:verify |
+| A2 | 内联代码徽记几何、填充色与文字色 ΔE00 0（返工后） | 通过 | D:\pilaude\relay-evidence\PIL-0126\verify\VERIFY-2.md | 81bf06d | claude-cli:sonnet-medium:verify |
 
 ## 日志
 
@@ -69,3 +70,4 @@ waivers: []
 - 2026-10-22T07:52Z · codex-plus:gpt-xhigh:impl · in_progress → verify
 - 2026-10-22T08:27Z · user · 修订验收标准 3cdd326cbfe6 → 94ea750078ed：拆卡政策（用户 2026-10-22 批准）：已验子集留本卡，缺同态参考或真实 Pi 链路的状态移至 PIL-0208（C12 补采与原生验收）。内联代码文字色按复验 ΔE00=31.7 未达标，改移 PIL-0208。
 - 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A1：通过
+- 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A2：通过
