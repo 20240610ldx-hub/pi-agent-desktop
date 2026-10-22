@@ -57,6 +57,7 @@ waivers: []
 | A1 | 已验子集：状态登记与夹具层呈现 | 通过 | D:\pilaude\relay-evidence\PIL-0126\verify\VERIFY.md | 2be4b18 | claude-cli:sonnet-medium:verify |
 | A2 | 内联代码徽记几何、填充色与文字色 ΔE00 0（返工后） | 通过 | D:\pilaude\relay-evidence\PIL-0126\verify\VERIFY-2.md | 81bf06d | claude-cli:sonnet-medium:verify |
 | A3 | 浏览器合成层 8 组：无溢出、Tab/hover 进入操作条、触屏常显 | 通过 | D:\pilaude\relay-evidence\PIL-0126\verify\VERIFY.md | 2be4b18 | claude-cli:sonnet-medium:verify |
+| A4 | 复制/分叉夹具反馈、Pin/朗读未伪造（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0126\verify\VERIFY.md | 2be4b18 | claude-cli:sonnet-medium:verify |
 
 ## 日志
 
@@ -73,3 +74,4 @@ waivers: []
 - 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A1：通过
 - 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A2：通过
 - 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A3：通过
+- 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A4：通过
