@@ -2900,7 +2900,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         {!compact && <div className="chat-composer-controls" style={{
           marginTop: 6,
           display: isNarrow ? "grid" : "flex",
-          gridTemplateColumns: isNarrow ? "auto minmax(0, 1fr) auto" : undefined,
+          gridTemplateColumns: isNarrow ? "minmax(0, 1fr) auto" : undefined,
           alignItems: "center",
           gap: 6,
         }}>

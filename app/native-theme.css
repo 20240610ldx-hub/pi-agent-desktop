@@ -10934,10 +10934,11 @@ html.dark .app-shell .session-sidebar .session-item { --bg-hover: #232323; }
    are tokens so the spacing is tightened in one place. */
 .app-shell .chat-composer:not([data-compact]) {
   --c08-card-radius: 16px;
+  --composer-line-focus: #c7c7c6; /* 3.1623 focused light border; dark keeps #4d4d4c from the base rule */
   --c08-control: 28px;
   --c08-row-gap: 6px;
   --c08-pad-block: 8px;
-  --c08-pad-start: 6px;
+  --c08-pad-start: 6.7px;
   --c08-pad-end: 8px;
   --c08-tile: 120px;
   --c08-tile-gap: 6px;
@@ -10953,7 +10954,7 @@ html.dark .app-shell .session-sidebar .session-item { --bg-hover: #232323; }
   gap: var(--c08-row-gap) !important;
   align-items: flex-end !important;
 }
-.app-shell .chat-composer:not([data-compact]) .chat-input-textarea { margin: 3.5px 0; }
+.app-shell .chat-composer:not([data-compact]) .chat-input-textarea { margin: 2.7px 0 4.3px; }
 .app-shell .chat-composer:not([data-compact]) .composer-attach-button {
   flex: 0 0 var(--c08-control);
   align-self: flex-end;
@@ -10980,6 +10981,8 @@ html.dark .app-shell .session-sidebar .session-item { --bg-hover: #232323; }
   object-fit: contain;
   border-radius: 8px;
 }
+/* Send glyph: ink 13.3x11.3 with a ~1.1px stroke, centre 1.7px below the button centre (3.1623 composer-tooltips-light 01). */
+.app-shell .chat-composer:not([data-compact]) .composer-send-button[data-action="send"] svg { width: 19px; height: 19px; stroke-width: 1; transform: translateY(2.3px); }
 .composer-send-tooltip {
   position: absolute;
   left: 50%;
@@ -11009,9 +11012,14 @@ html.dark .composer-send-tooltip { background: #20201f; color: #f0efec; box-shad
   padding: 0 4.5px;
   border: 0.8px solid #2d2d2b;
   border-radius: 4px;
-  color: #a5a49a;
+  color: #9b9a90;
   font: 400 11px/1 var(--font-ui);
 }
 .composer-keycap[data-glyph] { width: 16px; padding: 0; }
 html.dark .composer-keycap { border-color: #4d4d4c; color: #c3c2b7; }
+@media (max-width: 640px) {
+  /* The attach button moved into the card, so the footer grid has two columns. */
+  .app-shell .chat-composer-controls .composer-model-controls { grid-column: 1; }
+  .app-shell .chat-composer-controls .composer-session-controls { grid-column: 2; }
+}
 /* end C08 */

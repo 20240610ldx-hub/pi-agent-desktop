@@ -1382,3 +1382,59 @@ test("selector rows expose a plain default star separate from the selected optio
   assert.doesNotMatch(active, /polyline/);
   assert.doesNotMatch(active, /border-left/);
 });
+
+test("C08 main card is [attach][text][send] in one row: attach sits in the editor before the textarea", () => {
+  const html = renderWithI18n(React.createElement(ChatInput, { onSend() {}, onAbort() {}, isStreaming: false }));
+  const editorStart = html.indexOf('class="chat-composer-editor"');
+  const attach = html.indexOf("composer-attach-button");
+  const textarea = html.indexOf('class="chat-input-textarea"');
+  const send = html.indexOf('data-action="send"');
+  const controls = html.indexOf('class="chat-composer-controls"');
+  assert.ok(editorStart >= 0 && attach > editorStart, "attach button is inside the editor");
+  assert.ok(textarea > attach, "attach button precedes the textarea");
+  assert.ok(send > textarea, "send follows the textarea");
+  if (controls >= 0) assert.ok(attach < controls, "attach is not in the footer row");
+  assert.equal((html.match(/composer-attach-button/g) || []).length, 1);
+  assert.doesNotMatch(html, /composer-leading-actions/);
+});
+
+test("C08 composer renders no microphone control, label or placeholder", () => {
+  for (const props of [{}, { isStreaming: true }, { compact: true }]) {
+    const html = renderWithI18n(React.createElement(ChatInput, { onSend() {}, onAbort() {}, ...props }));
+    assert.doesNotMatch(html, /aria-label="[^"]*(microphone|Microphone|dictat|Dictat|voice|Voice|麥克風|麦克风|錄音|录音)[^"]*"/);
+    assert.doesNotMatch(html, /composer-mic|composer-voice/);
+  }
+});
+
+test("C08 compact quote composer has no attach button", () => {
+  const html = renderWithI18n(React.createElement(ChatInput, { onSend() {}, onAbort() {}, compact: true }));
+  assert.doesNotMatch(html, /composer-attach-button/);
+});
+
+test("C08 send hint is closed on first render and keeps the accessible name without a title", () => {
+  const html = renderWithI18n(React.createElement(ChatInput, { onSend() {}, onAbort() {}, isStreaming: false }));
+  // Disabled (empty draft) Send never owns a hint; hover/focus state starts closed.
+  assert.doesNotMatch(html, /role="tooltip"|composer-send-tooltip|aria-describedby/);
+  assert.match(html, /data-action="send"[^>]*aria-label="Send"/);
+});
+
+test("C08 send hint wiring: hover, keyboard focus, Escape and blur, tooltip role and describedby", () => {
+  const src = readFileSync(new URL("./ChatInput.tsx", import.meta.url), "utf8");
+  // Opens on hover and focus-visible only; closes on leave, blur and Escape.
+  assert.match(src, /onMouseEnter=\{\(\) => setSendTipOpen\(true\)\}/);
+  assert.match(src, /onMouseLeave=\{\(\) => setSendTipOpen\(false\)\}/);
+  assert.match(src, /e\.target\.matches\(":focus-visible"\)\) setSendTipOpen\(true\)/);
+  assert.match(src, /onBlur=\{\(\) => setSendTipOpen\(false\)\}/);
+  assert.match(src, /e\.key === "Escape"\) setSendTipOpen\(false\)/);
+  // The tooltip is a tooltip, referenced by the button only while open and available.
+  assert.match(src, /aria-describedby=\{sendTipAvailable && sendTipOpen \? sendTipId : undefined\}/);
+  assert.match(src, /id=\{sendTipId\} role="tooltip" className="composer-send-tooltip"/);
+  // Hidden on compact, mobile, streaming (Stop/Queue keep native title) and disabled Send.
+  assert.match(src, /const sendTipAvailable = !compact && !isMobile && !isStreaming && !sendDisabled;/);
+  // The native title is dropped while the custom hint is available so they never stack.
+  assert.match(src, /title=\{sendTipAvailable \? undefined : t\(showStop/);
+  // Ctrl keycap is shown when Enter alone does not send.
+  assert.match(src, /sendShortcutNeedsCtrl = isMobile \|\| enterSendMode === "ctrlEnter"/);
+  // No fork-send row until PIL-0189 has a real consumer in the shell (moved out of C08).
+  assert.doesNotMatch(src, /composer-fork|forkSend|sendInFork/);
+});
