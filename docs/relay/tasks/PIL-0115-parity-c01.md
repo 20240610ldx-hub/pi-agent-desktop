@@ -11,7 +11,7 @@ implementers: [claude:sonnet-high:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/PilaudeIcon.tsx, hooks/useChatAppearance.ts, components/ChatAppearance.test.mjs]
 files_shared: [app/native-theme.css]
-acceptance_sha: 6cc05af0a7e0
+acceptance_sha: 1b38071c64d4
 waivers: []
 ---
 
@@ -30,10 +30,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 主题切换与跟随系统、中英文/数字/标点字体回退、图标大小与 disabled 色；主题资源本身无会话加载/错误/展开状态，不造此类状态。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0115/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 用主题切换器键盘进入/切换/返回，检查 100%/125%/150% DPI、应用缩放、中英文公开字体回退与深浅色。IME、列表滚动、方向/Home/End 不用于本体：主题/字形/图标无文本框或列表。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：用公开字体回退和合法图标量测中英文、数字与标点的ink边界、行高和基线；私人字体实例不作发行结果。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
+- [ ] A1 本卡范围（用户 2026-10-22 决定拆卡）：仅已有 3.1623 原生同态参考的状态——浅色/深色主窗口（main-window-native/2026-10-22/00、01）中主区正文、顶栏标题、侧栏导航次要文字、输入框占位与分区标题的三档文字令牌（primary/secondary/dim）及正文行距。逐图登记来源、版本、DPI、应用缩放、主题。主题切换器状态、字体回退、图标 disabled 色、窄窗等无参考状态转 PIL-0199。
+- [ ] A2 对 A1 所列状态，在同帧/同状态下给出参考值、实现值、原像素与 CSS px、差值：文字令牌颜色 CIEDE2000 ΔE ≤2（sRGB→Lab D65，字形区域中位色），正文行距 ≤1 CSS px（3.1623 原生 CSS px = 原像素 ÷1.5）。侧栏消费者（会话标题、项目名、分组标签、导航图标位置与尺寸）未使用 C01 令牌或受侧栏规则覆盖的偏差归 PIL-0147（C33），不计入本卡；本卡须保证令牌值本身正确。抗锯齿与字形 ink 差单列残差。
+- [ ] A3 主题令牌在浅/深两套中一致生效：切换主题（含跟随系统）后 A1 所列文字颜色随之变化；markdown 正文行距在 Small/Large 档位保留偏移。验证层为浏览器（next dev），原生 DPI、应用缩放与字体回退层转 PIL-0199。
+- [ ] A4 本组件专属核验：A1 状态的量测表与改前改后对照完整；全局 --text-dim 浅色改为原生值 #898781 后的对比度变化（小字场景）逐项列出并说明取舍；已知残差（图标描边、disabled 不透明度不统一、markdown 行高旧规则双源）逐条记录处理结果。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test components/ChatAppearance.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0115`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -80,3 +80,5 @@ waivers: []
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A4：未运行
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A5：通过
 - 2026-10-22T02:52Z · claude:sonnet-high:impl · verify → in_progress：A2 失败：亮/暗侧栏会话标题与分组标题未采用三档令牌（亮会话标题 ΔE 21.55，分组 12.26 因 native-theme.css:2632 旧覆盖；暗 3.65/3.74），图标中心 x 差 7px 未处理；复现见 verify/compare-ink.txt。范围需协调者扩大或拆侧栏卡
+- 2026-10-22T03:50Z · claude:opus-medium:planner · 用户 2026-10-22 决定拆卡：A1–A4 收窄为已有原生参考的主区/顶栏文字令牌与行距；侧栏消费者偏差归 PIL-0147；无参考状态转 PIL-0199。
+- 2026-10-22T02:53Z · user · 修订验收标准 6cc05af0a7e0 → 1b38071c64d4：用户 2026-10-22 拆卡决定：已有原生参考的状态在本卡验收，侧栏消费者偏差归 PIL-0147，其余转 PIL-0199
