@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 120 张任务卡：todo 97 · in_progress 0 · verify 3 · review 0 · done 13 · blocked 2 · parked 5
+共 121 张任务卡：todo 98 · in_progress 0 · verify 3 · review 0 · done 13 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -139,6 +139,7 @@
 | PIL-0204 | P2 | E2 | C19 模型菜单补采与原生验收 | 是 | PIL-0133 |
 | PIL-0205 | P2 | E2 | C33 侧栏补采与原生验收 | 是 | PIL-0147 |
 | PIL-0206 | P2 | E2 | C13 代码块补采与原生验收 | 是 | PIL-0127 |
+| PIL-0208 | P2 | E2 | C12 助手正文与操作条补采与原生验收 | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 | PIL-0207 | P3 | E2 | C08 分叉发送入口（待用户开启） | 是 | PIL-0122, PIL-0189 |
 
