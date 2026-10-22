@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 119 张任务卡：todo 99 · in_progress 1 · verify 2 · review 0 · done 12 · blocked 0 · parked 5
+共 119 张任务卡：todo 99 · in_progress 1 · verify 1 · review 1 · done 12 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -33,7 +33,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0111 | P1 | verify | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | claude-cli:sonnet-high:impl | 已过期 2026-10-22T06:54Z | task/PIL-0111-windows-native-baseline |
 | PIL-0117 | P1 | in_progress | 复刻验收：C03 分段选择控件 | claude-cli:sonnet-high:impl | 2026-10-22T07:39Z | task/PIL-0117-parity-c03 |
-| PIL-0147 | P2 | verify | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | claude:sonnet-high:impl | 已过期 2026-10-22T05:41Z | task/PIL-0147-parity-c33 |
+| PIL-0147 | P2 | review | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | claude:sonnet-high:impl | 已过期 2026-10-22T05:41Z | task/PIL-0147-parity-c33 |
 
 ### 阻塞
 
