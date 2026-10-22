@@ -3,7 +3,7 @@ id: PIL-0197
 title: Windows 托盘 Quit 只隐藏窗口不结束进程
 epic: E11
 priority: P1
-status: verify
+status: review
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T16:04Z
 branch: task/PIL-0197-tray-quit-exit
@@ -78,3 +78,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T03:06Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T03:06Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T03:06Z · claude:sonnet-high:verify · 验证(3854190)：A1-A4 均有通过行，A2/A3 据用户 powercfg 前后对照补齐。目标：托盘Quit结束进程并释放keep-awake。结果：全部通过(A1/A4 为验证者重跑，A2/A3 为用户实机)。下一步：评审。
+- 2026-10-22T03:06Z · claude:sonnet-high:impl · verify → review
