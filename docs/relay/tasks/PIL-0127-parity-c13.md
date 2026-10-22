@@ -59,6 +59,7 @@ waivers: []
 | A2 | 参考07 dark hover+tooltip 像素量测 ÷1.5，代码文字 ΔE00 0.57 | 通过 | D:\pilaude\relay-evidence\PIL-0127\verify\VERIFY-2.md | 5d6eb2a | claude-cli:sonnet-high:verify |
 | A3 | 浏览器层 54 格主题×宽×DPR×缩放 | 通过 | D:\pilaude\relay-evidence\PIL-0127\verify\VERIFY-2.md | 5d6eb2a | claude-cli:sonnet-high:verify |
 | A4 | 浏览器层消息级显隐、pending 防重入、成功/失败/重试、Mermaid source 读回 | 通过 | D:\pilaude\relay-evidence\PIL-0127\verify\VERIFY-2.md | 5d6eb2a | claude-cli:sonnet-high:verify |
+| A5 | MermaidBlock 3x 21/21、tsc、lint、guard；npm test 12 基线失败逐名一致 | 通过 | D:\pilaude\relay-evidence\PIL-0127\verify\VERIFY-3.md | 4c6d136 | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -79,3 +80,4 @@ waivers: []
 - 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A4：通过
+- 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A5：通过
