@@ -3,9 +3,9 @@ id: PIL-0143
 title: 复刻验收：C29 Artifact 卡片、预览与 iframe 桥接
 epic: E2
 priority: P1
-status: review
+status: done
 owner: codex-plus:sol-high:impl
-lease_until: 2026-10-22T12:04Z
+lease_until:
 branch: task/PIL-0143-parity-c29
 implementers: [codex-plus:sol-high:impl]
 depends_on: [PIL-0014]
@@ -78,3 +78,4 @@ waivers: []
 - 2026-10-22T10:15Z · claude-cli:sonnet-high:verify · 证据 A5：通过
 - 2026-10-22T10:15Z · codex-plus:sol-high:impl · verify → review（评审 claude-cli:opus-high:review）
 - 2026-10-22T10:15Z · user · 修订验收标准 fd7b216b5c6c → 1010d618183b：拆卡政策：A2 整项移至 PIL-0210，删除空项
+- 2026-10-22T10:15Z · codex-plus:sol-high:impl · review → done（评审 claude-cli:opus-high:review）
