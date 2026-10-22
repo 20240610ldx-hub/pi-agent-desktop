@@ -9,7 +9,7 @@ import * as piAi from "@earendil-works/pi-ai";
 import * as piTui from "@earendil-works/pi-tui";
 import { createJiti } from "jiti";
 
-import { dedupeNestedPackages, externalPackageSpecifiers, findNestedPiScopePackages, findStagedCopies, stageBuiltinTodoRuntime, stageCompletePackage, stageResolvedClosure } from "./stage-package.mjs";
+import { dedupeNestedPackages, externalPackageSpecifiers, findNestedPiScopePackages, findStagedCopies, stageBuiltinPowerlineRuntime, stageBuiltinTodoRuntime, stageCompletePackage, stageResolvedClosure } from "./stage-package.mjs";
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "stage-package-"));
@@ -252,6 +252,25 @@ test("the staged installed Todo package retains its real factory, config validat
     const overlay = await loaded.makeTodoOverlayLoader(() => loader.import(join(todoDir, "todo-overlay.ts")))();
     assert.equal(typeof loaded.default, "function");
     assert.equal(typeof overlay.TodoOverlay, "function", "the actual lazy import resolves entirely from staged packages");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("the installed powerline footer package is staged whole with its declared entry and runtime modules", async () => {
+  const root = await mkdtemp(join(tmpdir(), "stage-builtin-powerline-"));
+  try {
+    const sourceRoot = fileURLToPath(new URL("..", import.meta.url));
+    const stagedNodeModulesDir = join(root, "node_modules");
+    const written = await stageBuiltinPowerlineRuntime({ sourceRoot, stagedNodeModulesDir });
+    assert.equal(written.length, 1);
+    const dir = join(stagedNodeModulesDir, "pi-powerline-footer");
+    const manifest = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
+    assert.equal(manifest.version, "0.20.2");
+    assert.deepEqual(manifest.pi.extensions, ["./index.ts"]);
+    for (const file of [...manifest.pi.extensions, "segments.ts", "git-status.ts", "paths.ts", "queue", "bash-mode"]) {
+      assert.ok(existsSync(join(dir, file)), `${file} is staged`);
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

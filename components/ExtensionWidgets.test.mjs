@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { chromium } from "playwright";
 import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url, {
@@ -38,6 +40,15 @@ test("renders short extension widgets without a truncation marker", () => {
   assert.match(html, /aria-expanded="true"/);
   assert.match(html, /data-direction="up"/);
   assert.doesNotMatch(html, /[\u2191\u2193]/);
+});
+
+test("an empty powerline footer does not add a zero-line trigger beside its primary", () => {
+  const html = renderWidgets({ widgets: [
+    { key: "powerline-top", lines: ["Model context"], placement: "aboveEditor" },
+    { key: "powerline-secondary", lines: [], placement: "belowEditor" },
+  ] });
+  assert.match(html, /extension-widget-primary/);
+  assert.doesNotMatch(html, /powerline-secondary|extension-widget-triggers/);
 });
 
 test("collapses long widgets by default", () => {
@@ -145,6 +156,42 @@ test("keeps one-line widgets compact but expandable", () => {
   assert.doesNotMatch(html, /extension-widget-line-count/);
   assert.doesNotMatch(html, />ready</);
   assert.doesNotMatch(html, /<pre/);
+});
+
+test("powerline primary is immediately visible while another widget keeps its expansion", () => {
+  const html = renderWidgets({ widgets: [
+    { key: "powerline-top", lines: ["\u001b[38;2;215;135;175mPrimary A\u001b[0m · ◫ ?/200k"], placement: "aboveEditor" },
+    { key: "other", lines: ["first", "second"], placement: "aboveEditor" },
+  ] });
+  assert.match(html, /class="extension-widget-primary"/);
+  assert.match(html, />Primary A</);
+  assert.match(html, /\?\/200k/);
+  assert.match(html, /first\nsecond/);
+  assert.match(html, /aria-expanded="true"/);
+  assert.doesNotMatch(html, /powerline-top - Above editor widget - Expand/);
+});
+
+test("primary-only content has no empty trigger row or presentation animation", () => {
+  const html = renderWidgets({ widgets: [{ key: "powerline-top", lines: ["Primary B · 12.5k/64k (19.5%)"], placement: "aboveEditor" }] });
+  assert.match(html, /Primary B · 12.5k\/64k \(19.5%\)/);
+  assert.doesNotMatch(html, /<button|extension-widget-triggers|extension-widget-update-pulse/);
+});
+
+test("the visible primary paints an opaque surface above transcript content with the actual theme CSS", async () => {
+  const css = (await Promise.all(["../app/globals.css", "../vendor/open-claude-ui/cds-theme.css", "../app/native-theme.css"].map(path => readFile(new URL(path, import.meta.url), "utf8")))).join("\n");
+  const html = renderWidgets({ widgets: [{ key: "powerline-top", lines: ["Visible model · ?/64k"], placement: "aboveEditor" }] });
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<style>${css}</style>${html}`);
+    const surface = await page.locator(".extension-widget-primary").evaluate(element => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, opacity: style.opacity, text: element.textContent };
+    });
+    assert.doesNotMatch(surface.background, /rgba\([^)]*,\s*0\)|transparent/, "primary must not blend with transcript text behind the composer overlay");
+    assert.equal(surface.opacity, "1");
+    assert.equal(surface.text, "Visible model · ?/64k");
+  } finally { await browser.close(); }
 });
 
 test("keeps empty widgets non-interactive", () => {

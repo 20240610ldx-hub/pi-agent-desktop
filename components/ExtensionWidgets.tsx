@@ -59,7 +59,7 @@ export function ExtensionWidgets({ widgets }: { widgets: ExtensionWidgetItem[] }
   );
 
   useEffect(() => {
-    const nextContents = snapshotExtensionWidgetContents(widgets);
+    const nextContents = snapshotExtensionWidgetContents(widgets.filter((widget) => widget.key !== "powerline-top" || widget.lines.length !== 1));
     const updatedKeys = getUpdatedExtensionWidgetKeys(
       previousContentsRef.current,
       nextContents,
@@ -104,7 +104,10 @@ export function ExtensionWidgets({ widgets }: { widgets: ExtensionWidgetItem[] }
 
   if (widgets.length === 0) return null;
 
-  const expandedWidget = widgets.find((widget) => (
+  const primaryWidget = widgets.find((widget) => widget.key === "powerline-top" && widget.lines.length === 1);
+  const expandableWidgets = widgets.filter((widget) => widget !== primaryWidget
+    && (widget.key !== "powerline-secondary" || widget.lines.length > 0));
+  const expandedWidget = expandableWidgets.find((widget) => (
     widget.key === expandedWidgetKey
     && widget.lines.length > 0
   ));
@@ -115,6 +118,11 @@ export function ExtensionWidgets({ widgets }: { widgets: ExtensionWidgetItem[] }
 
   return (
     <>
+      {primaryWidget && (
+        <div className="extension-widget-primary" data-widget-key={primaryWidget.key}>
+          <AnsiText text={primaryWidget.lines[0]} />
+        </div>
+      )}
       {expandedWidget && (
         <div className="extension-widget-panels">
           {(() => {
@@ -138,8 +146,9 @@ export function ExtensionWidgets({ widgets }: { widgets: ExtensionWidgetItem[] }
           })()}
         </div>
       )}
-      <div className="extension-widget-triggers" aria-label={t("chat.extensionWidgets")}>
-        {widgets.map((widget, index) => {
+      {expandableWidgets.length > 0 && <div className="extension-widget-triggers" aria-label={t("chat.extensionWidgets")}>
+        {expandableWidgets.map((widget) => {
+          const index = widgets.indexOf(widget);
           const expandable = widget.lines.length > 0;
           const expanded = expandable && widget.key === expandedWidget?.key;
           const updating = updatingWidgetKeys.has(widget.key);
@@ -202,7 +211,7 @@ export function ExtensionWidgets({ widgets }: { widgets: ExtensionWidgetItem[] }
             </div>
           );
         })}
-      </div>
+      </div>}
     </>
   );
 }

@@ -56,6 +56,7 @@ import { createExactSystemPromptExtension } from "./exact-system-prompt";
 import { createArtifactGuideExtension } from "./artifact-guide-extension";
 import { createConversationChapterExtension } from "./conversation-chapter-extension";
 import { createBuiltinTodoExtension } from "./builtin-todo-extension";
+import { createBuiltinPowerlineExtension } from "./builtin-powerline-extension";
 import { preferBuiltinTodoExtension } from "./builtin-todo-conflicts";
 import { CHAPTER_TOOL_NAME } from "./conversation-chapters";
 import { readSessionTodos } from "./session-todos";
@@ -2799,6 +2800,7 @@ export async function startRpcSession(
               createArtifactGuideExtension(),
               createConversationChapterExtension(),
               createBuiltinTodoExtension({ agentDir }),
+              createBuiltinPowerlineExtension({ agentDir }),
               ...(outputStyle ? [createOutputStyleExtension(outputStyle)] : []),
               createProjectCommandBashExtension({
                 cwd: sessionCwd,

@@ -35,6 +35,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Powerline footer primary row
+
+Pilaude pins `pi-powerline-footer@0.20.2` by Nico Bailon ([nicobailon/pi-powerline-footer](https://github.com/nicobailon/pi-powerline-footer), fixed source commit [e062674](https://github.com/nicobailon/pi-powerline-footer/tree/e06267494593c9006b014f42706a8d9e9259a417)) as an application runtime dependency, and the desktop installer ships the whole package (`scripts/stage-package.mjs` `stageBuiltinPowerlineRuntime`). `lib/builtin-powerline-extension.ts` executes the package's declared `pi.extensions` entry (`./index.ts`) through jiti, adapting only its path lookups and the Web UI boundary.
+
+**License basis.** The license is taken from the package manifest (`package.json` `"license": "MIT"`, author `Nico Bailon`, repository `git+https://github.com/nicobailon/pi-powerline-footer.git`). The published 0.20.2 tarball and the fixed repository tree contain no LICENSE, NOTICE or COPYING file, so no upstream copyright line or year exists to reproduce. The standard MIT text below is therefore included **on the basis of the manifest declaration**; the copyright holder is the manifest author and no year is asserted.
+
+```text
+MIT License
+
+Copyright (c) Nico Bailon (author named in package.json; year not stated by the package)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Changes diff renderer
 
 Pilaude uses [react-diff-view](https://github.com/otakustay/react-diff-view) as an npm runtime dependency, pinned to `3.3.3`. `components/ReviewDiff.tsx` consumes its diff components; `lib/review-diff-renderer.ts` adapts parsing, tokenization and edit marking. The installed library sources are unmodified; the integration and theme overrides are maintained in Pilaude.

@@ -4844,6 +4844,32 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   background: var(--bg);
 }
 
+/* PIL-0072: the powerline primary row (model · context) is always visible and
+   sits in that shelf. Without its own opaque surface it blends with transcript
+   text on short windows (390x340) where the composer overlay covers the chat.
+   No Claude Desktop reference exists for this Pi-only row, so spacing is the
+   tightest that keeps one 11px mono line readable. */
+.extension-widget-primary {
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  white-space: pre;
+  background: var(--bg);
+  color: var(--text-muted);
+  font: 400 11px/1.5 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  scrollbar-width: thin;
+}
+
+.extension-widget-primary::selection,
+.extension-widget-primary *::selection {
+  background: var(--bg-selected);
+}
+
 .message-user {
   margin-bottom: 18px !important;
 }
