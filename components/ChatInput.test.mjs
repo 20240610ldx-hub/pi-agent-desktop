@@ -1382,3 +1382,119 @@ test("selector rows expose a plain default star separate from the selected optio
   assert.doesNotMatch(active, /polyline/);
   assert.doesNotMatch(active, /border-left/);
 });
+
+test("C08 main card is [attach][text][send] in one row: attach sits in the editor before the textarea", () => {
+  const html = renderWithI18n(React.createElement(ChatInput, { onSend() {}, onAbort() {}, isStreaming: false }));
+  const editorStart = html.indexOf('class="chat-composer-editor"');
+  const attach = html.indexOf("composer-attach-button");
+  const textarea = html.indexOf('class="chat-input-textarea"');
+  const send = html.indexOf('data-action="send"');
+  const controls = html.indexOf('class="chat-composer-controls"');
+  assert.ok(editorStart >= 0 && attach > editorStart, "attach button is inside the editor");
+  assert.ok(textarea > attach, "attach button precedes the textarea");
+  assert.ok(send > textarea, "send follows the textarea");
+  if (controls >= 0) assert.ok(attach < controls, "attach is not in the footer row");
+  assert.equal((html.match(/composer-attach-button/g) || []).length, 1);
+  assert.doesNotMatch(html, /composer-leading-actions/);
+});
+
+test("C08 composer renders no microphone control, label or placeholder", () => {
+  for (const props of [{}, { isStreaming: true }, { compact: true }]) {
+    const html = renderWithI18n(React.createElement(ChatInput, { onSend() {}, onAbort() {}, ...props }));
+    assert.doesNotMatch(html, /aria-label="[^"]*(microphone|Microphone|dictat|Dictat|voice|Voice|麥克風|麦克风|錄音|录音)[^"]*"/);
+    assert.doesNotMatch(html, /composer-mic|composer-voice/);
+  }
+});
+
+test("C08 compact quote composer has no attach button", () => {
+  const html = renderWithI18n(React.createElement(ChatInput, { onSend() {}, onAbort() {}, compact: true }));
+  assert.doesNotMatch(html, /composer-attach-button/);
+});
+
+test("C08 send hint is closed on first render and keeps the accessible name without a title", () => {
+  const html = renderWithI18n(React.createElement(ChatInput, { onSend() {}, onAbort() {}, isStreaming: false }));
+  // Disabled (empty draft) Send never owns a hint; hover/focus state starts closed.
+  assert.doesNotMatch(html, /role="tooltip"|composer-send-tooltip|aria-describedby/);
+  assert.match(html, /data-action="send"[^>]*aria-label="Send"/);
+});
+
+test("C08 send hint wiring: hover, keyboard focus, Escape and blur, tooltip role and describedby", () => {
+  const src = readFileSync(new URL("./ChatInput.tsx", import.meta.url), "utf8");
+  // Opens on hover and focus-visible only; closes on leave, blur and Escape.
+  assert.match(src, /onMouseEnter=\{\(\) => setSendTipOpen\(true\)\}/);
+  assert.match(src, /onMouseLeave=\{\(\) => setSendTipOpen\(false\)\}/);
+  assert.match(src, /e\.target\.matches\(":focus-visible"\)\) setSendTipOpen\(true\)/);
+  assert.match(src, /onBlur=\{\(\) => setSendTipOpen\(false\)\}/);
+  assert.match(src, /e\.key === "Escape"\) setSendTipOpen\(false\)/);
+  // The tooltip is a tooltip, referenced by the button only while open and available.
+  assert.match(src, /aria-describedby=\{sendTipAvailable && sendTipOpen \? sendTipId : undefined\}/);
+  assert.match(src, /id=\{sendTipId\} role="tooltip" className="composer-send-tooltip"/);
+  // Hidden on compact, mobile, streaming (Stop/Queue keep native title) and disabled Send.
+  assert.match(src, /const sendTipAvailable = !compact && !isMobile && !isStreaming && !sendDisabled;/);
+  // The native title is dropped while the custom hint is available so they never stack.
+  assert.match(src, /title=\{sendTipAvailable \? undefined : t\(showStop/);
+  // Ctrl keycap is shown when Enter alone does not send.
+  assert.match(src, /sendShortcutNeedsCtrl = isMobile \|\| enterSendMode === "ctrlEnter"/);
+  // No fork-send row until PIL-0189 has a real consumer in the shell (moved out of C08).
+  assert.doesNotMatch(src, /composer-fork|forkSend|sendInFork/);
+});
+
+test("C08 verifier F1-F4: browser-level Escape closes a hovered hint; attach fill, tile ring and send glyph offset", async (t) => {
+  const { build } = await import("esbuild");
+  const { chromium } = await import("playwright");
+  const { fileURLToPath } = await import("node:url");
+  const project = fileURLToPath(new URL("../", import.meta.url));
+  const bundle = (await build({
+    stdin: { contents: `import React from "react";
+      import {createRoot} from "react-dom/client";
+      import {I18nProvider} from "./hooks/useI18n";
+      import {ChatInput} from "./components/ChatInput";
+      createRoot(document.getElementById("root")).render(<I18nProvider><div className="app-shell" style={{width:820,margin:"0 auto",position:"relative"}}><div className="chat-composer-column"><ChatInput onSend={()=>{}} onAbort={()=>{}} isStreaming={false} onSetAutomation={()=>{}} model={{provider:"anthropic",id:"opus"}} modelList={[]} draftKey="c08-f"/></div></div></I18nProvider>);`, resolveDir: project, loader: "tsx" },
+    bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic", logLevel: "silent", define: { "process.env.NODE_ENV": '"development"' }, loader: { ".css": "empty" }, tsconfig: fileURLToPath(new URL("../tsconfig.json", import.meta.url)),
+  })).outputFiles[0].text;
+  const css = ["app/globals.css", "app/settings.css", "vendor/open-claude-ui/cds-theme.css", "app/native-theme.css"]
+    .map((f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8")).join("\n").replace(/^@import[^;]*;/gm, "");
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const browser = await chromium.launch({ headless: true });
+  t.after(() => browser.close());
+  for (const theme of ["light", "dark"]) {
+    const page = await browser.newPage({ viewport: { width: 1000, height: 500 }, deviceScaleFactor: 1.5, reducedMotion: "reduce" });
+    await page.route("**/*", (r) => {
+      const u = r.request().url();
+      if (u === "https://c08.fixture/") return r.fulfill({ contentType: "text/html", body: `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body style="margin:0;padding:80px 0 0;background:var(--bg)"><div id="root"></div><script>${bundle.replaceAll("</script", "<\/script")}</script></body></html>` });
+      return u.includes("/api/") ? r.fulfill({ contentType: "application/json", body: '{"data":{}}' }) : r.abort();
+    });
+    await page.goto("https://c08.fixture/");
+    await page.evaluate((th) => document.documentElement.classList.toggle("dark", th === "dark"), theme);
+    const ta = page.locator(".chat-input-textarea");
+    await ta.fill("继续推进这个任务");
+    // F3: pointer on Send, caret in the textarea; Escape must close the hint.
+    await page.locator(".composer-send-button").hover();
+    assert.equal(await page.locator(".composer-send-tooltip").count(), 1, `${theme}: hint opens on hover`);
+    await ta.focus();
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator(".composer-send-tooltip").count(), 0, `${theme}: Escape closes the hovered hint`);
+    // F4: send glyph is nudged by 0.4px, not the earlier 2.3px.
+    const sendTransform = await page.evaluate(() => getComputedStyle(document.querySelector('.composer-send-button[data-action="send"] svg')).transform);
+    assert.equal(sendTransform, "matrix(1, 0, 0, 1, 0, 0.4)");
+    // F1/F2: attachments present.
+    await page.locator("input[type=file]").first().setInputFiles({ name: "t.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
+    await page.waitForSelector(".composer-attachment-image");
+    await page.mouse.move(5, 5);
+    const m = await page.evaluate(() => {
+      const a = document.querySelector(".composer-attach-button"), i = document.querySelector(".composer-attachment-image");
+      const ci = getComputedStyle(i);
+      return { active: a.hasAttribute("data-active"), bg: getComputedStyle(a).backgroundColor, bw: ci.borderTopWidth, bs: ci.borderTopStyle, bc: ci.borderTopColor };
+    });
+    assert.equal(m.active, true);
+    assert.equal(m.bg, "rgba(0, 0, 0, 0)", `${theme}: attach button has no fill with attachments`);
+    assert.equal(m.bs, "solid");
+    assert.equal(m.bw, "1px");
+    if (theme === "dark") assert.equal(m.bc, "rgb(68, 68, 68)");
+    await page.locator(".composer-attach-button").hover();
+    await page.waitForTimeout(400);
+    const hoverBg = await page.evaluate(() => getComputedStyle(document.querySelector(".composer-attach-button")).backgroundColor);
+    assert.notEqual(hoverBg, "rgba(0, 0, 0, 0)", `${theme}: hover keeps its fill`);
+    await page.close();
+  }
+});

@@ -10924,3 +10924,107 @@ html.dark .app-shell .session-sidebar .session-item { --bg-hover: #232323; }
   .app-shell .session-sidebar .scheduled-sidebar-row { height: 36px !important; min-height: 36px; }
   .app-shell .session-sidebar .session-tree-item:not([data-session-depth="0"])::before { display: none; }
 }
+
+/* C08 输入器主框与提交控件 -----------------------------------------------------
+   Geometry measured on the Windows Claude Desktop 3.1623.0.0 native captures
+   (main-window-native/2026-10-22 00/04, composer-tooltips-light/2026-10-21 01;
+   CSS px = raw px / 1.5). One row of [attach][text][send] inside the card:
+   28px controls, 6px column gap, 8px block padding (46px single-line card),
+   attachment tiles 120px with a 6px gap and a 16px gap before the row. Insets
+   are tokens so the spacing is tightened in one place. */
+.app-shell .chat-composer:not([data-compact]) {
+  --c08-card-radius: 16px;
+  --composer-line-focus: #c7c7c6; /* 3.1623 focused light border; dark keeps #4d4d4c from the base rule */
+  --c08-control: 28px;
+  --c08-row-gap: 6px;
+  --c08-pad-block: 8px;
+  --c08-pad-start: 6.7px;
+  --c08-pad-end: 8px;
+  --c08-tile: 120px;
+  --c08-tile-gap: 6px;
+  --c08-tile-row-gap: 16px;
+  min-height: 0;
+  border-radius: var(--c08-card-radius) !important;
+  padding: var(--c08-pad-block) var(--c08-pad-end) var(--c08-pad-block) var(--c08-pad-start) !important;
+}
+.app-shell .chat-composer:not([data-compact]):has(.composer-attachments) { padding-bottom: 7px !important; }
+.app-shell .chat-composer:not([data-compact]) .chat-composer-editor {
+  min-height: 0;
+  padding: 0 !important;
+  gap: var(--c08-row-gap) !important;
+  align-items: flex-end !important;
+}
+.app-shell .chat-composer:not([data-compact]) .chat-input-textarea { margin: 2.7px 0 4.3px; }
+.app-shell .chat-composer:not([data-compact]) .composer-attach-button {
+  flex: 0 0 var(--c08-control);
+  align-self: flex-end;
+  width: var(--c08-control);
+  height: var(--c08-control);
+  margin: 0;
+  border-radius: 7px;
+}
+.app-shell .chat-composer:not([data-compact]) .composer-attach-button:hover:not(:disabled) { background: var(--bg-hover); }
+.app-shell .chat-composer:not([data-compact]) .composer-primary-actions { position: relative; height: var(--c08-control); align-self: flex-end; }
+.app-shell .chat-composer:not([data-compact]) .composer-attachments {
+  gap: var(--c08-tile-gap);
+  padding: 3px 0 var(--c08-tile-row-gap) calc(var(--c08-control) + var(--c08-row-gap));
+}
+.app-shell .chat-composer:not([data-compact]) .composer-attachments { justify-content: flex-start; align-items: flex-start; }
+.app-shell .chat-composer:not([data-compact]) .composer-attachment { flex: 0 0 var(--c08-tile); width: var(--c08-tile); max-width: 100%; }
+.app-shell .chat-composer:not([data-compact]) .composer-attachment > button:first-child { width: 100%; max-width: 100%; }
+.app-shell .chat-composer:not([data-compact]) .composer-attachment-image {
+  width: 100%;
+  height: var(--c08-tile);
+  max-width: 100%;
+  max-height: none;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+/* 3.1623 composer-attachments-dark 04: 1px #444 ring on the tile; light has no capture, so it keeps the hairline token. */
+html.dark .app-shell .chat-composer:not([data-compact]) .composer-attachment-image { border-color: #444; }
+/* 3.1623 04: the attach button carries no fill while attachments are present; hover keeps its fill. */
+.app-shell .chat-composer:not([data-compact]) .composer-attach-button[data-active]:not(:hover) { background: transparent; }
+/* Send glyph: ink 13.3x11.3 with a ~1.1px stroke; ink centre sits ~22.3px above the card bottom border (verifier recheck against the mic row of 3.1623 composer-tooltips-light 01). */
+.app-shell .chat-composer:not([data-compact]) .composer-send-button[data-action="send"] svg { width: 19px; height: 19px; stroke-width: 1; transform: translateY(0.4px); }
+.composer-send-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4.5px);
+  z-index: 40;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border-radius: 6.3px;
+  background: var(--cds-gray-900);
+  color: #fff;
+  box-shadow: 0 2px 8px #0002;
+  font: 400 13px/22px var(--font-ui);
+  white-space: nowrap;
+  pointer-events: none;
+}
+html.dark .composer-send-tooltip { background: #20201f; color: #f0efec; box-shadow: inset 0 0 0 0.8px #373736, 0 2px 5px #0002; }
+.composer-send-tip-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.composer-keycaps { display: inline-flex; align-items: center; gap: 2px; }
+.composer-keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4.5px;
+  border: 0.8px solid #2d2d2b;
+  border-radius: 4px;
+  color: #9b9a90;
+  font: 400 11px/1 var(--font-ui);
+}
+.composer-keycap[data-glyph] { width: 16px; padding: 0; }
+html.dark .composer-keycap { border-color: #4d4d4c; color: #c3c2b7; }
+@media (max-width: 640px) {
+  /* The attach button moved into the card, so the footer grid has two columns. */
+  .app-shell .chat-composer-controls .composer-model-controls { grid-column: 1; }
+  .app-shell .chat-composer-controls .composer-session-controls { grid-column: 2; }
+}
+/* end C08 */

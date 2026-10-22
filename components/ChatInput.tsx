@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useCallback, useEffect, useLayoutEffect, useMemo, useImperativeHandle, forwardRef, KeyboardEvent } from "react";
+import React, { useRef, useState, useCallback, useEffect, useId, useLayoutEffect, useMemo, useImperativeHandle, forwardRef, KeyboardEvent } from "react";
 import type { BuiltinSlashCommandResult, CompactResultInfo, QueuedMessages, SlashCommandInfo } from "@/hooks/useAgentSession";
 import type { SkillsResponse } from "@/lib/api-types";
 import type { ModelScopeWarning } from "@/lib/model-scope-warnings";
@@ -1454,6 +1454,22 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const canQueueStreamingMessage = hasInputText || attachedImages.length > 0 || attachedFiles.length > 0;
   const canSend = canQueueStreamingMessage && !workspaceUnavailable;
   const showStop = isStreaming && !canQueueStreamingMessage;
+  const sendDisabled = !showStop && (!canSend || (isStreaming && !onFollowUp && !onSteer));
+  // Hover and keyboard-focus hint for Send (3.1623: label plus keycaps). Stop and
+  // Queue keep their native title until their own references exist.
+  const [sendTipOpen, setSendTipOpen] = useState(false);
+  const sendTipId = useId();
+  const sendTipAvailable = !compact && !isMobile && !isStreaming && !sendDisabled;
+  // A hovered hint can outlive focus (the pointer is on Send, the caret in the
+  // textarea), so Escape closes it from the document. Listen-only: Escape keeps
+  // its other jobs (stop the agent, close menus) because nothing is stopped here.
+  useEffect(() => {
+    if (!sendTipOpen) return;
+    const onKey = (e: { key: string }) => { if (e.key === "Escape") setSendTipOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sendTipOpen]);
+  const sendShortcutNeedsCtrl = isMobile || enterSendMode === "ctrlEnter";
   // Warn when images are attached but the selected model is known not to accept
   // image input (#584), including a resolved default. Unknown models stay silent.
   const showImageUnsupportedWarning = (
@@ -2750,6 +2766,20 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
             } as React.CSSProperties}
           >
+          {!compact && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title={t(!onAttachFiles ? "chat.attachImage" : "chat.attachFiles")}
+            aria-label={t(!onAttachFiles ? "chat.attachImage" : "chat.attachFiles")}
+            className="native-toolbar-button composer-attach-button"
+            data-active={attachedImages.length > 0 || attachedFiles.length > 0 || undefined}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+          )}
           <textarea
             ref={textareaRef}
             className="chat-input-textarea"
@@ -2815,7 +2845,14 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             </span>
           )}
 
-          <div className="composer-primary-actions">
+          <div
+            className="composer-primary-actions"
+            onMouseEnter={() => setSendTipOpen(true)}
+            onMouseLeave={() => setSendTipOpen(false)}
+            onFocus={(e) => { if (e.target.matches(":focus-visible")) setSendTipOpen(true); }}
+            onBlur={() => setSendTipOpen(false)}
+            onKeyDown={(e) => { if (e.key === "Escape") setSendTipOpen(false); }}
+          >
           <button
             type="button"
             // One action for Send, Queue and Stop. The compact quote composer
@@ -2824,8 +2861,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             data-action={showStop ? "stop" : isStreaming ? "queue" : "send"}
             onClick={showStop ? onAbort : isStreaming ? () => void sendQueued(onFollowUp ? "followup" : "steer") : handleSend}
             disabled={!showStop && (!canSend || (isStreaming && !onFollowUp && !onSteer))}
-            title={t(showStop ? "chat.stopAgent" : isStreaming ? "chat.queueMessage" : "chat.send")}
+            title={sendTipAvailable ? undefined : t(showStop ? "chat.stopAgent" : isStreaming ? "chat.queueMessage" : "chat.send")}
             aria-label={t(showStop ? "chat.stopAgent" : isStreaming ? "chat.queueMessage" : "chat.send")}
+            aria-describedby={sendTipAvailable && sendTipOpen ? sendTipId : undefined}
             style={{ flexShrink: 0, ...(compact ? { display: "flex", alignItems: "center", gap: 6 } : null) }}
           >
             {showStop ? (
@@ -2840,6 +2878,21 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             )}
             {compact && t(showStop ? "chat.stop" : "chat.send")}
           </button>
+          {sendTipAvailable && sendTipOpen && (
+            <span id={sendTipId} role="tooltip" className="composer-send-tooltip">
+              <span className="composer-send-tip-row">
+                <span>{t("chat.send")}</span>
+                <span className="composer-keycaps">
+                  {sendShortcutNeedsCtrl && <kbd className="composer-keycap">Ctrl</kbd>}
+                  <kbd className="composer-keycap" data-glyph="enter" aria-label="Enter">
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M13 3.5v5H3m3-3-3 3 3 3" />
+                    </svg>
+                  </kbd>
+                </span>
+              </span>
+            </span>
+          )}
           </div>
           </div>
           {/* Session controls sit below the input card, not inside it. */}
@@ -2856,25 +2909,10 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         {!compact && <div className="chat-composer-controls" style={{
           marginTop: 6,
           display: isNarrow ? "grid" : "flex",
-          gridTemplateColumns: isNarrow ? "auto minmax(0, 1fr) auto" : undefined,
+          gridTemplateColumns: isNarrow ? "minmax(0, 1fr) auto" : undefined,
           alignItems: "center",
           gap: 6,
         }}>
-
-          <div className="composer-leading-actions">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              title={t(!onAttachFiles ? "chat.attachImage" : "chat.attachFiles")}
-              aria-label={t(!onAttachFiles ? "chat.attachImage" : "chat.attachFiles")}
-              className="native-toolbar-button composer-attach-button"
-              data-active={attachedImages.length > 0 || attachedFiles.length > 0 || undefined}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </button>
-          </div>
 
           {/* The selected model precedes reasoning, as in the official footer. */}
           <div className="composer-model-controls" style={{ flex: isNarrow ? "1 1 auto" : "0 0 auto", minWidth: 0, display: "flex", alignItems: "center", gap: 2 }}>
