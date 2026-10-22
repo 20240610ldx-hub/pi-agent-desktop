@@ -58,6 +58,7 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 | A2 | changes-window.mjs 7 组与 changes-window-restore.mjs 通过，无页面/控制台错误、无外部请求 | 通过 | D:\pilaude\relay-evidence\PIL-0010\verify\VERIFY.md | 721036d1 | claude-cli:sonnet-high:verify |
 | A3 | 原 textarea 同节点草稿不变；IME 组合不提交；添加到草稿经 ACK 只追加一次 | 通过 | D:\pilaude\relay-evidence\PIL-0010\verify\VERIFY.md | 721036d1 | claude-cli:sonnet-high:verify |
 | A4 | 变异 11 个：单元或 e2e 均能打红（2 个等价变异存活） | 通过 | D:\pilaude\relay-evidence\PIL-0010\verify\VERIFY.md | 721036d1 | claude-cli:sonnet-high:verify |
+| A5 | cargo test changes_window 6/6，capabilities 无差异，两个权限变异打红；Opus 复核调用方校验 | 通过 | D:\pilaude\relay-evidence\PIL-0010\review\REVIEW.md | 721036d1 | claude-cli:opus-high:review |
 
 ## 日志
 
@@ -73,3 +74,4 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 - 2026-10-22T13:20Z · claude-cli:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T13:21Z · claude-cli:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T13:21Z · claude-cli:sonnet-high:verify · 证据 A4：通过
+- 2026-10-22T13:21Z · claude-cli:opus-high:review · 证据 A5：通过
