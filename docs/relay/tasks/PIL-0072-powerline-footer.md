@@ -43,6 +43,7 @@ waivers: []
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 390×340 叠字复现存证（impl/before）并经验证者复核 | 通过 | D:\pilaude\relay-evidence\PIL-0072\verify\VERIFY.md | cb654972 | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -57,3 +58,4 @@ waivers: []
 - 2026-10-22T12:54Z · claude-cli:sonnet-high:impl · 用户 2026-10-22 决定：pi-powerline-footer 随安装包打包（含许可信息）
 - 2026-10-22T13:32Z · claude-cli:sonnet-high:impl · FIX2：真实 next dev 状态行修复（serverExternalPackages）、整包入口接入、随安装包打包、MIT 依据 manifest 记入 NOTICES；真实层脚本修复前失败/后通过；npm test 11 败均在基线
 - 2026-10-22T13:33Z · claude-cli:sonnet-high:impl · in_progress → verify
+- 2026-10-22T13:43Z · claude-cli:sonnet-high:verify · 证据 A1：通过
