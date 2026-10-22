@@ -17,6 +17,28 @@ const jiti = createJiti(import.meta.url, { jsx: { runtime: "automatic" }, tsconf
 const React = await jiti.import("react");
 const { renderToStaticMarkup } = await jiti.import("react-dom/server");
 const { WorkspacePaneDock } = await jiti.import("./WorkspacePaneDock.tsx");
+const { workspacePopoutCopy } = await jiti.import("../lib/workspace-popout-copy.ts");
+
+test("the real shell supplies localized disabled popouts for all three unsupported panes", () => {
+  const shellAst = ts.createSourceFile("AppShell.tsx", shell, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const paneObjects = [];
+  const collect = node => {
+    if (ts.isJsxAttribute(node) && node.name.getText(shellAst) === "panes") paneObjects.push(...node.initializer.expression.elements);
+    ts.forEachChild(node, collect);
+  };
+  collect(shellAst);
+  for (const locale of ["en", "zh-CN", "zh-TW"]) for (const desktopMode of [true, false]) {
+    const popoutWords = workspacePopoutCopy(locale);
+    for (const id of ["files", "terminal", "tasks"]) {
+      const pane = paneObjects.find(node => node.properties.some(prop => prop.name?.getText(shellAst) === "id" && prop.initializer?.text === id));
+      const property = pane.properties.find(prop => prop.name?.getText(shellAst) === "popout");
+      const actual = compile(`(${property.initializer.getText(shellAst)})`).runInContext(createContext({ desktopMode, popoutWords }));
+      assert.equal(actual.label, desktopMode ? popoutWords.window : popoutWords.tab);
+      assert.equal(actual.disabledReason, popoutWords[id]);
+      assert.equal(actual.onOpen, undefined);
+    }
+  }
+});
 
 test("all pane content remains in keyed sibling hosts when panes are hidden", () => {
   const panes = ["files", "terminal", "tasks"].map((id) => ({ id, title: id, open: id !== "tasks", onClose() {}, children: React.createElement("i", null, `${id}-host`) }));
@@ -48,6 +70,20 @@ test("one stacked column exposes only a row separator and fills the parent width
   assert.match(html, /min-width:0;grid-template-columns:minmax\(0, 1fr\)/);
   assert.equal((html.match(/aria-orientation="horizontal"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /aria-orientation="vertical"/);
+});
+
+test("pane headers expose a real popout action or an accessible disabled reason before expand", () => {
+  const html = renderToStaticMarkup(React.createElement(WorkspacePaneDock, {
+    panes: [
+      { id: "files", title: "Files", open: true, onClose() {}, children: "file", popout: { label: "Open in new window", disabledReason: "Files consumer is not ready" } },
+      { id: "terminal", title: "Terminal", open: true, onClose() {}, children: "terminal", popout: { label: "Open in new window", onOpen() {} } },
+    ],
+    expandLabel: "Expand", restoreLabel: "Restore", closeLabel: "Hide {name}", resizeColumnLabel: "Resize column", resizeRowsLabel: "Resize rows",
+  }));
+  assert.equal((html.match(/workspace-pane-popout/g) ?? []).length, 2);
+  assert.match(html, /<button(?=[^>]*aria-disabled="true")(?=[^>]*aria-label="Open in new window")(?=[^>]*aria-describedby=)[^>]*>/);
+  assert.match(html, /Files consumer is not ready/);
+  assert.match(html, /workspace-pane-popout[\s\S]*workspace-pane-expand/);
 });
 
 test("column keyboard resize and Escape rollback retain the original geometry", () => {

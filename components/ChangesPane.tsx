@@ -9,12 +9,18 @@ import { filterFileEntries } from "@/lib/file-fuzzy";
 import { buildSearchTree, type SearchTreeNode } from "@/lib/search-tree";
 import { formatReviewFeedback, nextReviewSelection, reviewFileGroup, reviewNavigationIndex, reviewPaneShortcut, shortReviewRef, type ReviewKey, type ReviewSelectionState, type ReviewSide } from "@/lib/git-review-display";
 import type { GitReviewContext, GitReviewFile, GitReviewOptions, GitReviewPatch, GitReviewScope, GitReviewSnapshot } from "@/lib/git-review-types";
+import { normalizeChangesViewState, type ChangesViewState } from "@/lib/changes-window-state";
 
 export interface ChangesPaneProps {
   cwd: string;
   visible: boolean;
   onAddFeedback: (text: string) => void | boolean | Promise<void | boolean>;
-  onOpenWindow?: () => void;
+  onOpenWindow?: (state: ChangesViewState) => void;
+  openWindowLabel?: string;
+  openWindowDisabledReason?: string;
+  /** Consumed once per project mount; popout refreshes recover their own view. */
+  initialViewState?: ChangesViewState;
+  onViewStateChange?: (state: ChangesViewState) => void;
   onExpand?: () => void;
   onClose?: () => void;
   expanded?: boolean;
@@ -255,30 +261,35 @@ function FileLabel({ file }: { file: GitReviewFile }) {
   return <><Icon name="code" size={13} /><span className="changes-file-name">{name}</span>{parts.length > 0 && <span className="changes-file-directory">{parts.join("/")}</span>}</>;
 }
 
-export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpand, onClose, expanded, headerExtra, headerDragProps }: ChangesPaneProps) {
+export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, openWindowLabel, openWindowDisabledReason, initialViewState, onViewStateChange, onExpand, onClose, expanded, headerExtra, headerDragProps }: ChangesPaneProps) {
   const { locale } = useI18n();
   const words = copy[locale as keyof typeof copy] ?? copy.en;
-  const [scope, setScope] = useState<GitReviewScope>("all");
-  const [base, setBase] = useState("");
-  const [commit, setCommit] = useState("");
+  const [initial] = useState(() => normalizeChangesViewState(initialViewState));
+  const restoreView = useRef(initialViewState ? initial : null);
+  const [scope, setScope] = useState<GitReviewScope>(initial.scope);
+  const [base, setBase] = useState(initial.base);
+  const [commit, setCommit] = useState(initial.commit);
   const [refresh, setRefresh] = useState(0);
-  const [showFiles, setShowFiles] = useState(true);
-  const [groupFolders, setGroupFolders] = useState(true);
-  const [separate, setSeparate] = useState(true);
-  const [split, setSplit] = useState(false);
-  const [wrap, setWrap] = useState(true);
-  const [highlight, setHighlight] = useState(true);
-  const [ignoreWhitespace, setIgnoreWhitespace] = useState(false);
-  const [open, setOpen] = useState(new Set<string>());
-  const [contexts, setContexts] = useState<Record<string, GitReviewContext>>({});
-  const [selectedPath, setSelectedPath] = useState("");
+  const [showFiles, setShowFiles] = useState(initial.showFiles);
+  const [groupFolders, setGroupFolders] = useState(initial.groupFolders);
+  const [separate, setSeparate] = useState(initial.separate);
+  const [split, setSplit] = useState(initial.split);
+  const [wrap, setWrap] = useState(initial.wrap);
+  const [highlight, setHighlight] = useState(initial.highlight);
+  const [ignoreWhitespace, setIgnoreWhitespace] = useState(initial.ignoreWhitespace);
+  const [open, setOpen] = useState(new Set(initial.openPaths));
+  const [closedFolders, setClosedFolders] = useState(new Set(initial.closedFolders));
+  const [contexts, setContexts] = useState<Record<string, GitReviewContext>>(initial.contexts);
+  const [selectedPath, setSelectedPath] = useState(initial.selectedPath);
   const [menu, setMenu] = useState<MenuName | null>(null);
   const [submenu, setSubmenu] = useState<"branches" | "commits" | null>(null);
   const [query, setQuery] = useState("");
   const [finderIndex, setFinderIndex] = useState(0);
-  const [commitsOpen, setCommitsOpen] = useState(true);
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const [feedback, setFeedback] = useState("");
+  const [commitsOpen, setCommitsOpen] = useState(initial.commitsOpen);
+  const [selection, setSelection] = useState<Selection | null>(initial.selection);
+  const [feedback, setFeedback] = useState(initial.feedback);
+  const [unboundFeedback, setUnboundFeedback] = useState("");
+  const cancelScrollRestore = useRef<(() => void) | null>(null);
   const [feedbackPending, setFeedbackPending] = useState(false);
   const feedbackPendingRef = useRef(false);
   const feedbackGeneration = useRef(0);
@@ -303,18 +314,59 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
   const visibleFinderFiles = finderFiles.slice(0, 12);
   const snapshotIdentity = `${cwd}\0${snapshot?.comparisonId ?? ""}`;
 
+  const viewState = useMemo<ChangesViewState>(() => ({
+    version: 1, scope, comparisonId: snapshot?.comparisonId ?? initial.comparisonId, base, commit, showFiles, groupFolders, separate, split, wrap, highlight,
+    ignoreWhitespace, openPaths: [...open], closedFolders: [...closedFolders], contexts,
+    selectedPath, commitsOpen, selection, feedback: unboundFeedback || feedback, scrollTop: 0,
+  }), [scope, snapshot?.comparisonId, initial.comparisonId, base, commit, showFiles, groupFolders, separate, split, wrap, highlight, ignoreWhitespace, open, closedFolders, contexts, selectedPath, commitsOpen, selection, feedback, unboundFeedback]);
+  const captureView = useCallback(() => ({ ...viewState, scrollTop: scroller.current?.scrollTop ?? restoreView.current?.scrollTop ?? 0 }), [viewState]);
+  useEffect(() => { if (snapshot && !restoreView.current) onViewStateChange?.(captureView()); }, [snapshot, captureView, onViewStateChange]);
+
   useEffect(() => {
+    if (!snapshot) return;
     feedbackGeneration.current++;
-    setOpen(new Set(snapshot && !snapshot.large ? snapshot.files.slice(0, 8).map((file) => file.path) : []));
-    setContexts({});
-    setSelection(null);
-    setSelectedPath("");
+    const retained = restoreView.current;
+    restoreView.current = null;
+    const validPaths = new Set(snapshot.files.map(file => file.path));
+    setOpen(new Set(retained ? retained.openPaths.filter(path => validPaths.has(path)) : !snapshot.large ? snapshot.files.slice(0, 8).map((file) => file.path) : []));
+    setContexts(retained?.contexts ?? {});
+    const sameComparison = retained?.comparisonId === snapshot.comparisonId;
+    const retainedSelection = sameComparison && retained?.selection && validPaths.has(retained.selection.path) ? retained.selection : null;
+    setSelection(retainedSelection);
+    setFeedback(retainedSelection ? retained?.feedback ?? "" : "");
+    setUnboundFeedback(!retainedSelection ? retained?.feedback ?? (unboundFeedback || feedback) : "");
+    setSelectedPath(retained && validPaths.has(retained.selectedPath) ? retained.selectedPath : "");
     setNotice("");
     scroller.current?.scrollTo({ top: 0 });
+    if (retained) {
+      // Lazy patches change the scroll height. Hold the requested offset until
+      // content reaches it; user input ends restoration immediately.
+      const element = scroller.current;
+      if (!element) return;
+      let cancelled = false;
+      const apply = () => { if (!cancelled) element.scrollTop = retained.scrollTop; };
+      const cancel = () => { cancelled = true; observer.disconnect(); if (cancelScrollRestore.current === cancel) cancelScrollRestore.current = null; };
+      cancelScrollRestore.current = cancel;
+      const observer = new ResizeObserver(apply);
+      if (element.firstElementChild) for (const child of element.children) observer.observe(child);
+      apply();
+      const timer = setTimeout(cancel, 5000);
+      element.addEventListener("wheel", cancel, { passive: true });
+      element.addEventListener("pointerdown", cancel);
+      element.addEventListener("keydown", cancel);
+      return () => { cancel(); clearTimeout(timer); element.removeEventListener("wheel", cancel); element.removeEventListener("pointerdown", cancel); element.removeEventListener("keydown", cancel); };
+    }
   // A new comparison resets selections; view preference changes do not.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotIdentity]);
-  useEffect(() => { setBase(""); setCommit(""); setScope("all"); setMenu(null); }, [cwd]);
+  const previousCwd = useRef(cwd);
+  useEffect(() => {
+    if (previousCwd.current === cwd) return;
+    previousCwd.current = cwd;
+    restoreView.current = null;
+    setBase(""); setCommit(""); setScope("all"); setMenu(null); setClosedFolders(new Set());
+    setSelection(null); setFeedback(""); setUnboundFeedback("");
+  }, [cwd]);
   useEffect(() => {
     const token = feedbackGeneration;
     if (!visible) { token.current++; setMenu(null); setSelection(null); }
@@ -340,7 +392,7 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
   const selectLine = (file: GitReviewFile, side: ReviewSide, line: number, extend: boolean, inlineContextAnchor?: InlineContextAnchor) => {
     feedbackGeneration.current++;
     const next = nextReviewSelection(selection, { path: file.path, side, line, extend, inlineContextAnchor }, split);
-    setSelection(next); setFeedback(""); setNotice("");
+    setSelection(next); setFeedback(unboundFeedback); setUnboundFeedback(""); setNotice("");
   };
   const statusLabel = (file: GitReviewFile) => words[({ added: "statusAdded", modified: "statusModified", deleted: "statusDeleted", renamed: "statusRenamed", copied: "statusCopied", untracked: "statusUntracked", conflict: "statusConflict", typechange: "statusTypechange" } as const)[file.status]];
   const oldRevision = scope === "uncommitted" ? snapshot?.headOid ?? "HEAD" : snapshot?.baseOid ?? "";
@@ -371,7 +423,9 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
   const headerButton = (name: string, label: string, onClick: () => void, ref?: RefObject<HTMLButtonElement | null>, pressed?: boolean, shortcut?: string) => <WorkspaceControlButton triggerRef={ref} placement="top" tooltipGap={4.8} tooltipClassName="changes-control-tooltip" label={label} shortcut={shortcut} className={`changes-icon-button${pressed ? " is-active" : ""}`} aria-pressed={pressed} aria-haspopup={ref ? "menu" : undefined} aria-expanded={ref ? menu === (ref === comparisonButton ? "comparison" : ref === finderButton ? "finder" : "settings") : undefined} onClick={onClick}><Icon name={name} /></WorkspaceControlButton>;
 
   if (!visible) return null;
-  return <div ref={root} className="changes-pane" data-show-files={showFiles || undefined} tabIndex={-1} aria-label={words.changes} onKeyDown={(event) => {
+  return <div ref={root} className="changes-pane" data-show-files={showFiles || undefined} tabIndex={-1} aria-label={words.changes}
+    onPointerDownCapture={() => cancelScrollRestore.current?.()} onKeyDownCapture={() => cancelScrollRestore.current?.()} onWheelCapture={() => cancelScrollRestore.current?.()}
+    onKeyDown={(event) => {
     // Shortcuts belong to pane chrome. Embedded editors and feedback inputs keep their keys.
     const shortcut = reviewPaneShortcut(reviewKey(event));
     if (!shortcut) return;
@@ -385,7 +439,13 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
       <div className="changes-header-actions">
         {headerButton("search", words.find, () => openMenu("finder"), finderButton, menu === "finder", "Ctrl+P")}
         {headerButton("more", words.settings, () => openMenu("settings"), settingsButton, menu === "settings")}
-        {onOpenWindow && headerButton("window", words.openWindow, onOpenWindow)}
+        {onOpenWindow && <>
+          <WorkspaceControlButton className="changes-icon-button" placement="top" tooltipGap={4.8} tooltipClassName="changes-control-tooltip"
+            label={openWindowLabel ?? words.openWindow} tooltipDescription={openWindowDisabledReason}
+            aria-disabled={Boolean(openWindowDisabledReason)} aria-describedby={openWindowDisabledReason ? `${id}-popout-reason` : undefined}
+            onClick={() => { if (!openWindowDisabledReason) onOpenWindow(captureView()); }}><Icon name="window" /></WorkspaceControlButton>
+          {openWindowDisabledReason && <span id={`${id}-popout-reason`} hidden>{openWindowDisabledReason}</span>}
+        </>}
         {onExpand && headerButton(expanded ? "restore" : "expand", expanded ? words.restore : words.expand, onExpand)}
         {onClose && headerButton("close", words.close, onClose)}
         {headerExtra}
@@ -394,7 +454,7 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
     <div className="changes-body">
       {showFiles && <aside className="changes-sidebar" aria-label={words.showFiles}>
         <FadedScroll className="changes-tree-scroll" onKeyDown={rove}><div>
-          {fileGroups.map(({ group, files: grouped }) => <div key={group} className="changes-tree-group">{separate && group !== "source" && <div className="changes-group-label">{words[group]}</div>}<ReviewTree files={grouped} grouped={groupFolders} selected={selectedPath} onSelect={selectFile} statusLabel={statusLabel} /></div>)}
+          {fileGroups.map(({ group, files: grouped }) => <div key={group} className="changes-tree-group">{separate && group !== "source" && <div className="changes-group-label">{words[group]}</div>}<ReviewTree files={grouped} grouped={groupFolders} selected={selectedPath} onSelect={selectFile} statusLabel={statusLabel} closed={closedFolders} setClosed={setClosedFolders} /></div>)}
         </div></FadedScroll>
         <div className="changes-commits">
           <button type="button" className="changes-commits-heading" aria-expanded={commitsOpen} onClick={() => setCommitsOpen((value) => !value)}><Icon name={commitsOpen ? "down" : "right"} size={13} /><span>{words.commits}</span><span>{snapshot?.commits.length ?? 0}</span></button>
@@ -405,7 +465,7 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
           </div></FadedScroll>}
         </div>
       </aside>}
-      <div ref={scroller} className="changes-diff-scroll" aria-busy={!snapshot && !error}>
+      <div ref={scroller} className="changes-diff-scroll" aria-busy={!snapshot && !error} onScroll={() => { if (snapshot && !restoreView.current) onViewStateChange?.(captureView()); }}>
         {!snapshot && !error && <div className="changes-state" role="status">{words.loading}</div>}
         {error && <div className="changes-state is-error" role="alert"><span>{error}</span><button type="button" onClick={() => setRefresh((value) => value + 1)}>{words.retry}</button></div>}
         {snapshot && <>
@@ -427,6 +487,10 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
         </>}
       </div>
     </div>
+    {unboundFeedback && <div role="status" className="changes-state">
+      <span>{locale === "zh-CN" ? "比较内容已变更。请重新选择行，再使用保留的反馈。" : locale === "zh-TW" ? "比較內容已變更。請重新選取行，再使用保留的回饋。" : "The comparison changed. Select lines again to use your retained feedback."}</span>
+      <textarea aria-label={locale === "zh-CN" ? "未绑定反馈" : locale === "zh-TW" ? "未綁定回饋" : "Unbound feedback"} value={unboundFeedback} onChange={event => setUnboundFeedback(event.target.value)} />
+    </div>}
     {notice && <div className="changes-announcement" role="status">{notice}<button type="button" aria-label={words.close} onClick={() => setNotice("")}><Icon name="close" size={12} /></button></div>}
     {menu === "settings" && <Popover anchor={settingsButton} width={352} label={words.settings} onClose={closeMenu}>
       <MenuItem checked={showFiles} hint={<kbd>Ctrl+Shift+Y</kbd>} onClick={() => { setShowFiles((value) => !value); closeMenu(); }}>{words.showFiles}</MenuItem>
@@ -483,8 +547,7 @@ export function ChangesPane({ cwd, visible, onAddFeedback, onOpenWindow, onExpan
   </div>;
 }
 
-function ReviewTree({ files, grouped, selected, onSelect, statusLabel }: { files: GitReviewFile[]; grouped: boolean; selected: string; onSelect: (path: string) => void; statusLabel: (file: GitReviewFile) => string }) {
-  const [closed, setClosed] = useState(new Set<string>());
+function ReviewTree({ files, grouped, selected, onSelect, statusLabel, closed, setClosed }: { files: GitReviewFile[]; grouped: boolean; selected: string; onSelect: (path: string) => void; statusLabel: (file: GitReviewFile) => string; closed: Set<string>; setClosed: (update: (current: Set<string>) => Set<string>) => void }) {
   const tree = useMemo(() => buildSearchTree(files.map((file) => file.path)), [files]);
   const map = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
   let first = true;

@@ -154,24 +154,31 @@ export async function openExternal(url: string): Promise<void> {
 }
 
 /** Open Changes from a user click: a dedicated native window, or a same-origin browser tab. */
-export async function openChangesWindow(cwd: string, targetId?: string): Promise<void> {
+export async function openChangesWindow(cwd: string, targetId?: string, viewId?: string): Promise<void> {
   if (!cwd.trim() || cwd.includes("\0") || cwd.length > 32_768) {
     throw new Error("A project folder is required to open Changes.");
   }
   if (targetId && (targetId.length > 256 || targetId.includes("\0"))) {
     throw new Error("Invalid Changes feedback target.");
   }
+  if (viewId !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(viewId)) {
+    throw new Error("Invalid Changes view identifier.");
+  }
   if (!isTauriDesktop()) {
     const url = new URL("/changes", window.location.origin);
     url.searchParams.set("cwd", cwd);
     if (targetId) url.searchParams.set("targetId", targetId);
+    if (viewId) url.searchParams.set("viewId", viewId);
     // Keep this synchronous, before any await, so browser popup policies see
-    // the original click. No native command is invoked on the web path.
-    window.open(url.href, "_blank", "noopener,noreferrer");
+    // the original click. Clearing opener preserves the existing isolation and
+    // still lets us detect blocked tabs (noopener always returns null).
+    const opened = window.open(url.href, "_blank");
+    if (!opened) throw new Error("The browser blocked the new tab. Allow popups and try again.");
+    opened.opener = null;
     return;
   }
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("open_changes_window", { cwd, targetId });
+  await invoke("open_changes_window", { cwd, targetId, ...(viewId ? { viewId } : {}) });
 }
 
 export interface ConversationDestinations {

@@ -24,6 +24,14 @@
     "note": "Risk levels that force the sync to open a reviewed PR instead of pushing straight to main and triggering a signed release. Most upstream releases will land here, because the remaining drift is accepted by decision rather than pending cleanup — see `dispositions` and `decisionLog`. Narrow this list only if the drift itself actually goes away."
   },
   "driftedUpstreamFiles": {
+    "lib/app-prefs.ts": {
+      "risk": "low", "drift": 16, "structuralDrift": 16, "disposition": "accepted",
+      "reason": "Shared upstream helper introduced after 6fcd7d4; measured against actual upstream 3b6a87771267bb884c41df65537156820f23b41d. Preserve all current preference keys and bounded Changes view records addressed by opaque IDs. Only the window preference is migrated by PIL-0010."
+    },
+    "lib/desktop-native.ts": {
+      "risk": "medium", "drift": 105, "structuralDrift": 105, "disposition": "accepted",
+      "reason": "Shared upstream helper introduced after 6fcd7d4; measured against actual upstream 3b6a87771267bb884c41df65537156820f23b41d. Preserve current native dialogs, launch and window behavior plus opaque Changes view IDs, synchronous browser popup failure reporting and opener isolation. Browser or mock IPC checks do not prove native Windows behavior."
+    },
     "lib/types.ts": {
       "risk": "medium", "drift": 47, "structuralDrift": 47, "disposition": "accepted",
       "reason": "Measured against 6fcd7d4 for the Todo-only index. Preserve the existing chapter, activity and runtime contracts together with the optional canonical session Todo projection; null and a valid empty task list have different meanings. No Plan or permission fields are included in this measurement."
@@ -209,9 +217,9 @@
     },
     "components/AppShell.tsx": {
       "risk": "high",
-      "drift": 2941,
+      "drift": 2955,
       "reason": "New uses the existing welcome view with Next-integrated history while retaining the chat/composer mount and draft identity. Files/Artifact, Terminal, real family tasks and Changes retain stable sibling pane hosts; Context stays independent. Title-menu actions reuse rename, source-leaf fork, sidebar family archive and confirmed delete with generation/current-selection guards; transcript modes and acknowledged output-style menus have real consumers, native destinations are capability checked, and unsupported exact-prompt styles remain explicit. Secondary conversation views must not overwrite main workspace memory or duplicate notifications/audio. Preserve synchronous browser open, native capability checks, stacked Escape/IME/focus, layout restoration, terminal lifecycle and scoped acknowledged Changes feedback without model submission.",
-      "structuralDrift": 2515,
+      "structuralDrift": 2529,
       "disposition": "accepted"
     },
     "components/FileViewer.tsx": {
@@ -448,6 +456,12 @@
     }
   },
   "forkOwnedPaths": [
+    "components/ChangesPane.window.test.mjs",
+    "lib/changes-window-state.ts",
+    "lib/changes-window-state.test.mjs",
+    "lib/workspace-popout-copy.ts",
+    "e2e/changes-window.mjs",
+    "e2e/changes-window-restore.mjs",
     "components/SessionTodoPanel.tsx",
     "components/SessionTodoPanel.test.mjs",
     "lib/session-todos.ts",
@@ -549,8 +563,6 @@
     "lib/desktop-menu.test.mjs",
     "lib/dom-menu-store.ts",
     "lib/dom-menu-store.test.mjs",
-    "lib/desktop-native.ts",
-    "lib/app-prefs.ts",
     "app/api/desktop/routes.test.mjs",
     "app/api/agent/running/events/",
     "app/api/agent/running-events.test.mjs",
@@ -674,6 +686,7 @@
     "reduce": "Drift that can be removed without losing anything — desktop-only code that belongs in components/desktop/, or fork additions sitting in an upstream file that can move to a fork-owned one. Act on these."
   },
   "decisionLog": [
+    "2026-10-22 — PIL-0010 migrates the window-only 5193f1e delta onto the current mainline without Todo or extension hunks. Preserve bounded local Changes view state, exact comparison binding, explicit unsupported pane reasons and target-bound acknowledged draft feedback. Current AppShell measures 2955 total/2529 structural at 6fcd7d4; app-prefs 16/16 low and desktop-native 105/105 medium use actual upstream 3b6a87771267bb884c41df65537156820f23b41d because both were introduced after the baseline. Register only six new window modules/checkers. Browser fixtures and Rust units remain separate from PIL-0200 native verification; thresholds stay unchanged.",
     "2026-10-19 — Todo-only index based on checkpoint139c973 preserves canonical bounded branch projection, authoritative connected state, selected-branch hook ownership and the read-only native panel. Ordinary coding loads the real published Todo/config2.13.9 through the owned agentDir adapter; precise post-load duplicate filtering retains only the named host when it actually registers Todo. Real loader alias identity uses the nearest bounded regular package manifest because SDK sourceInfo is attached after extensionsOverride. This does not isolate the old raw factory's initial XDG read. Catalogue marks Todo built-in with no duplicate install action and migration copy; existing narrow footer catalogue wording is source correction only. At6fcd7d4 the exact Todo index measures types43/43 medium, reader133/130 medium, wire20/20 low, stream13/13 low, rpc-manager406/406 high, useAgentSession622/622 high, ChatWindow934/785 high, three locale packs10/10 low each, next.config47/47 medium and package.json71/71 medium. Shared tests remain shared: reader139/139 medium, wire27/27 low, stream65/65 medium, RPC90/90 medium and hook942/941 high. Three post-baseline scripts are verified in actual upstream/main3b6a87771267bb884c41df65537156820f23b41d and measured against it: stage-package11/11 low, its test31/31 medium and prepare-desktop10/10 low; exact shared entries supersede the broad scripts ownership description. Register the eight new Todo adapter/projector/panel/helper modules and tests as fork-owned. Existing fork CSS, generated checker, catalogue, locale-plugins and root notice keep their ownership, and lockfile remains ignored. No whole-tree WIP totals, Web, Plan, permission child, pane-window or footer runtime are included; source review, final index validation, real browser and Windows/installer acceptance remain separate. Baseline6fcd7d4 and30/250 thresholds are unchanged.",
     "2026-10-17 — Pilaude request headers: accept the masked editor, encrypted configuration references, origin checks and error redaction as merge review points. Refresh ModelsConfig, probe routes and locales against 6fcd7d4; record the post-baseline redaction helper against origin/main. Keep existing risk thresholds and CSS ownership unchanged.",
     "2026-07-26 \u2014 lib/api-types.ts: fork update types moved to lib/app-update-types.ts; file now matches upstream and left the manifest.",

@@ -11,7 +11,8 @@ const modules = {
     export const useState = (...args) => globalThis.__changesRouteTest.useState(...args);
     export const useRef = (...args) => globalThis.__changesRouteTest.useRef(...args);
     export const useEffect = () => {};
-    export const useCallback = (fn) => fn;`,
+    export const useCallback = (fn) => fn;
+    export const useSyncExternalStore = (_subscribe, snapshot) => snapshot();`,
   "react/jsx-runtime": `export const jsx = (type, props) => ({type, props}); export const jsxs = jsx;`,
   "next/navigation": `export const useSearchParams = () => globalThis.__changesRouteTest.params;`,
   "@/components/ChangesPane": `export const ChangesPane = "ChangesPane";`,
@@ -34,12 +35,12 @@ const { outputFiles } = await build({
 });
 const { default: ChangesPage } = await import(`data:text/javascript;base64,${Buffer.from(outputFiles[0].text).toString("base64")}`);
 
-function harness({ deliver = false, targetId = "main-123" } = {}) {
+function harness({ deliver = false, targetId = "main-123", viewId } = {}) {
   const states = [];
   let index = 0;
   const env = {
     locale: "en",
-    params: new URLSearchParams({ cwd: "D:/project", ...(targetId ? { targetId } : {}) }),
+    params: new URLSearchParams({ cwd: "D:/project", ...(targetId ? { targetId } : {}), ...(viewId ? { viewId } : {}) }),
     sent: [], copied: [], closed: 0,
     async request(value) { env.sent.push(value); return deliver; },
     async copy(text) { env.copied.push(text); },
@@ -95,7 +96,7 @@ test("only acknowledged delivery returns success for the pane's draft notice", a
   const view = harness({ deliver: true });
   assert.equal(await pane(view.render()).props.onAddFeedback("Review `src/file.ts` old line 82"), true);
   assert.deepEqual(view.env.sent, [{ targetId: "main-123", cwd: "D:/project", text: "Review `src/file.ts` old line 82" }]);
-  assert.equal(status(view.render()), undefined, "the pane owns the success notice; the route adds no duplicate");
+  assert.match(statusText(view.render()), /saved Changes view expired or is unavailable/, "delivery does not hide the missing-view recovery status");
   assert.deepEqual(view.env.copied, []);
 });
 
@@ -142,6 +143,58 @@ test("feedback fallback follows Simplified and Traditional Chinese locale change
   tree = view.render();
   assert.match(statusText(tree), /聊天草稿無法使用/);
   assert.equal(status(tree).props.children[1].props.children, "複製回饋");
+});
+
+test("an unavailable addressed view gives an explicit recovery status", () => {
+  const tree = harness({ viewId: "31b2ff61-9167-42ca-b241-8f95792acdf4" }).render();
+  assert.match(statusText(tree), /saved Changes view expired or is unavailable/);
+});
+
+test("missing and malformed view IDs show recovery while the latest comparison stays usable", () => {
+  for (const viewId of [undefined, "../api/home", "invalid"]) {
+    const tree = harness({ viewId }).render();
+    assert.match(statusText(tree), /saved Changes view expired or is unavailable/);
+    assert.equal(pane(tree).props.visible, true);
+    assert.equal(pane(tree).props.initialViewState, undefined);
+  }
+});
+
+test("addressed standalone route consumes the saved view and persists its own changes for refresh", async () => {
+  const { createJiti } = await import("jiti");
+  const jiti = createJiti(import.meta.url, { tsconfigPaths: true });
+  const api = await jiti.import("../../lib/changes-window-state.ts");
+  const values = new Map();
+  const previous = globalThis.window;
+  globalThis.window = { localStorage: { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) } };
+  try {
+    const viewId = api.createChangesWindowView({ cwd: "D:/project", targetId: "main-123", sessionId: "session-A", state: { version: 1, scope: "uncommitted", selectedPath: "src/file.ts", scrollTop: 420 } });
+    const tree = harness({ viewId }).render();
+    assert.equal(pane(tree).props.initialViewState.scope, "uncommitted");
+    assert.equal(pane(tree).props.initialViewState.selectedPath, "src/file.ts");
+    pane(tree).props.onViewStateChange({ ...pane(tree).props.initialViewState, scrollTop: 820 });
+    assert.equal(api.readChangesWindowView(viewId, "D:/project", "main-123").state.scrollTop, 820);
+    const restored = harness({ viewId }).render();
+    assert.equal(pane(restored).props.initialViewState.scrollTop, 820);
+  } finally { globalThis.window = previous; }
+});
+
+test("a view that grows past storage bounds keeps the pane usable and reports save failure", async () => {
+  const { createJiti } = await import("jiti");
+  const api = await createJiti(import.meta.url, { tsconfigPaths: true }).import("../../lib/changes-window-state.ts");
+  const values = new Map();
+  const previous = globalThis.window;
+  globalThis.window = { localStorage: { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) } };
+  try {
+    const viewId = api.createChangesWindowView({ cwd: "D:/project", targetId: "main-123", state: { version: 1 } });
+    const view = harness({ viewId });
+    const initial = pane(view.render()).props.initialViewState;
+    const oversized = { ...initial, openPaths: Array.from({ length: 129 }, (_, i) => `src/${i}.ts`) };
+    assert.doesNotThrow(() => pane(view.render()).props.onViewStateChange(oversized));
+    assert.match(statusText(view.render()), /could not be saved/);
+    assert.equal(pane(view.render()).props.visible, true);
+    pane(view.render()).props.onViewStateChange(initial);
+    assert.equal(status(view.render()), undefined);
+  } finally { globalThis.window = previous; }
 });
 
 test.after(() => { delete globalThis.__changesRouteTest; });

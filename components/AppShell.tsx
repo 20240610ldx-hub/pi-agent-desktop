@@ -24,6 +24,8 @@ import { clearDraft, getDraft, setDraft } from "@/lib/draft-store";
 import { TabBar, type Tab } from "./TabBar";
 import { TerminalSettingsMenu } from "./TerminalSettingsMenu";
 import { WorkspacePaneDock } from "./WorkspacePaneDock";
+import { createChangesWindowView, type ChangesViewState } from "@/lib/changes-window-state";
+import { workspacePopoutCopy } from "@/lib/workspace-popout-copy";
 import { WorkspaceControlButton, WorkspacePaneControls, type WorkspacePaneId } from "./WorkspacePaneControls";
 import { normalizeWorkspacePaneLayout } from "@/lib/workspace-pane-layout";
 
@@ -1935,14 +1937,19 @@ export function AppShell() {
     if (!changesCwd || !showChat || scheduledOpen || welcomeOpen || !changesFeedbackTargetRef.current) return;
     return subscribeChangesFeedback({ targetId: changesFeedbackTargetRef.current, cwd: changesCwd, onFeedback: addChangesFeedback });
   }, [addChangesFeedback, changesCwd, navigationKey, scheduledOpen, showChat, welcomeOpen]);
-  const openChangesPopout = useCallback(() => {
+  const popoutWords = workspacePopoutCopy(locale);
+  const openChangesPopout = useCallback((state: ChangesViewState) => {
     if (!changesCwd) return;
     changesFeedbackTargetRef.current ??= crypto.randomUUID();
     setChangesWindowError(null);
-    void openChangesWindow(changesCwd, changesFeedbackTargetRef.current).catch((error: unknown) => {
-      setChangesWindowError(error instanceof Error ? error.message : String(error));
-    });
-  }, [changesCwd]);
+    try {
+      const targetId = changesFeedbackTargetRef.current;
+      const viewId = createChangesWindowView({ cwd: changesCwd, targetId, sessionId: selectedSession?.id, state });
+      void openChangesWindow(changesCwd, targetId, viewId).catch((error: unknown) => {
+        setChangesWindowError(error instanceof Error ? error.message : String(error));
+      });
+    } catch (error) { setChangesWindowError(error instanceof Error ? error.message : String(error)); }
+  }, [changesCwd, selectedSession?.id]);
   // While restoring initial session from URL, don't show the placeholder
   const showPlaceholder = initialSessionRestored && !showChat;
   // No chat to wait for: the placeholder is the final first screen. (A restored
@@ -3289,6 +3296,7 @@ export function AppShell() {
           panes={[
             {
               id: "files", title: translate("workspace.pane.files"), open: openPanes.files,
+              popout: { label: desktopMode ? popoutWords.window : popoutWords.tab, disabledReason: popoutWords.files },
               onClose: () => hideWorkspacePane("files"),
               header: <>
                 <span className="workspace-pane-title">{translate("workspace.pane.files")}</span>
@@ -3441,6 +3449,7 @@ export function AppShell() {
             },
             {
               id: "terminal", title: translate("workspace.pane.terminal"), open: openPanes.terminal,
+              popout: { label: desktopMode ? popoutWords.window : popoutWords.tab, disabledReason: popoutWords.terminal },
               onClose: () => hideWorkspacePane("terminal"),
               header: <><span className="workspace-pane-title">{translate("workspace.pane.terminal")}</span><TerminalSettingsMenu /></>,
               children: (terminalVisible) => <>
@@ -3474,6 +3483,8 @@ export function AppShell() {
                 {changesWindowError && <div className="changes-window-error" role="alert">{changesWindowError}</div>}
                 <ChangesPane cwd={changesCwd} visible={rightPanelOpen && changesVisible}
                   onAddFeedback={addChangesFeedback} onOpenWindow={openChangesPopout}
+                  openWindowLabel={desktopMode ? popoutWords.window : popoutWords.tab}
+                  openWindowDisabledReason={conversationWindow ? popoutWords.conversation : !changesCwd ? popoutWords.missing : undefined}
                   expanded={rightPanelFullWidth || chrome.expanded}
                   onExpand={rightPanelFullWidth ? handleRightPanelExpandToggle : chrome.onExpand}
                   onClose={() => hideWorkspacePane("changes")} headerExtra={chrome.overlayControls}
@@ -3482,6 +3493,7 @@ export function AppShell() {
             },
             {
               id: "tasks", title: translate("workspace.pane.tasks"), open: openPanes.tasks,
+              popout: { label: desktopMode ? popoutWords.window : popoutWords.tab, disabledReason: popoutWords.tasks },
               onClose: () => hideWorkspacePane("tasks"),
               children: <div className="workspace-tasks-content">
                 {activeSessionFamily && selectedSession ? <AgentSessionPanel key={activeSessionFamily.root.id}

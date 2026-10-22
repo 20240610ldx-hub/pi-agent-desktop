@@ -100,7 +100,7 @@ test("the parent consumes the selection domain and independent renderer without 
   assert.match(source, /import\s*\{\s*ReviewDiff\s*\}\s*from\s*["']\.\/ReviewDiff/);
   assert.match(source, /import\s*\{[^}]*\bnextReviewSelection\b[^}]*\}\s*from\s*["']@\/lib\/git-review-display/);
   assert.match(source, /nextReviewSelection\(selection, \{ path: file\.path, side, line, extend, inlineContextAnchor \}, split\)/);
-  assert.match(source, /setSelection\(next\); setFeedback\(""\); setNotice\(""\);/);
+  assert.match(source, /setSelection\(next\); setFeedback\(unboundFeedback\); setUnboundFeedback\(""\); setNotice\(""\);/);
   assert.match(source, /const submitFeedback = async \(selected: \{ start: number; end: number; snippet: string \}\)/);
   assert.match(source, /selected\.start !== Math\.min\(selection\.start, selection\.end\) \|\| selected\.end !== Math\.max\(selection\.start, selection\.end\)/);
   assert.match(source, /onAddFeedback\(formatReviewFeedback\(\{ \.\.\.selected, path: file\.path,[^\n]*side: selection\.side, comment: feedback \}\)\)/);
