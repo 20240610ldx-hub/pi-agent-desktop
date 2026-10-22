@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 122 张任务卡：todo 95 · in_progress 4 · verify 0 · review 0 · done 16 · blocked 2 · parked 5
+共 122 张任务卡：todo 94 · in_progress 5 · verify 0 · review 0 · done 16 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -35,6 +35,7 @@
 | PIL-0130 | P1 | in_progress | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | codex-plus:luna-high:impl | 2026-10-22T10:57Z | task/PIL-0130-parity-c16 |
 | PIL-0137 | P1 | in_progress | 复刻验收：C23 长会话滚动跟随与历史恢复 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0137-parity-c23 |
 | PIL-0143 | P1 | in_progress | 复刻验收：C29 Artifact 卡片、预览与 iframe 桥接 | codex-plus:sol-high:impl | 2026-10-22T12:04Z | task/PIL-0143-parity-c29 |
+| PIL-0011 | P2 | in_progress | 查清并修复 FileViewer 窄 pane 下载被取消 | codex-plus:sol-high:impl | 2026-10-22T12:35Z | task/PIL-0011-fileviewer-download |
 
 ### 阻塞
 
@@ -78,7 +79,6 @@
 | PIL-0202 | P1 | E4 | 子代理与 child 会话的授权上限与撤权 | 是 | PIL-0030, PIL-0203 |
 | PIL-0203 | P1 | E4 | 公开审批服务、入口覆盖清单与未覆盖入口默认拒绝 | 是 | PIL-0030 |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
-| PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0020 | P2 | E3 | 本地数据隔离与凭据加密验收 | 否 | — |
 | PIL-0060 | P2 | E7 | 定时任务接入授权与浏览器 | 否 | PIL-0030 |
 | PIL-0070 | P2 | E8 | Todo 扩展收尾：GUI 全链与干净安装 | 是 | PIL-0001 |

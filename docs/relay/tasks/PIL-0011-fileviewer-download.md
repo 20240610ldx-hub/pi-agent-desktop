@@ -3,11 +3,11 @@ id: PIL-0011
 title: 查清并修复 FileViewer 窄 pane 下载被取消
 epic: E2
 priority: P2
-status: todo
-owner:
-lease_until:
+status: in_progress
+owner: codex-plus:sol-high:impl
+lease_until: 2026-10-22T12:35Z
 branch: task/PIL-0011-fileviewer-download
-implementers: [claude:sonnet-xhigh:impl]
+implementers: [claude:sonnet-xhigh:impl, codex-plus:sol-high:impl]
 depends_on: []
 files_allowed: [components/FileViewer*, e2e/file-panel.mjs, app/api/files/**, app/api/desktop/save/**]
 files_shared: []
@@ -52,3 +52,4 @@ FileViewer 其他视觉残差。
 - 2026-10-19T14:15Z · claude:sonnet-xhigh:impl · 做了：基于任务 HEAD fdc57d85f441f485d928820699b58c6d25255b28 完整读卡/规则/对应 docs，check 通过，未改产品源码。最小夹具 07-anchor-repro.log (exit1/778ms) 复现同 download URL 的 anchor 事件和正确文件名，但 failure=canceled、saveAs失败，context request/route均不含下载URL。复现后列出假设：H1 浏览器整体禁止保存，预测 blob 也失败；H2 download 属性触发的浏览器路径绕过 Playwright route，预测同URL fetch/普通导航能进handler并保存；H3 FileViewer逻辑是取消的必要条件，预测独立anchor不复现。08-anchor-controls.log (exit0/1203ms) 两项对照 fetch→blob/无download属性普通导航均进入同URL handler，saveAs实际落盘各53bytes，sha256均为4b20f34d60937a0cc1cfd44c5518a3c46a56a02f4ace9a783cce52d1d4090d9e，等于夹具源；因此排除H1/H3作为旧症状唯一解释，支持H2。以上全是生成夹具，不是native/产品实测。 / 状态：分支 HEAD fdc57d8，干净无代码改动；A1完整产品命令未运行（无任务worktree preview，且本批暂停不扩scope）；A2定位到独立于产品的夹具路由缺口，但完整产品/原生根因仍待证；A3产品与native均未运行；A4仅guard通过(0files)，tests/tsc/lint未运行。完整命令/退出码/时间见 D:/pilaude/relay-evidence/PIL-0011/01-12日志及anchor-controls/result.json与两个落盘夹具文件。 / 下一步：按主协调转达的本批暂停要求设blocked交回；恢复时先由协调者批准任务worktree专用launch配置scope，锁preview并用专用端口完整运行A1，再以真实文件服务与路由fixture对照确认是否需要修产品或harness；不得用filename事件作为A3证据。 / 风险：隔离夹具支持浏览器路由缺口但不能替代真实FileViewer或Tauri保存验证；若最终走环境skip分支将触及A3与R3冲突，必须blocked交规划；本轮未删除断言/加重试/skip，未写通过证据，preview锁已释放。任务板仅--no-commit，请协调者串行提交。
 - 2026-10-19T14:15Z · claude:sonnet-xhigh:impl · in_progress → blocked：有界夹具已定位download属性与Playwright route缺口，产品根因尚未证；任务worktree无专用preview launch，按本批暂停要求不扩scope/不启动新服务，完整A1与A3native留待恢复后验证。
 - 2026-10-19T14:16Z · codex:gpt:coord · blocked → todo：用户要求暂停并交还租约；夹具下载路由缺口已定位，产品完整复现与原生字节验收尚未运行，保留blocked原因与全部证据供下次接手
+- 2026-10-22T09:35Z · codex-plus:sol-high:impl · 领取，租约至 2026-10-22T12:35Z
