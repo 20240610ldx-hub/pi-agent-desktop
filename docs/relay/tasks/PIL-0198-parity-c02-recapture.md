@@ -46,3 +46,4 @@ PIL-0116 已验收的四个状态（除非补采显示回归）。
 ## 日志
 - 2026-10-22T02:47Z · planner · 创建
 - 2026-10-22T02:48Z · planner · 冻结验收标准 4a425fd04605
+- 2026-10-22T02:51Z · claude:opus-medium:planner · PIL-0116 评审可选意见留本卡：onContent 丢了 backdrop-blur/悬停/内描边；danger 改用 --danger；去掉 squish 弹簧；type 被覆盖为 submit 时加载中仍会提交表单——补采时一并核对与修正。
