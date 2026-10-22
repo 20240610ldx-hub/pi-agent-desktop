@@ -55,6 +55,7 @@ waivers: []
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 夹具层各状态可进入（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0143\verify\VERIFY.md | 26c6d92 | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -69,3 +70,4 @@ waivers: []
 - 2026-10-22T10:02Z · codex-plus:sol-high:impl · claude impl: 桥接安全加固+保存失败/重试，定向62/62 tsc lint guard 通过，npm test 12 失败与基线逐名一致；C29 同态参考待补
 - 2026-10-22T10:02Z · codex-plus:sol-high:impl · in_progress → verify
 - 2026-10-22T10:14Z · user · 修订验收标准 13b41ae1ace1 → fd7b216b5c6c：拆卡政策（用户 2026-10-22 批准）：已验部分合入，缺图与原生项移出至 PIL-0210（预览失败重试保滚动、C29 同态参考补采、关闭侧板回原卡、inline 流式、真实 SDK、Tauri 保存、原生 IME/DPI、评审残差）
+- 2026-10-22T10:14Z · claude-cli:sonnet-high:verify · 证据 A1：通过
