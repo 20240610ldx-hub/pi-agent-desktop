@@ -68,3 +68,4 @@ waivers: []
 - 2026-10-22T07:23Z · claude-cli:sonnet-high:impl · 领取，租约至 2026-10-22T10:23Z
 - 2026-10-22T07:34Z · claude-cli:sonnet-high:impl · 复述：A1 单行/多行/附件/busy 布局+发送提示；A2 同帧量测参考 3.1623 (00/04/tooltips-01)；分叉发送无真实 consumer 文件在范围，先隐藏。阶段1：卡内布局+提示已提交
 - 2026-10-22T07:34Z · claude-cli:sonnet-high:impl · 做了：卡内单行布局+发送提示(dea19aa) / 状态：A1/A2 部分，分叉发送因 consumer 不在范围未做，A3/A4/A5 未跑；额度用尽 / 下一步：读 evidence/PIL-0122/impl/HANDOFF.md，补测试、窄窗/多行/busy 量测、npm test 对比基线 / 风险：+ 位置与 PIL-0123 交叠
+- 2026-10-22T07:35Z · claude-cli:sonnet-high:impl · 协调者：分叉发送 UI（提示第二行、Ctrl+Alt+Enter、置灰、i18n）按 2026-10-21 用户决定 分叉发送先隐藏不在本卡实现，验收中相关项待拆卡；CLI 额度重置后继续剩余项（组件测试、夹具报错、窄窗/多行/busy、提示颜色基线、npm test 对比）。
