@@ -1,7 +1,8 @@
 # Top-level window probe for the Windows native baseline (see docs/pilaude-windows-regression.md).
 #
 #   -Action list   (default) JSON array of the target process's visible top-level windows
-#                  (geometry, DPI, frame styles; PrintWindow capture when -CaptureDirectory is set)
+#                  (geometry, DPI, frame styles; PrintWindow capture when -CaptureDirectory is set,
+#                  skipped for WS_EX_TOOLWINDOW helpers such as the 22x22 event-loop target)
 #   -Action move   -Handle <h> -X <x> -Y <y>   SetWindowPos (position only), prints the moved window row
 #   -Action close  -Handle <h>                 posts WM_CLOSE, prints [{handle, posted}]
 #   -Action dpi    system and primary-monitor DPI (no target process needed)
@@ -41,6 +42,7 @@ public static class PilaudeWindowProbe {
   [DllImport("user32.dll")] static extern bool IsIconic(IntPtr hwnd);
   [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int count);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd, StringBuilder text, int count);
   [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
   [DllImport("user32.dll")] static extern uint GetDpiForWindow(IntPtr hwnd);
   [DllImport("user32.dll")] static extern uint GetDpiForSystem();
@@ -76,6 +78,9 @@ public static class PilaudeWindowProbe {
     StringBuilder text = new StringBuilder(512);
     GetWindowText(hwnd, text, 512);
     long style = GetWindowLongPtr(hwnd, -16).ToInt64();
+    long exStyle = GetWindowLongPtr(hwnd, -20).ToInt64();
+    StringBuilder className = new StringBuilder(256);
+    GetClassName(hwnd, className, 256);
     IntPtr monitor = MonitorFromWindow(hwnd, 2);
     uint dpiX = 0, dpiY = 0;
     int scale = 0;
@@ -84,6 +89,8 @@ public static class PilaudeWindowProbe {
     Dictionary<string, object> row = new Dictionary<string, object>();
     row["handle"] = hwnd.ToInt64();
     row["title"] = text.ToString();
+    row["className"] = className.ToString();
+    row["toolWindow"] = (exStyle & 0x00000080L) != 0;
     row["processId"] = (long)OwnerOf(hwnd);
     row["x"] = rect.Left; row["y"] = rect.Top;
     row["width"] = rect.Right - rect.Left; row["height"] = rect.Bottom - rect.Top;
@@ -204,7 +211,7 @@ if ($CaptureDirectory -ne '') {
 $rows = @()
 foreach ($handleValue in [PilaudeWindowProbe]::Find($TargetProcessId)) {
   $row = ConvertRow ([PilaudeWindowProbe]::Describe($handleValue))
-  if ($CaptureDirectory -ne '' -and $row.width -gt 0 -and $row.height -gt 0) {
+  if ($CaptureDirectory -ne '' -and $row.width -gt 0 -and $row.height -gt 0 -and -not $row.toolWindow) {
     $file = Join-Path $CaptureDirectory ('os-window-' + $row.handle + '.png')
     $printed = $false
     $deviation = [PilaudeWindowProbe]::Capture($handleValue, $row.width, $row.height, $file, [ref]$printed)
