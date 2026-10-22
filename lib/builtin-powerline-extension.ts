@@ -19,10 +19,24 @@ type PrimaryRenderer = {
  * Consume its published renderer, without starting the editor/queue/shell factory.
  * See THIRD_PARTY_NOTICES.md for the package's license-source limitation.
  */
-export function createBuiltinPowerlineExtension({ agentDir }: { agentDir: string }): InlineExtension {
+let warnedMissing = false;
+const resolvePackageManifest = () => createRequire(import.meta.url).resolve("pi-powerline-footer/package.json");
+
+export function createBuiltinPowerlineExtension(
+  { agentDir, resolveManifest = resolvePackageManifest }: { agentDir: string; resolveManifest?: () => string },
+): InlineExtension {
   return { name: "pilaude-powerline", factory: async (pi) => {
-    const require = createRequire(import.meta.url);
-    const manifestPath = require.resolve("pi-powerline-footer/package.json");
+    // Packaged builds do not ship the package yet (license pending): register nothing.
+    let manifestPath: string;
+    try {
+      manifestPath = resolveManifest();
+    } catch (error) {
+      if (!warnedMissing) {
+        warnedMissing = true;
+        console.warn(`[pilaude-powerline] pi-powerline-footer is not installed; status row disabled (${(error as { code?: string })?.code ?? "unresolved"})`);
+      }
+      return;
+    }
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { name?: unknown; version?: unknown };
     if (manifest.name !== "pi-powerline-footer" || manifest.version !== "0.20.2") {
       throw new Error("The primary adapter requires pi-powerline-footer@0.20.2");
