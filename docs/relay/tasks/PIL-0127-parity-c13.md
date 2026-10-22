@@ -3,7 +3,7 @@ id: PIL-0127
 title: 复刻验收：C13 代码块、Mermaid source 与复制反馈
 epic: E2
 priority: P1
-status: verify
+status: review
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-22T05:42Z
 branch: task/PIL-0127-parity-c13
@@ -81,3 +81,4 @@ waivers: []
 - 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A5：通过
+- 2026-10-22T04:39Z · codex-plus:gpt-xhigh:impl · verify → review（评审 claude-cli:sonnet-high:review）
