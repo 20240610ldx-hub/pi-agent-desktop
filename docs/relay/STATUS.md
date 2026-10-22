@@ -25,14 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 112 张任务卡：todo 94 · in_progress 3 · verify 0 · review 1 · done 9 · blocked 0 · parked 5
+共 112 张任务卡：todo 94 · in_progress 3 · verify 0 · review 0 · done 10 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0127 | P1 | in_progress | 复刻验收：C13 代码块、Mermaid source 与复制反馈 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0127-parity-c13 |
-| PIL-0197 | P1 | review | Windows 托盘 Quit 只隐藏窗口不结束进程 | claude:sonnet-high:impl | 已过期 2026-10-21T16:04Z | task/PIL-0197-tray-quit-exit |
 | PIL-0133 | P2 | in_progress | 复刻验收：C19 模型切换菜单 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0133-parity-c19 |
 | PIL-0147 | P2 | in_progress | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | claude:sonnet-high:impl | 2026-10-22T05:41Z | task/PIL-0147-parity-c33 |
 
@@ -139,7 +138,7 @@
 | PIL-0199 | P2 | E2 | 复刻验收补采：C01 主题切换、字体回退、图标与窄窗等状态 | 是 | PIL-0115 |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
-### 已完成（9）
+### 已完成（10）
 
-PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0115 复刻验收：C01 主题、文字与图标；PIL-0116 复刻验收：C02 按钮尺寸与交互状态；PIL-0180 Windows 保持唤醒能力与退出释放；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown；PIL-0187 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）；PIL-0189 在分叉会话中发送（fork-send）；PIL-0177 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
+PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0115 复刻验收：C01 主题、文字与图标；PIL-0116 复刻验收：C02 按钮尺寸与交互状态；PIL-0180 Windows 保持唤醒能力与退出释放；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown；PIL-0187 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）；PIL-0189 在分叉会话中发送（fork-send）；PIL-0197 Windows 托盘 Quit 只隐藏窗口不结束进程；PIL-0177 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
 <!-- relay:board:end -->

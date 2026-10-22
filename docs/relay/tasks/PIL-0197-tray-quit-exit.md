@@ -3,9 +3,9 @@ id: PIL-0197
 title: Windows 托盘 Quit 只隐藏窗口不结束进程
 epic: E11
 priority: P1
-status: review
+status: done
 owner: claude:sonnet-high:impl
-lease_until: 2026-10-21T16:04Z
+lease_until:
 branch: task/PIL-0197-tray-quit-exit
 implementers: [claude:sonnet-high:impl]
 depends_on: [PIL-0180]
@@ -80,3 +80,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T03:06Z · claude:sonnet-high:verify · 验证(3854190)：A1-A4 均有通过行，A2/A3 据用户 powercfg 前后对照补齐。目标：托盘Quit结束进程并释放keep-awake。结果：全部通过(A1/A4 为验证者重跑，A2/A3 为用户实机)。下一步：评审。
 - 2026-10-22T03:06Z · claude:sonnet-high:impl · verify → review
 - 2026-10-22T03:08Z · claude:opus-high:review · 做了：评审 fusion...task/PIL-0197 diff(仅 shell/mod.rs +121)、复核 impl/verify/r2 与用户 powercfg 证据、guard 无问题。结论：quit_application 加 2s 看门狗兜底，超时执行 Exit 清理后 process::exit(0)，目标达成；正常路径(用户实机与 -Hide -Mouse)走 RunEvent::Exit 3–7ms 写 exit，看门狗未触发。强制路径风险可接受：Windows server.stop 同步 taskkill /T /F 且在计时开始前完成，慢停服不会误杀；stop 用 Mutex take 幂等；PowerClearRequest 基于句柄与线程无关，进程退出 OS 也会回收；AppHandle Send+Sync；window-state 在 CloseRequested(含隐藏到托盘)已存盘，强制路径只丢最近一次关窗后的几何，且从卡住的主线程外调 save_window_state 会死锁，不补是对的；无 prevent_exit 调用。延后到菜单返回后再 quit(run_on_main_thread)依赖同一事件循环，不能替代 OS 级兜底。/ 状态：评审通过 / 下一步：协调者合入 / 风险：1) 根因只在合成场景(-WhileMenuOpen，菜单模态中投递 WM_COMMAND)复现，真实点击修复前未复现(实现者已披露)；若以后日志无 'quit requested' 说明菜单事件未到达，看门狗覆盖不到，需新卡。2) RunEvent::Exit 若超过 2s，看门狗可能与 window-state 写盘并发导致截断(概率低)。3) 打包构建服务子进程残留未实测。可选：doc 注释中「PIL-0180 evidence」对 TrackPopupMenu 根因措辞偏强；第 4 个单测与第 3 个重复，看门狗单测只测 sleep 夹具。
+- 2026-10-22T03:09Z · claude:opus-high:review · review → done（评审 claude:opus-high:review）
