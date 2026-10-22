@@ -3,11 +3,11 @@ id: PIL-0073
 title: Plannotator 计划审阅接入
 epic: E8
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: codex-plus:luna-high:impl
+lease_until: 2026-10-22T15:55Z
+branch: task/PIL-0073-plannotator
+implementers: [codex-plus:luna-high:impl]
 depends_on: [PIL-0001]
 files_allowed: [lib/builtin-plannotator-extension*, lib/plannotator-extension*, lib/plan-review-runtime.ts, lib/session-plan-review*, components/PlanReviewPanel*, hooks/usePlanReview.ts, e2e/plannotator-compat.mjs]
 files_shared: [lib/rpc-manager*, hooks/useAgentSession*, lib/agent-event-stream*, lib/agent-event-wire*, lib/types.ts, lib/session-reader*, lib/i18n/messages/*.ts, app/native-theme.css, components/ChatWindow.tsx, package.json, package-lock.json, next.config.ts, scripts/prepare-desktop.mjs, scripts/stage-package*, scripts/web-package-layout.test.mjs, scripts/release-workflows.test.mjs, THIRD_PARTY_NOTICES.md, scripts/fork-ownership.json, docs/pilaude-pi-extensions.md]
@@ -48,3 +48,4 @@ waivers: []
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
+- 2026-10-22T12:55Z · codex-plus:luna-high:impl · 领取，租约至 2026-10-22T15:55Z
