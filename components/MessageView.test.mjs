@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { after } from "node:test";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
+import { chromium } from "playwright";
 import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url, {
@@ -29,6 +34,174 @@ function renderMessage(message, props = {}) {
     ),
   );
 }
+
+// Real MessageView + project CSS in Chromium. Only the OS clipboard and the
+// parent fork callback are controlled boundaries; this is not a Pi session.
+let browserFixture;
+after(async () => { if (browserFixture) await (await browserFixture).browser.close(); });
+async function assistantFixture(config = {}) {
+  browserFixture ??= (async () => {
+    const bundle = (await build({
+      stdin: { contents: `import React from "react";
+        import {createRoot} from "react-dom/client";
+        import {I18nProvider} from "./hooks/useI18n";
+        import {MessageView} from "./components/MessageView";
+        function Harness() {
+          const [text,setText] = React.useState(window.config.text ?? "First paragraph.\\n\\nSecond paragraph.");
+          const [forking,setForking] = React.useState(false);
+          window.setText = setText;
+          window.setForking = setForking;
+          return <I18nProvider><div className="app-shell" style={{display:'block',height:'100vh',overflow:'auto'}}>
+            <button id="before">Before answer</button>
+            <MessageView message={{role:'assistant',content:[{type:'text',text}]}} entryId="reply"
+              forking={forking} onFork={(...args)=>{window.forks.push(args);setForking(true);}}/>
+            <button id="after">After answer</button>
+          </div></I18nProvider>;
+        }
+        createRoot(document.getElementById('root')).render(<React.StrictMode><Harness/></React.StrictMode>);`,
+        resolveDir: fileURLToPath(new URL("../", import.meta.url)), loader: "tsx" },
+      bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic", logLevel: "silent",
+    })).outputFiles[0].text;
+    const css = (await Promise.all(["app/globals.css", "app/settings.css", "vendor/open-claude-ui/cds-theme.css", "app/native-theme.css"].map(name => readFile(new URL(`../${name}`, import.meta.url), "utf8")))).join("\n").replace(/^@import[^;]*;/gm, "");
+    return { bundle, css, browser: await chromium.launch({ headless: true }) };
+  })();
+  const { browser, bundle, css } = await browserFixture;
+  const page = await browser.newPage({ viewport: { width: config.width ?? 900, height: 720 }, hasTouch: config.touch ?? false });
+  page.setDefaultTimeout(3000);
+  await page.addInitScript(config => {
+    window.config = config;
+    window.forks = [];
+    window.writes = [];
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: text => {
+      window.writes.push(text);
+      return new Promise((resolve, reject) => { window.finishCopy = ok => ok ? resolve() : reject(new Error("clipboard denied")); });
+    } } });
+    document.execCommand = () => {
+      document.querySelector("textarea")?.focus();
+      return window.fallbackOk ?? false;
+    };
+  }, config);
+  await page.route("**/*", route => route.request().url() === "https://assistant.fixture/"
+    ? route.fulfill({ contentType: "text/html", body: `<style>${css}</style><div id="root"></div><script>${bundle.replaceAll("</script", "<\\/script")}</script>` }) : route.abort());
+  await page.goto("https://assistant.fixture/");
+  if (config.touch) {
+    const session = await page.context().newCDPSession(page);
+    await session.send("Emulation.setEmulatedMedia", { features: [{ name: "hover", value: "none" }, { name: "pointer", value: "coarse" }] });
+  }
+  await page.locator(".message-copy-action").waitFor();
+  return page;
+}
+
+test("assistant inline code uses the C12 theme colors without changing C13 code blocks", async () => {
+  const page = await assistantFixture({ text: "Inline `token`.\n\n```txt\nblock\n```" });
+  try {
+    for (const [theme, expected] of [["light", "rgb(142, 38, 38)"], ["dark", "rgb(236, 126, 126)"]]) {
+      await page.evaluate(value => document.documentElement.classList.toggle("dark", value === "dark"), theme);
+      assert.equal(await page.locator(".markdown-inline-code").evaluate(el => getComputedStyle(el).color), expected);
+      assert.equal(await page.locator(".c13-code-content").evaluate(el => getComputedStyle(el).color), theme === "dark" ? "rgb(229, 231, 235)" : "rgb(32, 32, 32)");
+    }
+  } finally { await page.close(); }
+});
+
+test("assistant copy reports pending, failure and recovery without losing fallback focus", async () => {
+  const page = await assistantFixture();
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  try {
+    const copy = page.locator(".message-copy-action");
+    await copy.focus();
+    await copy.press("Enter");
+    assert.equal(await copy.getAttribute("aria-busy"), "true");
+    await copy.press("Enter");
+    assert.deepEqual(await page.evaluate(() => window.writes), ["First paragraph.\n\nSecond paragraph."]);
+    await page.evaluate(() => window.finishCopy(false));
+    await page.getByRole("status").filter({ hasText: "Could not copy. Try again." }).waitFor();
+    assert.equal(await copy.evaluate(el => el === document.activeElement), true);
+    assert.equal(await copy.getAttribute("aria-busy"), "false");
+    await copy.press("Enter");
+    await page.evaluate(() => { window.fallbackOk = true; window.finishCopy(false); });
+    await page.getByRole("status").filter({ hasText: "Copied" }).waitFor();
+    assert.equal(await copy.evaluate(el => el === document.activeElement), true);
+    assert.deepEqual(errors, []);
+  } finally { await page.close(); }
+});
+
+test("assistant copy ignores stale completion and does not steal focus moved by the reader", async () => {
+  const page = await assistantFixture();
+  try {
+    const copy = page.locator(".message-copy-action");
+    await copy.focus();
+    await copy.press("Enter");
+    await page.evaluate(() => { window.setText("A different answer."); });
+    await page.locator(".markdown-body").filter({ hasText: "A different answer." }).waitFor();
+    await page.locator("#after").focus();
+    await page.evaluate(() => window.finishCopy(true));
+    await page.waitForFunction(() => document.querySelector(".message-copy-action").getAttribute("aria-busy") === "false");
+    assert.equal(await page.getByRole("status").filter({ hasText: "Copied" }).count(), 0);
+    assert.equal(await page.locator("#after").evaluate(el => el === document.activeElement), true);
+  } finally { await page.close(); }
+});
+
+test("assistant fork stays focused during parent pending and sends the exact after-entry boundary once", async () => {
+  const page = await assistantFixture();
+  try {
+    const fork = page.getByRole("button", { name: "Fork from here", exact: true });
+    await fork.focus();
+    await fork.press("Enter");
+    assert.equal(await fork.getAttribute("aria-busy"), "true");
+    assert.equal(await fork.evaluate(el => el === document.activeElement), true);
+    await fork.press("Enter");
+    assert.deepEqual(await page.evaluate(() => window.forks), [["reply", "after"]]);
+    await page.evaluate(() => window.setForking(false));
+    await page.waitForFunction(() => document.querySelector('[aria-label="Fork from here"]').getAttribute("aria-busy") === "false");
+    assert.equal(await fork.evaluate(el => el === document.activeElement), true);
+    await fork.press("Enter");
+    assert.deepEqual(await page.evaluate(() => window.forks), [["reply", "after"], ["reply", "after"]]);
+  } finally { await page.close(); }
+});
+
+test("assistant copy failure feedback expires and hides the touch tooltip", async () => {
+  const page = await assistantFixture({ touch: true, width: 390 });
+  try {
+    const copy = page.locator(".message-copy-action");
+    await copy.tap();
+    await page.evaluate(() => window.finishCopy(false));
+    await page.getByRole("status").filter({ hasText: "Could not copy. Try again." }).waitFor();
+    assert.equal(await copy.getAttribute("data-copy-state"), "failed");
+    await page.waitForFunction(() => document.querySelector(".message-copy-action").getAttribute("data-copy-state") === "idle", null, { timeout: 5500 });
+    assert.equal(await page.getByRole("status").textContent(), "");
+    await page.waitForFunction(() => getComputedStyle(document.querySelector(".message-copy-action .pilaude-action-tooltip")).visibility === "hidden");
+    assert.equal(await copy.locator(".pilaude-action-tooltip").evaluate(el => getComputedStyle(el).visibility), "hidden");
+  } finally { await page.close(); }
+});
+
+test("assistant actions reveal by hover, Tab and touch without shifting a long answer", async () => {
+  for (const touch of [false, true]) {
+    const page = await assistantFixture({ width: 390, touch, text: "A readable long answer.\n\n".repeat(80) });
+    try {
+      const footer = page.locator(".message-assistant-footer");
+      const copy = page.locator(".message-copy-action");
+      if (touch) {
+        assert.equal(await footer.evaluate(el => getComputedStyle(el).opacity), "1");
+        await copy.tap();
+      } else {
+        assert.equal(await footer.evaluate(el => getComputedStyle(el).opacity), "0");
+        await footer.hover();
+        await page.waitForFunction(() => getComputedStyle(document.querySelector(".message-assistant-footer")).opacity === "1");
+        await page.mouse.move(389, 0);
+        await page.locator("#before").focus();
+        await page.keyboard.press("Tab");
+        assert.equal(await copy.evaluate(el => el === document.activeElement), true);
+        await copy.press("Enter");
+      }
+      const before = await page.locator(".app-shell").evaluate(el => ({ top: el.scrollTop, height: el.scrollHeight }));
+      await page.evaluate(() => window.finishCopy(false));
+      await page.getByRole("status").filter({ hasText: "Could not copy. Try again." }).waitFor();
+      assert.deepEqual(await page.locator(".app-shell").evaluate(el => ({ top: el.scrollTop, height: el.scrollHeight })), before);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    } finally { await page.close(); }
+  }
+});
 
 test("validated chapter records render a literal bold anchor without an extension inspector", () => {
   const chapter = { role: "custom", customType: "pi-web:chapter", display: true, content: "Validation <tag> & **literal**", details: { version: 1, chapterId: "chapter-unique", title: "Validation <tag> & **literal**" } };
