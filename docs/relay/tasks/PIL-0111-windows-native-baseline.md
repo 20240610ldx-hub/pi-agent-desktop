@@ -95,3 +95,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T09:06Z · claude-cli:sonnet-medium:verify · 证据 A1：通过
 - 2026-10-22T09:06Z · claude-cli:sonnet-medium:verify · 证据 A4：通过
 - 2026-10-22T09:06Z · claude-cli:sonnet-medium:verify · 证据 A6：通过
+- 2026-10-22T09:06Z · claude-cli:sonnet-high:impl · 后续小修：中文系统 taskkill 输出为 GBK，warnings 中拒绝原因匹配不到（不影响残留判定）。PrintWindow 截图右侧有伪影，PIL-0200 视觉比对前留意。
