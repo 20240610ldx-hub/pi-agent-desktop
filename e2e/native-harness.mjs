@@ -134,36 +134,53 @@ export const processKey = (processInfo) => `${processInfo.pid}@${processInfo.cre
 export const isPilaudeOrWebView = (name) => /^(pi-agent-desktop|pilaude)(\.exe)?$/i.test(name) || /^msedgewebview2(\.exe)?$/i.test(name);
 export const publicProcess = ({ pid, ppid, name, created }) => ({ pid, ppid, name, created });
 
-/** Pids of `rootPid` and every descendant, following parent links in one snapshot. */
-export function descendantsOf(rootPid, processes) {
+/** Creation time in ms from the probe's 7-digit ISO form or JS's 3-digit one; NaN when unknown. */
+export function createdMs(value) {
+  const match = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d+))?Z$/.exec(String(value ?? ""));
+  if (!match) return Number.NaN;
+  return Date.parse(`${match[1]}Z`) + Number(`0.${match[2] ?? "0"}`) * 1000;
+}
+
+/**
+ * `rootPid` and every descendant in one snapshot. Parent links alone are not enough because Windows
+ * reuses pids: a child must also be created no earlier than its parent (and, for the root's own
+ * children, no earlier than `notBefore`), and the root itself must be the process we started
+ * (`rootCreated` / `notBefore`), otherwise a recycled pid would pull in unrelated trees.
+ */
+export function descendantsOf(rootPid, processes, { notBefore, rootCreated } = {}) {
+  const root = processes.find((item) => item.pid === rootPid);
+  if (root) {
+    if (rootCreated && root.created !== rootCreated) return [];
+    if (notBefore !== undefined && createdMs(root.created) < notBefore) return [];
+  }
   const children = new Map();
   for (const item of processes) {
     if (!children.has(item.ppid)) children.set(item.ppid, []);
     children.get(item.ppid).push(item);
   }
   const found = new Map();
-  const queue = [rootPid];
+  const queue = [{ pid: rootPid, bound: root ? createdMs(root.created) : (notBefore ?? Number.NaN) }];
   while (queue.length) {
-    const pid = queue.shift();
+    const { pid, bound } = queue.shift();
     for (const child of children.get(pid) ?? []) {
-      if (!found.has(child.pid) && child.pid !== rootPid) {
-        found.set(child.pid, child);
-        queue.push(child.pid);
-      }
+      if (found.has(child.pid) || child.pid === rootPid) continue;
+      const created = createdMs(child.created);
+      if (created < bound) continue; // started before its supposed parent: a recycled ppid
+      found.set(child.pid, child);
+      queue.push({ pid: child.pid, bound: created });
     }
   }
-  const root = processes.find((item) => item.pid === rootPid);
   return [...(root ? [root] : []), ...found.values()];
 }
 
 /**
  * Processes this run owns: the root's tree plus any process whose command line carries our unique
- * WebView2 profile folder (re-parented or orphaned WebView2 children). Pre-existing processes are
- * never owned, even if they match.
+ * WebView2 profile folder (re-parented or orphaned WebView2 children). Anything in `preexisting`
+ * (the key of every process that existed before the run, whatever its name) is never owned.
  */
-export function ownedProcesses({ rootPid, profileDir, processes, preexisting }) {
+export function ownedProcesses({ rootPid, profileDir, processes, preexisting, notBefore, rootCreated }) {
   const owned = new Map();
-  for (const item of descendantsOf(rootPid, processes)) owned.set(processKey(item), item);
+  for (const item of descendantsOf(rootPid, processes, { notBefore, rootCreated })) owned.set(processKey(item), item);
   if (profileDir) {
     const marker = profileDir.toLowerCase();
     for (const item of processes) {
@@ -189,14 +206,18 @@ export async function taskkillTree(pid) {
  * Kill only the tree this run started, then verify nothing of it survives within `graceMs`.
  * `preexisting` is a Set of process keys that existed before the run; they are never killed.
  */
-export async function cleanupOwned({ rootPid, profileDir, preexisting, list = listProcesses, kill = taskkillTree, graceMs = 5000, pollMs = 250 }) {
+export async function cleanupOwned({ rootPid, profileDir, preexisting, notBefore, list = listProcesses, kill = taskkillTree, graceMs = 5000, pollMs = 250 }) {
   const ownedKeys = new Map();
   const killed = [];
   const deadline = Date.now() + graceMs;
   let rootKilled = false;
+  let rootCreated;
   for (;;) {
     const processes = await list();
-    for (const item of ownedProcesses({ rootPid, profileDir, processes, preexisting })) ownedKeys.set(processKey(item), item);
+    for (const item of ownedProcesses({ rootPid, profileDir, processes, preexisting, notBefore, rootCreated })) {
+      ownedKeys.set(processKey(item), item);
+      if (item.pid === rootPid) rootCreated = item.created;
+    }
     const alive = [...ownedKeys.values()].filter((item) => processes.some((candidate) => processKey(candidate) === processKey(item)));
     if (alive.length === 0) return { killed, residual: [], ownedSeen: [...ownedKeys.values()].map(publicProcess) };
     if (Date.now() >= deadline) return { killed, residual: alive.map(publicProcess), ownedSeen: [...ownedKeys.values()].map(publicProcess) };
@@ -218,6 +239,7 @@ export async function cleanupOwned({ rootPid, profileDir, preexisting, list = li
 // Synchronous last resort if the harness dies without running its own cleanup.
 const liveRoots = new Set();
 let exitHookInstalled = false;
+/** Registers a started root for the exit hook; the caller drops it again when the process exits. */
 function trackRoot(pid) {
   liveRoots.add(pid);
   if (exitHookInstalled) return;
@@ -252,14 +274,40 @@ const FIXTURE_DATA = {
 export const isApiPath = (pathname) => pathname === "/api" || pathname.startsWith("/api/");
 
 /**
+ * The path a server would end up routing a request-target to: absolute-form stripped, query dropped,
+ * percent-escapes decoded (repeatedly), backslashes and duplicate slashes folded, dot segments
+ * resolved, lowercased. `//api/x` and `/%61pi/x` both come out as `/api/x`.
+ */
+export function normalizeRequestPath(target) {
+  let value = String(target);
+  const absolute = /^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i.exec(value);
+  if (absolute) value = value.slice(absolute[0].length) || "/";
+  value = value.split(/[?#]/, 1)[0];
+  for (let round = 0; round < 4; round += 1) {
+    const decoded = value.replace(/(?:%[0-9a-f]{2})+/gi, (run) => { try { return decodeURIComponent(run); } catch { return run; } });
+    if (decoded === value) break;
+    value = decoded;
+  }
+  const segments = [];
+  for (const segment of value.replaceAll("\\", "/").split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") segments.pop();
+    else segments.push(segment);
+  }
+  return `/${segments.join("/")}`.toLowerCase();
+}
+
+/**
  * Loopback reverse proxy in front of the dev server: everything outside `/api` is forwarded as-is
  * (including the HMR websocket), `/api` and SSE are answered from generated fixtures, so no request
- * reaches the real API regardless of when CDP attaches. `counters.realApiRequests` stays 0 by
- * construction and is the field the report exposes.
+ * reaches the real API regardless of when CDP attaches. The routing above uses the URL parser; a second
+ * check on the forwarding path re-reads the raw request-target with `normalizeRequestPath`, and anything
+ * that still resolves to `/api` (`//api/x`, `/%61pi/x`, `/API/x`, ...) is refused with 403, never
+ * forwarded, and counted in `counters.realApiRequests` - the measured "would have reached the API" value.
  */
 export async function startFixtureProxy({ upstream }) {
   const target = new URL(upstream);
-  const counters = { realApiRequests: 0, fixtureApiRequests: 0, blockedWrites: 0, passthroughRequests: 0 };
+  const counters = { realApiRequests: 0, fixtureApiRequests: 0, blockedWrites: 0, passthroughRequests: 0, directBaseRequests: 0 };
   const sockets = new Set();
   const streams = new Set();
   const server = http.createServer((request, response) => {
@@ -286,6 +334,12 @@ export async function startFixtureProxy({ upstream }) {
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(body));
       return;
     }
+    if (isApiPath(normalizeRequestPath(request.url))) {
+      counters.realApiRequests += 1;
+      response.writeHead(403, { "content-type": "application/json" }).end(JSON.stringify({ error: "Native baseline proxy refuses API paths it cannot fixture" }));
+      request.resume();
+      return;
+    }
     counters.passthroughRequests += 1;
     const headers = rewriteHeaders(request.headers, server.address().port, target);
     const forward = http.request({ host: target.hostname, port: target.port, method: request.method, path: request.url, headers }, (upstreamResponse) => {
@@ -305,6 +359,11 @@ export async function startFixtureProxy({ upstream }) {
   server.on("upgrade", (request, socket, head) => {
     const url = new URL(request.url, "http://proxy.invalid");
     if (isApiPath(url.pathname)) {
+      socket.destroy();
+      return;
+    }
+    if (isApiPath(normalizeRequestPath(request.url))) {
+      counters.realApiRequests += 1;
       socket.destroy();
       return;
     }
@@ -329,6 +388,7 @@ export async function startFixtureProxy({ upstream }) {
   return {
     origin: `http://127.0.0.1:${port}`,
     port,
+    host: server.address().address,
     counters,
     async close() {
       for (const stream of streams) stream.end();
@@ -520,14 +580,29 @@ export async function runBaseline(options) {
   if (!existsSync(exe)) {
     throw new HarnessError(`Desktop dev shell not found: ${exe}\nBuild it first (the harness never compiles): ${BUILD_HINT}`, EXIT.prerequisite);
   }
+  // The abort listener goes on first so an interrupt at any later await (or one that already happened)
+  // is seen: every await in the run is followed by guard(), and the long ones are wrapped in abortable().
+  const state = { aborted: false };
+  const interrupted = new Promise((_, reject) => {
+    const fire = () => { state.aborted = true; reject(new HarnessError("Run interrupted")); };
+    if (signal?.aborted) fire();
+    else signal?.addEventListener("abort", fire, { once: true });
+  });
+  interrupted.catch(() => {});
+  const guard = () => { if (state.aborted) throw new HarnessError("Run interrupted"); };
+  const abortable = (promise) => Promise.race([promise, interrupted]);
+  guard();
   try {
     const reachable = await fetch(`${base}/`, { signal: AbortSignal.timeout(8000) });
     await reachable.arrayBuffer();
   } catch (error) {
+    guard();
     throw new HarnessError(`Dev server at ${base} is not reachable (${error.message}). Start it first, e.g. npx next dev --webpack -p ${new URL(base).port}`, EXIT.prerequisite);
   }
+  guard();
   if (labelPercent !== undefined) {
     const [system] = await runProbe({ action: "dpi" });
+    guard();
     if (system.primaryMonitorScalePercent !== labelPercent) {
       throw new HarnessError(`Label dpi${labelPercent} does not match the measured display scale ${system.primaryMonitorScalePercent}% (DPI ${system.primaryMonitorDpi}); refusing to record it`, EXIT.labelMismatch);
     }
@@ -537,17 +612,18 @@ export async function runBaseline(options) {
   const report = {
     schema: 1, check, label: options.label ?? null, status: "running", startedAt: new Date().toISOString(),
     base, os: { release: os.release(), build: Number(os.release().split(".")[2]), version: os.version(), arch: os.arch() },
-    exe: null, launch: {}, dpi: {}, window: {}, realApiRequests: null, fixtureApiRequests: null, blockedWrites: null,
+    exe: null, launch: {}, dpi: {}, window: {}, realApiRequests: null, directBaseRequests: null, fixtureApiRequests: null, blockedWrites: null,
     processes: {}, hygiene: {}, desktopLog: {}, checks: [], warnings: [],
   };
   const stat = statSync(exe);
   report.exe = { path: path.relative(REPO_ROOT, exe).startsWith("..") ? path.basename(exe) : path.relative(REPO_ROOT, exe).replaceAll("\\", "/"), size: stat.size, builtAt: stat.mtime.toISOString(), sha256: await sha256(exe) };
-
-  const state = { aborted: false };
-  const guard = () => { if (state.aborted) throw new HarnessError("Run interrupted"); };
-  const interrupted = new Promise((_, reject) => {
-    signal?.addEventListener("abort", () => { state.aborted = true; reject(new HarnessError("Run interrupted")); }, { once: true });
-  });
+  guard();
+  // Every process alive before the run, whatever its name: none of them is ever owned or killed.
+  const preBefore = await listProcesses();
+  guard();
+  const preexisting = new Set(preBefore.map(processKey));
+  const preexistingApp = new Set(preBefore.filter((item) => isPilaudeOrWebView(item.name)).map(processKey));
+  report.processes.before = preBefore.filter((item) => isPilaudeOrWebView(item.name)).map(publicProcess);
   const addCheck = (id, name, ok, detail) => report.checks.push({ id, name, status: ok ? "passed" : "failed", detail });
 
   const profileDir = mkdtempSync(path.join(os.tmpdir(), "pilaude-native-webview-"));
@@ -562,14 +638,16 @@ export async function runBaseline(options) {
   let cleanup;
   let failure;
   let exitCode = EXIT.ok;
-  const preBefore = await listProcesses();
-  const preexisting = new Set(preBefore.filter((item) => isPilaudeOrWebView(item.name)).map(processKey));
-  report.processes.before = preBefore.filter((item) => isPilaudeOrWebView(item.name)).map(publicProcess);
+  let spawnedAt;
 
   const body = async () => {
     proxy = await startFixtureProxy({ upstream: base });
+    guard();
     const cdpPort = await freePort();
     report.launch = { proxyOrigin: proxy.origin, cdpPort, cdpHost: "127.0.0.1" };
+    await abortable(hooks.beforeSpawn?.({ report, proxy }));
+    guard(); // nothing may be spawned after an interrupt: no await sits between this check and spawn()
+    spawnedAt = Date.now();
     app = spawn(exe, exeArgs, {
       cwd: REPO_ROOT, windowsHide: false, stdio: ["ignore", "pipe", "pipe"],
       env: {
@@ -580,11 +658,13 @@ export async function runBaseline(options) {
         PI_DESKTOP_API_TOKEN: apiToken,
       },
     });
-    trackRoot(app.pid);
-    report.launch.pid = app.pid;
+    const rootPid = app.pid;
+    trackRoot(rootPid);
+    report.launch.pid = rootPid;
     app.stdout.on("data", () => {});
     app.stderr.on("data", (chunk) => { appStderr = (appStderr + chunk).slice(-4000); });
-    app.once("exit", (code) => { appExit = code; });
+    // Once it has exited its pid may be recycled, so the exit hook must not name it any more.
+    app.once("exit", (code) => { appExit = code; liveRoots.delete(rootPid); });
     app.once("error", (error) => { appStderr += `spawn error: ${error.message}`; });
 
     const version = await waitFor(async () => {
@@ -600,17 +680,31 @@ export async function runBaseline(options) {
       throw new HarnessError(`${error.message}. stderr: ${redact(appStderr, [apiToken]) || "(empty)"}`);
     });
     report.launch.webview2 = version.Browser;
-    await hooks.afterLaunch?.({ app, report, proxy });
+    await abortable(hooks.afterLaunch?.({ app, report, proxy }));
     guard();
 
-    const { chromium } = await import("playwright");
-    browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`);
+    const { chromium } = await abortable(import("playwright"));
+    guard();
+    const connecting = chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`);
+    connecting.then((connected) => { browser = connected; }, () => {});
+    await abortable(connecting);
+    guard();
+    // Requests the page sends straight to the real dev server (bypassing the proxy) are measured too.
+    const noteDirect = (url) => {
+      let parsed;
+      try { parsed = new URL(url); } catch { return; }
+      if (parsed.origin !== base) return;
+      proxy.counters.directBaseRequests += 1;
+      if (isApiPath(normalizeRequestPath(parsed.pathname))) proxy.counters.realApiRequests += 1;
+    };
+    for (const context of browser.contexts()) context.on("request", (request) => noteDirect(request.url()));
     const page = await waitFor(async () => {
       guard();
       for (const context of browser.contexts()) for (const candidate of context.pages()) if (candidate.url().startsWith(proxy.origin)) return candidate;
       return false;
     }, { timeoutMs: cdpTimeoutMs, what: "the main page on the fixture proxy" });
-    await page.waitForFunction(() => Boolean(window.__TAURI_INTERNALS__), undefined, { timeout: 120000 });
+    await abortable(page.waitForFunction(() => Boolean(window.__TAURI_INTERNALS__), undefined, { timeout: 120000 }));
+    guard();
     const tauri = await page.evaluate(() => ({
       hasInternals: Boolean(window.__TAURI_INTERNALS__),
       windowLabel: window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label ?? null,
@@ -631,6 +725,7 @@ export async function runBaseline(options) {
     const appWindows = windows.filter((row) => !row.toolWindow);
     report.window = { count: windows.length, appWindowCount: appWindows.length, windows };
     report.processes.during = (await listProcesses()).filter((item) => isPilaudeOrWebView(item.name)).map(publicProcess);
+    guard();
 
     const main = appWindows[0];
     const expectedDpi = Math.round(96 * main.monitorScalePercent / 100);
@@ -652,7 +747,7 @@ export async function runBaseline(options) {
   };
 
   try {
-    await Promise.race([body(), interrupted]);
+    await body();
   } catch (error) {
     failure = error;
     if (error instanceof HarnessError && error.exitCode !== EXIT.failed) exitCode = error.exitCode;
@@ -664,11 +759,12 @@ export async function runBaseline(options) {
       report.warnings.push(`CDP disconnect: ${error.message}`);
     }
     if (app?.pid) {
-      cleanup = await cleanupOwned({ rootPid: app.pid, profileDir, preexisting });
+      cleanup = await cleanupOwned({ rootPid: app.pid, profileDir, preexisting, notBefore: spawnedAt - 2000 });
       liveRoots.delete(app.pid);
     }
     if (proxy) {
       report.realApiRequests = proxy.counters.realApiRequests;
+      report.directBaseRequests = proxy.counters.directBaseRequests;
       report.fixtureApiRequests = proxy.counters.fixtureApiRequests;
       report.blockedWrites = proxy.counters.blockedWrites;
       await proxy.close();
@@ -679,7 +775,7 @@ export async function runBaseline(options) {
     const killedPreexisting = cleanup ? cleanup.ownedSeen.filter((item) => preexisting.has(processKey(item))) : [];
     report.hygiene = {
       ownedProcessesSeen: cleanup?.ownedSeen.length ?? 0, killedPids: cleanup?.killed ?? [], residual: cleanup?.residual ?? [],
-      preexistingTouched: killedPreexisting.length, preexistingMissingAfter: [...preexisting].filter((key) => !afterKeys.has(key)),
+      preexistingTouched: killedPreexisting.length, preexistingMissingAfter: [...preexistingApp].filter((key) => !afterKeys.has(key)),
     };
     let profileRemoved = false;
     for (let attempt = 0; attempt < 10 && !profileRemoved; attempt += 1) {

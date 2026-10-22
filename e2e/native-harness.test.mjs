@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 import {
   CHECKS, DPI_LABELS, EXIT, HarnessError, assertInside, cleanupOwned, descendantsOf, formatCheckList, inspectDesktopLog,
-  listProcesses, ownedProcesses, parseArgs, parseBaseOrigin, parseDpiLabel, parseProbeOutput, processKey, readPng, runBaseline,
+  listProcesses, normalizeRequestPath, ownedProcesses, parseArgs, parseBaseOrigin, parseDpiLabel, parseProbeOutput, processKey, readPng, runBaseline,
   runProbe, startFixtureProxy,
 } from "./native-harness.mjs";
 
@@ -101,11 +101,36 @@ async function listProcessCount() {
 }
 
 describe("process ownership (pure)", () => {
-  const p = (pid, ppid, name = "node.exe", cmd = "") => ({ pid, ppid, name, created: `t${pid}`, cmd });
+  // A later pid means a later creation time, unless a test says otherwise.
+  const at = (second) => `2026-01-01T00:00:${String(second).padStart(2, "0")}.1234567Z`;
+  const p = (pid, ppid, name = "node.exe", cmd = "", second = pid) => ({ pid, ppid, name, created: at(second), cmd });
   test("descendants follow parent links and ignore siblings", () => {
     const all = [p(1, 0), p(2, 1), p(3, 2), p(4, 1), p(9, 0), p(10, 9)];
     assert.deepEqual(descendantsOf(1, all).map((item) => item.pid).sort(), [1, 2, 3, 4]);
     assert.deepEqual(descendantsOf(404, all), []);
+  });
+
+  test("a child older than its parent is a recycled ppid, not a descendant", () => {
+    // pid 5 was an orphan of an earlier, dead process 1 whose pid the new root reuses.
+    const all = [p(1, 0, "pi-agent-desktop.exe", "", 20), p(5, 1, "node.exe", "", 10), p(6, 1, "node.exe", "", 21), p(7, 6, "node.exe", "", 22), p(8, 6, "node.exe", "", 15)];
+    assert.deepEqual(descendantsOf(1, all).map((item) => item.pid).sort((a, b) => a - b), [1, 6, 7]);
+  });
+
+  test("the root must be the process we started: a recycled root pid pulls in nothing", () => {
+    const all = [p(1, 0, "svchost.exe", "", 30), p(2, 1, "node.exe", "", 31)];
+    const spawnedAt = Date.parse("2026-01-01T00:00:20Z");
+    assert.deepEqual(descendantsOf(1, all, { notBefore: spawnedAt }).map((item) => item.pid), [1, 2], "created after spawn: ours");
+    assert.deepEqual(descendantsOf(1, all, { notBefore: Date.parse("2026-01-01T00:00:40Z") }), [], "created before spawn: someone else's");
+    assert.deepEqual(descendantsOf(1, all, { rootCreated: at(99) }), [], "different creation time than the root we saw");
+    // Root already gone: only children created after the spawn count as its orphans.
+    const orphans = [p(3, 1, "msedgewebview2.exe", "", 5), p(4, 1, "msedgewebview2.exe", "", 25)];
+    assert.deepEqual(descendantsOf(1, orphans, { notBefore: spawnedAt }).map((item) => item.pid), [4]);
+  });
+
+  test("any pre-existing process, not only Pilaude or WebView2, is excluded", () => {
+    const all = [p(1, 0, "pi-agent-desktop.exe", "", 20), p(2, 1, "node.exe", "", 21), p(3, 1, "node.exe", "", 5)];
+    const owned = ownedProcesses({ rootPid: 1, processes: all, preexisting: new Set(all.map(processKey).slice(2)) });
+    assert.deepEqual(owned.map((item) => item.pid).sort(), [1, 2]);
   });
 
   test("orphaned WebView2 with our profile folder is owned; pre-existing and others are not", () => {
@@ -198,18 +223,59 @@ ${SLEEPER}`;
     } finally { await dev.close(); }
   });
 
-  windowsOnly("an interrupt (Ctrl+C path) still runs cleanup", async () => {
+  // The abort fires from a hook, so it lands at a known point instead of after a timer.
+  const NEVER = new Promise(() => {});
+  const marker = () => path.join(temp, `spawned-${Math.random().toString(16).slice(2)}`);
+  const markerScript = (file) => `require("fs").writeFileSync(${JSON.stringify(file)}, "x");`;
+
+  windowsOnly("an interrupt after launch still cleans the whole tree and exits through the report", async () => {
     const dev = await stubServer();
     const controller = new AbortController();
-    setTimeout(() => controller.abort(), 1200);
     try {
       const { exitCode, report } = await runBaseline(base({
-        base: dev.origin, cdpTimeoutMs: 30000, signal: controller.signal, exeArgs: ["-e", SLEEPER],
+        base: dev.origin, cdpTimeoutMs: 30000, signal: controller.signal, exeArgs: ["-e", fakeCdp],
+        hooks: { afterLaunch: () => { controller.abort(); return NEVER; } },
       }));
       assert.equal(exitCode, EXIT.failed);
       assert.match(report.failure, /interrupted/);
+      assert.equal(report.launch.webview2, "Fake/1");
+      assert.ok(report.hygiene.killedPids.length >= 2, "root and grandchild were killed");
       await assertTreeGone(report);
-      assert.ok(report.hygiene.killedPids.length >= 1);
+    } finally { await dev.close(); }
+  });
+
+  windowsOnly("an interrupt between proxy start and spawn never spawns and closes the proxy", async () => {
+    const dev = await stubServer();
+    const controller = new AbortController();
+    const spawned = marker();
+    let proxyOrigin;
+    try {
+      const { exitCode, report } = await runBaseline(base({
+        base: dev.origin, signal: controller.signal, exeArgs: ["-e", `${markerScript(spawned)}${SLEEPER}`],
+        hooks: { beforeSpawn: ({ proxy }) => { proxyOrigin = proxy.origin; controller.abort(); return NEVER; } },
+      }));
+      assert.equal(exitCode, EXIT.failed);
+      assert.match(report.failure, /interrupted/);
+      assert.equal(report.launch.pid, undefined, "no pid: nothing was spawned");
+      assert.deepEqual(report.hygiene.killedPids, []);
+      await delay(1500);
+      assert.equal(existsSync(spawned), false, "the exe never ran");
+      await assert.rejects(fetch(`${proxyOrigin}/`), "the proxy was closed");
+      assert.equal(report.realApiRequests, 0);
+    } finally { await dev.close(); }
+  });
+
+  windowsOnly("a signal that is already aborted stops the run before anything starts", async () => {
+    const dev = await stubServer();
+    const spawned = marker();
+    try {
+      await assert.rejects(
+        runBaseline(base({ base: dev.origin, signal: AbortSignal.abort(), exeArgs: ["-e", `${markerScript(spawned)}${SLEEPER}`] })),
+        (error) => error instanceof HarnessError && /interrupted/.test(error.message),
+      );
+      await delay(1000);
+      assert.equal(existsSync(spawned), false);
+      assert.deepEqual(dev.requests, [], "not even the reachability probe was sent");
     } finally { await dev.close(); }
   });
 
@@ -249,7 +315,7 @@ describe("fixture proxy", () => {
       assert.equal(sse.headers.get("content-type"), "text/event-stream");
       await sse.body.cancel();
       assert.deepEqual(upstream.requests, ["GET /_next/static/app.js"], "no /api request reached the real server");
-      assert.equal(proxy.counters.realApiRequests, 0);
+      assert.equal(proxy.counters.realApiRequests, 0, "nothing needed refusing");
       assert.equal(proxy.counters.blockedWrites, 1);
       assert.ok(proxy.counters.fixtureApiRequests >= 3);
     } finally { await proxy.close(); await upstream.close(); }
@@ -259,8 +325,43 @@ describe("fixture proxy", () => {
     const upstream = await stubServer();
     const proxy = await startFixtureProxy({ upstream: upstream.origin });
     try {
-      assert.match(proxy.origin, /^http:\/\/127\.0\.0\.1:\d+$/);
+      assert.equal(proxy.host, "127.0.0.1");
+      const other = Object.values(os.networkInterfaces()).flat().find((entry) => entry && entry.family === "IPv4" && !entry.internal);
+      if (other) {
+        await assert.rejects(fetch(`http://${other.address}:${proxy.port}/`, { signal: AbortSignal.timeout(3000) }), "not reachable through a non-loopback address");
+      }
     } finally { await proxy.close(); await upstream.close(); }
+  });
+
+  test("API paths that dodge the router are refused, counted and never forwarded", async () => {
+    const upstream = await stubServer((request, response) => response.end("upstream"));
+    const proxy = await startFixtureProxy({ upstream: upstream.origin });
+    const raw = (target) => new Promise((resolve, reject) => {
+      const request = http.request({ host: "127.0.0.1", port: proxy.port, path: target, method: "GET" }, (response) => {
+        response.resume();
+        response.once("end", () => resolve(response.statusCode));
+      });
+      request.once("error", reject);
+      request.end();
+    });
+    const bypasses = ["//api/x", "/%61pi/x", "/%2561pi/x", "/API/x", "/\\api/x", "///api", "/api%2Fx", "/%2e/%61pi/x"];
+    try {
+      for (const [index, target] of bypasses.entries()) {
+        assert.equal(await raw(target), 403, target);
+        assert.equal(proxy.counters.realApiRequests, index + 1, `${target} counted`);
+      }
+      for (const target of ["/./api/x", "/foo/../api/x", "/foo/%2e%2e/api/x"]) assert.equal(await raw(target), 200, `${target} is resolved by the router into a fixture, not upstream`);
+      assert.deepEqual(upstream.requests, [], "no bypass reached the real server");
+      assert.equal(await raw("/_next/static/a.js?next=/api/x"), 200, "a query string mentioning /api is not an API path");
+      assert.equal(await raw("/apix/readme"), 200, "neither is a longer first segment");
+      assert.deepEqual(upstream.requests, ["GET /_next/static/a.js?next=/api/x", "GET /apix/readme"]);
+      assert.equal(proxy.counters.realApiRequests, bypasses.length);
+    } finally { await proxy.close(); await upstream.close(); }
+  });
+
+  test("path normalization resolves the shapes a server would route to /api", () => {
+    for (const target of ["/api/x", "//api/x", "/%61pi/x", "/API", "/a/../api/x?q=1", "http://h/api/x#f"]) assert.match(normalizeRequestPath(target), /^\/api(\/|$)/, target);
+    for (const target of ["/", "/apix", "/_next/api/x", "/x?/api/y", "/%zzapi/x"]) assert.doesNotMatch(normalizeRequestPath(target), /^\/api(\/|$)/, target);
   });
 });
 

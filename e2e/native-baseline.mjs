@@ -12,7 +12,14 @@ async function main() {
     return EXIT.ok;
   }
   const controller = new AbortController();
-  for (const name of ["SIGINT", "SIGBREAK", "SIGTERM"]) process.once(name, () => controller.abort());
+  // `on`, not `once`: a second Ctrl+C during cleanup must not fall back to the default handler, which
+  // ends the process without running the exit hook and would leave the dev shell tree behind.
+  for (const name of ["SIGINT", "SIGBREAK", "SIGTERM"]) {
+    process.on(name, () => {
+      if (controller.signal.aborted) console.error(`${name} ignored: cleaning up the started processes, please wait`);
+      controller.abort();
+    });
+  }
   const { exitCode, report, resultsFile } = await runBaseline({ ...args, signal: controller.signal });
   console.log(JSON.stringify({
     status: report.status, results: resultsFile, checks: report.checks, realApiRequests: report.realApiRequests,
