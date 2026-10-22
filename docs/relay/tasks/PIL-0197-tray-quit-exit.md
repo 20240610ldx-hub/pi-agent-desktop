@@ -48,3 +48,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-21T12:46Z · planner · 创建
 - 2026-10-21T12:47Z · planner · 冻结验收标准 93fcef9363a2
 - 2026-10-21T13:04Z · claude:sonnet-high:impl · 领取，租约至 2026-10-21T16:04Z
+- 2026-10-22T02:41Z · claude:sonnet-high:impl · 复述：A1 托盘 Quit 后进程/exit 行/子进程；A2 keep-awake 随进程释放；A3 关窗进托盘与 quit_app 不变；A4 修复前失败的复现脚本 + 测试 + cargo/tsc/lint/guard。
