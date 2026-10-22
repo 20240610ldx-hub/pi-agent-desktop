@@ -3,7 +3,7 @@ id: PIL-0126
 title: 复刻验收：C12 助手正文与消息操作条
 epic: E2
 priority: P1
-status: verify
+status: review
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-22T10:25Z
 branch: task/PIL-0126-parity-c12
@@ -77,3 +77,4 @@ waivers: []
 - 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A3：通过
 - 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A4：通过
 - 2026-10-22T09:25Z · claude-cli:sonnet-medium:verify · 证据 A5：通过
+- 2026-10-22T09:25Z · codex-plus:gpt-xhigh:impl · verify → review（评审 claude-cli:sonnet-high:review2）
