@@ -70,3 +70,4 @@ waivers: [R6:user-requested-initial-governance-2026-10-19]
 - 2026-10-22T09:53Z · claude-cli:sonnet-medium:verify · 证据 A3：通过
 - 2026-10-22T09:53Z · claude-cli:sonnet-medium:verify · 证据 A4：通过
 - 2026-10-22T09:53Z · claude-cli:sonnet-medium:verify · 证据 A5：通过
+- 2026-10-22T09:53Z · claude-cli:haiku:impl · 限制：wip 快照只含 2026-10-19 14:07 前状态，之后新增内容无另存证据。归档说明与 wip-mapping 保存在 relay-evidence/PIL-0001（仓库外证据），无需仓库提交。
