@@ -3,9 +3,9 @@ id: PIL-0147
 title: 复刻验收：C33 侧栏项目／会话、搜索、状态及重排
 epic: E2
 priority: P2
-status: review
+status: done
 owner: claude:sonnet-high:impl
-lease_until: 2026-10-22T05:41Z
+lease_until:
 branch: task/PIL-0147-parity-c33
 implementers: [claude:sonnet-high:impl]
 depends_on: [PIL-0014]
@@ -84,3 +84,4 @@ waivers: []
 - 2026-10-22T07:22Z · claude-cli:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T07:22Z · claude-cli:sonnet-high:verify · 证据 A5：通过
 - 2026-10-22T07:22Z · claude:sonnet-high:impl · verify → review（评审 claude-cli:sonnet-high:review2）
+- 2026-10-22T07:23Z · claude-cli:sonnet-high:review2 · review → done（评审 claude-cli:sonnet-high:review2）
