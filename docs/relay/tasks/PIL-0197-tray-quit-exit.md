@@ -72,3 +72,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T03:02Z · claude:sonnet-high:verify · 证据 A2：未运行
 - 2026-10-22T03:02Z · claude:sonnet-high:verify · 证据 A3：未运行
 - 2026-10-22T03:02Z · claude:sonnet-high:verify · 证据 A4：通过
+- 2026-10-22T03:02Z · claude:sonnet-high:verify · 验证(3854190)：A1/A4 通过，A2/A3 未运行(需用户管理员 powercfg)。目标：托盘Quit退出且日志有exit行。做法：审diff、cargo test/tsc/lint/guard、重跑repro -WhileMenuOpen×4 与 -Hide -Mouse。结果：强制路径出现 'exit (forced)'，正常路径 'exit'，进程均退出。下一步：用户做一次 keep-awake 前后 powercfg 对照(步骤见协调者)，通过后设 review。
