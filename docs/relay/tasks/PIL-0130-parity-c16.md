@@ -62,6 +62,7 @@ waivers: []
 | A2 | 浏览器量测（06 图）：命令盒外高 43.44/44.0，末行字墨到底边 9.4/9.3，非紧凑内距不变 | 通过 | D:\pilaude\relay-evidence\PIL-0130\verify\VERIFY-2.md | 78e5e0f9 | claude-cli:sonnet:verify |
 | A3 | 浏览器：Tab 顺序、双轴滚动、390px 无横向溢出 | 通过 | D:\pilaude\relay-evidence\PIL-0130\verify\VERIFY.md | 78e5e0f9 | claude-cli:sonnet:verify |
 | A4 | 浏览器：紧凑与富视图分离，复制保 CRLF/Tab/尾空格，MCP 不执行零网络 | 通过 | D:\pilaude\relay-evidence\PIL-0130\verify\VERIFY.md | 78e5e0f9 | claude-cli:sonnet:verify |
+| A5 | 定向 73/73（评审复跑），tsc 0，lint 0，guard 仅 R5 WARN，npm test 12 失败=基线 | 通过 | D:\pilaude\relay-evidence\PIL-0130\verify\VERIFY.md | 78e5e0f9 | claude-cli:sonnet:verify |
 
 ## 日志
 
@@ -86,3 +87,4 @@ waivers: []
 - 2026-10-22T10:56Z · claude-cli:sonnet:verify · 证据 A2：通过
 - 2026-10-22T10:56Z · claude-cli:sonnet:verify · 证据 A3：通过
 - 2026-10-22T10:56Z · claude-cli:sonnet:verify · 证据 A4：通过
+- 2026-10-22T10:56Z · claude-cli:sonnet:verify · 证据 A5：通过
