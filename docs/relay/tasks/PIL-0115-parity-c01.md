@@ -3,7 +3,7 @@ id: PIL-0115
 title: 复刻验收：C01 主题、文字与图标
 epic: E2
 priority: P1
-status: verify
+status: review
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T15:40Z
 branch: task/PIL-0115-parity-c01
@@ -91,3 +91,4 @@ waivers: []
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A4：通过
+- 2026-10-22T02:57Z · claude:sonnet-high:impl · verify → review
