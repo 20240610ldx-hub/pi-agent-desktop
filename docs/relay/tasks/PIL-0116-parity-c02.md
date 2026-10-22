@@ -3,7 +3,7 @@ id: PIL-0116
 title: 复刻验收：C02 按钮尺寸与交互状态
 epic: E2
 priority: P1
-status: verify
+status: review
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T15:51Z
 branch: task/PIL-0116-parity-c02
@@ -102,3 +102,4 @@ waivers: []
 - 2026-10-22T02:49Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T02:49Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T02:49Z · claude:sonnet-high:verify · 做了：按 amend 后范围(f290638aa589)用已有量测与键盘结果重判，补写 A1/A2/A3/A4 通过行，补测图标钮高度推算与图标中心。状态：8b5bdcc，A1–A5 均有通过行。下一步：set review，其余状态由 PIL-0198 补采后验。风险：07 复制钮高度为推算值；primary 变黑及 sm 字号 12→14 影响 PilaudeDataSection，sm primary 无原生参考(转 PIL-0198)。
+- 2026-10-22T02:49Z · claude:sonnet-high:impl · verify → review
