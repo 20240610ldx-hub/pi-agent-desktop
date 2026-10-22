@@ -3,7 +3,7 @@ id: PIL-0010
 title: Changes 面板在独立窗口打开（功能迁入与浏览器层验证）
 epic: E2
 priority: P1
-status: verify
+status: review
 owner: codex-plus:sol-high:impl
 lease_until: 2026-10-22T12:54Z
 branch: task/PIL-0010-changes-popout-window
@@ -64,3 +64,4 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 - 2026-10-22T03:34Z · planner · 冻结验收标准 b6c8d8d40ea3
 - 2026-10-22T09:54Z · codex-plus:sol-high:impl · 领取，租约至 2026-10-22T12:54Z
 - 2026-10-22T12:56Z · codex-plus:sol-high:impl · in_progress → verify
+- 2026-10-22T13:17Z · codex-plus:sol-high:impl · verify → review
