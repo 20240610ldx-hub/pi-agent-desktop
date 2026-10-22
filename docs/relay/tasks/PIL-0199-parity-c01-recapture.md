@@ -46,3 +46,4 @@ PIL-0115 拆出的剩余 C01 状态在补采 3.1623 原生参考后完成量测�
 ## 日志
 - 2026-10-22T02:53Z · planner · 创建
 - 2026-10-22T02:54Z · planner · 冻结验收标准 db09b2f85583
+- 2026-10-22T03:00Z · claude:opus-medium:planner · PIL-0115 评审建议：native-theme.css 约 5080 行 .markdown-body 旧 line-height:1.6 已成死规则，本卡清理双源时删除。
