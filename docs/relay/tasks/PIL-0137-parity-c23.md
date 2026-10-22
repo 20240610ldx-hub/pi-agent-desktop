@@ -9,7 +9,7 @@ lease_until: 2026-10-22T12:04Z
 branch: task/PIL-0137-parity-c23
 implementers: [codex-plus:luna-high:impl]
 depends_on: [PIL-0014]
-files_allowed: [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs]
+files_allowed: [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs, hooks/useAgentSession.branch-summary-guard.test.mjs]
 files_shared: [app/native-theme.css]
 acceptance_sha: dfacd004c1ef
 waivers: []
@@ -65,3 +65,4 @@ waivers: []
 - 2026-10-21T12:36Z · planner · 冻结验收标准 dfacd004c1ef
 - 2026-10-22T09:04Z · codex-plus:luna-high:impl · 领取，租约至 2026-10-22T12:04Z
 - 2026-10-22T09:43Z · codex-plus:luna-high:impl · in_progress → verify
+- 2026-10-22T10:29Z · claude:opus:coordinator · 范围 [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs] → [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs, hooks/useAgentSession.branch-summary-guard.test.mjs]：A5 要求定向测试全过；该测试夹具缺 todoBranchSelectionRef，实现前即失败，需修夹具
