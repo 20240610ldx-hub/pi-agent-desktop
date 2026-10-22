@@ -3,11 +3,11 @@ id: PIL-0122
 title: 复刻验收：C08 输入器主框与提交控件
 epic: E2
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: claude-cli:sonnet-high:impl
+lease_until: 2026-10-22T10:23Z
+branch: task/PIL-0122-parity-c08
+implementers: [claude-cli:sonnet-high:impl]
 depends_on: [PIL-0014, PIL-0177, PIL-0189]
 files_allowed: [components/ChatInput.tsx, components/ChatInput.test.mjs, lib/ime.ts]
 files_shared: [lib/i18n/messages/*.ts, app/native-theme.css]
@@ -65,3 +65,4 @@ waivers: []
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：ChatInput.automation.test.mjs、ime.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字；并入 composer-tooltips-light 01 发送提示；依赖加 PIL-0189（分叉发送，A1/A3/A4 验证快捷键与文案）；麦克风首发隐藏（00 号参考仅登记）；files_shared 加 lib/i18n/messages/*.ts（发送提示三语言同步）
 - 2026-10-21T12:35Z · planner · 冻结验收标准 042e78bfeb93
 - 2026-10-21T13:04Z · claude:opus-medium:planner · PIL-0189 评审非阻断意见供本卡落实：源会话运行中分叉会把未回复的用户消息一并复制，子会话出现连续两条用户消息，界面需说明；分叉后接入新会话事件流（onSessionForked）属本卡/0137。
+- 2026-10-22T07:23Z · claude-cli:sonnet-high:impl · 领取，租约至 2026-10-22T10:23Z
