@@ -54,6 +54,7 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 定向 66/66；三语工具条与 tooltip、Files 禁用原因截图 | 通过 | D:\pilaude\relay-evidence\PIL-0010\verify\VERIFY.md | 721036d1 | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -65,3 +66,4 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 - 2026-10-22T09:54Z · codex-plus:sol-high:impl · 领取，租约至 2026-10-22T12:54Z
 - 2026-10-22T12:56Z · codex-plus:sol-high:impl · in_progress → verify
 - 2026-10-22T13:17Z · codex-plus:sol-high:impl · verify → review
+- 2026-10-22T13:20Z · claude-cli:sonnet-high:verify · 证据 A1：通过
