@@ -2626,8 +2626,6 @@ html.dark .sidebar-view-switcher-thumb {
   visibility: hidden;
 }
 
-/* Secondary sidebar text (timestamps, counts, section label) sat at ~3.9:1 on
-   the panel; scoped here so the global --text-dim keeps its role elsewhere. */
 /* On the selection fill the timestamp measured 3.8:1; the inline color on the
    span needs !important to be replaced. */
 html:not(.dark) .session-item.is-selected .session-item-time {
@@ -10874,12 +10872,16 @@ html.dark .app-shell .session-sidebar {
   margin-top: -3.6px;
 }
 .app-shell .session-sidebar .session-item:is(:hover, :focus-within, :has(.session-item-more.is-open)) .session-item-main .session-activity-dot:not(.is-idle) { opacity: 0; }
-/* A selected row at rest carries no "···"; hover, focus and an open menu show it. */
-.app-shell .session-sidebar .session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open)) .session-item-trailing { display: none; }
-/* ...and so reserves no trailing width either: the reference title ends 9.33 from the
-   row edge. A running / unread mark still sits there, so those rows keep the inset; the
-   title stays clipped (ellipsis-free fade) at the content edge, never overflowing. */
-.app-shell .session-sidebar .session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open, .session-activity-dot:not(.is-idle))) .session-item-main { padding-right: 8px; }
+/* A selected row at rest carries no "···"; hover, focus and an open menu show it.
+   Only where hover exists: touch has no hover, so "···" stays permanent there (rename /
+   delete would be unreachable) and keeps its 27.2px reservation under the title. */
+@media (hover: hover) {
+  .app-shell .session-sidebar .session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open)) .session-item-trailing { display: none; }
+  /* ...and so reserves no trailing width either: the reference title ends 9.33 from the
+     row edge. A running / unread mark still sits there, so those rows keep the inset; the
+     title stays clipped (ellipsis-free fade) at the content edge, never overflowing. */
+  .app-shell .session-sidebar .session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open, .session-activity-dot:not(.is-idle))) .session-item-main { padding-right: 8px; }
+}
 .app-shell .session-sidebar .session-item-more svg { display: block; }
 
 /* Children: text at 38.2 (row padding 30 + 20 per extra level) and an elbow guide. */
@@ -10915,6 +10917,7 @@ html.dark .app-shell .session-sidebar .session-item { --bg-hover: #232323; }
 /* Touch keeps finger-sized rows; the reference geometry is a pointer layout. */
 @media (hover: none) {
   .app-shell .session-sidebar .session-item,
+  .app-shell .session-sidebar .sidebar-project-tree-children .session-item,
   .app-shell .session-sidebar .sidebar-project-tree-row { height: 44px !important; min-height: 44px; }
   .app-shell .session-sidebar .session-tree-item { min-height: 44px; }
   .app-shell .session-sidebar .sidebar-header-row,
