@@ -62,6 +62,7 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 | A4 | native-harness.test 30/30 不挂；真实 exe 前后进程计数一致、无残留 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
 | A5 | — | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
 | A6 | tsc、lint、guard；npm test 12 基线失败逐名一致 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
+| A1 | 最终提交真实 exe 150% --check window：N1–N3 通过，realApiRequests 0 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-5.md | 133acfc | claude-cli:sonnet-medium:verify |
 
 ## 日志
 
@@ -89,3 +90,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T08:07Z · claude-cli:sonnet-high:impl · 返工3：app 存活期记录根 pid@created，退出后不认根；cleanup 逐 pid taskkill 不加 /T；补 PID 复用测试；N1 终判；见 impl/FIX3.md
 - 2026-10-22T08:39Z · claude-cli:sonnet-high:impl · 返工4：Toolhelp 单快照+单次 taskkill 清理，A4 用例 1.8 s（原 9-10 s），3 次 harness 测试 42/42，真实 150% 通过；见 impl/FIX4.md
 - 2026-10-22T08:56Z · claude-cli:sonnet-high:impl · 复审3返工：未知创建时间进程不归属；taskkill 128 保留拒绝信息；二次快照失败不跳出收尾
+- 2026-10-22T09:06Z · claude-cli:sonnet-medium:verify · 证据 A1：通过
