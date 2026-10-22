@@ -66,3 +66,4 @@ waivers: []
 - 2026-10-22T02:42Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-22T05:42Z
 - 2026-10-22T03:13Z · codex-plus:gpt-xhigh:impl · Codex 实现提交：搜索/当前项/键盘/IME/焦点；行高24、圆角10.667；定向88/88，npm test 无新增失败。证据 relay-evidence/PIL-0133/impl/HANDOFF.md。转验证（CLI 账号 Sonnet）。
 - 2026-10-22T03:13Z · codex-plus:gpt-xhigh:impl · in_progress → verify
+- 2026-10-22T03:42Z · user · 修订验收标准 a4cb17ca21d9 → a4cb17ca21d9：用户 2026-10-22 拆卡政策：已验夹具层与有参考的深色项留在本卡，浅色/分组/搜索/无结果/不可用/长名/错误/星按钮行同态参考、真实 Pi 切换与失败恢复、WebView2 IME、三档 DPI、浅色对勾色移至 PIL-0204
