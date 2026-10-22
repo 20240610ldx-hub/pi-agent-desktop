@@ -149,6 +149,7 @@ export function createdMs(value) {
  */
 export function descendantsOf(rootPid, processes, { notBefore, rootCreated } = {}) {
   const root = processes.find((item) => item.pid === rootPid);
+  if (rootPid == null || (rootCreated && !root)) return []; // a root we saw alive that is gone: its pid may be recycled
   if (root) {
     if (rootCreated && root.created !== rootCreated) return [];
     if (notBefore !== undefined && createdMs(root.created) < notBefore) return [];
@@ -191,9 +192,12 @@ export function ownedProcesses({ rootPid, profileDir, processes, preexisting, no
   return [...owned.values()];
 }
 
-export async function taskkillTree(pid) {
+/** No `/T`: taskkill would expand the tree by ppid on its own, bypassing the pid+creation-time checks done here. */
+export const taskkillArgs = (pid) => ["/PID", String(pid), "/F"];
+
+export async function taskkillPid(pid) {
   try {
-    await execFileAsync("taskkill.exe", ["/PID", String(pid), "/T", "/F"]);
+    await execFileAsync("taskkill.exe", taskkillArgs(pid));
     return true;
   } catch (error) {
     // 128 = no such process (already gone); anything else is a real failure.
@@ -203,34 +207,36 @@ export async function taskkillTree(pid) {
 }
 
 /**
- * Kill only the tree this run started, then verify nothing of it survives within `graceMs`.
+ * Kill only what this run owns, then verify nothing of it survives within `graceMs`.
+ * `known` holds the rows (pid + creation time) seen alive while the root was still running; they are the
+ * only roots the tree is expanded from, so a pid the OS recycled after the app exited is never treated as ours.
+ * Processes are killed one pid at a time, children before parents, each key at most once.
  * `preexisting` is a Set of process keys that existed before the run; they are never killed.
  */
-export async function cleanupOwned({ rootPid, profileDir, preexisting, notBefore, list = listProcesses, kill = taskkillTree, graceMs = 5000, pollMs = 250 }) {
+export async function cleanupOwned({ known = [], profileDir, preexisting, list = listProcesses, kill = taskkillPid, graceMs = 5000, pollMs = 250 }) {
   const ownedKeys = new Map();
+  const killedKeys = new Set();
   const killed = [];
   const deadline = Date.now() + graceMs;
-  let rootKilled = false;
-  let rootCreated;
+  for (const item of known) if (!preexisting.has(processKey(item))) ownedKeys.set(processKey(item), item);
   for (;;) {
     const processes = await list();
-    for (const item of ownedProcesses({ rootPid, profileDir, processes, preexisting, notBefore, rootCreated })) {
-      ownedKeys.set(processKey(item), item);
-      if (item.pid === rootPid) rootCreated = item.created;
+    const present = new Set(processes.map(processKey));
+    for (const row of [...ownedKeys.values()]) {
+      if (!present.has(processKey(row))) continue;
+      for (const item of ownedProcesses({ rootPid: row.pid, rootCreated: row.created, processes, preexisting })) ownedKeys.set(processKey(item), item);
     }
-    const alive = [...ownedKeys.values()].filter((item) => processes.some((candidate) => processKey(candidate) === processKey(item)));
-    if (alive.length === 0) return { killed, residual: [], ownedSeen: [...ownedKeys.values()].map(publicProcess) };
-    if (Date.now() >= deadline) return { killed, residual: alive.map(publicProcess), ownedSeen: [...ownedKeys.values()].map(publicProcess) };
-    for (const item of alive) {
-      if (preexisting.has(processKey(item))) continue;
-      if (item.pid === rootPid && !rootKilled) {
-        await kill(item.pid);
-        rootKilled = true;
-        killed.push(item.pid);
-      } else if (item.pid !== rootPid) {
-        await kill(item.pid);
-        killed.push(item.pid);
-      }
+    for (const item of ownedProcesses({ profileDir, processes, preexisting })) ownedKeys.set(processKey(item), item);
+    const alive = [...ownedKeys.values()].filter((item) => present.has(processKey(item)));
+    const ownedSeen = [...ownedKeys.values()].map(publicProcess);
+    if (alive.length === 0) return { killed, residual: [], ownedSeen };
+    if (Date.now() >= deadline) return { killed, residual: alive.map(publicProcess), ownedSeen };
+    const byPid = new Map(alive.map((item) => [item.pid, item]));
+    const depth = (item) => { let n = 0; for (let at = byPid.get(item.ppid); at && n < 64; at = byPid.get(at.ppid)) n += 1; return n; };
+    for (const item of alive.filter((candidate) => !killedKeys.has(processKey(candidate))).sort((a, b) => depth(b) - depth(a))) {
+      killedKeys.add(processKey(item));
+      await kill(item.pid);
+      killed.push(item.pid);
     }
     await delay(pollMs);
   }
@@ -239,7 +245,10 @@ export async function cleanupOwned({ rootPid, profileDir, preexisting, notBefore
 // Synchronous last resort if the harness dies without running its own cleanup.
 const liveRoots = new Set();
 let exitHookInstalled = false;
-/** Registers a started root for the exit hook; the caller drops it again when the process exits. */
+/**
+ * Registers a started root for the exit hook; the caller drops it again when the process exits. `/T` is safe
+ * here only because the root is still running (Node holds its handle), so every ppid link to it is genuine.
+ */
 function trackRoot(pid) {
   liveRoots.add(pid);
   if (exitHookInstalled) return;
@@ -639,6 +648,27 @@ export async function runBaseline(options) {
   let failure;
   let exitCode = EXIT.ok;
   let spawnedAt;
+  // Rows (pid + creation time) of the root and its descendants, taken only while the app was provably running.
+  const known = new Map();
+  const pendingSnapshots = new Set();
+
+  /**
+   * Records the root and its tree from a process snapshot, but only if the app had not exited by the time the
+   * snapshot came back: Node holds the child's handle until 'exit', so until then its pid cannot be recycled.
+   */
+  const recordOwned = (processes) => {
+    if (appExit !== null || app.exitCode !== null) return;
+    const root = processes.find((item) => item.pid === app.pid);
+    if (!root || createdMs(root.created) < spawnedAt - 2000 || preexisting.has(processKey(root))) return;
+    for (const item of descendantsOf(app.pid, processes, { rootCreated: root.created })) {
+      if (!preexisting.has(processKey(item))) known.set(processKey(item), item);
+    }
+  };
+  const snapshotOwned = async () => {
+    const processes = await listProcesses();
+    recordOwned(processes);
+    return processes;
+  };
 
   const body = async () => {
     proxy = await startFixtureProxy({ upstream: base });
@@ -666,6 +696,9 @@ export async function runBaseline(options) {
     // Once it has exited its pid may be recycled, so the exit hook must not name it any more.
     app.once("exit", (code) => { appExit = code; liveRoots.delete(rootPid); });
     app.once("error", (error) => { appStderr += `spawn error: ${error.message}`; });
+    const firstSnapshot = snapshotOwned().catch(() => {});
+    pendingSnapshots.add(firstSnapshot);
+    firstSnapshot.finally(() => pendingSnapshots.delete(firstSnapshot));
 
     const version = await waitFor(async () => {
       guard();
@@ -689,7 +722,8 @@ export async function runBaseline(options) {
     connecting.then((connected) => { browser = connected; }, () => {});
     await abortable(connecting);
     guard();
-    // Requests the page sends straight to the real dev server (bypassing the proxy) are measured too.
+    // Requests the page sends straight to the real dev server (bypassing the proxy) are measured too, from CDP attach onward only:
+    // earlier ones are invisible here, so `directBaseRequests` is a lower bound.
     const noteDirect = (url) => {
       let parsed;
       try { parsed = new URL(url); } catch { return; }
@@ -724,7 +758,7 @@ export async function runBaseline(options) {
     }, { timeoutMs: 45000, intervalMs: 500, what: "a visible top-level window" });
     const appWindows = windows.filter((row) => !row.toolWindow);
     report.window = { count: windows.length, appWindowCount: appWindows.length, windows };
-    report.processes.during = (await listProcesses()).filter((item) => isPilaudeOrWebView(item.name)).map(publicProcess);
+    report.processes.during = (await snapshotOwned()).filter((item) => isPilaudeOrWebView(item.name)).map(publicProcess);
     guard();
 
     const main = appWindows[0];
@@ -759,7 +793,8 @@ export async function runBaseline(options) {
       report.warnings.push(`CDP disconnect: ${error.message}`);
     }
     if (app?.pid) {
-      cleanup = await cleanupOwned({ rootPid: app.pid, profileDir, preexisting, notBefore: spawnedAt - 2000 });
+      await Promise.allSettled([...pendingSnapshots]);
+      cleanup = await cleanupOwned({ known: [...known.values()], profileDir, preexisting });
       liveRoots.delete(app.pid);
     }
     if (proxy) {
@@ -767,6 +802,12 @@ export async function runBaseline(options) {
       report.directBaseRequests = proxy.counters.directBaseRequests;
       report.fixtureApiRequests = proxy.counters.fixtureApiRequests;
       report.blockedWrites = proxy.counters.blockedWrites;
+      // N1 was judged when CDP attached; requests made later (window probe phase) must not slip past it.
+      const n1 = report.checks.find((item) => item.id === "N1");
+      if (n1?.status === "passed" && proxy.counters.realApiRequests !== 0) {
+        n1.status = "failed";
+        n1.detail += `; final realApiRequests=${proxy.counters.realApiRequests}`;
+      }
       await proxy.close();
     }
     const after = (await listProcesses()).filter((item) => isPilaudeOrWebView(item.name));

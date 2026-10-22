@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 import {
   CHECKS, DPI_LABELS, EXIT, HarnessError, assertInside, cleanupOwned, descendantsOf, formatCheckList, inspectDesktopLog,
-  listProcesses, normalizeRequestPath, ownedProcesses, parseArgs, parseBaseOrigin, parseDpiLabel, parseProbeOutput, processKey, readPng, runBaseline,
+  listProcesses, normalizeRequestPath, taskkillArgs, ownedProcesses, parseArgs, parseBaseOrigin, parseDpiLabel, parseProbeOutput, processKey, readPng, runBaseline,
   runProbe, startFixtureProxy,
 } from "./native-harness.mjs";
 
@@ -149,12 +149,58 @@ describe("process ownership (pure)", () => {
     const all = [p(1, 0, "pi-agent-desktop.exe"), p(2, 1, "msedgewebview2.exe"), p(50, 1, "msedgewebview2.exe")];
     const killed = [];
     const result = await cleanupOwned({
-      rootPid: 1, profileDir: undefined, preexisting: new Set([processKey(all[2])]),
+      known: [all[0]], profileDir: undefined, preexisting: new Set([processKey(all[2])]),
       list: async () => all, kill: async (pid) => { killed.push(pid); }, graceMs: 400, pollMs: 50,
     });
     assert.deepEqual(result.residual.map((item) => item.pid).sort(), [1, 2]);
     assert.ok(!killed.includes(50), "pre-existing child stays untouched");
     assert.ok(killed.includes(1));
+    assert.ok(killed.indexOf(2) < killed.indexOf(1), "children die before their parent");
+  });
+
+  test("taskkill never expands the tree itself (no /T)", () => {
+    assert.deepEqual(taskkillArgs(42), ["/PID", "42", "/F"]);
+  });
+
+  const noop = { profileDir: undefined, graceMs: 300, pollMs: 50 };
+
+  test("root pid recycled after the app exited: the new owner is neither killed nor expanded", async () => {
+    const started = p(10, 1, "pi-agent-desktop.exe", "", 20);
+    // The app is gone; pid 10 now belongs to an unrelated process (created later, other parent) with a child.
+    const all = [p(10, 777, "powershell.exe", "", 40), p(11, 10, "node.exe", "", 41)];
+    const killed = [];
+    const result = await cleanupOwned({ ...noop, known: [started], preexisting: new Set(), list: async () => all, kill: async (pid) => { killed.push(pid); } });
+    assert.deepEqual(killed, []);
+    assert.deepEqual(result.residual, []);
+  });
+
+  test("root never recorded (exited before any snapshot): its pid is not treated as a root", async () => {
+    const all = [p(10, 777, "powershell.exe", "", 40), p(11, 10, "node.exe", "", 41)];
+    const killed = [];
+    await cleanupOwned({ ...noop, known: [], preexisting: new Set(), list: async () => all, kill: async (pid) => { killed.push(pid); } });
+    assert.deepEqual(killed, []);
+  });
+
+  test("descendant pid recycled between iterations is not killed", async () => {
+    const root = p(10, 1, "pi-agent-desktop.exe", "", 20);
+    const child = p(50, 10, "msedgewebview2.exe", "", 21);
+    const snapshots = [[root, child], [p(50, 777, "chrome.exe", "", 60)], []];
+    const killed = [];
+    const result = await cleanupOwned({
+      ...noop, graceMs: 2000, known: [root], preexisting: new Set(),
+      list: async () => snapshots.length > 1 ? snapshots.shift() : snapshots[0],
+      kill: async (pid) => { killed.push(pid); },
+    });
+    assert.deepEqual(killed, [50, 10], "each owned key killed once, child first; the recycled pid 50 is left alone later");
+    assert.deepEqual(result.residual, []);
+  });
+
+  test("a live recorded root expands to descendants and kills them one pid at a time", async () => {
+    const root = p(10, 1, "pi-agent-desktop.exe", "", 20);
+    const all = [root, p(11, 10, "node.exe", "", 21), p(12, 11, "node.exe", "", 22), p(13, 12, "node.exe", "", 5)];
+    const killed = [];
+    await cleanupOwned({ ...noop, known: [root], preexisting: new Set(), list: async () => all, kill: async (pid) => { killed.push(pid); } });
+    assert.deepEqual(killed, [12, 11, 10], "grandchild first; pid 13 predates its parent so it is a recycled ppid");
   });
 });
 
@@ -166,7 +212,7 @@ describe("process cleanup (real processes)", () => {
     const tree = descendantsOf(root.pid, await listProcesses());
     assert.ok(tree.length >= 2, "root has a grandchild");
     const started = Date.now();
-    const result = await cleanupOwned({ rootPid: root.pid, profileDir: undefined, preexisting: new Set() });
+    const result = await cleanupOwned({ known: tree, profileDir: undefined, preexisting: new Set() });
     try {
       assert.ok(Date.now() - started < 5500);
       assert.deepEqual(result.residual, []);
@@ -205,6 +251,19 @@ ${SLEEPER}`;
       await assertTreeGone(report);
       assert.equal(alive(decoy.pid), true, "pre-existing decoy survives");
       assert.equal(report.realApiRequests, 0);
+    } finally { decoy.kill(); await dev.close(); }
+  });
+
+  windowsOnly("app exiting before CDP: reported early, its recycled pid is never used to kill anything", async () => {
+    const dev = await stubServer();
+    const decoy = spawnSleeper();
+    try {
+      const { exitCode, report } = await runBaseline(base({ base: dev.origin, cdpTimeoutMs: 5000, exeArgs: ["-e", "process.exit(3)"] }));
+      assert.equal(exitCode, EXIT.failed);
+      assert.match(report.failure, /exited early with code 3/);
+      assert.deepEqual(report.hygiene.killedPids, []);
+      assert.equal(report.hygiene.preexistingTouched, 0);
+      assert.equal(alive(decoy.pid), true);
     } finally { decoy.kill(); await dev.close(); }
   });
 
