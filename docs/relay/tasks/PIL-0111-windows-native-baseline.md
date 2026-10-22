@@ -64,3 +64,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T00:00Z · claude:sonnet-high:planner · 做了：核对主线与 wip 备份，把占位卡补成底座卡 A1–A6；剪贴板、外部编辑器、托盘驱动拆到 PIL-0201，Changes 独立窗口实测拆到 PIL-0200。状态：未冻结。下一步：协调者审阅后 freeze。风险：dev 壳是否带 no-default-features 需在 A1 里核实；初始导航隔离若代理方案仍不可行，交调试者。
 - 2026-10-22T03:34Z · planner · 冻结验收标准 70e3a657f80d
 - 2026-10-22T03:54Z · claude-cli:sonnet-high:impl · 领取，租约至 2026-10-22T06:54Z
+- 2026-10-22T03:56Z · claude-cli:sonnet-high:impl · 复述：A1 用 Rust 运行期 PILAUDE_DEV_URL 覆盖(devUrl 为编译期写死)+harness 回环代理证明；A2 用 native-window-probe.ps1 对真实窗口证明；A3 用实测缩放对标签；A4 用 node --test+真实 exe 前后进程表；A5 文档表格与 --list 对齐。
