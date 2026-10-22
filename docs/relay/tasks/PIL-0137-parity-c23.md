@@ -54,6 +54,7 @@ waivers: []
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 各状态进入步骤逐条复现并登记环境（Chromium、mock 流式、600 条会话、webpack dev） | 通过 | D:\pilaude\relay-evidence\PIL-0137\verify\VERIFY.md | 8d46a622 | claude-cli:sonnet:verify |
 
 ## 日志
 
@@ -68,3 +69,4 @@ waivers: []
 - 2026-10-22T10:29Z · claude:opus:coordinator · 范围 [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs] → [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs, hooks/useAgentSession.branch-summary-guard.test.mjs]：A5 要求定向测试全过；该测试夹具缺 todoBranchSelectionRef，实现前即失败，需修夹具
 - 2026-10-22T10:43Z · codex-plus:luna-high:impl · 返工 F1-F4：回到最新流式中立即重新跟随(scrollToLatest)、分页前插不顶回、流式跟随时按钮不闪、移除无效 pointerdown 监听；定向158/158，npm test 失败集=基线减1；证据 impl/FIX1.md
 - 2026-10-22T11:00Z · user · 修订验收标准 dfacd004c1ef → 43195e1eb4a1：拆卡政策（用户 2026-10-22 决定：已验部分合入，缺图状态转补采卡）：缺 3.1623 同态参考的视觉项，以及触控板／触摸、IME、PageDown、原生三档 DPI、WebView2、SSE 真断线、贴底滚动条遮挡、拖到轨道底松开行为，移至 PIL-0212。F1 口径（用户 2026-10-22 批准）：“距底 ≤96px”明确为“不累积漂移，逐块滞后不超过一个流式块”；流式中回到最新后瞬时 100px 属块级滞后，纯跟随基线同样出现，VERIFY-2 已实测无累积漂移。
+- 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A1：通过
