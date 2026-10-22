@@ -58,6 +58,7 @@ waivers: []
 | A1 | 夹具层各状态可进入（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0143\verify\VERIFY.md | 26c6d92 | claude-cli:sonnet-high:verify |
 | A3 | 保存失败重试保 iframe 与滚动、外层滚动、键盘 Retry、390 双主题无溢出 | 通过 | D:\pilaude\relay-evidence\PIL-0143\verify\VERIFY.md | 26c6d92 | claude-cli:sonnet-high:verify |
 | A4 | 真实 Edge：sandbox 隔离、伪造 origin/source/畸形/超大消息均被忽略；保存失败/取消/版本隔离 | 通过 | D:\pilaude\relay-evidence\PIL-0143\verify\VERIFY.md | 26c6d92 | claude-cli:sonnet-high:verify |
+| A5 | 定向 62/62、tsc、lint、guard；npm test 12 基线失败逐名一致 | 通过 | D:\pilaude\relay-evidence\PIL-0143\verify\VERIFY.md | 26c6d92 | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -75,3 +76,4 @@ waivers: []
 - 2026-10-22T10:14Z · claude-cli:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T10:15Z · claude-cli:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T10:15Z · claude-cli:sonnet-high:verify · 证据 A4：通过
+- 2026-10-22T10:15Z · claude-cli:sonnet-high:verify · 证据 A5：通过
