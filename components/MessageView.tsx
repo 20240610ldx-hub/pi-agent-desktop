@@ -835,7 +835,13 @@ function AssistantMessageView({
         setCopyState("idle");
       }, 1500);
     } catch {
-      if (current === request.attempt) setCopyState("failed");
+      if (current === request.attempt) {
+        setCopyState("failed");
+        request.timer = setTimeout(() => {
+          request.timer = null;
+          setCopyState("idle");
+        }, 4000);
+      }
     } finally {
       if (current === request.attempt) {
         request.pending = false;
@@ -1023,7 +1029,7 @@ function AssistantMessageView({
           <button
             type="button"
             onClick={copyContent}
-            aria-label={copied ? t("i18n.copied") : t("i18n.copyMessage")}
+            aria-label={t("i18n.copyMessage")}
             className="message-copy-action"
             aria-busy={copyState === "pending"}
             aria-disabled={copyState === "pending"}

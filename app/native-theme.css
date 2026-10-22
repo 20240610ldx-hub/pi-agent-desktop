@@ -10564,6 +10564,13 @@ html.dark .message-assistant {
   max-width: calc(100vw - 16px);
   white-space: normal;
 }
+@media (hover: none) {
+  .message-assistant-footer button.message-copy-action[data-copy-state="idle"]:hover > .pilaude-action-tooltip,
+  .message-assistant-footer button.message-copy-action[data-copy-state="idle"]:focus-visible > .pilaude-action-tooltip {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+}
 .app-shell .message-assistant-footer > .message-copy-action[data-copy-state="copied"] {
   color: var(--text);
 }

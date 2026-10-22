@@ -84,6 +84,10 @@ async function assistantFixture(config = {}) {
   await page.route("**/*", route => route.request().url() === "https://assistant.fixture/"
     ? route.fulfill({ contentType: "text/html", body: `<style>${css}</style><div id="root"></div><script>${bundle.replaceAll("</script", "<\\/script")}</script>` }) : route.abort());
   await page.goto("https://assistant.fixture/");
+  if (config.touch) {
+    const session = await page.context().newCDPSession(page);
+    await session.send("Emulation.setEmulatedMedia", { features: [{ name: "hover", value: "none" }, { name: "pointer", value: "coarse" }] });
+  }
   await page.locator(".message-copy-action").waitFor();
   return page;
 }
@@ -149,9 +153,25 @@ test("assistant fork stays focused during parent pending and sends the exact aft
     await fork.press("Enter");
     assert.deepEqual(await page.evaluate(() => window.forks), [["reply", "after"]]);
     await page.evaluate(() => window.setForking(false));
+    await page.waitForFunction(() => document.querySelector('[aria-label="Fork from here"]').getAttribute("aria-busy") === "false");
     assert.equal(await fork.evaluate(el => el === document.activeElement), true);
     await fork.press("Enter");
     assert.deepEqual(await page.evaluate(() => window.forks), [["reply", "after"], ["reply", "after"]]);
+  } finally { await page.close(); }
+});
+
+test("assistant copy failure feedback expires and hides the touch tooltip", async () => {
+  const page = await assistantFixture({ touch: true, width: 390 });
+  try {
+    const copy = page.locator(".message-copy-action");
+    await copy.tap();
+    await page.evaluate(() => window.finishCopy(false));
+    await page.getByRole("status").filter({ hasText: "Could not copy. Try again." }).waitFor();
+    assert.equal(await copy.getAttribute("data-copy-state"), "failed");
+    await page.waitForFunction(() => document.querySelector(".message-copy-action").getAttribute("data-copy-state") === "idle", null, { timeout: 5500 });
+    assert.equal(await page.getByRole("status").textContent(), "");
+    await page.waitForFunction(() => getComputedStyle(document.querySelector(".message-copy-action .pilaude-action-tooltip")).visibility === "hidden");
+    assert.equal(await copy.locator(".pilaude-action-tooltip").evaluate(el => getComputedStyle(el).visibility), "hidden");
   } finally { await page.close(); }
 });
 
