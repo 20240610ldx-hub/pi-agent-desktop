@@ -61,6 +61,7 @@ waivers: []
 | A1 | 核对实现者登记与 manifest：缺逐状态矩阵(pressed/focus/disabled/loading/长标签无原生参考)、客户区/字体/开关字段，真实 consumer(PilaudeDataSection)未在 next dev 页面渲染；仅夹具层(h/fixture.jsx) | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
 | A2 | 夹具层 Chromium DPR1.5 独立量测子集：00 Skip 外框/墨迹/边框色/圆角、Submit 高/色，09 管理(sm 深色)外框/墨迹/圆角/色，07 复制钮宽/悬停色；全部在容差内(max ΔE 0.96) | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
 | A2 | 无 3.1623 原生同态参考或帧状态未确认：Submit 宽(键帽槽缺)、icon 高/纵向中心(tooltip 遮挡)、agent-panels 07 悬停归属、md/lg/xxs、深色 primary、secondary/ghost/danger 等其余态 | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
+| A3 | 浏览器合成事件层 node h/keys.mjs：light/dark x DPR1/1.5/2 x 宽900/320；Tab 到 skip，Enter/Space 各 1 次，disabled/loading 不触发，loading 可聚焦，长标签省略无溢出 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/keys-result.json | 8b5bdcc | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -82,3 +83,4 @@ waivers: []
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A1：未运行
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A2：未运行
+- 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A3：通过
