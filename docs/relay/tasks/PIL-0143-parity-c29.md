@@ -57,6 +57,7 @@ waivers: []
 | --- | --- | --- | --- | --- | --- |
 | A1 | 夹具层各状态可进入（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0143\verify\VERIFY.md | 26c6d92 | claude-cli:sonnet-high:verify |
 | A3 | 保存失败重试保 iframe 与滚动、外层滚动、键盘 Retry、390 双主题无溢出 | 通过 | D:\pilaude\relay-evidence\PIL-0143\verify\VERIFY.md | 26c6d92 | claude-cli:sonnet-high:verify |
+| A4 | 真实 Edge：sandbox 隔离、伪造 origin/source/畸形/超大消息均被忽略；保存失败/取消/版本隔离 | 通过 | D:\pilaude\relay-evidence\PIL-0143\verify\VERIFY.md | 26c6d92 | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -73,3 +74,4 @@ waivers: []
 - 2026-10-22T10:14Z · user · 修订验收标准 13b41ae1ace1 → fd7b216b5c6c：拆卡政策（用户 2026-10-22 批准）：已验部分合入，缺图与原生项移出至 PIL-0210（预览失败重试保滚动、C29 同态参考补采、关闭侧板回原卡、inline 流式、真实 SDK、Tauri 保存、原生 IME/DPI、评审残差）
 - 2026-10-22T10:14Z · claude-cli:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T10:15Z · claude-cli:sonnet-high:verify · 证据 A3：通过
+- 2026-10-22T10:15Z · claude-cli:sonnet-high:verify · 证据 A4：通过
