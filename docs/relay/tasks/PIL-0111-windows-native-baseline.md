@@ -68,3 +68,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T03:58Z · claude-cli:sonnet-high:impl · 进度：lib.rs development_server_url+运行期覆盖(cargo test origin 9/9 过)、window probe 已提交；cargo build exe 进行中。
 - 2026-10-22T04:07Z · claude-cli:sonnet-high:impl · 进度：harness+CLI 已提交；真实 exe 在 150% 跑通 N1/N2/N3（run-window-3），错误标签退出码 3；下一步：node --test、文档、gating。
 - 2026-10-22T04:09Z · claude-cli:sonnet-high:impl · 进度：native-harness.test.mjs 23/23 过、A5 文档已提交；下一步：tsc/lint/guard/npm test 基线、真实运行证据。
+- 2026-10-22T04:15Z · claude-cli:sonnet-high:impl · 做了：A1–A5 完成并自测（真实 exe 150% 下 N1/N2/N3 通过，进程 27→34→27 无残余；node --test 23/23；cargo origin 9/9；tsc/lint 0）。状态：分支最后提交见 git log，A3 仅 150% 档，其余档位未运行；npm test 13 失败（基线 12），新增 1 个为 release-workflows 的“no test file left out”因 e2e/native-harness.test.mjs 在其覆盖目录外。下一步：协调者决定该测试的范围/豁免，并转达用户切 DPI 100/125/175；然后交验证。风险：lib.rs 额外加了 dev 专用运行期 PILAUDE_DEV_URL；详见 relay-evidence/PIL-0111/impl/HANDOFF.md。
