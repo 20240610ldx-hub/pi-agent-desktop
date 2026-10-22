@@ -3,9 +3,9 @@ id: PIL-0111
 title: Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生）
 epic: E11
 priority: P1
-status: review
+status: done
 owner: claude-cli:sonnet-high:impl
-lease_until: 2026-10-22T06:54Z
+lease_until:
 branch: task/PIL-0111-windows-native-baseline
 implementers: [claude-cli:sonnet-high:impl]
 depends_on: []
@@ -97,3 +97,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T09:06Z · claude-cli:sonnet-medium:verify · 证据 A6：通过
 - 2026-10-22T09:06Z · claude-cli:sonnet-high:impl · 后续小修：中文系统 taskkill 输出为 GBK，warnings 中拒绝原因匹配不到（不影响残留判定）。PrintWindow 截图右侧有伪影，PIL-0200 视觉比对前留意。
 - 2026-10-22T09:06Z · claude-cli:sonnet-high:impl · verify → review（评审 claude-cli:opus:review5）
+- 2026-10-22T09:06Z · claude-cli:opus:review5 · review → done（评审 claude-cli:opus:review5）
