@@ -3,7 +3,7 @@ id: PIL-0130
 title: 复刻验收：C16 工具步骤、参数结果与紧凑命令
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: codex-plus:luna-high:impl
 lease_until: 2026-10-22T10:57Z
 branch: task/PIL-0130-parity-c16
@@ -74,3 +74,4 @@ waivers: []
 - 2026-10-22T10:05Z · codex-plus:luna-high:impl · 做了：ToolCallBlock 迁入 ToolStepView，C16 紧凑命令间距按 06 原生图量测收紧（盒高 50→42.06，参考 42.7）/ 状态：A1/A2(仅06图覆盖项)完成，A3 未运行，其余状态待参考；迁移致 2 个源码字符串测试失败（restored-wiring、NonChatModels.wiring，不在范围）/ 下一步：协调者 relay scope 授权这两处改读 ToolStepView.tsx / 风险：见 impl/HANDOFF.md
 - 2026-10-22T10:06Z · claude:opus:coordinator · 范围 [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs] → [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs, components/restored-wiring.test.mjs, components/NonChatModels.wiring.test.mjs]：ToolCallBlock 迁出 MessageView 后，两处源码字符串断言须改读 ToolStepView.tsx；断言内容不变
 - 2026-10-22T10:13Z · codex-plus:luna-high:impl · wiring 测试改读 ToolStepView.tsx（restored-wiring 的 patch diff 用例、NonChatModels 的结果图片下载用例），断言不变；4 个相关文件 69/69 通过，npm test 3651 中 12 个失败，均为基线
+- 2026-10-22T10:14Z · codex-plus:luna-high:impl · in_progress → verify
