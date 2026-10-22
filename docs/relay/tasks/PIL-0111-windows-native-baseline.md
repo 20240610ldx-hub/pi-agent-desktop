@@ -58,6 +58,7 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 | --- | --- | --- | --- | --- | --- |
 | A1 | 真实 exe --check window：realApiRequests 0、directBaseRequests 0；绕过路径 403 计数；cargo test origin 9/9 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
 | A2 | 四档窗口探针：单窗口、PNG=物理矩形、非纯色；move/close/失败路径见 VERIFY.md | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
+| A3 | dpi100/125/150/175 实测标签与 DPI 一致；错误标签退出码 3 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -78,3 +79,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T07:34Z · claude-cli:sonnet-high:impl · 返工2：中断/清理时序、process.on、pid 复用、realApiRequests 实测、绕过路径测试；harness 30/30；真实 exe 复跑待做
 - 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A2：通过
+- 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A3：通过
