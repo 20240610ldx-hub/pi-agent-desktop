@@ -59,6 +59,7 @@ waivers: []
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
 | A1 | 夹具+浏览器：MessageView→ToolStepView 真实接线，各状态渲染（behav.log） | 通过 | D:\pilaude\relay-evidence\PIL-0130\verify\VERIFY.md | 78e5e0f9 | claude-cli:sonnet:verify |
+| A2 | 浏览器量测（06 图）：命令盒外高 43.44/44.0，末行字墨到底边 9.4/9.3，非紧凑内距不变 | 通过 | D:\pilaude\relay-evidence\PIL-0130\verify\VERIFY-2.md | 78e5e0f9 | claude-cli:sonnet:verify |
 
 ## 日志
 
@@ -80,3 +81,4 @@ waivers: []
 - 2026-10-22T10:43Z · user · 修订验收标准 8feff7797176 → eb34d4c46a35：拆卡政策，移出项见 PIL-0211
 - 2026-10-22T10:56Z · user · 修订验收标准 eb34d4c46a35 → 59fbf3d8d1f5：评审：A3 焦点返回无验证证据，按拆卡政策移至 PIL-0211 A4
 - 2026-10-22T10:56Z · claude-cli:sonnet:verify · 证据 A1：通过
+- 2026-10-22T10:56Z · claude-cli:sonnet:verify · 证据 A2：通过
