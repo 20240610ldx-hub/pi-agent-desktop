@@ -25,14 +25,14 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 132 张任务卡：todo 98 · in_progress 3 · verify 1 · review 0 · done 22 · blocked 2 · parked 6
+共 132 张任务卡：todo 98 · in_progress 3 · verify 0 · review 1 · done 22 · blocked 2 · parked 6
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0030 | P1 | in_progress | 统一执行前授权并接入 pi-permission-system（普通 coding 会话授权门） | codex-plus:sol-xhigh:impl | 已过期 2026-10-22T12:54Z | task/PIL-0030-permission-gate |
-| PIL-0072 | P1 | verify | pi-powerline-footer 状态行接入并修复短窗叠字 | claude-cli:sonnet-high:impl | 2026-10-22T14:17Z | task/PIL-0072-powerline-footer |
+| PIL-0072 | P1 | review | pi-powerline-footer 状态行接入并修复短窗叠字 | claude-cli:sonnet-high:impl | 2026-10-22T14:17Z | task/PIL-0072-powerline-footer |
 | PIL-0073 | P1 | in_progress | Plannotator 计划审阅接入 | codex-plus:luna-high:impl | 2026-10-22T15:55Z | task/PIL-0073-plannotator |
 | PIL-0011 | P2 | in_progress | 查清并修复 FileViewer 窄 pane 下载被取消 | codex-plus:sol-high:impl | 已过期 2026-10-22T12:35Z | task/PIL-0011-fileviewer-download |
 
