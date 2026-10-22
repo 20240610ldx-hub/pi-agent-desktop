@@ -83,8 +83,11 @@ test("no test file is left out of npm test", async () => {
     .filter(Boolean);
 
   const covered = tracked.filter((file) => /^(app|lib|scripts|components|hooks|public|vendor)\//.test(file));
+  // e2e/native-*.test.mjs are Windows-only and kill processes, so they stay out
+  // of npm test; run them by hand with `node e2e/native-baseline.mjs`.
+  const manualOnly = tracked.filter((file) => /^e2e\/native-[^/]*\.test\.mjs$/.test(file));
   assert.deepEqual(
-    tracked.filter((file) => !covered.includes(file)),
+    tracked.filter((file) => !covered.includes(file) && !manualOnly.includes(file)),
     [],
     "a .test.mjs file lives outside app/, lib/, scripts/, components/, hooks/, public/ and vendor/ — extend npm test",
   );
