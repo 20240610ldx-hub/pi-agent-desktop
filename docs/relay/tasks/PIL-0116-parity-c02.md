@@ -66,6 +66,7 @@ waivers: []
 | A4 | 逐尺寸×逐状态矩阵不完整：pressed/focus/disabled/loading 全尺寸及 md/lg/xxs 无 3.1623 原生参考；仅 xs 文本/图标钮与 sm secondary 深色默认有参考 | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
 | A5 | node --test 四个定向文件 40/40；tsc --noEmit 0；npm run lint 0；npm test 3605 例 12 失败均在 PIL-0113 基线名单，新增 0；relay guard --task PIL-0116 无问题 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/A5-targeted.log; D:/pilaude/relay-evidence/PIL-0116/verify/A5-tsc.log; D:/pilaude/relay-evidence/PIL-0116/verify/A5-lint.log; D:/pilaude/relay-evidence/PIL-0116/verify/A5-npm-test.log; D:/pilaude/relay-evidence/PIL-0116/verify/fail-names.txt; D:/pilaude/relay-evidence/PIL-0116/verify/A5-guard.log | 8b5bdcc | claude:sonnet-high:verify |
 | A1 | 夹具层(浏览器 Chromium)：按 amend 后范围逐图登记四个状态的来源/3.1623/150%/AppliedDPI144/缩放100%/zh-CN/主题与进入步骤，实现侧 node h/run.mjs 复现 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md(补充节) | 8b5bdcc | claude:sonnet-high:verify |
+| A2 | 按 amend 后范围重判：四个状态的盒/墨迹/圆角/色全部在容差内（先前量测表，max ΔE 0.96；07 复制钮高度由墨迹对称推得 24.0、icon-centre.json dx0 dy0） | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md; D:/pilaude/relay-evidence/PIL-0116/verify/icon-centre.json | 8b5bdcc | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -95,3 +96,4 @@ waivers: []
 - 2026-10-22T03:20Z · claude:opus-medium:planner · 用户 2026-10-22 决定：UI 卡已量测部分达标即可拆卡合入，缺 3.1623 参考的状态转补采卡。A1/A3/A4 收窄为已有原生参考的状态，其余转 PIL-0198。
 - 2026-10-22T02:47Z · user · 修订验收标准 4633dd54c86e → f290638aa589：用户 2026-10-22 决定拆卡：已有原生参考的状态在本卡验收合入，其余转 PIL-0198 补采后另验
 - 2026-10-22T02:49Z · claude:sonnet-high:verify · 证据 A1：通过
+- 2026-10-22T02:49Z · claude:sonnet-high:verify · 证据 A2：通过
