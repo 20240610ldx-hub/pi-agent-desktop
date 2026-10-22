@@ -11,7 +11,7 @@ implementers: [codex-plus:luna-high:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs, components/restored-wiring.test.mjs, components/NonChatModels.wiring.test.mjs]
 files_shared: [components/MessageView.tsx, app/native-theme.css]
-acceptance_sha: 8feff7797176
+acceptance_sha: eb34d4c46a35
 waivers: []
 ---
 
@@ -30,10 +30,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 command-only 紧凑 shell 与 rich tool views，运行/结束/错误、参数/结果开合、空结果与超长输出。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0130/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 Tab 到工具展开/复制，长参数/结果双轴滚动，展开后焦点可返回原项；原生剪贴板保 CRLF/Tab/尾空格，窄窗/三档 DPI/缩放/双主题核验。命令为只读数据，IME/执行快捷键不适用，绝不由查看触发命令。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：command-only紧凑条与rich views分开，参数／结果复制保CRLF、Tab、尾空格；长输出双轴滚动，MCP文本不执行。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
+- [ ] A1 夹具/浏览器层：真实接线 `MessageView.tsx → ToolStepView`；command-only 紧凑 shell 与 rich tool views 的运行、完成、错误、参数/结果开合、空结果与超长输出、MCP 文本渲染可见，数据来自真实 consumer 而非演示数据。本条只判定该子集；缺 3.1623 同态参考的状态（错误、运行、取消、空结果、超长、MCP、富视图）移至 PIL-0211 A1。
+- [ ] A2 紧凑命令盒几何（仅 06 图覆盖项；3.1623 深色；CSS px = 原像素 ÷ 1.5）：命令盒外高 ±1 CSS px、末行字墨到底边 ±1 CSS px、非紧凑视图内距不变。同帧同状态量测表与差异图存 relay-evidence/PIL-0130/，叠图只作整数裁剪/平移。卡片与结果底色 ΔE 移至 PIL-0211 A2；图标中心对齐与富视图计算内距浏览器重测移至 PIL-0211 A3。
+- [ ] A3 浏览器层：Tab 到工具展开/复制，长参数/结果双轴滚动，390px 无横向溢出；展开后焦点回到原项。命令为只读数据，IME/执行快捷键不适用，查看不触发命令。原生与浏览器合成事件分层记录。原生剪贴板、三档 DPI、窄窗、浅色与双主题移至 PIL-0211 A3/A4。
+- [ ] A4 浏览器层：command-only 紧凑条与 rich views 分开；参数／结果复制保 CRLF、Tab、尾空格（浏览器剪贴板层）；长输出双轴滚动；MCP 文本不执行，零网络请求。Windows 原生剪贴板移至 PIL-0211 A4。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test components/CompactCommandText.test.mjs components/ToolStepView.test.mjs components/MessageView.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0130`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -76,3 +76,4 @@ waivers: []
 - 2026-10-22T10:13Z · codex-plus:luna-high:impl · wiring 测试改读 ToolStepView.tsx（restored-wiring 的 patch diff 用例、NonChatModels 的结果图片下载用例），断言不变；4 个相关文件 69/69 通过，npm test 3651 中 12 个失败，均为基线
 - 2026-10-22T10:14Z · codex-plus:luna-high:impl · in_progress → verify
 - 2026-10-22T10:39Z · codex-plus:luna-high:impl · 返工1：命令盒外高 44.0、结果底内距 7px、还原无参考视图 padding；定向65/65 tsc lint guard 通过，npm test 12=基线
+- 2026-10-22T10:43Z · user · 修订验收标准 8feff7797176 → eb34d4c46a35：拆卡政策，移出项见 PIL-0211
