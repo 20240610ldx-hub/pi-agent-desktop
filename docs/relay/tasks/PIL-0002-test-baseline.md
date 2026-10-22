@@ -3,7 +3,7 @@ id: PIL-0002
 title: 建立可信的测试基线并逐项登记已知失败
 epic: E0
 priority: P0
-status: verify
+status: review
 owner: codex-plus:luna-medium:impl
 lease_until: 2026-10-22T12:04Z
 branch: task/PIL-0002-test-baseline
@@ -61,3 +61,4 @@ waivers: []
 - 2026-10-22T13:13Z · claude-cli:haiku:verify · 证据 A3：通过
 - 2026-10-22T13:14Z · claude-cli:sonnet-medium:review · 证据 A4：通过
 - 2026-10-22T13:14Z · claude-cli:sonnet-medium:review · 证据 A5：通过（条件款不成立：未取得 Linux 结果）
+- 2026-10-22T13:14Z · codex-plus:luna-medium:impl · verify → review
