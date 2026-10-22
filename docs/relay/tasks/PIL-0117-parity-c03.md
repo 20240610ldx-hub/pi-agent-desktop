@@ -68,3 +68,4 @@ waivers: []
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：SettingsUi.blocks.test.mjs、SettingsUi.group-switch.test.mjs、SettingsUi.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字
 - 2026-10-21T12:35Z · planner · 冻结验收标准 d9b340aeda5f
 - 2026-10-22T04:39Z · claude-cli:sonnet-high:impl · 领取，租约至 2026-10-22T07:39Z
+- 2026-10-22T04:41Z · claude-cli:sonnet-high:impl · 复述：新建 SegmentedChoice（radiogroup+roving tabindex，方向键/Home/End 跳过禁用，空值，多实例互不串）与独占测试，C03 CSS 分节；A1/A3 用夹具+浏览器合成事件证明；A2 无 3.1623 同态参考（R12-02/06 为版本未知聊天附件），数值项记待参考；真实 consumer 受 files_allowed 限制，待协调者决定
