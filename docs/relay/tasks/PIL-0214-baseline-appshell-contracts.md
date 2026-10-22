@@ -25,7 +25,7 @@ waivers: []
 
 - 失败测试：desktop-only workspace and health behavior is gated before use；workspace visibility restores independently of file or terminal tabs
 - 测试文件：components/AppShell-session-reset.test.mjs、components/AppShell.terminal.test.mjs
-- 原因与归类：日志首行：`The input did not match the regular expression /desktopMode ? getPrefJson<PersistedWorkspace>/` 与 `/if (workspacePanesRestored) setPrefJson(APP_PREF_KEYS.workspacePaneVisibility, rightPanelOpen)/`。静态源码模式在当前 AppShell.tsx 中找不到。前者 upstream 通过（既有契约被 fork 改动破坏）；后者 upstream 无此用例（fork 自有测试）。归类：fork 回归。
+- 原因与归类：日志首行：`The input did not match the regular expression /desktopMode ? getPrefJson<PersistedWorkspace>/` 与 `/if (workspacePanesRestored) setPrefJson(APP_PREF_KEYS.workspacePaneVisibility, rightPanelOpen)/`。静态源码模式在当前 AppShell.tsx 中找不到。分开归类：`desktop-only workspace and health behavior is gated before use`（`/desktopMode ? getPrefJson<PersistedWorkspace>/`）upstream 通过，归类 fork 回归（既有契约被 fork 改动破坏）；`workspace visibility restores independently of file or terminal tabs`（`/if (workspacePanesRestored) setPrefJson(...)/`）upstream 无此用例（fork 自有测试，同文件另两例 upstream 通过），归类 既有缺陷（fork-only 测试与实现漂移）。
 - 复现：`node --test <测试文件>`
 
 ## 验收标准
