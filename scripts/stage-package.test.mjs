@@ -252,6 +252,7 @@ test("the staged installed Todo package retains its real factory, config validat
     const overlay = await loaded.makeTodoOverlayLoader(() => loader.import(join(todoDir, "todo-overlay.ts")))();
     assert.equal(typeof loaded.default, "function");
     assert.equal(typeof overlay.TodoOverlay, "function", "the actual lazy import resolves entirely from staged packages");
+    assert.equal(existsSync(join(stagedNodeModulesDir, "pi-powerline-footer")), false, "the footer package has no license text yet and is not added to the reviewed installer closure");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

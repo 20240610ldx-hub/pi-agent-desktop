@@ -35,6 +35,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Powerline footer primary row
+
+Pilaude pins `pi-powerline-footer@0.20.2` by Nico Bailon ([nicobailon/pi-powerline-footer, fixed source commit](https://github.com/nicobailon/pi-powerline-footer/tree/e06267494593c9006b014f42706a8d9e9259a417)) as an application runtime dependency. `lib/builtin-powerline-extension.ts` loads only its published `segments.ts` model and context renderers and does not start the package's editor, footer, queue or shell factory.
+
+**License text gap (open).** The package manifest declares `MIT`, but neither the published 0.20.2 tarball nor the fixed repository tree contains a LICENSE, NOTICE or COPYING file, so there is no license text or copyright statement to reproduce, and none is invented here. This does not affect local development. Whether an installer may contain this package without the upstream text is a decision for the user; until it is made, the desktop staging helper must not add `pi-powerline-footer`, and `package-lock.json` plus Next's own file tracer are not proof that it is excluded from a build.
+
 ## Changes diff renderer
 
 Pilaude uses [react-diff-view](https://github.com/otakustay/react-diff-view) as an npm runtime dependency, pinned to `3.3.3`. `components/ReviewDiff.tsx` consumes its diff components; `lib/review-diff-renderer.ts` adapts parsing, tokenization and edit marking. The installed library sources are unmodified; the integration and theme overrides are maintained in Pilaude.
