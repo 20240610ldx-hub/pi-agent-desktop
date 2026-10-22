@@ -58,6 +58,7 @@ waivers: []
 | A2 | 同帧同文本量测 ÷1.5：圆角、···贴边、组间距、选中静止右内距 9.33/10.0；触屏···与行高44 | 通过 | D:\pilaude\relay-evidence\PIL-0147\verify\VERIFY-4.md | 820949d | claude-cli:sonnet-high:verify |
 | A3 | 浏览器合成事件：方向键/Home/End/Alt 重排、搜索、行菜单、窄窗触屏 | 通过 | D:\pilaude\relay-evidence\PIL-0147\verify\VERIFY-2.md | 820949d | claude-cli:sonnet-high:verify |
 | A4 | 夹具层走通（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0147\verify\VERIFY-2.md | 820949d | claude-cli:sonnet-high:verify |
+| A5 | 定向65/65、tsc、lint、guard；npm test 12 基线失败逐名一致 | 通过 | D:\pilaude\relay-evidence\PIL-0147\verify\VERIFY-4.md | 820949d | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -81,3 +82,4 @@ waivers: []
 - 2026-10-22T07:22Z · claude-cli:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T07:22Z · claude-cli:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T07:22Z · claude-cli:sonnet-high:verify · 证据 A4：通过
+- 2026-10-22T07:22Z · claude-cli:sonnet-high:verify · 证据 A5：通过
