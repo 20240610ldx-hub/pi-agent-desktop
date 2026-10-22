@@ -56,6 +56,7 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 真实 exe --check window：realApiRequests 0、directBaseRequests 0；绕过路径 403 计数；cargo test origin 9/9 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -74,3 +75,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T04:22Z · claude-cli:sonnet-high:impl · in_progress → verify
 - 2026-10-22T07:25Z · claude-cli:sonnet-high:impl · 返工进行中（CLI Sonnet 修复 Opus 评审 6 项）；DPI 100/125/175 用户已跑完，证据在 verify\dpi*。
 - 2026-10-22T07:34Z · claude-cli:sonnet-high:impl · 返工2：中断/清理时序、process.on、pid 复用、realApiRequests 实测、绕过路径测试；harness 30/30；真实 exe 复跑待做
+- 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A1：通过
