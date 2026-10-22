@@ -9,7 +9,7 @@ lease_until: 2026-10-22T14:17Z
 branch: task/PIL-0072-powerline-footer
 implementers: [claude-cli:sonnet-high:impl]
 depends_on: [PIL-0001]
-files_allowed: [lib/builtin-powerline-extension*, components/ExtensionWidgets*, components/ExtensionStatusLine*, e2e/powerline-footer-*.mjs]
+files_allowed: [lib/builtin-powerline-extension*, components/ExtensionWidgets*, components/ExtensionStatusLine*, e2e/powerline-footer-*.mjs, next.config.ts]
 files_shared: [lib/rpc-manager*, hooks/useAgentSession*, lib/agent-event-stream*, lib/agent-event-wire*, lib/types.ts, lib/session-reader*, lib/i18n/messages/*.ts, app/native-theme.css, components/ChatWindow.tsx, package.json, package-lock.json, next.config.ts, scripts/prepare-desktop.mjs, scripts/stage-package*, scripts/web-package-layout.test.mjs, scripts/release-workflows.test.mjs, THIRD_PARTY_NOTICES.md, scripts/fork-ownership.json, docs/pilaude-pi-extensions.md]
 acceptance_sha: b5738af054bb
 waivers: []
@@ -53,3 +53,4 @@ waivers: []
 - 2026-10-22T11:49Z · claude-cli:sonnet-high:impl · 缺包时跳过 powerline 扩展(不抛错,警告一次),补单测
 - 2026-10-22T11:49Z · claude-cli:sonnet-high:impl · in_progress → verify
 - 2026-10-22T12:11Z · claude-cli:sonnet-high:impl · verify → in_progress
+- 2026-10-22T12:11Z · claude:opus:coordinator · 范围 [lib/builtin-powerline-extension*, components/ExtensionWidgets*, components/ExtensionStatusLine*, e2e/powerline-footer-*.mjs] → [lib/builtin-powerline-extension*, components/ExtensionWidgets*, components/ExtensionStatusLine*, e2e/powerline-footer-*.mjs, next.config.ts]：验证 F1：webpack 静态改写 createRequire.resolve，需把 pi-powerline-footer 加入 serverExternalPackages（同 rpiv-todo）；只允许改该数组
