@@ -67,3 +67,4 @@ waivers: []
 - 2026-10-21T13:04Z · claude:opus-medium:planner · PIL-0189 评审非阻断意见供本卡落实：源会话运行中分叉会把未回复的用户消息一并复制，子会话出现连续两条用户消息，界面需说明；分叉后接入新会话事件流（onSessionForked）属本卡/0137。
 - 2026-10-22T07:23Z · claude-cli:sonnet-high:impl · 领取，租约至 2026-10-22T10:23Z
 - 2026-10-22T07:34Z · claude-cli:sonnet-high:impl · 复述：A1 单行/多行/附件/busy 布局+发送提示；A2 同帧量测参考 3.1623 (00/04/tooltips-01)；分叉发送无真实 consumer 文件在范围，先隐藏。阶段1：卡内布局+提示已提交
+- 2026-10-22T07:34Z · claude-cli:sonnet-high:impl · 做了：卡内单行布局+发送提示(dea19aa) / 状态：A1/A2 部分，分叉发送因 consumer 不在范围未做，A3/A4/A5 未跑；额度用尽 / 下一步：读 evidence/PIL-0122/impl/HANDOFF.md，补测试、窄窗/多行/busy 量测、npm test 对比基线 / 风险：+ 位置与 PIL-0123 交叠
