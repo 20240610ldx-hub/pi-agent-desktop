@@ -9,7 +9,7 @@ lease_until: 2026-10-22T12:04Z
 branch: task/PIL-0143-parity-c29
 implementers: [codex-plus:sol-high:impl]
 depends_on: [PIL-0014]
-files_allowed: [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs]
+files_allowed: [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs, hooks/useHtmlPreviewFrame.ts, hooks/useHtmlPreviewFrame.test.mjs]
 files_shared: [app/native-theme.css]
 acceptance_sha: 13b41ae1ace1
 waivers: []
@@ -64,3 +64,4 @@ waivers: []
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字
 - 2026-10-21T12:36Z · planner · 冻结验收标准 13b41ae1ace1
 - 2026-10-22T09:04Z · codex-plus:sol-high:impl · 领取，租约至 2026-10-22T12:04Z
+- 2026-10-22T09:20Z · claude:opus:coordinator · 范围 [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs] → [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs, hooks/useHtmlPreviewFrame.ts, hooks/useHtmlPreviewFrame.test.mjs]：实现者发现 iframe 桥接缺 origin 校验（安全缺口），该文件无卡归属；本卡 A4 桥接需修复并补负向测试
