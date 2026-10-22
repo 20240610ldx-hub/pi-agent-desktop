@@ -71,3 +71,4 @@ waivers: []
 - 2026-10-22T04:41Z · claude-cli:sonnet-high:impl · 复述：新建 SegmentedChoice（radiogroup+roving tabindex，方向键/Home/End 跳过禁用，空值，多实例互不串）与独占测试，C03 CSS 分节；A1/A3 用夹具+浏览器合成事件证明；A2 无 3.1623 同态参考（R12-02/06 为版本未知聊天附件），数值项记待参考；真实 consumer 受 files_allowed 限制，待协调者决定
 - 2026-10-22T04:42Z · claude-cli:sonnet-high:impl · 提交 SegmentedChoice + C03 CSS 分节 + 11 条夹具测试；下一步：浏览器量测与键盘实测、tsc/lint/guard/npm test
 - 2026-10-22T04:52Z · claude-cli:sonnet-high:impl · 做了：SegmentedChoice(radiogroup/roving tabindex/方向键/空值/多实例)+C03 CSS+11 测试；浏览器层键盘与双主题/窄宽实测 / 状态：提交 1fe9916，A5 自测全过（npm test 12 失败同基线）；A1/A3/A4 部分，A2 无 3.1623 参考待参考 / 下一步：协调者决定 consumer 接线范围（SettingsPanel）与 3.1623 补采 / 风险：无真实 consumer 未解；实现值待参考核对。详见 relay-evidence/PIL-0117/impl/HANDOFF.md
+- 2026-10-22T07:23Z · claude-cli:sonnet-high:impl · 实现已提交（fe540a7、1fe9916，分支 task/PIL-0117-parity-c03），夹具层自测通过；但 C03 无任何 3.1623 同态参考，且自然 consumer（SettingsPanel）不在范围内。阻塞待：用户补采分段控件参考图 + 规划接线 consumer。
