@@ -11,7 +11,7 @@ implementers: [codex-plus:luna-high:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs, hooks/useAgentSession.branch-summary-guard.test.mjs]
 files_shared: [app/native-theme.css]
-acceptance_sha: dfacd004c1ef
+acceptance_sha: 43195e1eb4a1
 waivers: []
 ---
 
@@ -30,10 +30,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 长会话的底部跟随/离底、历史分页、搜索锚点、分支切换、重连/错误恢复和返回最新。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0137/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 真实鼠标滚轮/触控板/滚动条拖动测试离底与返回最新；流式、历史分页、分支/重连后锚点不漂移，150ms 意图锁按实际记录。键盘 PageUp/PageDown/Home/End 属阅读区；IME 仅验证输入器组合时不抢焦点/滚动。三档 DPI/缩放/窄窗/双主题下保历史位置。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：用长会话、分页、搜索锚点、分支切换、流式与重连验证150ms意图锁及历史恢复；手动滚动不得被错误展开抢回。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
+- [ ] A1 长会话状态进入与来源登记（已验子集）。底部跟随／离底、历史分页、搜索锚点、分支切换、重连／错误恢复、返回最新的进入步骤逐条可复现，并登记测试环境（Chromium、mock 流式模型、600 条会话、dev server）。3.1623 同态参考的逐图登记与视觉量测移至 PIL-0212（A1）；本卡不判定视觉通过。
+- [ ] A2 几何与颜色量测（实现侧记录，同态比对移至 PIL-0212）。实现侧按钮几何、颜色及 dsf 1／1.5／2 下 CSS px 恒定性记录于 `D:pilaudeelay-evidencePIL-0137erifyutton-measure.json`。与 3.1623 的同帧比对、差值与 ΔE 判定移至 PIL-0212（A1）；本卡不计通过。
+- [ ] A3 真实输入（浏览器层）：鼠标滚轮、键盘 PageUp/Home/End、滚动条按住滑块与轨道的离底与返回最新；流式、历史分页、分支／会话切换后锚点不漂移；150ms 意图锁按实际记录。回到最新后的跟随口径：距底不累积漂移，逐块滞后不超过一个流式块（块约 50px，瞬时可达 100px，纯跟随基线同样出现），不以字面 96px（`CHAT_SCROLL_REATTACH_TOLERANCE`）作逐采样判定。浏览器层 dsf 1／1.5／2、390／1280 宽、亮暗主题的分页锚点已测。触控板／触摸、IME、PageDown、原生系统 DPI、WebView2、贴底滚动条遮挡移至 PIL-0212（A2、A3）。
+- [ ] A4 本组件专属核验（已验子集）：用长会话、分页、搜索锚点、分支切换、流式与重连验证 150ms 意图锁及历史恢复；手动滚动不得被错误展开抢回；流式中点击回到最新须重新跟随。已知残差：原生滚动、SSE 真断线、三档系统 DPI、IME 移至 PIL-0212（A2）；拖到轨道底松开的行为移至 PIL-0212（A4，待用户决定）。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test lib/cds-scroll.test.mjs components/ChatWindow.scroll-to-latest.test.mjs components/ChatWindow*.test.mjs hooks/useAgentSession.branch-summary-guard.test.mjs hooks/useAgentSession.composer-queue.test.mjs hooks/useAgentSession.context-usage.test.mjs hooks/useAgentSession.events-086.test.mjs hooks/useAgentSession.failure-notices.test.mjs hooks/useAgentSession.fork-position.test.mjs hooks/useAgentSession.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0137`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -67,3 +67,4 @@ waivers: []
 - 2026-10-22T09:43Z · codex-plus:luna-high:impl · in_progress → verify
 - 2026-10-22T10:29Z · claude:opus:coordinator · 范围 [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs] → [components/ChatWindow.tsx, hooks/useAgentSession.ts, lib/cds-scroll.ts, lib/cds-scroll.test.mjs, components/ChatWindow.scroll-to-latest.test.mjs, hooks/useAgentSession.branch-summary-guard.test.mjs]：A5 要求定向测试全过；该测试夹具缺 todoBranchSelectionRef，实现前即失败，需修夹具
 - 2026-10-22T10:43Z · codex-plus:luna-high:impl · 返工 F1-F4：回到最新流式中立即重新跟随(scrollToLatest)、分页前插不顶回、流式跟随时按钮不闪、移除无效 pointerdown 监听；定向158/158，npm test 失败集=基线减1；证据 impl/FIX1.md
+- 2026-10-22T11:00Z · user · 修订验收标准 dfacd004c1ef → 43195e1eb4a1：拆卡政策（用户 2026-10-22 决定：已验部分合入，缺图状态转补采卡）：缺 3.1623 同态参考的视觉项，以及触控板／触摸、IME、PageDown、原生三档 DPI、WebView2、SSE 真断线、贴底滚动条遮挡、拖到轨道底松开行为，移至 PIL-0212。F1 口径（用户 2026-10-22 批准）：“距底 ≤96px”明确为“不累积漂移，逐块滞后不超过一个流式块”；流式中回到最新后瞬时 100px 属块级滞后，纯跟随基线同样出现，VERIFY-2 已实测无累积漂移。
