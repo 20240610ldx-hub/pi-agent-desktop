@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 110 张任务卡：todo 93 · in_progress 2 · verify 3 · review 0 · done 7 · blocked 0 · parked 5
+共 110 张任务卡：todo 92 · in_progress 3 · verify 3 · review 0 · done 7 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -35,6 +35,7 @@
 | PIL-0116 | P1 | verify | 复刻验收：C02 按钮尺寸与交互状态 | claude:sonnet-high:impl | 已过期 2026-10-21T15:51Z | task/PIL-0116-parity-c02 |
 | PIL-0127 | P1 | in_progress | 复刻验收：C13 代码块、Mermaid source 与复制反馈 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0127-parity-c13 |
 | PIL-0197 | P1 | verify | Windows 托盘 Quit 只隐藏窗口不结束进程 | claude:sonnet-high:impl | 已过期 2026-10-21T16:04Z | task/PIL-0197-tray-quit-exit |
+| PIL-0133 | P2 | in_progress | 复刻验收：C19 模型切换菜单 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0133-parity-c19 |
 | PIL-0147 | P2 | in_progress | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | claude:sonnet-high:impl | 2026-10-22T05:41Z | task/PIL-0147-parity-c33 |
 
 ### 阻塞
@@ -102,7 +103,6 @@
 | PIL-0129 | P2 | E2 | 复刻验收：C15 执行记录组与摘要 | 是 | PIL-0014, PIL-0137 |
 | PIL-0131 | P2 | E2 | 复刻验收：C17 流式正文／公式／Artifact 光标 | 是 | PIL-0014, PIL-0127, PIL-0143 |
 | PIL-0132 | P2 | E2 | 复刻验收：C18 单处微光、新步骤及有限状态动效 | 是 | PIL-0014, PIL-0128, PIL-0130 |
-| PIL-0133 | P2 | E2 | 复刻验收：C19 模型切换菜单 | 是 | PIL-0014 |
 | PIL-0134 | P2 | E2 | 复刻验收：C20 推理强度选择 | 是 | PIL-0014, PIL-0122 |
 | PIL-0135 | P2 | E2 | 复刻验收：C21 当前上下文圆环与用量浮层 | 是 | PIL-0014 |
 | PIL-0136 | P2 | E2 | 复刻验收：C22 DOM 菜单进入与弹簧曲线 | 是 | PIL-0014 |

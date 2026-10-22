@@ -3,11 +3,11 @@ id: PIL-0133
 title: 复刻验收：C19 模型切换菜单
 epic: E2
 priority: P2
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: codex-plus:gpt-xhigh:impl
+lease_until: 2026-10-22T05:42Z
+branch: task/PIL-0133-parity-c19
+implementers: [codex-plus:gpt-xhigh:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/ModelSelector.tsx, components/SelectorRow.tsx, components/ModelSelector.test.mjs]
 files_shared: [app/native-theme.css]
@@ -63,3 +63,4 @@ waivers: []
 - 2026-10-21T08:01Z · codex-plus:gpt-xhigh:planner · 做了：以当前磁盘与上一轮草案重建冻结前修订，补全组件状态/容差/专属交互、真实能力依赖和文件主卡；保留已有日志。P2：首发必需，当前无其他卡依赖，不占 P1。 / 状态：仅 round2 草案，todo、未冻结、无实现通过证据 / 下一步：宿主协调者审阅 before/after、全板校验与交接后应用并独立复核 / 风险：参考版本/换算与实机能力仍按各卡验收取证，范围外冲突见 round2/HANDOFF.md。
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字；G8 A3 写明走 DOM、不开原生弹出
 - 2026-10-21T12:36Z · planner · 冻结验收标准 a4cb17ca21d9
+- 2026-10-22T02:42Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-22T05:42Z
