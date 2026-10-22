@@ -11,7 +11,7 @@ implementers: [claude-cli:sonnet-high:impl]
 depends_on: [PIL-0014, PIL-0177, PIL-0189]
 files_allowed: [components/ChatInput.tsx, components/ChatInput.test.mjs, lib/ime.ts]
 files_shared: [lib/i18n/messages/*.ts, app/native-theme.css]
-acceptance_sha: 042e78bfeb93
+acceptance_sha: 7f2336e0b28d
 waivers: []
 ---
 
@@ -31,10 +31,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 空白/单行/多行/长草稿、焦点/IME、附件、busy/发送/停止和未知提交结果；逐态保留同一次提交快照；发送按钮悬停/键盘焦点提示（发送 ⏎；在分叉会话中发送 Ctrl Alt ⏎，后者依赖 PIL-0189，会话不可分叉时置灰且快捷键不响应）；麦克风按钮首发隐藏（不渲染按钮、不留占位）。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0122/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。 发送按钮提示（composer-tooltips-light 01，原生）可量测：提示盒宽高、两行文字基线与行距、键帽尺寸与间距、圆角、与按钮的间隙。
-- [ ] A3 原生 Windows IME 组合/选词/Enter/Escape/229 不误提交；Tab 到工具与单一提交控件，粘贴/多行/附件后保持光标与草稿，长草稿内部滚动；窄窗/三档 DPI/应用缩放/双主题核验。方向/Home/End 按文本编辑语义，不当菜单导航。 Enter 发送、Ctrl+Alt+Enter 触发 PIL-0189 的分叉发送（IME 组合期间两者都不触发、不误发）；发送按钮提示在悬停与键盘聚焦时出现、移开/失焦/Escape 时消失，不遮挡输入。原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：在短／多行／长草稿、附件与busy下验证单次提交；原生IME Enter／229不误发，未知提交结果不重放。 发送提示文案与键帽与 composer-tooltips-light 01 一致（发送 ⏎；在分叉会话中发送 Ctrl Alt ⏎；繁中/英文使用对应译文，lib/i18n/messages 三种语言同步，缺键不显示键名，i18n 文件只改本提示键）；Ctrl+Alt+Enter 与点击提示项经 PIL-0189 在新会话发送：成功后跳到新会话并清空源会话草稿；失败/取消保留源草稿并显示错误；快速连按只产生一个分叉；源会话未持久化、正在运行 shell 命令等不可分叉时第二行置灰且快捷键不响应，不假装可用；输入器工具栏无麦克风按钮、DOM 中无其 aria-label 与残留空位。对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
+- [ ] A1 建立 空白/单行/多行/长草稿、焦点/IME、附件、busy/发送/停止和未知提交结果；逐态保留同一次提交快照；发送按钮悬停/键盘焦点提示（发送 ⏎；第二行“在分叉会话中发送 Ctrl Alt ⏎”移至 PIL-0207）；麦克风按钮首发隐藏（不渲染按钮、不留占位）。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
+- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0122/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。 发送按钮提示（composer-tooltips-light 01，原生）第一行“发送 ⏎”可量测：提示盒宽高、文字基线、圆角、与按钮的间隙；第二行与键帽量测移至 PIL-0207。
+- [ ] A3 原生 Windows IME 组合/选词/Enter/Escape/229 不误提交；Tab 到工具与单一提交控件，粘贴/多行/附件后保持光标与草稿，长草稿内部滚动；窄窗/三档 DPI/应用缩放/双主题核验。方向/Home/End 按文本编辑语义，不当菜单导航。 Enter 发送与 IME 组合期间不误发保留本卡；Ctrl+Alt+Enter 分叉发送移至 PIL-0207；发送按钮提示在悬停与键盘聚焦时出现、移开/失焦/Escape 时消失，不遮挡输入。原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
+- [ ] A4 本组件专属核验：在短／多行／长草稿、附件与busy下验证单次提交；原生IME Enter／229不误发，未知提交结果不重放。 发送提示第一行文案“发送 ⏎”与 composer-tooltips-light 01 一致，lib/i18n/messages 三种语言同步，缺键不显示键名，i18n 文件只改本提示键，保留本卡；第二行文案及其 i18n 键、Ctrl+Alt+Enter 与点击提示项经 PIL-0189 在新会话发送（成功跳转并清空源草稿、失败保留草稿并报错、快速连按只产生一个分叉、不可分叉时置灰）全部移至 PIL-0207；输入器工具栏无麦克风按钮、DOM 中无其 aria-label 与残留空位。对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test components/ChatInput.test.mjs components/ChatInput.automation.test.mjs lib/ime.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0122`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -71,3 +71,4 @@ waivers: []
 - 2026-10-22T07:35Z · claude-cli:sonnet-high:impl · 协调者：分叉发送 UI（提示第二行、Ctrl+Alt+Enter、置灰、i18n）按 2026-10-21 用户决定 分叉发送先隐藏不在本卡实现，验收中相关项待拆卡；CLI 额度重置后继续剩余项（组件测试、夹具报错、窄窗/多行/busy、提示颜色基线、npm test 对比）。
 - 2026-10-22T07:55Z · claude-cli:sonnet-high:impl · implementer：量测校准(卡内行起点/文字基线/发送图标/聚焦亮边框/键帽色，ΔE≤2)、补 5 项 ChatInput 测试、窄窗底栏空首列修复；tsc/lint/guard/定向71通过，npm test 12 失败与基线逐名一致；分叉发送移出待拆卡，麦克风不渲染；提交 2a40c84，待验证。交接见 relay-evidence/PIL-0122/impl/HANDOFF.md
 - 2026-10-22T07:55Z · claude-cli:sonnet-high:impl · in_progress → verify
+- 2026-10-22T07:59Z · user · 修订验收标准 042e78bfeb93 → 7f2336e0b28d：分叉发送 UI 按用户决定先隐藏，移至 PIL-0207
