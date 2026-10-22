@@ -10527,3 +10527,120 @@ html.dark .app-shell {
   line-height: calc(20px + var(--chat-font-size-offset, 0px));
 }
 /* end C01 */
+
+/* C19 模型切换菜单 */
+.model-selector-menu {
+  /* 3.1623 native reference at 150%: 36px row pitch, 16px outer radius. */
+  --menu-inset: 3.333px;
+  --menu-radius: 10.667px;
+  --menu-row-radius: 7.333px;
+  --menu-row-height: 24px;
+  --menu-row-gap: 0px;
+  box-sizing: border-box;
+}
+
+html.dark .model-selector-menu {
+  --separator: #373736;
+  --text: #e6e5e2;
+  --text-muted: #a3a39c;
+  --bg-hover: #313130;
+  --bg-selected: #313130;
+}
+
+.model-selector-menu .app-option-row > button[role="option"],
+.model-selector-menu .app-option-row[data-selected] > button[role="option"] {
+  height: var(--menu-row-height);
+  padding: 2px 8px !important;
+  font-size: 13.333px !important;
+  font-weight: 400 !important;
+  line-height: 20px;
+}
+
+.model-selector-menu .app-option-row:has(.app-default-star) > button[role="option"] {
+  padding-right: 36px !important;
+}
+
+.model-selector-menu .app-option-row[data-selected] {
+  background: transparent !important;
+}
+
+.model-selector-menu .app-option-row[data-selected]::before {
+  content: none;
+}
+
+.model-selector-menu .app-default-star {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.model-selector-check {
+  flex: none;
+  margin-left: auto;
+  color: var(--menu-selection-color);
+}
+
+.model-selector-provider {
+  padding: 4px 8px 2px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-caption);
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-selector-provider.has-separator {
+  margin-top: 4px;
+  border-top: 1px solid var(--separator);
+}
+
+.model-selector-filter {
+  flex: none;
+  padding: 2px 4px 6px;
+}
+
+.model-selector-filter input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--separator);
+  background: var(--surface-muted);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-small);
+}
+
+.model-selector-filter input:focus-visible {
+  outline: 2px solid var(--menu-focus-ring);
+  outline-offset: -2px;
+}
+
+.model-selector-menu .app-menu-list {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.model-selector-empty,
+.model-selector-unavailable {
+  padding: 4px 8px;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.model-selector-unavailable {
+  display: flex;
+  flex-direction: column;
+  opacity: 0.6;
+}
+
+.model-selector-unavailable small {
+  font-size: var(--fs-caption);
+}
+
+@media (pointer: coarse) {
+  .model-selector-menu { --menu-row-height: 44px; }
+  .model-selector-menu .app-default-star { width: 44px !important; height: 44px !important; }
+}
+/* End C19 模型切换菜单 */
