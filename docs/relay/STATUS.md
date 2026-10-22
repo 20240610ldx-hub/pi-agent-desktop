@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 122 张任务卡：todo 95 · in_progress 4 · verify 0 · review 0 · done 16 · blocked 2 · parked 5
+共 122 张任务卡：todo 95 · in_progress 5 · verify 0 · review 0 · done 16 · blocked 1 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -33,13 +33,13 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0002 | P0 | in_progress | 建立可信的测试基线并逐项登记已知失败 | codex-plus:luna-medium:impl | 2026-10-22T12:04Z | task/PIL-0002-test-baseline |
 | PIL-0128 | P1 | in_progress | 复刻验收：C14 思考摘要与展开正文 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0128-parity-c14 |
+| PIL-0130 | P1 | in_progress | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | codex-plus:luna-high:impl | 2026-10-22T10:57Z | task/PIL-0130-parity-c16 |
 | PIL-0137 | P1 | in_progress | 复刻验收：C23 长会话滚动跟随与历史恢复 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0137-parity-c23 |
 | PIL-0143 | P1 | in_progress | 复刻验收：C29 Artifact 卡片、预览与 iframe 桥接 | codex-plus:sol-high:impl | 2026-10-22T12:04Z | task/PIL-0143-parity-c29 |
 
 ### 阻塞
 
 - **PIL-0117** 复刻验收：C03 分段选择控件 — 2026-10-22T07:23Z · claude-cli:sonnet-high:impl · in_progress → blocked：缺 3.1623 参考与真实 consumer
-- **PIL-0130** 复刻验收：C16 工具步骤、参数结果与紧凑命令 — 2026-10-22T08:20Z · codex-plus:luna-high:impl · in_progress → blocked：等 PIL-0126 合入后串行实施（MessageView.tsx 归属）
 
 ### 待办（按优先级；未冻结验收的卡需先由规划者冻结）
 
