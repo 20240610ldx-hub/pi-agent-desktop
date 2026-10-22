@@ -72,3 +72,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T04:15Z · claude:opus:coordinator · 范围 [e2e/native-harness.mjs, e2e/native-harness.test.mjs, e2e/native-baseline.mjs, e2e/native-window-probe.ps1, docs/pilaude-windows-regression.md] → [e2e/native-harness.mjs, e2e/native-harness.test.mjs, e2e/native-baseline.mjs, e2e/native-window-probe.ps1, docs/pilaude-windows-regression.md, scripts/release-workflows.test.mjs]：冻结的 e2e/native-harness.test.mjs 位于 npm test 覆盖目录外；需在覆盖断言中显式排除仅限 Windows、会结束进程的 e2e/native-*.test.mjs
 - 2026-10-22T04:21Z · claude-cli:sonnet-high:impl · release-workflows 断言排除 e2e/native-*.test.mjs；npm test 失败名与基线 12 个逐名一致（25d0c84）
 - 2026-10-22T04:22Z · claude-cli:sonnet-high:impl · in_progress → verify
+- 2026-10-22T07:25Z · claude-cli:sonnet-high:impl · 返工进行中（CLI Sonnet 修复 Opus 评审 6 项）；DPI 100/125/175 用户已跑完，证据在 verify\dpi*。
