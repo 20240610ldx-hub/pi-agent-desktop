@@ -65,3 +65,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T03:34Z · planner · 冻结验收标准 70e3a657f80d
 - 2026-10-22T03:54Z · claude-cli:sonnet-high:impl · 领取，租约至 2026-10-22T06:54Z
 - 2026-10-22T03:56Z · claude-cli:sonnet-high:impl · 复述：A1 用 Rust 运行期 PILAUDE_DEV_URL 覆盖(devUrl 为编译期写死)+harness 回环代理证明；A2 用 native-window-probe.ps1 对真实窗口证明；A3 用实测缩放对标签；A4 用 node --test+真实 exe 前后进程表；A5 文档表格与 --list 对齐。
+- 2026-10-22T03:58Z · claude-cli:sonnet-high:impl · 进度：lib.rs development_server_url+运行期覆盖(cargo test origin 9/9 过)、window probe 已提交；cargo build exe 进行中。
