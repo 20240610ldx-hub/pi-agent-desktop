@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 110 张任务卡：todo 95 · in_progress 1 · verify 2 · review 0 · done 7 · blocked 0 · parked 5
+共 110 张任务卡：todo 95 · in_progress 0 · verify 3 · review 0 · done 7 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -33,7 +33,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0115 | P1 | verify | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 已过期 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
 | PIL-0116 | P1 | verify | 复刻验收：C02 按钮尺寸与交互状态 | claude:sonnet-high:impl | 已过期 2026-10-21T15:51Z | task/PIL-0116-parity-c02 |
-| PIL-0197 | P1 | in_progress | Windows 托盘 Quit 只隐藏窗口不结束进程 | claude:sonnet-high:impl | 已过期 2026-10-21T16:04Z | task/PIL-0197-tray-quit-exit |
+| PIL-0197 | P1 | verify | Windows 托盘 Quit 只隐藏窗口不结束进程 | claude:sonnet-high:impl | 已过期 2026-10-21T16:04Z | task/PIL-0197-tray-quit-exit |
 
 ### 阻塞
 
