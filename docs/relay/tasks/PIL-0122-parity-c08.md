@@ -3,7 +3,7 @@ id: PIL-0122
 title: 复刻验收：C08 输入器主框与提交控件
 epic: E2
 priority: P1
-status: verify
+status: review
 owner: claude-cli:sonnet-high:impl
 lease_until: 2026-10-22T10:23Z
 branch: task/PIL-0122-parity-c08
@@ -85,3 +85,4 @@ waivers: []
 - 2026-10-22T08:28Z · claude-cli:sonnet-medium:verify · 证据 A4：通过
 - 2026-10-22T08:28Z · claude-cli:sonnet-medium:verify · 证据 A5：通过
 - 2026-10-22T08:28Z · claude-cli:sonnet-high:impl · 评审可选残差：发送后 busy 期间 sendTipOpen 不复位，指针停留时本轮结束提示会重现；isMobile 死分支；.composer-leading-actions 死规则（他人分节）。留给 PIL-0209 或后续清理。
+- 2026-10-22T08:28Z · claude-cli:sonnet-high:impl · verify → review（评审 claude-cli:sonnet-high:review）
