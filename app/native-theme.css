@@ -8857,3 +8857,51 @@ html.native-desktop :is(
 .saved-file-card-reveal:hover {
   background: var(--bg-hover);
 }
+
+/* Chat folder and computer access: the switch in the composer's run menu, and the checkbox in
+   the chat confirmation dialog (which borrows the trust dialog's frame). */
+.chat-access-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.12s;
+}
+
+.chat-access-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: transform 0.12s;
+}
+
+.chat-access-switch[data-on] {
+  background: var(--accent);
+}
+
+.chat-access-switch[data-on]::after {
+  transform: translateX(11px);
+}
+
+.chat-confirm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.project-trust-button.is-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
