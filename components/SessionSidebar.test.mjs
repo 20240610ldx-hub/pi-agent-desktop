@@ -8,6 +8,18 @@ import { isImeComposing } from "../lib/ime.ts";
 const source = (await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 const sessionItemSource = source.slice(source.indexOf("function SessionItem("));
 
+test("C33 session corners and trailing controls match the native reference geometry", async () => {
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  const c33 = css.slice(css.indexOf("/* C33 侧栏项目／会话、搜索、状态及重排"));
+  assert.match(c33, /\.sidebar-project-tree-children \.session-item \{[^}]*height: 28px !important;[^}]*padding: 0 0 0 10px !important;[^}]*border-radius: 6px;/);
+  // Row padding cannot override the earlier absolute right:3.2px menu slot.
+  assert.match(c33, /\.app-shell \.session-sidebar \.session-item-trailing \{ right: 0; \}/);
+  assert.match(css, /\.app-shell \.session-item-more \{ width: 24px; height: 24px;/);
+  // The marker's 7.2px diameter and 8.7px right offset retain a 12.3px centre.
+  assert.match(css, /\.session-activity-dot \{[^}]*width: 7\.2px; height: 7\.2px;/);
+  assert.match(c33, /\.session-item-main \.session-activity-dot:not\(\.is-idle\) \{[^}]*right: 8\.7px;/);
+});
+
 test("project-list notifications change only when ordered paths or the receiver change", () => {
   const ast = ts.createSourceFile("SessionSidebar.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const component = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "SessionSidebar");

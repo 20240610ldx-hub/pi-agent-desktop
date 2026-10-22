@@ -10771,7 +10771,7 @@ html.dark .c13-code-block {
    Reference: Windows Claude Desktop 3.1623.0.0, main-window-native/2026-10-22
    (00 light, 01 dark, 02/03 hover). 2560x1600 @150%, app zoom 100%: CSS px =
    raw px / 1.5. Measured: nav pitch 40 raw = 26.67; session row 28 high on a
-   30 pitch (2px gap), inset 8 left / 10 right, radius 8; row text left 18,
+   30 pitch (2px gap), inset 8 left / 10 right, radius 6; row text left 18,
    child text 38.2 with a 0.67px elbow guide at x=22; trailing slot (+, warning)
    centred 193 = 12.3 from the row's right edge; "···" button 24x24, dark fill
    #343434. Light/dark session text #52514e/#c3c2b7, selected #0b0b0b/#f0efec on
@@ -10801,7 +10801,8 @@ html.dark .app-shell .session-sidebar {
   --sidebar-guide: #414141;
 }
 
-/* Nav rows: icon ink centre x=26 (15px box), text at 41.5, pitch 26.67. */
+/* Nav rows: icon ink centre x=26 (15px box), text at 41.5, pitch 26.67.
+   导航行圆角 8px 待参考：3.1623 无同态样本，保留原值。 */
 .app-shell .session-sidebar .sidebar-header-row,
 .app-shell .session-sidebar .scheduled-sidebar-row {
   box-sizing: border-box;
@@ -10830,8 +10831,9 @@ html.dark .app-shell .session-sidebar {
 .app-shell .session-sidebar .sidebar-project-tree-menu { color: var(--sidebar-label); }
 .app-shell .session-sidebar .sidebar-chats-empty { padding-left: 18px; }
 
-/* Project label row: 26 high, text at 18, group gap so last row -> next label
-   centre pitch is ~38. */
+/* Project label row: 26 high, text at 18. Same-text ink-centre gap measured
+   39px (reference 39.33px); keep the 9px group margin.
+   项目行圆角 8px 待参考：3.1623 无同态样本，保留原值。 */
 .app-shell .session-sidebar .sidebar-project-tree-group { margin-bottom: 9px; }
 .app-shell .session-sidebar .sidebar-project-tree-row {
   box-sizing: border-box;
@@ -10846,7 +10848,7 @@ html.dark .app-shell .session-sidebar {
 .app-shell .session-sidebar .sidebar-project-tree-show-more { width: calc(100% - 18px); margin: 0 10px 0 8px; padding-left: 10px; }
 .app-shell .session-sidebar .sidebar-session-group-name { padding-left: 18px; }
 
-/* Session rows: 28 high, 2px apart (margin-bottom only: a flex item does not collapse it), 8px radius, title at x=18. */
+/* Session rows: 28 high, 2px apart (margin-bottom only: a flex item does not collapse it), 6px radius, title at x=18. */
 .app-shell .session-sidebar .session-tree-item { position: relative; min-height: 28px; margin-left: 0 !important; }
 .app-shell .session-sidebar .session-item,
 .app-shell .session-sidebar .sidebar-project-tree-children .session-item {
@@ -10854,11 +10856,13 @@ html.dark .app-shell .session-sidebar {
   width: calc(100% - 18px);
   height: 28px !important;
   margin: 0 10px 2px 8px;
-  padding: 0 3.2px 0 10px !important;
+  padding: 0 0 0 10px !important;
   gap: 0;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 .app-shell .session-sidebar .session-item-main { gap: 0; }
+/* The menu slot is absolutely positioned; row padding alone cannot align it. */
+.app-shell .session-sidebar .session-item-trailing { right: 0; }
 /* The idle ring and its reserved slot are gone: the reference shows no leading
    mark. Real running / unread / needs-input marks sit in the trailing slot
    (centre 12.3 from the row edge) where 3.1623 draws its attention icon. */
