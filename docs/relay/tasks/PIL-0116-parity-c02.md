@@ -59,6 +59,7 @@ waivers: []
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
 | A1 | 核对实现者登记与 manifest：缺逐状态矩阵(pressed/focus/disabled/loading/长标签无原生参考)、客户区/字体/开关字段，真实 consumer(PilaudeDataSection)未在 next dev 页面渲染；仅夹具层(h/fixture.jsx) | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
+| A2 | 夹具层 Chromium DPR1.5 独立量测子集：00 Skip 外框/墨迹/边框色/圆角、Submit 高/色，09 管理(sm 深色)外框/墨迹/圆角/色，07 复制钮宽/悬停色；全部在容差内(max ΔE 0.96) | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -78,3 +79,4 @@ waivers: []
 - 2026-10-22T02:36Z · claude:sonnet-high:impl · 做了：合并 fusion 后 package.json npm test glob 加 vendor/**/*.test.mjs、release-workflows.test.mjs 覆盖正则加 vendor（仅放宽覆盖）；新参考量测后改值：sm 圆角 8→6、字号 12→14（设置页「管理」深色 72×42 raw 完全一致，填充 ΔE 0.96，文字色 #f0efec ΔE 1.98→0）；深色图标钮悬停填充 .08→.074、图标色→#f0efec（代码块复制钮 ΔE 0）；浅色图标填充改 alpha .05；文字上提改为仅 xs（sm 不上提，墨迹 11/10 raw 一致）；改前改后表在 relay-evidence/PIL-0116/impl/measurements.md 末节。 / 状态：提交 37604b5（glob）、8b5bdcc（量测改值）；npm test 12 失败=基线，新增 0；CdsButton 等定向 40/40、tsc、lint、guard、ui-menu-consistency 通过。 / 下一步：交验证。 / 风险：sm hover/pressed/focus、浅色 sm、md/lg/xxs、深色 primary 仍无参考；secondary 悬停色、primary 悬停(#2c2c2a 推定)待确认；未量工具栏/侧栏行等非 C02 组件。
 - 2026-10-22T02:36Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A1：未运行
+- 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A2：通过
