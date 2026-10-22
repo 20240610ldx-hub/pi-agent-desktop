@@ -66,3 +66,4 @@ waivers: []
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：MarkdownBody.caret.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字；G4 补写 3.1623 基准与待补采；删除 →PIL-0012（桩卡，仅文件重叠；领取时重叠检查已能互斥）
 - 2026-10-21T12:35Z · planner · 冻结验收标准 d96107ef040c
 - 2026-10-22T02:42Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-22T05:42Z
+- 2026-10-22T03:22Z · codex-plus:gpt-xhigh:impl · Codex 实现提交：代码块高32.656、复制按钮24x24、浮签68x24、pending/成功/失败重试/焦点恢复；定向70项、npm test 无新增失败。证据 relay-evidence/PIL-0127/impl/HANDOFF.md。转验证（CLI 账号 Sonnet）。
