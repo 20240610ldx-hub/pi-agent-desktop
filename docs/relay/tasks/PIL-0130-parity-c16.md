@@ -9,7 +9,7 @@ lease_until: 2026-10-22T10:57Z
 branch: task/PIL-0130-parity-c16
 implementers: [codex-plus:luna-high:impl]
 depends_on: [PIL-0014]
-files_allowed: [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs]
+files_allowed: [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs, components/restored-wiring.test.mjs, components/NonChatModels.wiring.test.mjs]
 files_shared: [components/MessageView.tsx, app/native-theme.css]
 acceptance_sha: 8feff7797176
 waivers: []
@@ -72,3 +72,4 @@ waivers: []
 - 2026-10-22T08:20Z · codex-plus:luna-high:impl · in_progress → blocked：等 PIL-0126 合入后串行实施（MessageView.tsx 归属）
 - 2026-10-22T09:26Z · codex-plus:luna-high:impl · blocked → in_progress：PIL-0126 已合入，串行实施
 - 2026-10-22T10:05Z · codex-plus:luna-high:impl · 做了：ToolCallBlock 迁入 ToolStepView，C16 紧凑命令间距按 06 原生图量测收紧（盒高 50→42.06，参考 42.7）/ 状态：A1/A2(仅06图覆盖项)完成，A3 未运行，其余状态待参考；迁移致 2 个源码字符串测试失败（restored-wiring、NonChatModels.wiring，不在范围）/ 下一步：协调者 relay scope 授权这两处改读 ToolStepView.tsx / 风险：见 impl/HANDOFF.md
+- 2026-10-22T10:06Z · claude:opus:coordinator · 范围 [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs] → [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs, components/restored-wiring.test.mjs, components/NonChatModels.wiring.test.mjs]：ToolCallBlock 迁出 MessageView 后，两处源码字符串断言须改读 ToolStepView.tsx；断言内容不变
