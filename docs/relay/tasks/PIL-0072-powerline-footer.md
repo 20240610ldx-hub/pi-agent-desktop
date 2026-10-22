@@ -3,9 +3,9 @@ id: PIL-0072
 title: pi-powerline-footer 状态行接入并修复短窗叠字
 epic: E8
 priority: P1
-status: review
+status: done
 owner: claude-cli:sonnet-high:impl
-lease_until: 2026-10-22T14:17Z
+lease_until:
 branch: task/PIL-0072-powerline-footer
 implementers: [claude-cli:sonnet-high:impl]
 depends_on: [PIL-0001]
@@ -68,3 +68,4 @@ waivers: []
 - 2026-10-22T13:43Z · claude-cli:sonnet-medium:verify · 证据 A4：通过
 - 2026-10-22T13:43Z · claude-cli:sonnet-medium:verify · 证据 A5：通过
 - 2026-10-22T13:43Z · claude-cli:sonnet-high:impl · verify → review
+- 2026-10-22T13:43Z · claude-cli:sonnet-high:review APPROVE · review → done（评审 claude-cli:sonnet-high:review APPROVE）
