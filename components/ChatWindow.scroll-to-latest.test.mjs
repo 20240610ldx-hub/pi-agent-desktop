@@ -81,3 +81,8 @@ test("exposes the detached-tail flag from the session hook without a ref read", 
   );
   assert.match(hookSource, /promptAnchorActive,\s*showScrollToBottom,\s*\/\/ Refs/);
 });
+
+test("treats mouse scrollbar interaction as recent user scroll intent and removes its listener", () => {
+  assert.match(hookSource, /container\.addEventListener\("pointerdown", markUserInput, \{ passive: true \}\);/);
+  assert.match(hookSource, /container\.removeEventListener\("pointerdown", markUserInput\);/);
+});

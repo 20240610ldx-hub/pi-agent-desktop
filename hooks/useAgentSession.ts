@@ -3023,9 +3023,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       }
     };
     for (const type of ["wheel", "touchstart", "keydown"]) container.addEventListener(type, markUserInput, { passive: true });
+    container.addEventListener("pointerdown", markUserInput, { passive: true });
     container.addEventListener("scroll", handleScrollPositionChange, { passive: true });
     return () => {
       for (const type of ["wheel", "touchstart", "keydown"]) container.removeEventListener(type, markUserInput);
+      container.removeEventListener("pointerdown", markUserInput);
       container.removeEventListener("scroll", handleScrollPositionChange);
     };
   }, [messages.length, loading, handleScrollPositionChange]);
