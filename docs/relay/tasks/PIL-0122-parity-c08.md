@@ -84,3 +84,4 @@ waivers: []
 - 2026-10-22T08:28Z · claude-cli:sonnet-medium:verify · 证据 A3：通过
 - 2026-10-22T08:28Z · claude-cli:sonnet-medium:verify · 证据 A4：通过
 - 2026-10-22T08:28Z · claude-cli:sonnet-medium:verify · 证据 A5：通过
+- 2026-10-22T08:28Z · claude-cli:sonnet-high:impl · 评审可选残差：发送后 busy 期间 sendTipOpen 不复位，指针停留时本轮结束提示会重现；isMobile 死分支；.composer-leading-actions 死规则（他人分节）。留给 PIL-0209 或后续清理。
