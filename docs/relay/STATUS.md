@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 116 张任务卡：todo 98 · in_progress 0 · verify 3 · review 0 · done 10 · blocked 0 · parked 5
+共 117 张任务卡：todo 99 · in_progress 0 · verify 3 · review 0 · done 10 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -140,6 +140,7 @@
 | PIL-0198 | P2 | E2 | 复刻验收补采：C02 按钮其余尺寸、变体与交互状态 | 是 | PIL-0116 |
 | PIL-0199 | P2 | E2 | 复刻验收补采：C01 主题切换、字体回退、图标与窄窗等状态 | 是 | PIL-0115 |
 | PIL-0201 | P2 | E11 | Windows 原生互操作检查：剪贴板、外部编辑器、托盘菜单驱动 | 是 | PIL-0111 |
+| PIL-0204 | P2 | E2 | C19 模型菜单补采与原生验收 | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
 ### 已完成（10）
