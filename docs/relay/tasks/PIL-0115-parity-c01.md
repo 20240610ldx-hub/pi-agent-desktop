@@ -61,6 +61,7 @@ waivers: []
 | A5 | node --test components/ChatAppearance.test.mjs 9/9; tsc --noEmit 0; npm run lint 0; npm test 3582/12 失败=PIL-0113 基线 12 名新增 0; relay guard --task PIL-0115 无问题; upstream-css-baseline 4/4（夹具/源码契约层，非视觉） | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/A5-chatappearance.log; D:/pilaude/relay-evidence/PIL-0115/verify/A5-tsc.log; D:/pilaude/relay-evidence/PIL-0115/verify/A5-lint.log; D:/pilaude/relay-evidence/PIL-0115/verify/A5-npm-test.log; D:/pilaude/relay-evidence/PIL-0115/verify/npm-fail-head.txt; D:/pilaude/relay-evidence/PIL-0115/verify/A5-guard.log | 2525b0d | claude:sonnet-high:verify |
 | A1 | amend 后范围：原生 00/01（3.1623，2559px，150% 显示/100% 应用缩放，zh-CN，浅/深）与同帧 next dev 渲染（1706x1017 DSF1.5）逐图登记；主区正文/顶栏标题/侧栏导航/占位/分区标题三档令牌+行距已覆盖（侧栏消费者归 PIL-0147，无参考状态归 PIL-0199） | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md; D:/pilaude/relay-evidence/PIL-0115/verify/native-light-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-dark-ink.txt | 2525b0d | claude:sonnet-high:verify |
 | A2 | 浏览器层+原生像素：ink 色 CIEDE2000 亮 primary/secondary/dim 0.00，暗 primary 0.21~0.42、secondary/dim 0.00；行距参考 19.97 vs 实现 20（差 0.03，≤1）；大写T高 10.0=10.0；令牌值=原生极值色。侧栏消费者偏差按 amend 归 PIL-0147 不计；字体差异为残差 | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/compare-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-light-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-dark-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/ours.json | 2525b0d | claude:sonnet-high:verify |
+| A3 | 浏览器层（next dev，合成媒体/localStorage，非原生）：pi-theme=light/dark 与 auto 下 emulateMedia 实时跟随，文字色随之变；pi-chat-content-font-size 13/14/16 → 行高 19/20/22px、段落两行高 38/40/44（20px+偏移）。原生DPI/缩放/字体回退转 PIL-0199 | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/A3-browser.json; D:/pilaude/relay-evidence/PIL-0115/verify/A3-auto.json; D:/pilaude/relay-evidence/PIL-0115/verify/a3-measure.mjs; D:/pilaude/relay-evidence/PIL-0115/verify/a3-auto.mjs | 2525b0d | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -87,3 +88,4 @@ waivers: []
 - 2026-10-22T02:54Z · claude:sonnet-high:verify · in_progress → verify：按 amend 后范围重判
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A2：通过
+- 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A3：通过
