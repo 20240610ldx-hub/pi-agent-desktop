@@ -3,7 +3,7 @@ id: PIL-0128
 title: 复刻验收：C14 思考摘要与展开正文
 epic: E2
 priority: P1
-status: in_progress
+status: blocked
 owner: codex-plus:luna-high:impl
 lease_until: 2026-10-22T12:04Z
 branch: task/PIL-0128-parity-c14
@@ -67,3 +67,4 @@ waivers: []
 - 2026-10-21T12:36Z · planner · 冻结验收标准 f49f6283a57b
 - 2026-10-22T09:04Z · codex-plus:luna-high:impl · 领取，租约至 2026-10-22T12:04Z
 - 2026-10-22T09:30Z · codex-plus:luna-high:impl · luna 首轮无代码改动：C14 思考状态无 3.1623 同态参考；协调者提示词误写为仅 files_allowed，导致未改 native-theme.css 本卡分节（已修正模板）。阻塞待用户补采 C14 思考摘要/展开/加载/失败态截图。
+- 2026-10-22T09:30Z · codex-plus:luna-high:impl · in_progress → blocked：缺 C14 3.1623 同态参考
