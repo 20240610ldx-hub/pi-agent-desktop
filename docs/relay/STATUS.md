@@ -25,12 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 122 张任务卡：todo 99 · in_progress 0 · verify 2 · review 0 · done 14 · blocked 2 · parked 5
+共 122 张任务卡：todo 98 · in_progress 1 · verify 2 · review 0 · done 14 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
+| PIL-0002 | P0 | in_progress | 建立可信的测试基线并逐项登记已知失败 | codex-plus:luna-medium:impl | 2026-10-22T12:04Z | task/PIL-0002-test-baseline |
 | PIL-0111 | P1 | verify | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | claude-cli:sonnet-high:impl | 已过期 2026-10-22T06:54Z | task/PIL-0111-windows-native-baseline |
 | PIL-0126 | P1 | verify | 复刻验收：C12 助手正文与消息操作条 | codex-plus:gpt-xhigh:impl | 2026-10-22T10:25Z | task/PIL-0126-parity-c12 |
 
@@ -44,7 +45,6 @@
 | ID | 优先级 | Epic | 标题 | 验收已冻结 | 依赖 |
 | --- | --- | --- | --- | --- | --- |
 | PIL-0001 | P0 | E0 | 接力治理落地与工作树分流 | 是 | — |
-| PIL-0002 | P0 | E0 | 建立可信的测试基线并逐项登记已知失败 | 是 | — |
 | PIL-0010 | P1 | E2 | Changes 面板在独立窗口打开（功能迁入与浏览器层验证） | 是 | PIL-0001 |
 | PIL-0030 | P1 | E4 | 统一执行前授权并接入 pi-permission-system（普通 coding 会话授权门） | 是 | PIL-0001 |
 | PIL-0040 | P1 | E5 | 受控浏览器 | 否 | PIL-0030 |

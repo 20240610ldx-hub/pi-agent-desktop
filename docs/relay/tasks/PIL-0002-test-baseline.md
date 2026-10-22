@@ -3,11 +3,11 @@ id: PIL-0002
 title: 建立可信的测试基线并逐项登记已知失败
 epic: E0
 priority: P0
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: codex-plus:luna-medium:impl
+lease_until: 2026-10-22T12:04Z
+branch: task/PIL-0002-test-baseline
+implementers: [codex-plus:luna-medium:impl]
 depends_on: []
 files_allowed: [docs/relay/test-baseline.md]
 files_shared: [package.json]
@@ -48,3 +48,4 @@ waivers: []
 
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
+- 2026-10-22T09:04Z · codex-plus:luna-medium:impl · 领取，租约至 2026-10-22T12:04Z
