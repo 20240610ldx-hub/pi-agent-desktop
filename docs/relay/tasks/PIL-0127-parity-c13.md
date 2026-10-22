@@ -56,6 +56,7 @@ waivers: []
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
 | A1 | 夹具层状态矩阵（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0127\verify\VERIFY-2.md | 5d6eb2a | claude-cli:sonnet-high:verify |
+| A2 | 参考07 dark hover+tooltip 像素量测 ÷1.5，代码文字 ΔE00 0.57 | 通过 | D:\pilaude\relay-evidence\PIL-0127\verify\VERIFY-2.md | 5d6eb2a | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -73,3 +74,4 @@ waivers: []
 - 2026-10-22T04:25Z · codex-plus:gpt-xhigh:impl · A5 修复：键盘聚焦用例改为纯键盘激活 Source、去掉 hover，MermaidBlock 连跑 5 次全过，npm test 仅剩基线 12 失败
 - 2026-10-22T04:27Z · user · 修订验收标准 d96107ef040c → af59818e4717：用户 2026-10-22 拆卡政策：已验夹具层与深色有参考项留在本卡，缺图状态与 Windows 原生层移出，见 PIL-0206
 - 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A1：通过
+- 2026-10-22T04:39Z · claude-cli:sonnet-high:verify · 证据 A2：通过
