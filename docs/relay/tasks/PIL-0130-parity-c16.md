@@ -3,9 +3,9 @@ id: PIL-0130
 title: 复刻验收：C16 工具步骤、参数结果与紧凑命令
 epic: E2
 priority: P1
-status: review
+status: done
 owner: codex-plus:luna-high:impl
-lease_until: 2026-10-22T10:57Z
+lease_until:
 branch: task/PIL-0130-parity-c16
 implementers: [codex-plus:luna-high:impl]
 depends_on: [PIL-0014]
@@ -89,3 +89,4 @@ waivers: []
 - 2026-10-22T10:56Z · claude-cli:sonnet:verify · 证据 A4：通过
 - 2026-10-22T10:56Z · claude-cli:sonnet:verify · 证据 A5：通过
 - 2026-10-22T10:56Z · codex-plus:luna-high:impl · verify → review
+- 2026-10-22T10:56Z · claude-cli:sonnet-high:review（唯一必改项 A3 焦点返回已按拆卡政策移至 PIL-0211） · review → done（评审 claude-cli:sonnet-high:review（唯一必改项 A3 焦点返回已按拆卡政策移至 PIL-0211））
