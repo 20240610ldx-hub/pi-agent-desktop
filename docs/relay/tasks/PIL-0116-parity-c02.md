@@ -90,3 +90,4 @@ waivers: []
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A3：未运行
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A4：未运行
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A5：通过
+- 2026-10-22T02:46Z · claude:sonnet-high:verify · 做了：独立重量测并跑 A5 全部命令。状态：8b5bdcc；A2/A3 已测子集与 A5 通过，A1/A4 及其余状态因无 3.1623 原生参考记未运行。下一步：补采参考后再验，保持 verify。风险：primary 变黑与 sm 字号 12→14 影响 PilaudeDataSection，sm primary 无原生参考；07 帧悬停归属未确认。证据 D:/pilaude/relay-evidence/PIL-0116/verify/
