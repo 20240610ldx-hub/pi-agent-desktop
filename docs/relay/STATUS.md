@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 119 张任务卡：todo 97 · in_progress 0 · verify 3 · review 0 · done 13 · blocked 1 · parked 5
+共 119 张任务卡：todo 96 · in_progress 1 · verify 3 · review 0 · done 13 · blocked 1 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -34,6 +34,7 @@
 | PIL-0111 | P1 | verify | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | claude-cli:sonnet-high:impl | 已过期 2026-10-22T06:54Z | task/PIL-0111-windows-native-baseline |
 | PIL-0122 | P1 | verify | 复刻验收：C08 输入器主框与提交控件 | claude-cli:sonnet-high:impl | 2026-10-22T10:23Z | task/PIL-0122-parity-c08 |
 | PIL-0126 | P1 | verify | 复刻验收：C12 助手正文与消息操作条 | codex-plus:gpt-xhigh:impl | 2026-10-22T10:25Z | task/PIL-0126-parity-c12 |
+| PIL-0130 | P1 | in_progress | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | codex-plus:luna-high:impl | 2026-10-22T10:57Z | task/PIL-0130-parity-c16 |
 
 ### 阻塞
 
@@ -56,7 +57,6 @@
 | PIL-0100 | P1 | E10 | 首次使用引导：不开终端完成第一个真实任务 | 否 | — |
 | PIL-0114 | P1 | E0 | 修复 THIRD_PARTY_NOTICES 许可声明测试（CRLF 与 rpiv-todo From 块） | 否 | PIL-0113 |
 | PIL-0128 | P1 | E2 | 复刻验收：C14 思考摘要与展开正文 | 是 | PIL-0014 |
-| PIL-0130 | P1 | E2 | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | 是 | PIL-0014 |
 | PIL-0137 | P1 | E2 | 复刻验收：C23 长会话滚动跟随与历史恢复 | 是 | PIL-0014 |
 | PIL-0143 | P1 | E2 | 复刻验收：C29 Artifact 卡片、预览与 iframe 桥接 | 是 | PIL-0014 |
 | PIL-0144 | P1 | E2 | 复刻验收：C30 产物分屏、多 pane 布局与拖动分隔 | 是 | PIL-0014, PIL-0169, PIL-0010 |
