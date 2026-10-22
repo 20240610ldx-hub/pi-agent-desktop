@@ -3,7 +3,7 @@ id: PIL-0147
 title: 复刻验收：C33 侧栏项目／会话、搜索、状态及重排
 epic: E2
 priority: P2
-status: in_progress
+status: verify
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-22T05:41Z
 branch: task/PIL-0147-parity-c33
@@ -65,3 +65,4 @@ waivers: []
 - 2026-10-21T12:36Z · planner · 冻结验收标准 a61465879994
 - 2026-10-22T02:41Z · claude:sonnet-high:impl · 领取，租约至 2026-10-22T05:41Z
 - 2026-10-22T03:05Z · claude:sonnet-high:impl · 做了：C33 侧栏按 3.1623 原生参考收紧（commit 97439c3，仅改 app/native-theme.css C33 分节 + SessionSidebar.tsx 的 ··· 图标与头部 padding）。导航行距 32→26.67、图标中心 33→26、会话行 28 高/30 行距、左右内缩 8/10、圆角 8、标题左缘 45.6→18、子项缩进 38 + 椭圆折线导引、空闲圆环删除、选中行静止不显示 ···、··· 改横向三点；浅/深色标签、会话文字、选中/悬停底色与参考 ΔE=0（改前浅标签 12.26、浅会话文字 19.37、深选中底 5.4）；移除旧 html:not(.dark) .app-sidebar --text-dim #6c6c71 压制；触屏保留 44px。 / 状态：自测 node --test 六文件 61/61、tsc 0、lint 0、guard 无问题、ui-menu-consistency 通过、npm test 新增失败 0（12 个同基线）；浏览器合成事件：Alt+方向键重排且焦点跟随、搜索/无结果、行菜单开关均正常；DPR 1/1.25/1.5、窄屏触屏无横向溢出。e2e/sidebar-pin-order.mjs 在基线上同样失败（getByRole button 定位旧），未当作通过。 / 下一步：交验证。 / 风险：无 3.1623 参考的状态仅保留原实现并未量测：搜索框、对话/项目分节标题、running/unread/needs-input 标记（现移到尾部槽位，参考的警告三角图标未复刻）、浅色悬停底色、show-more/分组名/固定/归档行、折叠切换箭头与分支计数、长名渐隐、会话行 hover 字形、指针拖放；侧栏默认宽 259（参考 216）不在本卡文件内，量测时用 pi-sidebar-width=216；浅色标签 #898781 对比度约 3.5:1 低于旧 4.5:1 目标，按参考取值。证据 D:/pilaude/relay-evidence/PIL-0147/impl/（RESULT.md、before/after-measure.json、截图）。
+- 2026-10-22T03:05Z · claude:sonnet-high:impl · in_progress → verify
