@@ -46,6 +46,7 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 | A1 | Windows 原生。用户实机托盘 Quit：进程消失(Get-Process)；验证者重跑 repro -WhileMenuOpen（desktop:dev 构建，fix 提交）：Quit 后 3.5s 进程已退出（修复前 impl 记录为存活）。失败部分：卡片要求 desktop.log 写入本次 exit 行，托盘路径实际只有 'quit requested' + 'exit forced: event loop did not stop within 2000ms'，无 exit 行（强制路径 process::exit 绕过 RunEvent::Exit 的 desktop_log）；本地服务子进程残留未验证（desktop:dev 无子进程，打包构建未测） | 失败 | D:/pilaude/relay-evidence/PIL-0197/verify/quit-log.txt, D:/pilaude/relay-evidence/PIL-0197/verify/user-4-quit.txt, D:/pilaude/relay-evidence/PIL-0197/verify/repro-whilemenuopen-rerun.txt | 02a0ce6 | claude:sonnet-high:verify |
 | A2 | Windows 原生，用户管理员 powercfg /requests：托盘中 SYSTEM 含 pi-agent-desktop.exe(Pilaude keeps the system awake)，托盘 Quit(走 exit forced 路径)后 SYSTEM 仅剩 GameViewer，无本进程 | 通过 | D:/pilaude/relay-evidence/PIL-0197/verify/user-2-tray.txt, D:/pilaude/relay-evidence/PIL-0197/verify/user-4-quit.txt, D:/pilaude/relay-evidence/PIL-0197/verify/quit-log.txt | 02a0ce6 | claude:sonnet-high:verify |
 | A3 | Windows 原生+代码审阅。关窗进托盘时 powercfg 仍有本进程请求(user-2-tray)；quit_application 被两条路径共用，改动仅增加日志与2s看门狗线程，正常路径(02:46:33 quit requested→+2ms exit，无 forced 行)进程正常退出。保留项：该次 02:46 是 F12 quit_app 还是托盘触发由调用方推断，验证者未亲自触发 quit_app | 通过 | D:/pilaude/relay-evidence/PIL-0197/verify/user-2-tray.txt, D:/pilaude/relay-evidence/PIL-0197/verify/quit-log.txt, D:/pilaude/relay-evidence/PIL-0197/impl/after-fix-HideMouse.txt | 02a0ce6 | claude:sonnet-high:verify |
+| A4 | 修复前失败：impl before-fix-whilemenuopen.txt（Quit 后进程存活=True、日志无 exit，沿用实现者记录，未自行构建父提交）；修复后：验证者重跑 repro-tray-quit.ps1 -WhileMenuOpen 通过；cargo test shell::(2 个看门狗测试，仅测 spawn_exit_watchdog 夹具层，不覆盖 force_exit 本身)、cargo test 全量 30 通过、tsc 0、npm run lint 0、relay guard --task PIL-0197 无问题 | 通过 | D:/pilaude/relay-evidence/PIL-0197/verify/cargo-test.txt, D:/pilaude/relay-evidence/PIL-0197/verify/cargo-test-all.txt, D:/pilaude/relay-evidence/PIL-0197/verify/tsc.txt, D:/pilaude/relay-evidence/PIL-0197/verify/lint.txt, D:/pilaude/relay-evidence/PIL-0197/verify/guard.txt, D:/pilaude/relay-evidence/PIL-0197/verify/repro-whilemenuopen-rerun.txt | 02a0ce6 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T12:46Z · planner · 创建
@@ -57,3 +58,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T02:53Z · claude:sonnet-high:verify · 证据 A1：失败
 - 2026-10-22T02:53Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T02:53Z · claude:sonnet-high:verify · 证据 A3：通过
+- 2026-10-22T02:53Z · claude:sonnet-high:verify · 证据 A4：通过
