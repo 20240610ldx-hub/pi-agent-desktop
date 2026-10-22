@@ -214,7 +214,7 @@ export function descendantsOf(rootPid, processes, { notBefore, rootCreated } = {
     for (const child of children.get(pid) ?? []) {
       if (found.has(child.pid) || child.pid === rootPid) continue;
       const created = createdMs(child.created);
-      if (created < bound) continue; // started before its supposed parent: a recycled ppid
+      if (Number.isNaN(created) || created < bound) continue; // unknown creation time can't be tied to this tree; older than its parent: a recycled ppid
       found.set(child.pid, child);
       queue.push({ pid: child.pid, bound: created });
     }
@@ -250,8 +250,12 @@ export async function taskkillPids(pids) {
     await execFileAsync("taskkill.exe", taskkillArgs(...pids));
     return true;
   } catch (error) {
-    // 128 = some process was already gone; anything else (e.g. access denied) is a real failure.
-    if (error.code === 128) return false;
+    // 128 = some process was already gone; it also hides other pids' failures, so keep any non-"not found" ERROR lines.
+    if (error.code === 128) {
+      const denied = String(error.stderr || "").split(/\r?\n/).filter((line) => /ERROR/i.test(line) && !/not found/i.test(line));
+      if (denied.length) throw new HarnessError(`taskkill failed for ${pids.join(",")}: ${denied.join(" ").trim()}`);
+      return false;
+    }
     throw new HarnessError(`taskkill failed for ${pids.join(",")}: ${String(error.stderr || error.message).trim()}`);
   }
 }
@@ -921,7 +925,8 @@ export async function runBaseline(options) {
       await proxy.close();
     }
     // The cleanup's confirming snapshot is the post-run state; take a fresh one only when no cleanup ran.
-    const after = (cleanup?.snapshot ?? await listProcesses()).filter((item) => isPilaudeOrWebView(item.name));
+    const afterSnapshot = cleanup?.snapshot ?? await listProcesses().catch((error) => { report.warnings.push(`final snapshot failed: ${error.message}`); cleanupFailed = true; return []; });
+    const after = afterSnapshot.filter((item) => isPilaudeOrWebView(item.name));
     report.processes.after = after.map(publicProcess);
     const afterKeys = new Set(after.map(processKey));
     const killedPreexisting = cleanup ? cleanup.ownedSeen.filter((item) => preexisting.has(processKey(item))) : [];

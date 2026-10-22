@@ -116,6 +116,11 @@ describe("process ownership (pure)", () => {
     assert.deepEqual(descendantsOf(1, all).map((item) => item.pid).sort((a, b) => a - b), [1, 6, 7]);
   });
 
+  test("a child with unknown creation time is never adopted", () => {
+    const all = [p(1, 0, "pi-agent-desktop.exe", "", 20), { ...p(2, 1, "node.exe", "", 21), created: "" }, p(3, 1, "node.exe", "", 22)];
+    assert.deepEqual(descendantsOf(1, all).map((item) => item.pid), [1, 3]);
+  });
+
   test("the root must be the process we started: a recycled root pid pulls in nothing", () => {
     const all = [p(1, 0, "svchost.exe", "", 30), p(2, 1, "node.exe", "", 31)];
     const spawnedAt = Date.parse("2026-01-01T00:00:20Z");
