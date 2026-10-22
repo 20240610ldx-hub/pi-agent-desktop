@@ -3,11 +3,11 @@ id: PIL-0010
 title: Changes 面板在独立窗口打开（功能迁入与浏览器层验证）
 epic: E2
 priority: P1
-status: todo
-owner:
-lease_until:
-branch:
-implementers: []
+status: in_progress
+owner: codex-plus:sol-high:impl
+lease_until: 2026-10-22T12:54Z
+branch: task/PIL-0010-changes-popout-window
+implementers: [codex-plus:sol-high:impl]
 depends_on: [PIL-0001]
 files_allowed: [app/changes/**, components/ChangesPane.window.test.mjs, lib/changes-window*, lib/workspace-popout-copy.ts, lib/app-prefs.ts, src-tauri/src/changes_window.rs, e2e/changes-window*.mjs, e2e/sidebar-pin-order.mjs]
 files_shared: [components/AppShell.tsx, components/ChangesPane.tsx, components/ChangesPane.test.mjs, components/WorkspacePaneDock.tsx, components/WorkspacePaneDock.test.mjs, components/WorkspacePaneControls.tsx, components/WorkspacePaneControls.test.mjs, lib/desktop-native.ts, scripts/fork-ownership.json]
@@ -62,3 +62,4 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 - 2026-10-19T14:20Z · codex:gpt:coord · 做了：恢复原窗口上下文并只读核对源与最后失败，证据D:/pilaude/relay-evidence/PIL-0001/recovery-windows/recovery.json。状态：19条窗口源在index快照5193f1e，native lib.rs/checker/probe三个blob匹配working23329458；四轮自建进程与调试端口当前无匹配残留，无需终止。最后run1792392333147预期about:blank但实际已是30142根页，真实开窗IPC、OS1到2到1、移动/DPI/关闭后草稿均未到达，不作为A4通过。下一步：用户恢复工作且PIL-0001完成后，在PIL-0010任务worktree交调试者解决初始导航隔离，再独立验证。风险：空API数组不覆盖CDP接入前请求，不降低真实IPC和窗口验收要求；本轮未改源或启动GUI。
 - 2026-10-22T00:00Z · claude:sonnet-high:planner · 做了：重写验收标准为浏览器层 A1–A6，原生窗口实测拆到 PIL-0200，初始导航隔离难题归入 PIL-0111 的夹具代理方案；核对 19 文件可干净迁移（除 fork-ownership.json）。状态：未冻结（acceptance_sha 已清空，原冻结文本作废，需协调者重新 freeze，缩小范围的部分需用户确认）。下一步：协调者审阅后 freeze。风险：A1 的通用 pane 工具条改动落在 WorkspacePaneDock／Controls 等复刻卡拥有的文件，合入需依赖顺序。
 - 2026-10-22T03:34Z · planner · 冻结验收标准 b6c8d8d40ea3
+- 2026-10-22T09:54Z · codex-plus:sol-high:impl · 领取，租约至 2026-10-22T12:54Z
