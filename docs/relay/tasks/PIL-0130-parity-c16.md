@@ -11,7 +11,7 @@ implementers: [codex-plus:luna-high:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs, components/restored-wiring.test.mjs, components/NonChatModels.wiring.test.mjs]
 files_shared: [components/MessageView.tsx, app/native-theme.css]
-acceptance_sha: eb34d4c46a35
+acceptance_sha: 59fbf3d8d1f5
 waivers: []
 ---
 
@@ -32,7 +32,7 @@ waivers: []
 
 - [ ] A1 夹具/浏览器层：真实接线 `MessageView.tsx → ToolStepView`；command-only 紧凑 shell 与 rich tool views 的运行、完成、错误、参数/结果开合、空结果与超长输出、MCP 文本渲染可见，数据来自真实 consumer 而非演示数据。本条只判定该子集；缺 3.1623 同态参考的状态（错误、运行、取消、空结果、超长、MCP、富视图）移至 PIL-0211 A1。
 - [ ] A2 紧凑命令盒几何（仅 06 图覆盖项；3.1623 深色；CSS px = 原像素 ÷ 1.5）：命令盒外高 ±1 CSS px、末行字墨到底边 ±1 CSS px、非紧凑视图内距不变。同帧同状态量测表与差异图存 relay-evidence/PIL-0130/，叠图只作整数裁剪/平移。卡片与结果底色 ΔE 移至 PIL-0211 A2；图标中心对齐与富视图计算内距浏览器重测移至 PIL-0211 A3。
-- [ ] A3 浏览器层：Tab 到工具展开/复制，长参数/结果双轴滚动，390px 无横向溢出；展开后焦点回到原项。命令为只读数据，IME/执行快捷键不适用，查看不触发命令。原生与浏览器合成事件分层记录。原生剪贴板、三档 DPI、窄窗、浅色与双主题移至 PIL-0211 A3/A4。
+- [ ] A3 浏览器层：Tab 到工具展开/复制，长参数/结果双轴滚动，390px 无横向溢出。命令为只读数据，IME/执行快捷键不适用，查看不触发命令。原生与浏览器合成事件分层记录。原生剪贴板、三档 DPI、窄窗、浅色与双主题、展开后焦点返回移至 PIL-0211 A3/A4。
 - [ ] A4 浏览器层：command-only 紧凑条与 rich views 分开；参数／结果复制保 CRLF、Tab、尾空格（浏览器剪贴板层）；长输出双轴滚动；MCP 文本不执行，零网络请求。Windows 原生剪贴板移至 PIL-0211 A4。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test components/CompactCommandText.test.mjs components/ToolStepView.test.mjs components/MessageView.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0130`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
@@ -77,3 +77,4 @@ waivers: []
 - 2026-10-22T10:14Z · codex-plus:luna-high:impl · in_progress → verify
 - 2026-10-22T10:39Z · codex-plus:luna-high:impl · 返工1：命令盒外高 44.0、结果底内距 7px、还原无参考视图 padding；定向65/65 tsc lint guard 通过，npm test 12=基线
 - 2026-10-22T10:43Z · user · 修订验收标准 8feff7797176 → eb34d4c46a35：拆卡政策，移出项见 PIL-0211
+- 2026-10-22T10:56Z · user · 修订验收标准 eb34d4c46a35 → 59fbf3d8d1f5：评审：A3 焦点返回无验证证据，按拆卡政策移至 PIL-0211 A4
