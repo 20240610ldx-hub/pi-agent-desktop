@@ -3,7 +3,7 @@ id: PIL-0126
 title: 复刻验收：C12 助手正文与消息操作条
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-22T10:25Z
 branch: task/PIL-0126-parity-c12
@@ -65,3 +65,4 @@ waivers: []
 - 2026-10-21T12:35Z · planner · 冻结验收标准 3cdd326cbfe6
 - 2026-10-22T07:25Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-22T10:25Z
 - 2026-10-22T07:52Z · codex-plus:gpt-xhigh:impl · Codex 实现提交：内联代码内距 4px、复制反馈、分叉等待焦点；定向55、npm test 无新增。A2 宽高比/颜色残差未达标，缺操作条同态参考。转验证。
+- 2026-10-22T07:52Z · codex-plus:gpt-xhigh:impl · in_progress → verify
