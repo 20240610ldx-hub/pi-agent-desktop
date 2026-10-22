@@ -285,3 +285,36 @@ test("an empty catalogue exposes no invented option and selecting the current mo
     assert.equal(await current.getByRole("listbox").count(), 0);
   } finally { await current.close(); }
 });
+
+test("clicking menu chrome keeps the menu open while outside clicks and Escape still close it", async () => {
+  const page = await fixture({ options: [...options, { provider: "provider-c", modelId: "model-9", name: "Model 9", unavailable: true }] });
+  try {
+    const trigger = page.getByRole("button", { name: "Fixture model", exact: true });
+    await trigger.click();
+    await page.locator(".model-selector-provider").first().click();
+    assert.equal(await page.getByRole("listbox").count(), 1, "provider heading click closed the menu");
+    await page.locator(".model-selector-menu").click({ position: { x: 2, y: 2 } });
+    assert.equal(await page.getByRole("listbox").count(), 1, "panel padding click closed the menu");
+    await page.mouse.click(700, 60);
+    assert.equal(await page.getByRole("listbox").count(), 0, "outside click left the menu open");
+    await trigger.click();
+    await page.locator(".model-selector-provider").first().click();
+    await page.keyboard.press("Escape");
+    assert.equal(await page.getByRole("listbox").count(), 0);
+    assert.equal(await trigger.evaluate(el => el === document.activeElement), true);
+  } finally { await page.close(); }
+});
+
+test("arrow keys from a row's default star move to the neighbouring row", async () => {
+  const page = await fixture({ stars: true });
+  try {
+    await page.getByRole("button", { name: "Fixture model", exact: true }).click();
+    const rows = page.locator(".app-option-row");
+    await rows.nth(2).getByRole("button", { name: "Save as default" }).focus();
+    await page.keyboard.press("ArrowDown");
+    assert.equal(await page.locator(":focus").textContent(), "Model 3");
+    await rows.nth(2).getByRole("button", { name: /default/i }).focus();
+    await page.keyboard.press("ArrowUp");
+    assert.equal(await page.locator(":focus").textContent(), "Model 1");
+  } finally { await page.close(); }
+});

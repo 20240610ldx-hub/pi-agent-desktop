@@ -213,7 +213,9 @@ export function ModelSelector({
           const editing = event.target instanceof HTMLInputElement;
           if (editing && (event.key === "Home" || event.key === "End")) return;
           const rows = Array.from(panelRef.current?.querySelectorAll<HTMLButtonElement>('button[role="option"]:not(:disabled)') ?? []);
-          const index = rows.indexOf(document.activeElement as HTMLButtonElement);
+          // Focus may sit on a row's save-default star; locate its row's option button.
+          const currentRow = (document.activeElement as Element | null)?.closest(".app-option-row")?.querySelector<HTMLButtonElement>('button[role="option"]');
+          const index = currentRow ? rows.indexOf(currentRow) : -1;
           const next = event.key === "Home" ? 0 : event.key === "End" ? rows.length - 1
             : index < 0 ? event.key === "ArrowDown" ? 0 : rows.length - 1
             : (index + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
@@ -323,6 +325,11 @@ export function ModelSelector({
           <div
             ref={panelRef}
             className="native-popover app-menu model-selector-menu"
+            // Clicks on headings, gaps and hint text must not move focus to <body>:
+            // the root onBlur would read relatedTarget === null and close the menu.
+            onMouseDown={(event) => {
+              if (!(event.target as Element).closest("input, button")) event.preventDefault();
+            }}
             style={{
               position: "fixed",
               ...verticalPosition,

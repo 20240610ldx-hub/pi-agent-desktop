@@ -10546,7 +10546,6 @@ html.dark .model-selector-menu {
   --model-menu-check-color: #2975d1;
   /* 正文继承 C01 的 --text（深色 #f0efec）。本工作树尚未合入 C01，
      旧 app-shell 仍映射到 #e7e6e1；由 C01 集成修正，不在 C19 重定义。 */
-  --text-muted: #a3a39c;
   --bg-hover: #313130;
   --bg-selected: #313130;
 }
