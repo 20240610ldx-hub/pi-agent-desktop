@@ -11,7 +11,7 @@ product code was changed for this capture.
 | Dependency consistency | `npm run check:deps` | exit 0 (1.8s) | `D:/pilaude/relay-evidence/PIL-0002/impl/check-deps.log` |
 | TypeScript | `node_modules/.bin/tsc --noEmit` | exit 0 (14.3s) | `D:/pilaude/relay-evidence/PIL-0002/impl/tsc.log` |
 | Lint | `npm run lint` | exit 0; 0 errors, 2 warnings (35.8s) | `D:/pilaude/relay-evidence/PIL-0002/impl/lint.log` |
-| Full suite (A1 capture) | `npm test` (foreground; `NPM_CONFIG_CACHE` points to evidence directory) | exit 1; 3641 tests, 3608 pass, 14 fail, 19 skipped; elapsed 10m 57.7s. The 14 "fail" = the 12 baseline names + the intermittent MermaidBlock timeout (below, not baseline) + the parent suite `code copy browser lifecycle preserves source, focus and the current attempt` (log line 750, printed `✖` but absent from the log's "failing tests" list, which names 13 cases) | `D:/pilaude/relay-evidence/PIL-0002/impl/npm-test.log` |
+| Full suite (A1 capture) | `npm test` (foreground; `NPM_CONFIG_CACHE` points to evidence directory) | exit 1; 3641 tests, 3608 pass, 14 fail, 19 skipped; elapsed 10m 57.7s. Summary count 14 fail; the log's failing list shows 13 case names (12 baseline names + the intermittent MermaidBlock timeout, below, not baseline). The 14th item is the parent suite `code copy browser lifecycle preserves source, focus and the current attempt` (npm-test.log:750, printed `✖`, not in the failing list) | `D:/pilaude/relay-evidence/PIL-0002/impl/npm-test.log` |
 | Full suite (A2 bounded capture) | `npm test -- --test-timeout=1800000` (foreground; external `NPM_CONFIG_CACHE`) | exit 1; 3641 tests including nested subtests, 3610 pass, 12 fail, 19 skipped; elapsed 5m 3.5s; all 12 failures match the baseline list | `D:/pilaude/relay-evidence/PIL-0002/impl/npm-test-bounded-cache.log` |
 | Bounded run without external npm cache | `npm test -- --test-timeout=1800000` | exit 1; 13 failures, including one additional npm log/cache permissions failure; do not use as the baseline | `D:/pilaude/relay-evidence/PIL-0002/impl/npm-test-bounded.log` |
 | Mermaid browser fixture follow-up | `node --test components/MermaidBlock.test.mjs` | exit 0; 21/21 pass | `D:/pilaude/relay-evidence/PIL-0002/impl/mermaid-targeted.log` |
@@ -71,8 +71,8 @@ so it is an intermittent fixture timeout under load, not a repeatable failure.
 Reproduce with `node --test components/MermaidBlock.test.mjs`.
 
 The repo has `.github/workflows/ci.yml` with an `ubuntu-latest` checks job, but
-no Linux result was collected: triggering it requires publishing/pushing this
-worktree, which was outside the authorized actions for this implementation.
+no Linux result was collected: a draft PR was authorized and pushed twice, but
+GitHub reported 0 Actions runs and no `github-actions` check suite (see A5 below).
 
 ## Acceptance coverage and follow-up
 
@@ -97,5 +97,11 @@ worktree, which was outside the authorized actions for this implementation.
   PIL-0213 (row 1), PIL-0214 (rows 2, 3), PIL-0215 (rows 4, 5), PIL-0216
   (rows 6, 7), PIL-0218 (rows 9, 10, 11). Row 12 stays with PIL-0114; row 8 was
   fixed by PIL-0137 (PIL-0217 was created by mistake and is parked).
-- A5: not complete; the Linux workflow exists, but no Linux runner result was
-  available without a remote workflow run.
+- A5: condition not met; no Linux result was obtained. The user authorized
+  draft PR #1 (https://github.com/20240610ldx-hub/pilaude/pull/1, head
+  fff18f48, base main). After two pushes (the second, 3248e8f4, to trigger
+  `synchronize`), `actions/runs` returned total_count=0 and the check suites on
+  3248e8f4 contained no `github-actions` suite, although `ci.yml` is active.
+  Windows results are not mixed with Linux. Record:
+  `D:/pilaude/relay-evidence/PIL-0002/verify/A5-ci.md`. PR #1 stays draft;
+  closing or retrying it is the user's decision.
