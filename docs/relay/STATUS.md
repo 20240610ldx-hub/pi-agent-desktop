@@ -54,7 +54,7 @@
 | PIL-0073 | P1 | E8 | Plannotator 计划审阅接入 | 是 | PIL-0001 |
 | PIL-0074 | P1 | E8 | pi-background-tasks 接入界面与普通会话 | 是 | PIL-0001 |
 | PIL-0100 | P1 | E10 | 首次使用引导：不开终端完成第一个真实任务 | 否 | — |
-| PIL-0111 | P1 | E11 | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | 否 | — |
+| PIL-0111 | P1 | E11 | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | 是 | — |
 | PIL-0114 | P1 | E0 | 修复 THIRD_PARTY_NOTICES 许可声明测试（CRLF 与 rpiv-todo From 块） | 否 | PIL-0113 |
 | PIL-0117 | P1 | E2 | 复刻验收：C03 分段选择控件 | 是 | PIL-0014 |
 | PIL-0122 | P1 | E2 | 复刻验收：C08 输入器主框与提交控件 | 是 | PIL-0014, PIL-0177, PIL-0189 |
