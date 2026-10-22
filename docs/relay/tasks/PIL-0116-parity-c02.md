@@ -68,6 +68,7 @@ waivers: []
 | A1 | 夹具层(浏览器 Chromium)：按 amend 后范围逐图登记四个状态的来源/3.1623/150%/AppliedDPI144/缩放100%/zh-CN/主题与进入步骤，实现侧 node h/run.mjs 复现 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md(补充节) | 8b5bdcc | claude:sonnet-high:verify |
 | A2 | 按 amend 后范围重判：四个状态的盒/墨迹/圆角/色全部在容差内（先前量测表，max ΔE 0.96；07 复制钮高度由墨迹对称推得 24.0、icon-centre.json dx0 dy0） | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md; D:/pilaude/relay-evidence/PIL-0116/verify/icon-centre.json | 8b5bdcc | claude:sonnet-high:verify |
 | A3 | 浏览器合成事件层 node h/keys.mjs（light/dark×DPR1/1.5/2×宽900/320）：Tab、Enter/Space 各1次、disabled/loading 不触发、loading 可聚焦、长标签省略无溢出；原生层转 PIL-0198 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/keys-result.json | 8b5bdcc | claude:sonnet-high:verify |
+| A4 | 夹具层：四状态逐项参考/实现/差值见量测表；文本钮(Skip/Submit/管理)与图标钮(复制钮)均量测；primary 改黑依据=00/06 原生 Submit (11,11,11)，ΔE 51.4→0 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -99,3 +100,4 @@ waivers: []
 - 2026-10-22T02:49Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T02:49Z · claude:sonnet-high:verify · 证据 A2：通过
 - 2026-10-22T02:49Z · claude:sonnet-high:verify · 证据 A3：通过
+- 2026-10-22T02:49Z · claude:sonnet-high:verify · 证据 A4：通过
