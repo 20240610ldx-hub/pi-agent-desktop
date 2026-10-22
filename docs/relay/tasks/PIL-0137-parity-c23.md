@@ -3,7 +3,7 @@ id: PIL-0137
 title: 复刻验收：C23 长会话滚动跟随与历史恢复
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: codex-plus:luna-high:impl
 lease_until: 2026-10-22T12:04Z
 branch: task/PIL-0137-parity-c23
@@ -64,3 +64,4 @@ waivers: []
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：ChatWindow*.test.mjs、useAgentSession.branch-summary-guard.test.mjs、useAgentSession.composer-queue.test.mjs、useAgentSession.context-usage.test.mjs、useAgentSession.events-086.test.mjs、useAgentSession.failure-notices.test.mjs、useAgentSession.fork-position.test.mjs、useAgentSession.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字
 - 2026-10-21T12:36Z · planner · 冻结验收标准 dfacd004c1ef
 - 2026-10-22T09:04Z · codex-plus:luna-high:impl · 领取，租约至 2026-10-22T12:04Z
+- 2026-10-22T09:43Z · codex-plus:luna-high:impl · in_progress → verify

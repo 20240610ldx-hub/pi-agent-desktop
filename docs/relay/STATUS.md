@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 122 张任务卡：todo 94 · in_progress 4 · verify 1 · review 0 · done 16 · blocked 2 · parked 5
+共 122 张任务卡：todo 94 · in_progress 3 · verify 2 · review 0 · done 16 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -33,7 +33,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0002 | P0 | verify | 建立可信的测试基线并逐项登记已知失败 | codex-plus:luna-medium:impl | 2026-10-22T12:04Z | task/PIL-0002-test-baseline |
 | PIL-0130 | P1 | in_progress | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | codex-plus:luna-high:impl | 2026-10-22T10:57Z | task/PIL-0130-parity-c16 |
-| PIL-0137 | P1 | in_progress | 复刻验收：C23 长会话滚动跟随与历史恢复 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0137-parity-c23 |
+| PIL-0137 | P1 | verify | 复刻验收：C23 长会话滚动跟随与历史恢复 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0137-parity-c23 |
 | PIL-0143 | P1 | in_progress | 复刻验收：C29 Artifact 卡片、预览与 iframe 桥接 | codex-plus:sol-high:impl | 2026-10-22T12:04Z | task/PIL-0143-parity-c29 |
 | PIL-0011 | P2 | in_progress | 查清并修复 FileViewer 窄 pane 下载被取消 | codex-plus:sol-high:impl | 2026-10-22T12:35Z | task/PIL-0011-fileviewer-download |
 
