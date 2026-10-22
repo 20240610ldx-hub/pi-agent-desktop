@@ -73,3 +73,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T04:21Z · claude-cli:sonnet-high:impl · release-workflows 断言排除 e2e/native-*.test.mjs；npm test 失败名与基线 12 个逐名一致（25d0c84）
 - 2026-10-22T04:22Z · claude-cli:sonnet-high:impl · in_progress → verify
 - 2026-10-22T07:25Z · claude-cli:sonnet-high:impl · 返工进行中（CLI Sonnet 修复 Opus 评审 6 项）；DPI 100/125/175 用户已跑完，证据在 verify\dpi*。
+- 2026-10-22T07:34Z · claude-cli:sonnet-high:impl · 返工2：中断/清理时序、process.on、pid 复用、realApiRequests 实测、绕过路径测试；harness 30/30；真实 exe 复跑待做
