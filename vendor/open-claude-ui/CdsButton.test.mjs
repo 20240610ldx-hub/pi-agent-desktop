@@ -53,6 +53,12 @@ test("xs 档令牌等于 3.1623 原生量测值", () => {
   assert.equal(token("--cds-btn-xs-r"), "5.33px");
   assert.equal(token("--cds-btn-xs-fs"), "13px");
   assert.equal(token("--cds-btn-icon-xs"), "24px");
+  assert.equal(token("--cds-btn-xs-lift"), "-1px");
+  // sm：设置页「管理」（深色，main-window-native/2026-10-22/09）72×42 raw = 48×28 CSS
+  assert.equal(token("--cds-btn-sm-h"), "28px");
+  assert.equal(token("--cds-btn-sm-px"), "10px");
+  assert.equal(token("--cds-btn-sm-r"), "6px");
+  assert.equal(token("--cds-btn-sm-fs"), "14px");
   assert.equal(token("--cds-btn-primary-bg"), "var(--cds-gray-900)");
   assert.equal(token("--cds-btn-primary-bg-hover"), "var(--cds-gray-750)");
 });
