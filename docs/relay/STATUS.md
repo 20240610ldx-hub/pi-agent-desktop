@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 110 张任务卡：todo 94 · in_progress 1 · verify 3 · review 0 · done 7 · blocked 0 · parked 5
+共 110 张任务卡：todo 93 · in_progress 2 · verify 3 · review 0 · done 7 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -33,6 +33,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0115 | P1 | verify | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 已过期 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
 | PIL-0116 | P1 | verify | 复刻验收：C02 按钮尺寸与交互状态 | claude:sonnet-high:impl | 已过期 2026-10-21T15:51Z | task/PIL-0116-parity-c02 |
+| PIL-0127 | P1 | in_progress | 复刻验收：C13 代码块、Mermaid source 与复制反馈 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0127-parity-c13 |
 | PIL-0197 | P1 | verify | Windows 托盘 Quit 只隐藏窗口不结束进程 | claude:sonnet-high:impl | 已过期 2026-10-21T16:04Z | task/PIL-0197-tray-quit-exit |
 | PIL-0147 | P2 | in_progress | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | claude:sonnet-high:impl | 2026-10-22T05:41Z | task/PIL-0147-parity-c33 |
 
@@ -60,7 +61,6 @@
 | PIL-0117 | P1 | E2 | 复刻验收：C03 分段选择控件 | 是 | PIL-0014 |
 | PIL-0122 | P1 | E2 | 复刻验收：C08 输入器主框与提交控件 | 是 | PIL-0014, PIL-0177, PIL-0189 |
 | PIL-0126 | P1 | E2 | 复刻验收：C12 助手正文与消息操作条 | 是 | PIL-0014 |
-| PIL-0127 | P1 | E2 | 复刻验收：C13 代码块、Mermaid source 与复制反馈 | 是 | PIL-0014 |
 | PIL-0128 | P1 | E2 | 复刻验收：C14 思考摘要与展开正文 | 是 | PIL-0014 |
 | PIL-0130 | P1 | E2 | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | 是 | PIL-0014 |
 | PIL-0137 | P1 | E2 | 复刻验收：C23 长会话滚动跟随与历史恢复 | 是 | PIL-0014 |
