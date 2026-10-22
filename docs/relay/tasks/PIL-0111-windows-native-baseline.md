@@ -61,6 +61,7 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 | A3 | dpi100/125/150/175 实测标签与 DPI 一致；错误标签退出码 3 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
 | A4 | native-harness.test 30/30 不挂；真实 exe 前后进程计数一致、无残留 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
 | A5 | — | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
+| A6 | tsc、lint、guard；npm test 12 基线失败逐名一致 | 通过 | D:\pilaude\relay-evidence\PIL-0111\verify\VERIFY-2.md | 2eb5ea8 | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -84,3 +85,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A5：通过
+- 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A6：通过
