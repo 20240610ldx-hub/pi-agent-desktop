@@ -57,6 +57,7 @@ waivers: []
 | --- | --- | --- | --- | --- | --- |
 | A1 | 夹具层各状态可进入、麦克风 DOM 0、附件态与参考一致（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0122\verify\VERIFY-2.md | 6a6f4fc | claude-cli:sonnet-medium:verify |
 | A2 | 暗色有参考项量测 ÷1.5：附件态底色/缩略图描边 ΔE 0、发送图标中心差 ≤0.61、提示框各项 | 通过 | D:\pilaude\relay-evidence\PIL-0122\verify\VERIFY-2.md | 6a6f4fc | claude-cli:sonnet-medium:verify |
+| A3 | 浏览器层 Enter/IME/229 不误发、Tab 提示、hover+Escape 关闭且不拦截 | 通过 | D:\pilaude\relay-evidence\PIL-0122\verify\VERIFY-2.md | 6a6f4fc | claude-cli:sonnet-medium:verify |
 
 ## 日志
 
@@ -78,3 +79,4 @@ waivers: []
 - 2026-10-22T08:27Z · user · 修订验收标准 7f2336e0b28d → 6024aa17a06c：拆卡政策（用户 2026-10-22 批准）：已验子集留在本卡，无参考或需原生环境的状态移至 PIL-0209，分叉相关移至 PIL-0207
 - 2026-10-22T08:28Z · claude-cli:sonnet-medium:verify · 证据 A1：通过
 - 2026-10-22T08:28Z · claude-cli:sonnet-medium:verify · 证据 A2：通过
+- 2026-10-22T08:28Z · claude-cli:sonnet-medium:verify · 证据 A3：通过
