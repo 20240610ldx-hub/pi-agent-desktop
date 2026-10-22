@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 118 张任务卡：todo 99 · in_progress 0 · verify 3 · review 0 · done 11 · blocked 0 · parked 5
+共 119 张任务卡：todo 100 · in_progress 0 · verify 3 · review 0 · done 11 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -141,6 +141,7 @@
 | PIL-0201 | P2 | E11 | Windows 原生互操作检查：剪贴板、外部编辑器、托盘菜单驱动 | 是 | PIL-0111 |
 | PIL-0204 | P2 | E2 | C19 模型菜单补采与原生验收 | 是 | PIL-0133 |
 | PIL-0205 | P2 | E2 | C33 侧栏补采与原生验收 | 是 | PIL-0147 |
+| PIL-0206 | P2 | E2 | C13 代码块补采与原生验收 | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
 ### 已完成（11）
