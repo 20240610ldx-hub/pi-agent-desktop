@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 111 张任务卡：todo 93 · in_progress 5 · verify 0 · review 0 · done 8 · blocked 0 · parked 5
+共 112 张任务卡：todo 94 · in_progress 5 · verify 0 · review 0 · done 8 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -137,6 +137,7 @@
 | PIL-0190 | P2 | E2 | 复刻验收：C54b 下载、安装、失败与重启界面 | 是 | PIL-0014, PIL-0003, PIL-0110, PIL-0112 |
 | PIL-0196 | P2 | E5 | 受控浏览器 pane 桥接契约 | 否 | PIL-0191, PIL-0195 |
 | PIL-0198 | P2 | E2 | 复刻验收补采：C02 按钮其余尺寸、变体与交互状态 | 是 | PIL-0116 |
+| PIL-0199 | P2 | E2 | 复刻验收补采：C01 主题切换、字体回退、图标与窄窗等状态 | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 
 ### 已完成（8）
