@@ -3,7 +3,7 @@ id: PIL-0115
 title: 复刻验收：C01 主题、文字与图标
 epic: E2
 priority: P1
-status: verify
+status: in_progress
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T15:40Z
 branch: task/PIL-0115-parity-c01
@@ -79,3 +79,4 @@ waivers: []
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A3：未运行
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A4：未运行
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A5：通过
+- 2026-10-22T02:52Z · claude:sonnet-high:impl · verify → in_progress：A2 失败：亮/暗侧栏会话标题与分组标题未采用三档令牌（亮会话标题 ΔE 21.55，分组 12.26 因 native-theme.css:2632 旧覆盖；暗 3.65/3.74），图标中心 x 差 7px 未处理；复现见 verify/compare-ink.txt。范围需协调者扩大或拆侧栏卡

@@ -25,13 +25,13 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 111 张任务卡：todo 93 · in_progress 3 · verify 2 · review 0 · done 8 · blocked 0 · parked 5
+共 111 张任务卡：todo 93 · in_progress 4 · verify 1 · review 0 · done 8 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0115 | P1 | verify | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 已过期 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
+| PIL-0115 | P1 | in_progress | 复刻验收：C01 主题、文字与图标 | claude:sonnet-high:impl | 已过期 2026-10-21T15:40Z | task/PIL-0115-parity-c01 |
 | PIL-0127 | P1 | in_progress | 复刻验收：C13 代码块、Mermaid source 与复制反馈 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0127-parity-c13 |
 | PIL-0197 | P1 | verify | Windows 托盘 Quit 只隐藏窗口不结束进程 | claude:sonnet-high:impl | 已过期 2026-10-21T16:04Z | task/PIL-0197-tray-quit-exit |
 | PIL-0133 | P2 | in_progress | 复刻验收：C19 模型切换菜单 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0133-parity-c19 |
