@@ -2628,10 +2628,6 @@ html.dark .sidebar-view-switcher-thumb {
 
 /* Secondary sidebar text (timestamps, counts, section label) sat at ~3.9:1 on
    the panel; scoped here so the global --text-dim keeps its role elsewhere. */
-html:not(.dark) .app-sidebar {
-  --text-dim: #6c6c71;
-}
-
 /* On the selection fill the timestamp measured 3.8:1; the inline color on the
    span needs !important to be replaced. */
 html:not(.dark) .session-item.is-selected .session-item-time {
@@ -10770,3 +10766,150 @@ html.dark .c13-code-block {
   .c13-copy-pending { animation: none; }
 }
 /* End C13 */
+
+/* C33 侧栏项目／会话、搜索、状态及重排
+   Reference: Windows Claude Desktop 3.1623.0.0, main-window-native/2026-10-22
+   (00 light, 01 dark, 02/03 hover). 2560x1600 @150%, app zoom 100%: CSS px =
+   raw px / 1.5. Measured: nav pitch 40 raw = 26.67; session row 28 high on a
+   30 pitch (2px gap), inset 8 left / 10 right, radius 8; row text left 18,
+   child text 38.2 with a 0.67px elbow guide at x=22; trailing slot (+, warning)
+   centred 193 = 12.3 from the row's right edge; "···" button 24x24, dark fill
+   #343434. Light/dark session text #52514e/#c3c2b7, selected #0b0b0b/#f0efec on
+   #f0efec/#232323, labels #898781 in both themes, guide #cbcbc9/#414141.
+   Not in any 3.1623 reference (kept from earlier work, listed as residuals):
+   search field, section titles Chats/Projects, running/unread/needs-input
+   marks, light-theme hover fill, show-more / group captions, pin and archive
+   rows, long-name fade. Layout above the tree (search, window chrome) and the
+   259px default width belong to other cards. */
+.app-shell .session-sidebar {
+  --sidebar-nav-text: var(--text-muted);
+  --sidebar-session-text: var(--text-muted);
+  --sidebar-session-selected-text: var(--text);
+  --sidebar-session-selected: #f0efec;
+  --sidebar-project-label: var(--text-dim);
+  --sidebar-label: var(--text-dim);
+  --sidebar-guide: #cbcbc9;
+}
+html.dark .app-shell .session-sidebar {
+  --sidebar-nav-text: var(--text-muted);
+  --sidebar-session-text: var(--text-muted);
+  --sidebar-session-selected-text: var(--text);
+  --sidebar-session-selected: #232323;
+  --sidebar-session-menu: #343434;
+  --sidebar-project-label: var(--text-dim);
+  --sidebar-label: var(--text-dim);
+  --sidebar-guide: #414141;
+}
+
+/* Nav rows: icon ink centre x=26 (15px box), text at 41.5, pitch 26.67. */
+.app-shell .session-sidebar .sidebar-header-row,
+.app-shell .session-sidebar .scheduled-sidebar-row {
+  box-sizing: border-box;
+  width: calc(100% + 2px);
+  height: 26.67px !important;
+  min-height: 26.67px;
+  margin: 0 0 0 -2px;
+  padding: 0 10px 0 10.5px !important;
+  gap: 8px !important;
+  border-radius: 8px;
+  color: var(--sidebar-nav-text) !important;
+}
+.app-shell .session-sidebar .sidebar-header-row > svg:first-child { margin: 0; }
+.app-shell .session-sidebar .sidebar-header-row > svg,
+.app-shell .session-sidebar .scheduled-sidebar-row svg { width: 15px; height: 15px; }
+.app-shell .session-sidebar .sidebar-new-row { padding-left: 9.5px !important; gap: 6px !important; }
+.app-shell .session-sidebar .sidebar-new-plus { width: 18px; height: 18px; color: var(--sidebar-nav-text); }
+
+/* Section titles and project labels share the reference label colour. */
+.app-shell .session-sidebar .sidebar-project-tree { padding-top: 0; }
+.app-shell .session-sidebar .sidebar-chats-header { margin-top: 0; }
+.app-shell .session-sidebar .sidebar-project-tree-header { height: 26px; min-height: 26px; margin-bottom: 0; }
+.app-shell .session-sidebar .sidebar-project-tree-title,
+.app-shell .session-sidebar .sidebar-chats-title:hover .sidebar-project-tree-title { color: var(--sidebar-label); }
+.app-shell .session-sidebar .sidebar-project-tree-add,
+.app-shell .session-sidebar .sidebar-project-tree-menu { color: var(--sidebar-label); }
+.app-shell .session-sidebar .sidebar-chats-empty { padding-left: 18px; }
+
+/* Project label row: 26 high, text at 18, group gap so last row -> next label
+   centre pitch is ~38. */
+.app-shell .session-sidebar .sidebar-project-tree-group { margin-bottom: 9px; }
+.app-shell .session-sidebar .sidebar-project-tree-row {
+  box-sizing: border-box;
+  width: calc(100% - 18px);
+  height: 26px;
+  min-height: 26px;
+  margin: 0 10px 0 8px;
+  border-radius: 8px;
+}
+.app-shell .session-sidebar .sidebar-project-tree-row-main { padding-left: 10px; }
+.app-shell .session-sidebar .sidebar-project-tree-row-actions { right: 0.3px; }
+.app-shell .session-sidebar .sidebar-project-tree-show-more { width: calc(100% - 18px); margin: 0 10px 0 8px; padding-left: 10px; }
+.app-shell .session-sidebar .sidebar-session-group-name { padding-left: 18px; }
+
+/* Session rows: 28 high, 2px apart (margin-bottom only: a flex item does not collapse it), 8px radius, title at x=18. */
+.app-shell .session-sidebar .session-tree-item { position: relative; min-height: 28px; margin-left: 0 !important; }
+.app-shell .session-sidebar .session-item,
+.app-shell .session-sidebar .sidebar-project-tree-children .session-item {
+  box-sizing: border-box;
+  width: calc(100% - 18px);
+  height: 28px !important;
+  margin: 0 10px 2px 8px;
+  padding: 0 3.2px 0 10px !important;
+  gap: 0;
+  border-radius: 8px;
+}
+.app-shell .session-sidebar .session-item-main { gap: 0; }
+/* The idle ring and its reserved slot are gone: the reference shows no leading
+   mark. Real running / unread / needs-input marks sit in the trailing slot
+   (centre 12.3 from the row edge) where 3.1623 draws its attention icon. */
+.app-shell .session-sidebar .session-activity-dot.is-idle { display: none; }
+.app-shell .session-sidebar .session-item-main .session-activity-dot:not(.is-idle) {
+  position: absolute;
+  top: 50%;
+  right: 8.7px;
+  margin-top: -3.6px;
+}
+.app-shell .session-sidebar .session-item:is(:hover, :focus-within, :has(.session-item-more.is-open)) .session-item-main .session-activity-dot:not(.is-idle) { opacity: 0; }
+/* A selected row at rest carries no "···"; hover, focus and an open menu show it. */
+.app-shell .session-sidebar .session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open)) .session-item-trailing { display: none; }
+.app-shell .session-sidebar .session-item-more svg { display: block; }
+
+/* Children: text at 38.2 (row padding 30 + 20 per extra level) and an elbow guide. */
+.app-shell .session-sidebar .session-tree-item[data-session-depth="1"] > div:first-child > .session-item { padding-left: 30px !important; }
+.app-shell .session-sidebar .session-tree-item[data-session-depth="2"] > div:first-child > .session-item { padding-left: 50px !important; }
+.app-shell .session-sidebar .session-tree-item[data-session-depth="3"] > div:first-child > .session-item { padding-left: 70px !important; }
+.app-shell .session-sidebar .session-tree-item:not([data-session-depth="0"])::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 22px;
+  width: 0;
+  border-left: 0.67px solid var(--sidebar-guide);
+  pointer-events: none;
+}
+.app-shell .session-sidebar .session-tree-item[data-session-depth="1"]:first-child::before { top: 4px; }
+.app-shell .session-sidebar .session-tree-item[data-session-depth="2"]::before { left: 42px; }
+.app-shell .session-sidebar .session-tree-item[data-session-depth="3"]::before { left: 62px; }
+.app-shell .session-sidebar .session-tree-item:not([data-session-depth="0"]):last-child::before {
+  box-sizing: border-box;
+  bottom: auto;
+  width: 9px;
+  height: 14px;
+  border-bottom: 0.67px solid var(--sidebar-guide);
+  border-bottom-left-radius: 5px;
+}
+.app-shell .session-sidebar .session-tree-item[data-session-depth="1"]:first-child:last-child::before { top: 4px; height: 10px; }
+/* Dark hover = selected fill (#232323 in 02/03 and 01). The row's inline
+   hover background reads --bg-hover, so re-point it on the row. Light hover has
+   no 3.1623 reference and keeps the shared token. */
+html.dark .app-shell .session-sidebar .session-item { --bg-hover: #232323; }
+/* Touch keeps finger-sized rows; the reference geometry is a pointer layout. */
+@media (hover: none) {
+  .app-shell .session-sidebar .session-item,
+  .app-shell .session-sidebar .sidebar-project-tree-row { height: 44px !important; min-height: 44px; }
+  .app-shell .session-sidebar .session-tree-item { min-height: 44px; }
+  .app-shell .session-sidebar .sidebar-header-row,
+  .app-shell .session-sidebar .scheduled-sidebar-row { height: 36px !important; min-height: 36px; }
+  .app-shell .session-sidebar .session-tree-item:not([data-session-depth="0"])::before { display: none; }
+}

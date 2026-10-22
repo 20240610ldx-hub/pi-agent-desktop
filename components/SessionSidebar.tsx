@@ -1846,7 +1846,7 @@ export function SessionSidebar({ onArchiveActionsChange, selectedSessionId, onSe
         data-tauri-drag-region={desktopPlatform ? true : undefined}
         {...windowDrag}
         style={{
-          padding: "12px 10px 10px",
+          padding: "12px 10px 7px",
           borderBottom: "var(--hairline) solid var(--border)",
           flexShrink: 0,
         }}
@@ -2880,9 +2880,9 @@ function SessionItem({
                 className={`session-item-more${menuOpen ? " is-open" : ""}`}
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-                  <circle cx="6" cy="2" r="1.1" />
-                  <circle cx="6" cy="6" r="1.1" />
-                  <circle cx="6" cy="10" r="1.1" />
+                  <circle cx="3" cy="6" r="1" />
+                  <circle cx="6" cy="6" r="1" />
+                  <circle cx="9" cy="6" r="1" />
                 </svg>
               </button>
             </div>
