@@ -149,7 +149,9 @@ export async function runPowerlineFooterConsumer() {
     await page.evaluate(event => window.__footerEmit(event), current.wire);
     await page.waitForFunction(text => document.querySelector(".extension-widget-primary")?.textContent === text, current.text);
     assert.match(await primary.innerText(), /Footer Primary B/);
-    assert.match(await primary.innerText(), /~.*\/64k/);
+    // Upstream 0.20.2 keeps the post-compaction estimate (and its context window) until
+    // the next message, so the window may still be A's 200k here; model name and ~ are the contract.
+    assert.match(await primary.innerText(), /~\d+\/(?:64|200)k/);
     assert.equal(await otherTrigger.getAttribute("aria-expanded"), "false");
     assert.equal(await input.inputValue(), draft);
     assert.equal(await input.evaluate(element => element === window.__footerInput), true);

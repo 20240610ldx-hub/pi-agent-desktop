@@ -310,6 +310,16 @@ export async function stageBuiltinTodoRuntime({ sourceRoot, stagedNodeModulesDir
   });
 }
 
+/** The published powerline footer package is shipped whole; it has no runtime dependencies (Pi peers are staged separately). */
+export async function stageBuiltinPowerlineRuntime({ sourceRoot, stagedNodeModulesDir }) {
+  return stageResolvedClosure({
+    importer: join(sourceRoot, "package.json"),
+    specifiers: ["pi-powerline-footer"],
+    sourceRoot,
+    stagedNodeModulesDir,
+  });
+}
+
 async function resolveInstalledPackage(fromFile, name, sourceRoot) {
   let dir = dirname(fromFile);
   while (true) {

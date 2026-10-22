@@ -99,16 +99,22 @@ try {
     // Next may recompile this entry while the first browser bootstrap compiles
     // sibling routes. Exercise the application's own Retry if its load deadline
     // wins that cold-start race; never replace the response or change the limit.
-    const firstLoad = await Promise.race([
-      primary.waitFor().then(() => "ready"),
-      page.getByRole("button", { name: "Retry", exact: true }).waitFor().then(() => "retry"),
-    ]);
-    if (firstLoad === "retry") {
-      await page.getByRole("button", { name: "Retry", exact: true }).click();
-      await primary.waitFor();
-      // Start layout measurements on a normal mount, after cold compilation.
-      // The host's error-to-Retry path can leave its composer spacer unmeasured.
-      await page.reload({ waitUntil: "domcontentloaded" });
+    const retryButton = page.getByRole("button", { name: "Retry", exact: true });
+    let mounted = false, retried = false;
+    for (let attempt = 0; attempt < 5 && !mounted; attempt++) {
+      const outcome = await Promise.race([
+        primary.waitFor({ timeout: 60000 }).then(() => "ready"),
+        retryButton.waitFor({ timeout: 60000 }).then(() => "retry"),
+      ]).catch(() => "timeout");
+      if (outcome === "retry") { retried = true; await retryButton.click(); }
+      await primary.waitFor({ timeout: 30000 }).then(() => { mounted = true; }, () => {});
+      if (!mounted) await page.reload({ waitUntil: "domcontentloaded" });
+      else if (retried) {
+        // Start layout measurements on a normal mount, after cold compilation.
+        // The host's error-to-Retry path can leave its composer spacer unmeasured.
+        await page.reload({ waitUntil: "domcontentloaded" });
+        retried = false; mounted = false; attempt--;
+      }
     }
     await primary.waitFor();
     assert.match(await primary.innerText(), /Footer Real Next/);
@@ -140,9 +146,12 @@ try {
     report.sse = await page.evaluate(() => window.__footerWire.filter(e => e.method === "setWidget" && e.widgetKey === "powerline-top"));
     assert.equal(await page.locator(".chat-input-textarea").inputValue(), draft);
     const connections = await page.evaluate(() => window.__footerWire.filter(e => e.type === "connected").length);
-    await context.setOffline(true);
-    await page.waitForTimeout(300);
-    await context.setOffline(false);
+    // Chromium keeps an already-open SSE stream when the context goes offline, so
+    // signal a transport error on the session stream: the application's own
+    // AgentEventConnection then discards it and reconnects against the real server.
+    await page.evaluate(() => {
+      for (const source of window.__footerSources.filter(source => source.readyState === 1 && /\/api\/agent\/footer-next-a\/events/.test(source.url))) source.onerror?.(new Event("error"));
+    });
     await page.waitForFunction(count => window.__footerWire.filter(e => e.type === "connected").length > count, connections);
     assert.match(await primary.innerText(), /Footer Real Next/);
     assert.equal(await page.locator(".chat-input-textarea").inputValue(), draft);

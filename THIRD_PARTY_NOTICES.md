@@ -37,9 +37,33 @@ SOFTWARE.
 
 ## Powerline footer primary row
 
-Pilaude pins `pi-powerline-footer@0.20.2` by Nico Bailon ([nicobailon/pi-powerline-footer, fixed source commit](https://github.com/nicobailon/pi-powerline-footer/tree/e06267494593c9006b014f42706a8d9e9259a417)) as an application runtime dependency. `lib/builtin-powerline-extension.ts` loads only its published `segments.ts` model and context renderers and does not start the package's editor, footer, queue or shell factory.
+Pilaude pins `pi-powerline-footer@0.20.2` by Nico Bailon ([nicobailon/pi-powerline-footer](https://github.com/nicobailon/pi-powerline-footer), fixed source commit [e062674](https://github.com/nicobailon/pi-powerline-footer/tree/e06267494593c9006b014f42706a8d9e9259a417)) as an application runtime dependency, and the desktop installer ships the whole package (`scripts/stage-package.mjs` `stageBuiltinPowerlineRuntime`). `lib/builtin-powerline-extension.ts` executes the package's declared `pi.extensions` entry (`./index.ts`) through jiti, adapting only its path lookups and the Web UI boundary.
 
-**License text gap (open).** The package manifest declares `MIT`, but neither the published 0.20.2 tarball nor the fixed repository tree contains a LICENSE, NOTICE or COPYING file, so there is no license text or copyright statement to reproduce, and none is invented here. This does not affect local development. Whether an installer may contain this package without the upstream text is a decision for the user; until it is made, the desktop staging helper must not add `pi-powerline-footer`, and `package-lock.json` plus Next's own file tracer are not proof that it is excluded from a build.
+**License basis.** The license is taken from the package manifest (`package.json` `"license": "MIT"`, author `Nico Bailon`, repository `git+https://github.com/nicobailon/pi-powerline-footer.git`). The published 0.20.2 tarball and the fixed repository tree contain no LICENSE, NOTICE or COPYING file, so no upstream copyright line or year exists to reproduce. The standard MIT text below is therefore included **on the basis of the manifest declaration**; the copyright holder is the manifest author and no year is asserted.
+
+```text
+MIT License
+
+Copyright (c) Nico Bailon (author named in package.json; year not stated by the package)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 ## Changes diff renderer
 
