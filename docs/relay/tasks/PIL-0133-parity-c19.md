@@ -11,7 +11,7 @@ implementers: [codex-plus:gpt-xhigh:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/ModelSelector.tsx, components/SelectorRow.tsx, components/ModelSelector.test.mjs]
 files_shared: [app/native-theme.css]
-acceptance_sha: a4cb17ca21d9
+acceptance_sha: 2a97764096d2
 waivers: []
 ---
 
@@ -30,10 +30,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 模型/提供商分组、当前/不可用/未知、长名称、搜索/无结果和失败；模型值来自 Pi。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0133/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 Tab/方向/Home/End 访问分组/当前项，Escape 只关本层并回触发点；有搜索时测原生 IME，不让组合 Enter 选中；长列表滚动保当前项，窄窗避让/三档 DPI/缩放/双主题核验。无搜索框的菜单项不套文本编辑语义。 菜单一律走 DOM（.app-menu 与共享菜单令牌），lib/desktop-menu.ts 的 NATIVE_POPUP_MENUS_ENABLED 保持 false，不调用 Rust show_popup_menu 弹原生菜单（PIL-0177、用户决定）；验证：打开本卡每个菜单/子菜单，检查 DOM 中存在 .app-menu 节点且没有系统原生弹出窗口。托盘右键等系统表面不在此列。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：提供商／模型列表、长名、搜索、当前项、不可用和错误逐态核验；选择真实模型能力，不硬编码演示模型。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
+- [ ] A1 本卡范围（用户 2026-10-22 决定拆卡）：仅浏览器夹具层的状态矩阵——模型/提供商分组、当前/不可用/未知、长名称、搜索/无结果、失败（真实 Chromium 测试夹具，模型值由夹具提供，不冒充真实 Pi），并登记深色主窗口 05-model-picker-more-models-dark（3.1623，150%，应用缩放 100%，zh-CN）的来源、版本、DPI、缩放、主题。真实 Pi 目录下的分组/搜索/无结果/不可用/失败与浅色等无 3.1623 同态参考的状态移至 PIL-0204。
+- [ ] A2 仅对有 3.1623 深色同态参考的原语（对勾位置与颜色、正文颜色、菜单宽、行高、hover inset、外/行圆角、文字左 ink、面板底色/边框/hover 底）在同帧/同状态下给出参考值、实现值、原像素与 CSS px（原像素 ÷1.5）、差值：盒宽高与间距 ≤1 CSS px，文字基线 ≤1，圆角 ≤0.5，图标中心 ≤1，颜色 CIEDE2000 ΔE ≤2（sRGB→Lab D65，同一像素采样区取中位色）。叠图只做整数裁剪/平移，不插值；字形 ink 差单列残差。量测表与差异图存 relay-evidence/PIL-0133/。浅色菜单、浅色对勾色、星按钮行、文字行内垂直基线及缺同态参考的状态移至 PIL-0204。
+- [ ] A3 浏览器层：Tab/方向/Home/End 访问分组/当前项，Escape 只关本层并回触发点；搜索框 IME 合成事件下 Enter 不选中；长列表滚动保当前项；菜单走 DOM `.app-menu`，`NATIVE_POPUP_MENUS_ENABLED` 保持 false，不弹系统原生菜单（PIL-0177、用户决定）；无搜索框的菜单项不套文本编辑语义。原生与浏览器合成事件分层记录。WebView2 原生 IME、100/125/150% 三档 DPI、应用缩放、窄窗原生核验移至 PIL-0204。
+- [ ] A4 浏览器夹具层专属核验：当前项对勾与星按钮避让（鼠标/触屏）无重叠回归，提供商/模型列表、长名、搜索、当前项、不可用和错误逐态在夹具下核验；已知残差逐条给出处理结果与可复现操作。真实模型切换成功/失败/取消/恢复、真实 Pi 数据逐态核验移至 PIL-0204。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test components/ModelSelector.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0133`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -67,3 +67,4 @@ waivers: []
 - 2026-10-22T03:13Z · codex-plus:gpt-xhigh:impl · Codex 实现提交：搜索/当前项/键盘/IME/焦点；行高24、圆角10.667；定向88/88，npm test 无新增失败。证据 relay-evidence/PIL-0133/impl/HANDOFF.md。转验证（CLI 账号 Sonnet）。
 - 2026-10-22T03:13Z · codex-plus:gpt-xhigh:impl · in_progress → verify
 - 2026-10-22T03:42Z · user · 修订验收标准 a4cb17ca21d9 → a4cb17ca21d9：用户 2026-10-22 拆卡政策：已验夹具层与有参考的深色项留在本卡，浅色/分组/搜索/无结果/不可用/长名/错误/星按钮行同态参考、真实 Pi 切换与失败恢复、WebView2 IME、三档 DPI、浅色对勾色移至 PIL-0204
+- 2026-10-22T03:43Z · user · 修订验收标准 a4cb17ca21d9 → 2a97764096d2：用户 2026-10-22 拆卡政策（移出项见 PIL-0204）：浅色/分组/搜索/无结果/不可用/长名/错误/星按钮行同态参考、真实 Pi 切换与失败恢复、WebView2 IME、三档 DPI、浅色对勾色移至 PIL-0204
