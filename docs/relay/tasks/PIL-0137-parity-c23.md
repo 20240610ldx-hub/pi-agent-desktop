@@ -56,6 +56,7 @@ waivers: []
 | --- | --- | --- | --- | --- | --- |
 | A1 | 各状态进入步骤逐条复现并登记环境（Chromium、mock 流式、600 条会话、webpack dev） | 通过 | D:\pilaude\relay-evidence\PIL-0137\verify\VERIFY.md | 8d46a622 | claude-cli:sonnet:verify |
 | A2 | 实现侧按钮几何/颜色记录（button-measure.json），同态比对移至 PIL-0212 | 通过 | D:\pilaude\relay-evidence\PIL-0137\verify\VERIFY.md | 8d46a622 | claude-cli:sonnet:verify |
+| A3 | 真实应用：滚轮/PageUp/Home/End/滚动条拖动；F1 回到最新后无累积漂移；前插锚点 0–0.3px；会话切换恢复 | 通过 | D:\pilaude\relay-evidence\PIL-0137\verify\VERIFY-2.md | 8d46a622 | claude-cli:sonnet:verify |
 
 ## 日志
 
@@ -72,3 +73,4 @@ waivers: []
 - 2026-10-22T11:00Z · user · 修订验收标准 dfacd004c1ef → 43195e1eb4a1：拆卡政策（用户 2026-10-22 决定：已验部分合入，缺图状态转补采卡）：缺 3.1623 同态参考的视觉项，以及触控板／触摸、IME、PageDown、原生三档 DPI、WebView2、SSE 真断线、贴底滚动条遮挡、拖到轨道底松开行为，移至 PIL-0212。F1 口径（用户 2026-10-22 批准）：“距底 ≤96px”明确为“不累积漂移，逐块滞后不超过一个流式块”；流式中回到最新后瞬时 100px 属块级滞后，纯跟随基线同样出现，VERIFY-2 已实测无累积漂移。
 - 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A1：通过
 - 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A2：通过
+- 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A3：通过
