@@ -86,3 +86,4 @@ Windows 10 与干净机器、安装包、升级、2 小时耐久（PIL-0110 的�
 - 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A5：通过
 - 2026-10-22T07:48Z · claude:sonnet-high:verify · 证据 A6：通过
+- 2026-10-22T08:07Z · claude-cli:sonnet-high:impl · 返工3：app 存活期记录根 pid@created，退出后不认根；cleanup 逐 pid taskkill 不加 /T；补 PID 复用测试；N1 终判；见 impl/FIX3.md
