@@ -52,6 +52,7 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 | A3 | 关窗进托盘后进程仍存活且托盘菜单可响应(-Hide -Mouse 已见)、quit_application 正常路径 exit 行正常；但 keep-awake 保持不变需管理员 powercfg，验证者无权限，旧提交证据不能挪用 | 未运行 | D:/pilaude/relay-evidence/PIL-0197/verify/r2/hide-mouse.txt | 3854190 | claude:sonnet-high:verify |
 | A4 | cargo test 全量 32 通过(含新增 forced_exit_* 2 个顺序/日志单测，仍属夹具层，force_exit 真实路径由 A1 重跑覆盖)；tsc 0；npm run lint 0；relay guard --task PIL-0197 无问题；修复前失败证据沿用 impl before-fix-whilemenuopen.txt(存活=True)，修复后验证者重跑通过 | 通过 | D:/pilaude/relay-evidence/PIL-0197/verify/r2/cargo-test.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/tsc.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/lint.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/guard.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/whilemenuopen-2.txt | 3854190 | claude:sonnet-high:verify |
 | A2 | Windows 原生，用户在 3854190 desktop:dev 构建上用管理员 powercfg /requests 前后对照：关窗进托盘时 SYSTEM 有 pi-agent-desktop.exe(Pilaude keeps the system awake)；托盘 Quit 后 SYSTEM 仅剩 GameViewer，无本进程；desktop.log 03:05:11.693 quit requested→+3ms exit | 通过 | D:/pilaude/relay-evidence/PIL-0197/verify/user-2b-tray.txt, D:/pilaude/relay-evidence/PIL-0197/verify/user-4b-quit.txt, D:/pilaude/relay-evidence/PIL-0197/verify/quit-log-b.txt | 3854190 | claude:sonnet-high:verify |
+| A3 | Windows 原生。关窗进托盘后 powercfg 仍有本进程 keep-awake 请求(user-2b-tray)，进程存活；quit_application 共用路径正常退出(quit requested→+3ms exit，无 forced)；验证者 -Hide -Mouse 重跑同样正常。保留：用户未报告 Get-Process 输出文件，进程消失以 powercfg 与 exit 行佐证；未亲自触发 F12 quit_app，其与托盘共用 quit_application | 通过 | D:/pilaude/relay-evidence/PIL-0197/verify/user-2b-tray.txt, D:/pilaude/relay-evidence/PIL-0197/verify/user-4b-quit.txt, D:/pilaude/relay-evidence/PIL-0197/verify/quit-log-b.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/hide-mouse.txt | 3854190 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T12:46Z · planner · 创建
@@ -75,3 +76,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T03:02Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T03:02Z · claude:sonnet-high:verify · 验证(3854190)：A1/A4 通过，A2/A3 未运行(需用户管理员 powercfg)。目标：托盘Quit退出且日志有exit行。做法：审diff、cargo test/tsc/lint/guard、重跑repro -WhileMenuOpen×4 与 -Hide -Mouse。结果：强制路径出现 'exit (forced)'，正常路径 'exit'，进程均退出。下一步：用户做一次 keep-awake 前后 powercfg 对照(步骤见协调者)，通过后设 review。
 - 2026-10-22T03:06Z · claude:sonnet-high:verify · 证据 A2：通过
+- 2026-10-22T03:06Z · claude:sonnet-high:verify · 证据 A3：通过
