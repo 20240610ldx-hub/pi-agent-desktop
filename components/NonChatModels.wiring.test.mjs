@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const modelsConfig = await read("./ModelsConfig.tsx");
 const settingsPanel = await read("./SettingsPanel.tsx");
-const messageView = await read("./MessageView.tsx");
+const messageView = await read("./ToolStepView.tsx");
 
 test("Settings › Models lists classifier and image models in their own entry", () => {
   assert.match(modelsConfig, /if \(selection\?\.type === "nonchat"\) return <NonChatModelsDetail onOpenMcp=\{onOpenMcp\} \/>;/);
