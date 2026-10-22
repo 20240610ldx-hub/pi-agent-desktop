@@ -3,7 +3,7 @@ id: PIL-0130
 title: 复刻验收：C16 工具步骤、参数结果与紧凑命令
 epic: E2
 priority: P1
-status: in_progress
+status: blocked
 owner: codex-plus:luna-high:impl
 lease_until: 2026-10-22T10:57Z
 branch: task/PIL-0130-parity-c16
@@ -69,3 +69,4 @@ waivers: []
 - 2026-10-21T12:36Z · planner · 冻结验收标准 8feff7797176
 - 2026-10-22T07:57Z · codex-plus:luna-high:impl · 领取，租约至 2026-10-22T10:57Z
 - 2026-10-22T08:20Z · codex-plus:luna-high:impl · 协调者决定：本卡的核心是把 MessageView.tsx 的 ToolCallBlock 及其工具 helper 迁到 ToolStepView.tsx；授权在 MessageView.tsx 中仅做 删除被迁出的块 + import 新组件的改动，不改其他逻辑。因 MessageView.tsx 现由 PIL-0126 持有且在返工，本卡等 PIL-0126 合入后再串行实施。luna 试跑首轮正确识别范围并停止，无代码改动。
+- 2026-10-22T08:20Z · codex-plus:luna-high:impl · in_progress → blocked：等 PIL-0126 合入后串行实施（MessageView.tsx 归属）

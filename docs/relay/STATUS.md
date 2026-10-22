@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 120 张任务卡：todo 97 · in_progress 1 · verify 3 · review 0 · done 13 · blocked 1 · parked 5
+共 120 张任务卡：todo 97 · in_progress 0 · verify 3 · review 0 · done 13 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -34,11 +34,11 @@
 | PIL-0111 | P1 | verify | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | claude-cli:sonnet-high:impl | 已过期 2026-10-22T06:54Z | task/PIL-0111-windows-native-baseline |
 | PIL-0122 | P1 | verify | 复刻验收：C08 输入器主框与提交控件 | claude-cli:sonnet-high:impl | 2026-10-22T10:23Z | task/PIL-0122-parity-c08 |
 | PIL-0126 | P1 | verify | 复刻验收：C12 助手正文与消息操作条 | codex-plus:gpt-xhigh:impl | 2026-10-22T10:25Z | task/PIL-0126-parity-c12 |
-| PIL-0130 | P1 | in_progress | 复刻验收：C16 工具步骤、参数结果与紧凑命令 | codex-plus:luna-high:impl | 2026-10-22T10:57Z | task/PIL-0130-parity-c16 |
 
 ### 阻塞
 
 - **PIL-0117** 复刻验收：C03 分段选择控件 — 2026-10-22T07:23Z · claude-cli:sonnet-high:impl · in_progress → blocked：缺 3.1623 参考与真实 consumer
+- **PIL-0130** 复刻验收：C16 工具步骤、参数结果与紧凑命令 — 2026-10-22T08:20Z · codex-plus:luna-high:impl · in_progress → blocked：等 PIL-0126 合入后串行实施（MessageView.tsx 归属）
 
 ### 待办（按优先级；未冻结验收的卡需先由规划者冻结）
 
