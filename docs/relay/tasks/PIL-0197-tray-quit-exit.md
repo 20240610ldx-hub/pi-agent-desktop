@@ -3,7 +3,7 @@ id: PIL-0197
 title: Windows 托盘 Quit 只隐藏窗口不结束进程
 epic: E11
 priority: P1
-status: in_progress
+status: verify
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T16:04Z
 branch: task/PIL-0197-tray-quit-exit
@@ -63,3 +63,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T02:53Z · claude:sonnet-high:impl · verify → in_progress：A1 失败：托盘 Quit 日志无 exit 行(只有 exit forced)；见 verify/quit-log.txt
 - 2026-10-22T02:56Z · claude:sonnet-high:impl · 复述（返工）：验证 A1 失败因 force_exit 绕过 RunEvent::Exit 未写 exit 行；要求清理后、process::exit 前写 exit 行并补清理顺序/日志单测。
 - 2026-10-22T02:56Z · claude:sonnet-high:impl · 做了：force_exit 改为 forced_exit_sequence：写 'exit forced: …' → keep-awake release → instance lock 清理(仅 Linux，调用 crate::remove_instance_lock，与正常路径对齐) → server.stop → 写 'exit (forced)' → process::exit(0)。新增 2 个单测（清理顺序+exit 行最后；存在以 exit 开头的行）。repro 脚本 -WhileMenuOpen 增加对 exit 行的断言，重跑：进程已退出，desktop.log 出现 'exit (forced)'（after-fix2-whilemenuopen.txt）；正常点击路径仍写 'exit'（after-fix2-HideMouse.txt）。/ 状态：分支最后提交 3854190；cargo test 32 过、tsc、lint、guard 通过，证据 relay-evidence/PIL-0197/impl/。/ 下一步：交验证，用户实机复测 A1/A2/A3。/ 风险：Linux 强制路径的 instance lock 清理仅 cfg 编译，未在 Linux 实跑。
+- 2026-10-22T02:56Z · claude:sonnet-high:impl · in_progress → verify
