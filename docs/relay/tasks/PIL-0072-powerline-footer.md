@@ -69,3 +69,4 @@ waivers: []
 - 2026-10-22T13:43Z · claude-cli:sonnet-medium:verify · 证据 A5：通过
 - 2026-10-22T13:43Z · claude-cli:sonnet-high:impl · verify → review
 - 2026-10-22T13:43Z · claude-cli:sonnet-high:review APPROVE · review → done（评审 claude-cli:sonnet-high:review APPROVE）
+- 2026-10-22T13:43Z · claude-cli:sonnet-high:impl · 评审可选项待建卡：O1 每事件等待 git 更新最多 500ms；O2 recommended-pi-extensions 仍标 unsupported；O3 安装包冒烟
