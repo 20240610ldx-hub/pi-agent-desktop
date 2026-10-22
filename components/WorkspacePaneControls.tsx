@@ -21,7 +21,7 @@ const controls = [
 ] as const;
 
 /** A local portal avoids clipping by the shell's overflow-hidden topbar. */
-export function WorkspaceControlButton({ label, shortcut, onClick, triggerRef, placement = "bottom", tooltipGap = 6, tooltipClassName, ...props }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title" | "aria-label"> & { label: string; shortcut?: string; triggerRef?: Ref<HTMLButtonElement>; placement?: "top" | "bottom"; tooltipGap?: number; tooltipClassName?: string }) {
+export function WorkspaceControlButton({ label, shortcut, onClick, triggerRef, placement = "bottom", tooltipGap = 6, tooltipClassName, tooltipDescription, ...props }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title" | "aria-label"> & { label: string; shortcut?: string; triggerRef?: Ref<HTMLButtonElement>; placement?: "top" | "bottom"; tooltipGap?: number; tooltipClassName?: string; tooltipDescription?: string }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,7 +54,7 @@ export function WorkspaceControlButton({ label, shortcut, onClick, triggerRef, p
     });
   }, [label, open, shortcut, placement, tooltipGap, tooltipClassName]);
   return <>
-    <button {...props} ref={(element) => { buttonRef.current = element; if (typeof triggerRef === "function") triggerRef(element); else if (triggerRef) triggerRef.current = element; }} type="button" aria-label={label} aria-describedby={open ? tooltipId : undefined}
+    <button {...props} ref={(element) => { buttonRef.current = element; if (typeof triggerRef === "function") triggerRef(element); else if (triggerRef) triggerRef.current = element; }} type="button" aria-label={label} aria-describedby={[props["aria-describedby"], open ? tooltipId : undefined].filter(Boolean).join(" ") || undefined}
       onPointerEnter={(event) => {
         if (event.pointerType === "touch") return;
         clearTimer();
@@ -67,7 +67,7 @@ export function WorkspaceControlButton({ label, shortcut, onClick, triggerRef, p
       onClick={(event) => { hide(); onClick?.(event); }} />
     {open && createPortal(<span id={tooltipId} ref={tooltipRef} role="tooltip" className={`workspace-control-tooltip${tooltipClassName ? ` ${tooltipClassName}` : ""}`}
       style={{ left: position?.left ?? 0, top: position?.top ?? 0, visibility: position ? "visible" : "hidden" }}>
-      <span>{label}</span>{shortcut && <kbd>{shortcut}</kbd>}
+      <span>{tooltipDescription ? `${label} · ${tooltipDescription}` : label}</span>{shortcut && <kbd>{shortcut}</kbd>}
     </span>, document.body)}
   </>;
 }

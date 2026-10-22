@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent, type KeyboardEvent, type HTMLAttributes } from "react";
 import { APP_PREF_KEYS, getPrefJson, setPrefJson } from "@/lib/app-prefs";
+import { WorkspaceControlButton } from "./WorkspacePaneControls";
 import { isImeComposing } from "@/lib/ime";
 import {
   getWorkspacePaneGridStyle, normalizeWorkspacePaneLayout, reconcileWorkspacePanes, resizeWorkspacePaneColumn,
@@ -17,6 +18,8 @@ export interface WorkspacePane {
   customHeader?: boolean;
   children: ReactNode | ((visible: boolean, chrome: WorkspacePaneChrome) => ReactNode);
   onClose: () => void;
+  /** A real consumer, or a discoverable reason why this pane cannot pop out yet. */
+  popout?: { label: string; onOpen?: () => void; disabledReason?: string };
 }
 
 export interface WorkspacePaneChrome {
@@ -193,6 +196,16 @@ export function WorkspacePaneDock({ panes, expandLabel, restoreLabel, closeLabel
               {!pane.customHeader && <header {...headerDragProps} className={`workspace-pane-header${pane.id === chromePaneId && windowControls ? " has-window-controls" : ""}${pane.id === overlayPaneId && macWindowInset ? " has-mac-window-inset" : ""}`}>
                 {pane.header ?? <span className="workspace-pane-title">{pane.title}</span>}
                 {pane.id === overlayPaneId && overlayControls}
+                {pane.popout && <>
+                  <WorkspaceControlButton className="file-workbench-icon-button workspace-pane-popout"
+                    label={pane.popout.label} placement="top" aria-disabled={!pane.popout.onOpen || Boolean(pane.popout.disabledReason)}
+                    aria-describedby={pane.popout.disabledReason ? `workspace-popout-reason-${pane.id}` : undefined}
+                    tooltipDescription={pane.popout.disabledReason}
+                    onClick={() => { if (!pane.popout?.disabledReason) pane.popout?.onOpen?.(); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="8" y="4.7" width="13" height="10.4" rx="1.5" /><path d="M16 8.7H3v10.6h13V8.7" /></svg>
+                  </WorkspaceControlButton>
+                  {pane.popout.disabledReason && <span id={`workspace-popout-reason-${pane.id}`} hidden>{pane.popout.disabledReason}</span>}
+                </>}
                 <button type="button" className="file-workbench-icon-button workspace-pane-expand"
                   title={`${expanded === pane.id ? restoreLabel : expandLabel}: ${pane.title}`}
                   aria-label={`${expanded === pane.id ? restoreLabel : expandLabel}: ${pane.title}`}

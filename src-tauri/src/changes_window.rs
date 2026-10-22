@@ -10,7 +10,7 @@ use crate::{
 /// The server origin chosen by Rust at startup, never a renderer-provided URL.
 pub struct ChangesWindowOrigin(pub Url);
 
-fn changes_url(origin: &Url, cwd: &str, target_id: Option<&str>) -> Result<Url, String> {
+fn changes_url(origin: &Url, cwd: &str, target_id: Option<&str>, view_id: Option<&str>) -> Result<Url, String> {
     if cwd.trim().is_empty() || cwd.contains('\0') || cwd.len() > 32_768 {
         return Err("A project folder is required to open Changes".into());
     }
@@ -25,6 +25,14 @@ fn changes_url(origin: &Url, cwd: &str, target_id: Option<&str>) -> Result<Url, 
         }
         url.query_pairs_mut().append_pair("targetId", target_id);
     }
+    if let Some(view_id) = view_id {
+        if view_id.len() != 36 || !view_id.bytes().enumerate().all(|(index, byte)| {
+            if [8, 13, 18, 23].contains(&index) { byte == b'-' } else { byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte) }
+        }) {
+            return Err("Invalid Changes view identifier".into());
+        }
+        url.query_pairs_mut().append_pair("viewId", view_id);
+    }
     Ok(url)
 }
 
@@ -35,6 +43,16 @@ fn is_changes_navigation(candidate: &Url, target: &Url) -> bool {
         && candidate.password().is_none()
 }
 
+fn validate_changes_caller(label: &str, current: &Url, origin: &Url) -> Result<(), String> {
+    if label != WINDOW_LABEL {
+        return Err("Changes windows can only be opened from the main window".into());
+    }
+    if !same_origin(current, origin) || current.path() != "/" || !current.username().is_empty() || current.password().is_some() {
+        return Err("Changes windows require the trusted app origin".into());
+    }
+    Ok(())
+}
+
 /// Creates only the dedicated Changes page. General webview creation remains
 /// unavailable to the renderer, and the desktop API token never enters the URL.
 #[tauri::command]
@@ -43,12 +61,12 @@ pub async fn open_changes_window(
     window: WebviewWindow,
     cwd: String,
     target_id: Option<String>,
+    view_id: Option<String>,
     origin: tauri::State<'_, ChangesWindowOrigin>,
 ) -> Result<(), String> {
-    if window.label() != WINDOW_LABEL {
-        return Err("Changes windows can only be opened from the main window".into());
-    }
-    let target = changes_url(&origin.0, &cwd, target_id.as_deref())?;
+    let current = window.url().map_err(|error| error.to_string())?;
+    validate_changes_caller(window.label(), &current, &origin.0)?;
+    let target = changes_url(&origin.0, &cwd, target_id.as_deref(), view_id.as_deref())?;
     let navigation_target = target.clone();
     let label = format!("changes-{}", crate::generate_random_hex()?);
     let mut builder = WebviewWindowBuilder::new(&app, label, WebviewUrl::External(target))
@@ -101,14 +119,14 @@ pub async fn close_changes_window(window: WebviewWindow) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{changes_url, is_changes_navigation};
+    use super::{changes_url, is_changes_navigation, validate_changes_caller};
     use tauri::Url;
 
     #[test]
     fn changes_url_encodes_cwd_as_one_query_value_on_the_server_origin() {
         let origin = Url::parse("http://127.0.0.1:38471/old?token=never#fragment").unwrap();
         let cwd = "C:\\src\\R&D\\用户 #1?x=2";
-        let target = changes_url(&origin, cwd, None).unwrap();
+        let target = changes_url(&origin, cwd, None, None).unwrap();
         assert_eq!(target.origin(), origin.origin());
         assert_eq!(target.path(), "/changes");
         assert_eq!(target.fragment(), None);
@@ -121,7 +139,7 @@ mod tests {
     #[test]
     fn feedback_target_is_optional_and_travels_only_as_encoded_data() {
         let origin = Url::parse("http://127.0.0.1:38471").unwrap();
-        let target = changes_url(&origin, r"C:\src", Some("main&cwd=else#where")).unwrap();
+        let target = changes_url(&origin, r"C:\src", Some("main&cwd=else#where"), None).unwrap();
         assert_eq!(
             target.query_pairs().collect::<Vec<_>>(),
             vec![
@@ -136,10 +154,37 @@ mod tests {
     fn changes_url_rejects_missing_or_invalid_folders() {
         let origin = Url::parse("http://127.0.0.1:30141").unwrap();
         for cwd in ["", "   ", "C:\\src\0ignored"] {
-            assert!(changes_url(&origin, cwd, None).is_err());
+            assert!(changes_url(&origin, cwd, None, None).is_err());
         }
-        assert!(changes_url(&origin, &"a".repeat(32_769), None).is_err());
-        assert!(changes_url(&origin, "C:\\src", Some(&"x".repeat(257))).is_err());
+        assert!(changes_url(&origin, &"a".repeat(32_769), None, None).is_err());
+        assert!(changes_url(&origin, "C:\\src", Some(&"x".repeat(257)), None).is_err());
+    }
+
+    #[test]
+    fn only_main_at_the_trusted_origin_root_can_open_changes() {
+        let origin = Url::parse("http://127.0.0.1:30141/").unwrap();
+        assert!(validate_changes_caller("main", &origin, &origin).is_ok());
+        for label in ["conversation-123", "changes-123", "other"] {
+            assert!(validate_changes_caller(label, &origin, &origin).is_err());
+        }
+        for url in [
+            "http://127.0.0.1:30142/", "http://localhost:30141/",
+            "https://127.0.0.1:30141/", "http://127.0.0.1:30141/changes",
+            "http://user@127.0.0.1:30141/", "https://example.com/",
+        ] {
+            assert!(validate_changes_caller("main", &Url::parse(url).unwrap(), &origin).is_err());
+        }
+    }
+
+    #[test]
+    fn view_identifier_is_bounded_opaque_data_not_a_url_or_state_payload() {
+        let origin = Url::parse("http://127.0.0.1:38471").unwrap();
+        let id = "31b2ff61-9167-42ca-b241-8f95792acdf4";
+        let target = changes_url(&origin, r"C:\src", Some("draft-A"), Some(id)).unwrap();
+        assert_eq!(target.query_pairs().find(|(key, _)| key == "viewId").unwrap().1, id);
+        for value in ["", "../api/home", "https://example.com", "31b2ff61-9167-42ca-b241-8f95792acdfG", &id.to_uppercase(), &id[..35], &format!("{id}0")] {
+            assert!(changes_url(&origin, r"C:\src", None, Some(value)).is_err());
+        }
     }
 
     #[test]

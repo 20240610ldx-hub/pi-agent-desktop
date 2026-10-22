@@ -39,6 +39,8 @@ export const APP_PREF_KEYS = {
   /** Short-lived, explicitly addressed feedback from a Changes popout. */
   changesFeedbackRequest: "pi-changes-feedback-request-v1",
   changesFeedbackAck: "pi-changes-feedback-ack-v1",
+  /** Bounded local view summaries; only their random ID appears in popout URLs. */
+  changesWindowViews: "pi-changes-window-views-v1",
   /** Last open session / cwd / file tabs for desktop cold-start restore. */
   workspace: "pi-workspace-v1",
 } as const;

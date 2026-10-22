@@ -30,6 +30,7 @@ export const SIDEBAR_PIN_METADATA = {
 /** Replace every API/SSE boundary before opening the real app. No session/model writes. */
 export async function installSidebarPinFixture(context, base, report) {
   await context.addInitScript(({ key, metadata }) => {
+    if (window.top !== window || !/^https?:$/.test(window.location.protocol)) return;
     if (!sessionStorage.getItem("sidebar-pin-initialized")) {
       sessionStorage.setItem("sidebar-pin-initialized", "1");
       if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(metadata));
