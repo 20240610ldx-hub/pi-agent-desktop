@@ -3,7 +3,7 @@ id: PIL-0115
 title: 复刻验收：C01 主题、文字与图标
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T15:40Z
 branch: task/PIL-0115-parity-c01
@@ -68,3 +68,4 @@ waivers: []
 - 2026-10-21T12:54Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-22T02:28Z · claude:sonnet-high:impl · verify → in_progress：新参考到位，继续量测收紧
 - 2026-10-22T02:40Z · claude:sonnet-high:impl · 做了：新参考 main-window-native/2026-10-22 到位后量测并改 native-theme.css 本卡分节（共享 token）：三档文字色令牌指向灰阶梯（浅 900/600/400，深 50/200/400），CIEDE2000 对 3.1623 参考墨迹色由 1.9–4.0 降至 0（背景本就 0）；.markdown-body 行距 22.4→20px（参考 30 raw=20 CSS，改后实测 30 raw）；字号 14px 的 ink 带与参考同为 21 raw，顶栏图标 ink 与参考差 ≤1.3px 保持 18px。新增 1 条 C01 token 契约测试。改前改后对照 C01-delta.md / C01-delta-table.json，脚本 ref-measure2.mjs、ours.mjs、compare.mjs、de2000.mjs。自测：ChatAppearance 9 条通过，tsc 0，lint 0，guard 无问题，ui-menu-consistency 与 upstream-css-baseline 通过，npm test 12 失败均在 PIL-0113 基线内无新增。 / 状态：分支最后提交 2525b0d；A1/A2 浅深主题文字色、背景、正文行距已有同态量测并达标；窄窗、图标 disabled 色、100/125/150% 原生 DPI（本批仅 150% 一档）、应用缩放仍缺同态参考，记未运行；字体为 Anthropic Sans 私有字体不可发行，公开回退差异作 ink 残差 / 下一步：交验证（复核 C01-delta 量测，可用 ours.mjs 复现） / 风险：超出本卡 files 需派对应卡——侧栏卡：功能行行距参考≈26.5px 现32px、图标左缘参考20px 现≈25.5px、html:not(.dark) .app-sidebar --text-dim #6c6c71 与参考分区标签 #898781（浅色 ΔE≈10）、深色 --sidebar-project-label #7f7d77（ΔE≈4）、未选中会话行应用次要色而非主文字色、深色 --bg-selected 选中行底（参考#232323 现≈#1d1d1d，ΔE≈2.7）；顶栏卡：顶栏高度参考约36px 现45px、图标间距参考32px 现≈36.7px；.markdown-body 行距现由 C01 分节统一设置，C12 卡如需覆盖请改此处而非另起规则。色令牌改动影响全局，验证者请关注 --text-dim 在浅色下对比度（#898781 约3.5:1，原 #8a8a8a 相当）。
+- 2026-10-22T02:40Z · claude:sonnet-high:impl · in_progress → verify
