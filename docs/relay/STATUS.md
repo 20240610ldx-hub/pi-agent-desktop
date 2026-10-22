@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 131 张任务卡：todo 99 · in_progress 4 · verify 1 · review 0 · done 20 · blocked 2 · parked 5
+共 131 张任务卡：todo 98 · in_progress 4 · verify 1 · review 0 · done 20 · blocked 2 · parked 6
 
 ### 进行中 / 待验证 / 待评审
 
@@ -137,12 +137,11 @@
 | PIL-0208 | P2 | E2 | C12 助手正文与操作条补采与原生验收 | 是 | PIL-0014, PIL-0126 |
 | PIL-0209 | P2 | E2 | C08 输入器补采与原生验收 | 是 | PIL-0122 |
 | PIL-0210 | P2 | E2 | C29 Artifact 预览补采、重试保滚动与原生验收 | 是 | PIL-0143 |
-| PIL-0213 | P2 | E0 | tmp-shadow-tokens | 否 | — |
-| PIL-0214 | P2 | E0 | tmp-appshell-contracts | 否 | — |
-| PIL-0215 | P2 | E0 | tmp-settings-icon-catalogue | 否 | — |
-| PIL-0216 | P2 | E0 | tmp-sidebar-message-contracts | 否 | — |
-| PIL-0217 | P2 | E0 | tmp-branch-summary-fixture | 否 | — |
-| PIL-0218 | P2 | E0 | tmp-env-trust-windows | 否 | — |
+| PIL-0213 | P2 | E0 | 定义 --shadow-md / --shadow-sm 令牌（css-variables 基线失败） | 否 | PIL-0002 |
+| PIL-0214 | P2 | E0 | 对齐 AppShell 两处源码契约测试（desktop 门控、工作区可见性恢复） | 否 | PIL-0002 |
+| PIL-0215 | P2 | E0 | 修复子 agent 标签图标与推荐扩展目录数量测试 | 否 | PIL-0002 |
+| PIL-0216 | P2 | E0 | 修复侧栏触屏菜单可达与中断工具调用标记契约测试 | 否 | PIL-0002 |
+| PIL-0218 | P2 | E0 | 修复 Windows 下 PATH 键与 project-trust 隔离主目录测试 | 否 | PIL-0002 |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 | PIL-0207 | P3 | E2 | C08 分叉发送入口（待用户开启） | 是 | PIL-0122, PIL-0189 |
 

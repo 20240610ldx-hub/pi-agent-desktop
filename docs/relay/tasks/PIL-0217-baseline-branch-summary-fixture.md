@@ -3,7 +3,7 @@ id: PIL-0217
 title: tmp-branch-summary-fixture
 epic: E0
 priority: P2
-status: todo
+status: parked
 owner:
 lease_until:
 branch:
@@ -46,3 +46,4 @@ waivers: []
 
 ## 日志
 - 2026-10-22T11:19Z · planner · 创建
+- 2026-10-22T11:19Z · unknown · todo → parked：无需此卡：branch-summary-guard 夹具已由 PIL-0137 修复，当前基线 11 个失败
