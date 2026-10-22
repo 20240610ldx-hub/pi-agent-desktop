@@ -3,7 +3,7 @@ id: PIL-0147
 title: 复刻验收：C33 侧栏项目／会话、搜索、状态及重排
 epic: E2
 priority: P2
-status: in_progress
+status: verify
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-22T05:41Z
 branch: task/PIL-0147-parity-c33
@@ -68,3 +68,4 @@ waivers: []
 - 2026-10-22T03:05Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-22T03:06Z · claude:sonnet-high:impl · verify → in_progress：合入 C01 后改用令牌
 - 2026-10-22T03:13Z · claude:sonnet-high:impl · 做了：按协调者指示合入 C01/C02（因 pre-commit 守卫会把合并提交里的他卡文件判 R7/R8，改用 rebase 到 fusion/pi-claude-desktop，无合并提交），C33 分节中与 C01 令牌同值的色改为 var(--text-muted)/var(--text)/var(--text-dim)（导航/会话文字/选中文字/标签）；侧栏专属色保留并注明来源：选中底 #f0efec/#232323、导引线 #cbcbc9/#414141、深色 ··· 底 #343434、深色悬停 #232323；旧 html:not(.dark) .app-sidebar{--text-dim:#6c6c71} 已删除，我的覆盖也已删除。新提交 7c2dcce。 / 状态：颜色量测 ΔE 全部 0（16 项，同前）、悬停/··· /尾部槽位几何同前；node --test 六文件 61/61、tsc 0、lint 0、ui-menu-consistency 通过、guard 无问题、npm test 3610 项 12 失败且无新增（同基线）。 / 下一步：交验证。 / 风险：同前一次日志（无参考状态未量测、默认宽 259 由协调者另开卡）；rebase 改写了我本分支未推送的提交 sha（97439c3→7c2dcce）。
+- 2026-10-22T03:13Z · claude:sonnet-high:impl · in_progress → verify
