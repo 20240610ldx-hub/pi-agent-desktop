@@ -56,6 +56,7 @@ waivers: []
 | --- | --- | --- | --- | --- | --- |
 | A1 | 浏览器夹具状态矩阵（已验子集） | 通过 | D:\pilaude\relay-evidence\PIL-0133\verify\VERIFY-2.md | bdae54c | claude-cli:sonnet-high:verify |
 | A2 | 深色参考像素量测 ÷1.5，对勾/正文 ΔE00=0 | 通过 | D:\pilaude\relay-evidence\PIL-0133\verify\VERIFY-2.md | bdae54c | claude-cli:sonnet-high:verify |
+| A3 | node --test components/ModelSelector.test.mjs 浏览器层键盘/Escape/IME | 通过 | D:\pilaude\relay-evidence\PIL-0133\verify\VERIFY-2.md | 791669c | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -73,3 +74,4 @@ waivers: []
 - 2026-10-22T03:49Z · codex-plus:gpt-xhigh:impl · FIX2: 修复面板内点击误关菜单、删除硬编码 muted 色、星按钮方向键定位；新增2回归测试，13/13 通过
 - 2026-10-22T03:53Z · claude-cli:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T03:53Z · claude-cli:sonnet-high:verify · 证据 A2：通过
+- 2026-10-22T03:53Z · claude-cli:sonnet-high:verify · 证据 A3：通过
