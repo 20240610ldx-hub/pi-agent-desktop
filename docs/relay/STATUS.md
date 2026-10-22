@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 124 张任务卡：todo 93 · in_progress 3 · verify 2 · review 0 · done 19 · blocked 2 · parked 5
+共 125 张任务卡：todo 94 · in_progress 3 · verify 2 · review 0 · done 19 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -76,6 +76,7 @@
 | PIL-0202 | P1 | E4 | 子代理与 child 会话的授权上限与撤权 | 是 | PIL-0030, PIL-0203 |
 | PIL-0203 | P1 | E4 | 公开审批服务、入口覆盖清单与未覆盖入口默认拒绝 | 是 | PIL-0030 |
 | PIL-0211 | P1 | E2 | C16 工具步骤补采与原生验收 | 是 | PIL-0130 |
+| PIL-0212 | P1 | E2 | C23 滚动跟随补采与原生验收 | 否 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0020 | P2 | E3 | 本地数据隔离与凭据加密验收 | 否 | — |
 | PIL-0060 | P2 | E7 | 定时任务接入授权与浏览器 | 否 | PIL-0030 |
