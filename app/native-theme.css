@@ -11098,16 +11098,17 @@ html.dark .composer-keycap { border-color: #4d4d4c; color: #c3c2b7; }
 /* end C08 */
 
 /* C16 工具步骤、参数结果与紧凑命令 */
-/* 量测依据：main-window-native/2026-10-22/06 原像素 ÷ 1.5（命令盒 42.7 高、距卡片 7.3、
-   文字距盒边 8.7、行距 ≈ 17、结果块上 ≈ 11 / 下 ≈ 9）。无同态参考的富视图不在此改。 */
+/* 量测依据：main-window-native/2026-10-22/06 原像素 ÷ 1.5（命令盒外高 44.0、距卡片 7.0、
+   文字距盒边 8.7、行距 ≈ 17.3、结果首行字墨距盒 13.7、末行字墨距底边 9.3）。
+   这些变量只作用于 [data-command-layout="compact"]；无同态参考的富视图不在此改。 */
 .tool-call-row {
   --c16-tool-gap: 7px;
   --c16-tool-inset-x: 8px;
-  --c16-tool-inset-y: 3px;
+  --c16-tool-inset-y: 3.7px;
   --c16-command-inset-inline: 6px;
   --c16-tool-line: 1.42;
   --c16-result-inset-top: 11px;
-  --c16-result-inset-bottom: 9px;
+  --c16-result-inset-bottom: 7px;
 }
 .tool-call-row[data-command-layout="compact"] .tool-call-command-line {
   gap: var(--c16-tool-gap);

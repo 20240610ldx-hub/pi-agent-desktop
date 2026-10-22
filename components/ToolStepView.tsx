@@ -619,9 +619,9 @@ function ResultImages({ images, isError }: { images: ImageContent[]; isError: bo
     <div
       style={{
         display: "flex",
-        gap: 6,
+        gap: 8,
         flexWrap: "wrap",
-        padding: "var(--c16-tool-inset-y) var(--c16-tool-inset-x)",
+        padding: "10px",
         background: "var(--bg)",
         borderTop: `1px solid ${isError ? "rgba(248,113,113,0.3)" : "rgba(34,197,94,0.15)"}`,
       }}
@@ -682,7 +682,7 @@ function PairedResult({ text, isEmpty, isError }: {
       <pre
         style={{
           margin: 0,
-          padding: "var(--c16-tool-inset-y) var(--c16-tool-inset-x)",
+          padding: "8px 10px",
           color: isError ? "var(--danger)" : (isEmpty ? "var(--text-dim)" : "var(--text-muted)"),
           fontSize: "calc(12px + var(--chat-font-size-offset, 0px))",
           lineHeight: 1.5,

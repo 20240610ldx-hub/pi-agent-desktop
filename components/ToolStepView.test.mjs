@@ -91,9 +91,9 @@ test("compact tool step keeps measured geometry in desktop and narrow viewports"
       return { width: card.width, commandHeight: command.height, commandLeft: command.left - card.left, commandRight: card.right - command.right, textTop: text.top - command.top, textLeft: text.left - command.left, overflow: row.scrollWidth - row.clientWidth };
     });
     console.log(`ToolStepView geometry at viewport ${width}px: ${JSON.stringify(metrics)}`);
-    // 3.1623 native 06-tool-group (dark), original px / 1.5: command box 42.7 high, 7.3 from the card edge.
+    // 3.1623 native 06-tool-group (dark), original px / 1.5: command box 44.0 high (66px / 1.5), 7.3 from the card edge.
     if (width === 1200) {
-      assert.ok(Math.abs(metrics.commandHeight - 42.7) <= 1, `command box height ${metrics.commandHeight}`);
+      assert.ok(Math.abs(metrics.commandHeight - 44.0) <= 1, `command box height ${metrics.commandHeight}`);
       assert.ok(Math.abs(metrics.commandLeft - 7.3) <= 1, `command box inset ${metrics.commandLeft}`);
       assert.ok(Math.abs(metrics.commandRight - 7.3) <= 1, `command box inset ${metrics.commandRight}`);
       assert.ok(Math.abs(metrics.textLeft - 23.3) <= 1, `command text inset ${metrics.textLeft}`);
