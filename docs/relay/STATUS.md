@@ -46,7 +46,7 @@
 | PIL-0001 | P0 | E0 | 接力治理落地与工作树分流 | 是 | — |
 | PIL-0002 | P0 | E0 | 建立可信的测试基线并逐项登记已知失败 | 是 | — |
 | PIL-0010 | P1 | E2 | Changes 面板在独立窗口打开（功能迁入与浏览器层验证） | 是 | PIL-0001 |
-| PIL-0030 | P1 | E4 | 统一执行前授权并接入 pi-permission-system（普通 coding 会话授权门） | 否 | PIL-0001 |
+| PIL-0030 | P1 | E4 | 统一执行前授权并接入 pi-permission-system（普通 coding 会话授权门） | 是 | PIL-0001 |
 | PIL-0040 | P1 | E5 | 受控浏览器 | 否 | PIL-0030 |
 | PIL-0050 | P1 | E6 | 多代理完整流程与 pi-subagents 适配 | 否 | PIL-0030, PIL-0202 |
 | PIL-0071 | P1 | E8 | pi-web-access 接入普通会话 | 是 | PIL-0001 |
