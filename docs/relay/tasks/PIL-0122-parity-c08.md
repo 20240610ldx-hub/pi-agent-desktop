@@ -3,7 +3,7 @@ id: PIL-0122
 title: 复刻验收：C08 输入器主框与提交控件
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: claude-cli:sonnet-high:impl
 lease_until: 2026-10-22T10:23Z
 branch: task/PIL-0122-parity-c08
@@ -70,3 +70,4 @@ waivers: []
 - 2026-10-22T07:34Z · claude-cli:sonnet-high:impl · 做了：卡内单行布局+发送提示(dea19aa) / 状态：A1/A2 部分，分叉发送因 consumer 不在范围未做，A3/A4/A5 未跑；额度用尽 / 下一步：读 evidence/PIL-0122/impl/HANDOFF.md，补测试、窄窗/多行/busy 量测、npm test 对比基线 / 风险：+ 位置与 PIL-0123 交叠
 - 2026-10-22T07:35Z · claude-cli:sonnet-high:impl · 协调者：分叉发送 UI（提示第二行、Ctrl+Alt+Enter、置灰、i18n）按 2026-10-21 用户决定 分叉发送先隐藏不在本卡实现，验收中相关项待拆卡；CLI 额度重置后继续剩余项（组件测试、夹具报错、窄窗/多行/busy、提示颜色基线、npm test 对比）。
 - 2026-10-22T07:55Z · claude-cli:sonnet-high:impl · implementer：量测校准(卡内行起点/文字基线/发送图标/聚焦亮边框/键帽色，ΔE≤2)、补 5 项 ChatInput 测试、窄窗底栏空首列修复；tsc/lint/guard/定向71通过，npm test 12 失败与基线逐名一致；分叉发送移出待拆卡，麦克风不渲染；提交 2a40c84，待验证。交接见 relay-evidence/PIL-0122/impl/HANDOFF.md
+- 2026-10-22T07:55Z · claude-cli:sonnet-high:impl · in_progress → verify
