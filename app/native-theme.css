@@ -10979,10 +10979,15 @@ html.dark .app-shell .session-sidebar .session-item { --bg-hover: #232323; }
   max-height: none;
   aspect-ratio: 1;
   object-fit: contain;
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
-/* Send glyph: ink 13.3x11.3 with a ~1.1px stroke, centre 1.7px below the button centre (3.1623 composer-tooltips-light 01). */
-.app-shell .chat-composer:not([data-compact]) .composer-send-button[data-action="send"] svg { width: 19px; height: 19px; stroke-width: 1; transform: translateY(2.3px); }
+/* 3.1623 composer-attachments-dark 04: 1px #444 ring on the tile; light has no capture, so it keeps the hairline token. */
+html.dark .app-shell .chat-composer:not([data-compact]) .composer-attachment-image { border-color: #444; }
+/* 3.1623 04: the attach button carries no fill while attachments are present; hover keeps its fill. */
+.app-shell .chat-composer:not([data-compact]) .composer-attach-button[data-active]:not(:hover) { background: transparent; }
+/* Send glyph: ink 13.3x11.3 with a ~1.1px stroke; ink centre sits ~22.3px above the card bottom border (verifier recheck against the mic row of 3.1623 composer-tooltips-light 01). */
+.app-shell .chat-composer:not([data-compact]) .composer-send-button[data-action="send"] svg { width: 19px; height: 19px; stroke-width: 1; transform: translateY(0.4px); }
 .composer-send-tooltip {
   position: absolute;
   left: 50%;

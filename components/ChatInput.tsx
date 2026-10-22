@@ -1460,6 +1460,15 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const [sendTipOpen, setSendTipOpen] = useState(false);
   const sendTipId = useId();
   const sendTipAvailable = !compact && !isMobile && !isStreaming && !sendDisabled;
+  // A hovered hint can outlive focus (the pointer is on Send, the caret in the
+  // textarea), so Escape closes it from the document. Listen-only: Escape keeps
+  // its other jobs (stop the agent, close menus) because nothing is stopped here.
+  useEffect(() => {
+    if (!sendTipOpen) return;
+    const onKey = (e: { key: string }) => { if (e.key === "Escape") setSendTipOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sendTipOpen]);
   const sendShortcutNeedsCtrl = isMobile || enterSendMode === "ctrlEnter";
   // Warn when images are attached but the selected model is known not to accept
   // image input (#584), including a resolved default. Unknown models stay silent.

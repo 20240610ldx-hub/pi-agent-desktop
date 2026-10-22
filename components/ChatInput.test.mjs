@@ -1438,3 +1438,63 @@ test("C08 send hint wiring: hover, keyboard focus, Escape and blur, tooltip role
   // No fork-send row until PIL-0189 has a real consumer in the shell (moved out of C08).
   assert.doesNotMatch(src, /composer-fork|forkSend|sendInFork/);
 });
+
+test("C08 verifier F1-F4: browser-level Escape closes a hovered hint; attach fill, tile ring and send glyph offset", async (t) => {
+  const { build } = await import("esbuild");
+  const { chromium } = await import("playwright");
+  const { fileURLToPath } = await import("node:url");
+  const project = fileURLToPath(new URL("../", import.meta.url));
+  const bundle = (await build({
+    stdin: { contents: `import React from "react";
+      import {createRoot} from "react-dom/client";
+      import {I18nProvider} from "./hooks/useI18n";
+      import {ChatInput} from "./components/ChatInput";
+      createRoot(document.getElementById("root")).render(<I18nProvider><div className="app-shell" style={{width:820,margin:"0 auto",position:"relative"}}><div className="chat-composer-column"><ChatInput onSend={()=>{}} onAbort={()=>{}} isStreaming={false} onSetAutomation={()=>{}} model={{provider:"anthropic",id:"opus"}} modelList={[]} draftKey="c08-f"/></div></div></I18nProvider>);`, resolveDir: project, loader: "tsx" },
+    bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic", logLevel: "silent", define: { "process.env.NODE_ENV": '"development"' }, loader: { ".css": "empty" }, tsconfig: fileURLToPath(new URL("../tsconfig.json", import.meta.url)),
+  })).outputFiles[0].text;
+  const css = ["app/globals.css", "app/settings.css", "vendor/open-claude-ui/cds-theme.css", "app/native-theme.css"]
+    .map((f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8")).join("\n").replace(/^@import[^;]*;/gm, "");
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const browser = await chromium.launch({ headless: true });
+  t.after(() => browser.close());
+  for (const theme of ["light", "dark"]) {
+    const page = await browser.newPage({ viewport: { width: 1000, height: 500 }, deviceScaleFactor: 1.5, reducedMotion: "reduce" });
+    await page.route("**/*", (r) => {
+      const u = r.request().url();
+      if (u === "https://c08.fixture/") return r.fulfill({ contentType: "text/html", body: `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body style="margin:0;padding:80px 0 0;background:var(--bg)"><div id="root"></div><script>${bundle.replaceAll("</script", "<\/script")}</script></body></html>` });
+      return u.includes("/api/") ? r.fulfill({ contentType: "application/json", body: '{"data":{}}' }) : r.abort();
+    });
+    await page.goto("https://c08.fixture/");
+    await page.evaluate((th) => document.documentElement.classList.toggle("dark", th === "dark"), theme);
+    const ta = page.locator(".chat-input-textarea");
+    await ta.fill("继续推进这个任务");
+    // F3: pointer on Send, caret in the textarea; Escape must close the hint.
+    await page.locator(".composer-send-button").hover();
+    assert.equal(await page.locator(".composer-send-tooltip").count(), 1, `${theme}: hint opens on hover`);
+    await ta.focus();
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator(".composer-send-tooltip").count(), 0, `${theme}: Escape closes the hovered hint`);
+    // F4: send glyph is nudged by 0.4px, not the earlier 2.3px.
+    const sendTransform = await page.evaluate(() => getComputedStyle(document.querySelector('.composer-send-button[data-action="send"] svg')).transform);
+    assert.equal(sendTransform, "matrix(1, 0, 0, 1, 0, 0.4)");
+    // F1/F2: attachments present.
+    await page.locator("input[type=file]").first().setInputFiles({ name: "t.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
+    await page.waitForSelector(".composer-attachment-image");
+    await page.mouse.move(5, 5);
+    const m = await page.evaluate(() => {
+      const a = document.querySelector(".composer-attach-button"), i = document.querySelector(".composer-attachment-image");
+      const ci = getComputedStyle(i);
+      return { active: a.hasAttribute("data-active"), bg: getComputedStyle(a).backgroundColor, bw: ci.borderTopWidth, bs: ci.borderTopStyle, bc: ci.borderTopColor };
+    });
+    assert.equal(m.active, true);
+    assert.equal(m.bg, "rgba(0, 0, 0, 0)", `${theme}: attach button has no fill with attachments`);
+    assert.equal(m.bs, "solid");
+    assert.equal(m.bw, "1px");
+    if (theme === "dark") assert.equal(m.bc, "rgb(68, 68, 68)");
+    await page.locator(".composer-attach-button").hover();
+    await page.waitForTimeout(400);
+    const hoverBg = await page.evaluate(() => getComputedStyle(document.querySelector(".composer-attach-button")).backgroundColor);
+    assert.notEqual(hoverBg, "rgba(0, 0, 0, 0)", `${theme}: hover keeps its fill`);
+    await page.close();
+  }
+});
