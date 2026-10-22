@@ -68,3 +68,4 @@ waivers: []
 - 2026-10-21T12:33Z · claude:sonnet-high:planner · 冻结前修订第3轮：A5 补跑共享/壳层既有测试（只运行不改写）：MessageView.test.mjs；G1 ΔE 固定 CIEDE2000 与 3.1623 换算（÷1.5）；G4 基准改 3.1623.0.0 并写明 3.1623 参考覆盖/待补采；G6 删除过期文字
 - 2026-10-21T12:36Z · planner · 冻结验收标准 8feff7797176
 - 2026-10-22T07:57Z · codex-plus:luna-high:impl · 领取，租约至 2026-10-22T10:57Z
+- 2026-10-22T08:20Z · codex-plus:luna-high:impl · 协调者决定：本卡的核心是把 MessageView.tsx 的 ToolCallBlock 及其工具 helper 迁到 ToolStepView.tsx；授权在 MessageView.tsx 中仅做 删除被迁出的块 + import 新组件的改动，不改其他逻辑。因 MessageView.tsx 现由 PIL-0126 持有且在返工，本卡等 PIL-0126 合入后再串行实施。luna 试跑首轮正确识别范围并停止，无代码改动。
