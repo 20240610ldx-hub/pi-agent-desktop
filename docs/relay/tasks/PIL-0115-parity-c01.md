@@ -58,6 +58,7 @@ waivers: []
 | A2 | next dev --webpack，1706x1017 DSF1.5 浏览器层；ink 色 CIEDE2000 对 00/01 原生：正文/导航/占位/暗侧栏标题 ΔE 0~0.4 通过，行距 20 vs 19.97 通过，T 大写高 10.0=10.0；但亮侧栏会话标题 21.55、亮侧栏分组/项目标题 12.26（旧规则 native-theme.css:2632 覆盖 --text-dim）、暗侧栏会话 3.65/项目名 3.74 超 ΔE2；图标中心 x 参考 26.0 实现 33.0、尺寸未对齐，PilaudeIcon 零改动。字体不同为残差 | 失败 | D:/pilaude/relay-evidence/PIL-0115/verify/compare-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-light-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-dark-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md | 2525b0d | claude:sonnet-high:verify |
 | A3 | 无同态原生参考；100/125/150% 原生 DPI 与应用缩放、主题切换器键盘均未由验证者运行 | 未运行 | D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md | 2525b0d | claude:sonnet-high:verify |
 | A4 | 仅测 Latin 'T' 大写高与行距；中文/数字/标点 ink 边界与基线无公开字体对照，未运行 | 未运行 | D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md | 2525b0d | claude:sonnet-high:verify |
+| A5 | node --test components/ChatAppearance.test.mjs 9/9; tsc --noEmit 0; npm run lint 0; npm test 3582/12 失败=PIL-0113 基线 12 名新增 0; relay guard --task PIL-0115 无问题; upstream-css-baseline 4/4（夹具/源码契约层，非视觉） | 通过 | D:/pilaude/relay-evidence/PIL-0115/verify/A5-chatappearance.log; D:/pilaude/relay-evidence/PIL-0115/verify/A5-tsc.log; D:/pilaude/relay-evidence/PIL-0115/verify/A5-lint.log; D:/pilaude/relay-evidence/PIL-0115/verify/A5-npm-test.log; D:/pilaude/relay-evidence/PIL-0115/verify/npm-fail-head.txt; D:/pilaude/relay-evidence/PIL-0115/verify/A5-guard.log | 2525b0d | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -77,3 +78,4 @@ waivers: []
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A2：失败
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A3：未运行
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A4：未运行
+- 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A5：通过
