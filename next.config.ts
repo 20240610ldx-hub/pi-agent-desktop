@@ -66,6 +66,7 @@ const nextConfig: NextConfig = {
     "undici",
     "web-push",
     "@juicesharp/rpiv-todo",
+    "pi-powerline-footer",
     "@juicesharp/rpiv-config",
     "@earendil-works/pi-coding-agent",
     "@earendil-works/pi-agent-core",

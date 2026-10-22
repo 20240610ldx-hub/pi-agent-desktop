@@ -105,7 +105,8 @@ export function ExtensionWidgets({ widgets }: { widgets: ExtensionWidgetItem[] }
   if (widgets.length === 0) return null;
 
   const primaryWidget = widgets.find((widget) => widget.key === "powerline-top" && widget.lines.length === 1);
-  const expandableWidgets = widgets.filter((widget) => widget !== primaryWidget);
+  const expandableWidgets = widgets.filter((widget) => widget !== primaryWidget
+    && (widget.key !== "powerline-secondary" || widget.lines.length > 0));
   const expandedWidget = expandableWidgets.find((widget) => (
     widget.key === expandedWidgetKey
     && widget.lines.length > 0

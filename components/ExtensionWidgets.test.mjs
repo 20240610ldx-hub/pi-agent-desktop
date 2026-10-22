@@ -42,6 +42,15 @@ test("renders short extension widgets without a truncation marker", () => {
   assert.doesNotMatch(html, /[\u2191\u2193]/);
 });
 
+test("an empty powerline footer does not add a zero-line trigger beside its primary", () => {
+  const html = renderWidgets({ widgets: [
+    { key: "powerline-top", lines: ["Model context"], placement: "aboveEditor" },
+    { key: "powerline-secondary", lines: [], placement: "belowEditor" },
+  ] });
+  assert.match(html, /extension-widget-primary/);
+  assert.doesNotMatch(html, /powerline-secondary|extension-widget-triggers/);
+});
+
 test("collapses long widgets by default", () => {
   const lines = Array.from(
     { length: 12 },

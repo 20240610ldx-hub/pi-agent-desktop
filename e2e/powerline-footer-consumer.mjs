@@ -10,6 +10,8 @@ import { createAgentSessionServices, createAgentSessionFromServices, ModelRuntim
 import { createJiti } from "jiti";
 import { installActivityFixture } from "./activity-disclosure.mjs";
 
+// Fixture layer: real package/SDK/wrapper, intercepted browser API/SSE. This does
+// not test Next bundling; powerline-footer-next-dev.mjs covers the real app layer.
 const base = process.env.E2E_BASE_URL || "http://127.0.0.1:30142";
 const plain = lines => stripVTControlCharacters(lines.join("\n"));
 
@@ -17,6 +19,7 @@ async function realPrimary() {
   const root = await mkdtemp(join(tmpdir(), "pilaude-footer-browser-"));
   const agentDir = join(root, "agent");
   await mkdir(agentDir);
+  await writeFile(join(agentDir, "settings.json"), JSON.stringify({ powerline: { welcome: false, layout: { left: ["model", "thinking", "context_pct"], right: [], secondary: [] } } }));
   const jiti = createJiti(import.meta.url, { fsCache: false, tsconfigPaths: true });
   const { createBuiltinPowerlineExtension } = await jiti.import("../lib/builtin-powerline-extension.ts");
   const { AgentSessionWrapper } = await jiti.import("../lib/rpc-manager.ts");
@@ -41,24 +44,25 @@ async function realPrimary() {
   const snapshot = async () => {
     const state = await wrapper.send({ type: "get_state" });
     const wire = events.findLast(event => event.method === "setWidget" && event.widgetKey === "powerline-top" && event.widgetLines);
-    assert.deepEqual(state.extensionWidgets[0].lines, wire.widgetLines);
+    assert.deepEqual(state.extensionWidgets.find(widget => widget.key === "powerline-top").lines, wire.widgetLines);
     return { state, wire, text: plain(wire.widgetLines) };
   };
   return { async unknown() {
     const leaf = manager.appendMessage({ role: "user", content: "Generated unestimated compaction context.", timestamp: 1800000000000 });
     manager.appendCompaction("Generated compaction, no model call.", leaf, 100);
     await session.extensionRunner.emit({ type: "session_compact", compactionEntry: manager.getLeafEntry(), fromExtension: true });
+    await new Promise(resolve => setTimeout(resolve, 80));
     assert.equal(session.getContextUsage().tokens, null);
     return snapshot();
-  }, async selectB() { await session.setModel(faux.getModel("footer-b")); return snapshot(); }, snapshot,
-  async close() { wrapper.destroy(); await wrapper.waitUntilDisposed(); assert.equal(faux.state.callCount, 0); await rm(root, { recursive: true, force: true }); } };
+  }, async selectB() { await session.setModel(faux.getModel("footer-b")); await new Promise(resolve => setTimeout(resolve, 80)); return snapshot(); }, snapshot,
+  async close() { await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" }); wrapper.destroy(); await wrapper.waitUntilDisposed(); assert.equal(faux.state.callCount, 0); await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); } };
 }
 
 export async function runPowerlineFooterConsumer() {
   const out = new URL(`../test-results/pilaude/powerline-footer-consumer/run-${Date.now()}/`, import.meta.url);
   await mkdir(out, { recursive: true });
   const artifact = name => fileURLToPath(new URL(name, out));
-  const report = { status: "running", base, source: "installed pi-powerline-footer 0.20.2 public renderer -> actual SDK -> complete wrapper -> intercepted browser API/SSE", checks: [], captures: [], measurements: [], violations: [], apiRequests: [], interceptedWrites: [], externalRequests: [], thinkingRequests: [], pageErrors: [], consoleErrors: [] };
+  const report = { status: "running", base, source: "FIXTURE layer: installed pi-powerline-footer 0.20.2 full entry -> actual SDK -> wrapper -> intercepted browser API/SSE; real Next bundling is covered separately by powerline-footer-next-dev.mjs", checks: [], captures: [], measurements: [], violations: [], apiRequests: [], interceptedWrites: [], externalRequests: [], thinkingRequests: [], pageErrors: [], consoleErrors: [] };
   let browser, page, core;
   try {
     core = await realPrimary();
@@ -132,7 +136,7 @@ export async function runPowerlineFooterConsumer() {
     await primary.getByText("Footer Primary A", { exact: false }).waitFor();
     assert.equal(await primary.count(), 1);
     assert.equal(await primary.innerText(), current.text);
-    assert.match(current.text, /\?\/200k/);
+    assert.match(current.text, /~.*\/200k/, "upstream estimates unknown context after compaction");
     assert.equal(await page.locator(".extension-widget-key").filter({ hasText: "powerline-top" }).count(), 0);
     const input = page.locator(".chat-input-textarea");
     const draft = "Generated footer draft 😀 stays in the composer";
@@ -145,12 +149,12 @@ export async function runPowerlineFooterConsumer() {
     await page.evaluate(event => window.__footerEmit(event), current.wire);
     await page.waitForFunction(text => document.querySelector(".extension-widget-primary")?.textContent === text, current.text);
     assert.match(await primary.innerText(), /Footer Primary B/);
-    assert.match(await primary.innerText(), /\?\/64k/);
+    assert.match(await primary.innerText(), /~.*\/64k/);
     assert.equal(await otherTrigger.getAttribute("aria-expanded"), "false");
     assert.equal(await input.inputValue(), draft);
     assert.equal(await input.evaluate(element => element === window.__footerInput), true);
     assert.equal(await input.evaluate(element => element === document.activeElement), true);
-    report.checks.push("Published model/context is directly visible, true unknown stays ?, update preserves another widget choice and exact draft/focus/node");
+    report.checks.push("Full package model/context is directly visible, upstream estimated context carries ~, update preserves another widget choice and exact draft/focus/node");
     const connections = await page.evaluate(() => window.__footerConnections);
     await page.evaluate(() => window.__footerReconnect());
     await page.waitForFunction(count => window.__footerConnections > count, connections);
