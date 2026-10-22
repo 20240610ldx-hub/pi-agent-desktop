@@ -142,20 +142,44 @@ fn spawn_exit_watchdog(grace: Duration, on_stalled: impl FnOnce() + Send + 'stat
 /// The `RunEvent::Exit` cleanup, run by hand because the event loop never got
 /// to it, followed by the end of the process.
 fn force_exit(app: &AppHandle) -> ! {
-    desktop_log(
-        app,
-        &format!(
-            "exit forced: event loop did not stop within {}ms of the quit request",
-            EXIT_GRACE.as_millis()
-        ),
+    forced_exit_sequence(
+        |line| desktop_log(app, line),
+        || {
+            if let Some(state) = app.try_state::<crate::keep_awake::KeepAwakeState>() {
+                state.release();
+            }
+        },
+        || {
+            #[cfg(target_os = "linux")]
+            crate::remove_instance_lock();
+        },
+        || {
+            if let Some(server) = app.try_state::<DesktopServer>() {
+                server.stop();
+            }
+        },
     );
-    if let Some(state) = app.try_state::<crate::keep_awake::KeepAwakeState>() {
-        state.release();
-    }
-    if let Some(server) = app.try_state::<DesktopServer>() {
-        server.stop();
-    }
     std::process::exit(0)
+}
+
+/// Order of a forced exit: say why, release the OS-visible resources, then
+/// write the same `exit` line the normal `RunEvent::Exit` path writes (marked
+/// `(forced)`), so "the app exited" is one searchable fact in `desktop.log`.
+/// The `exit` line comes last: it means the cleanup is done.
+fn forced_exit_sequence(
+    mut log: impl FnMut(&str),
+    release_keep_awake: impl FnOnce(),
+    remove_instance_lock: impl FnOnce(),
+    stop_server: impl FnOnce(),
+) {
+    log(&format!(
+        "exit forced: event loop did not stop within {}ms of the quit request",
+        EXIT_GRACE.as_millis()
+    ));
+    release_keep_awake();
+    remove_instance_lock();
+    stop_server();
+    log("exit (forced)");
 }
 
 #[tauri::command]
@@ -218,7 +242,8 @@ pub fn open_external(url: &Url) {
 
 #[cfg(test)]
 mod tests {
-    use super::spawn_exit_watchdog;
+    use super::{forced_exit_sequence, spawn_exit_watchdog};
+    use std::cell::RefCell;
     use std::sync::mpsc;
     use std::time::Duration;
 
@@ -239,5 +264,29 @@ mod tests {
         });
         assert!(rx.recv_timeout(Duration::from_millis(50)).is_err());
         assert!(rx.recv_timeout(Duration::from_secs(2)).is_ok());
+    }
+
+    #[test]
+    fn forced_exit_cleans_up_in_order_and_logs_exit_last() {
+        let events = RefCell::new(Vec::<String>::new());
+        forced_exit_sequence(
+            |line| events.borrow_mut().push(format!("log:{line}")),
+            || events.borrow_mut().push("keep-awake".into()),
+            || events.borrow_mut().push("instance-lock".into()),
+            || events.borrow_mut().push("server".into()),
+        );
+        let events = events.into_inner();
+        assert_eq!(events.len(), 5);
+        assert!(events[0].starts_with("log:exit forced"));
+        assert_eq!(&events[1..4], ["keep-awake", "instance-lock", "server"]);
+        assert_eq!(events[4], "log:exit (forced)");
+    }
+
+    #[test]
+    fn forced_exit_writes_a_line_starting_with_exit() {
+        let lines = RefCell::new(Vec::<String>::new());
+        forced_exit_sequence(|l| lines.borrow_mut().push(l.to_string()), || {}, || {}, || {});
+        let lines = lines.into_inner();
+        assert!(lines.iter().any(|l| l == "exit" || l.starts_with("exit (")));
     }
 }
