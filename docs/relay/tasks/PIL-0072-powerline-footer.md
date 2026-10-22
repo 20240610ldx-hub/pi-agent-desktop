@@ -49,3 +49,4 @@ waivers: []
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
 - 2026-10-22T11:17Z · claude-cli:sonnet-high:impl · 领取，租约至 2026-10-22T14:17Z
+- 2026-10-22T11:46Z · claude-cli:sonnet-high:impl · 做了：带入 wip 的 powerline 适配与 e2e，装 pi-powerline-footer@0.20.2，primary 行加不透明 CSS 与重叠断言，THIRD_PARTY_NOTICES 记 LICENSE 缺口 / 状态：分支最后提交 59655a70，A1-A5 自测完成，A4 待用户决定打包，npm test 11 失败均在基线 12 内 / 下一步：交验证 / 风险：installer 不含该包时 factory 会抛错；无 3.1623 参考，量测待参考；交接 relay-evidence/PIL-0072/impl/HANDOFF.md
