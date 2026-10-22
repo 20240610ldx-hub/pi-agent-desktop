@@ -56,7 +56,7 @@ import {
 } from "@/lib/chat-lazy-load";
 import { findChatScrollAnchor, type ChatScrollPosition } from "@/lib/chat-scroll-position";
 import { useI18n } from "@/hooks/useI18n";
-import { canFollowStream } from "@/lib/cds-scroll";
+import { canFollowStream, revealScrollToLatest } from "@/lib/cds-scroll";
 import { branchSummaryHolds, useBranchSummary } from "@/hooks/useBranchSummary";
 import { compactNoopMessage, useCompactNotice } from "@/hooks/useCompactNotice";
 import { useScopeWarningDismissal } from "@/hooks/useScopeWarningDismissal";
@@ -470,6 +470,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const lastUserScrollInputAtRef = useRef(-Infinity);
   const previousScrollTopRef = useRef(0);
   const liveFollowFrameRef = useRef<number | null>(null);
+  // Set by the "back to latest" button until the view reaches the tail or the
+  // reader scrolls again; keeps a prepend that lands mid-jump from undoing it.
+  const latestIntentRef = useRef(false);
   const executeBashRef = useRef<(command: string, excludeFromContext: boolean) => Promise<void> | undefined>(undefined);
   const handleNavigateRef = useRef<((entryId: string) => Promise<boolean>) | undefined>(undefined);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -558,6 +561,20 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     container.scrollTo({ top: container.scrollHeight, behavior });
     previousScrollTopRef.current = container.scrollTop;
   }, []);
+
+  // "Back to latest": re-attach to the live tail now rather than when the
+  // animation ends. A smooth scroll aims at the scrollHeight of the click, so
+  // while a run streams it lands short of the tail and never re-attaches.
+  const scrollToLatest = useCallback(() => {
+    if (liveFollowFrameRef.current !== null) {
+      cancelAnimationFrame(liveFollowFrameRef.current);
+      liveFollowFrameRef.current = null;
+    }
+    latestIntentRef.current = true;
+    isNearBottomRef.current = true;
+    lastUserScrollInputAtRef.current = -Infinity;
+    scrollToBottom(agentRunningRef.current ? "auto" : "smooth");
+  }, [scrollToBottom]);
 
   // ── Render-phase session-switch bookkeeping ──
   // Save the departing session's scroll position now, while the DOM still
@@ -978,7 +995,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       // A "before" request prepends history; it is not a new tail message.
       // Keep the message-length layout effect from pulling the reader back to
       // the bottom before the browser delivers its pending scroll event.
-      if (before) isNearBottomRef.current = false;
+      if (before && !latestIntentRef.current) isNearBottomRef.current = false;
       setHistoryCursor(d.context.oldestEntryId);
       setHasEarlierMessages(d.context.hasMore);
       setData((prev) => {
@@ -2860,7 +2877,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       );
       isNearBottomRef.current = isAttached;
       previousScrollTopRef.current = scrollTop;
-      const shouldShow = shouldShowScrollToLatest(scrollTop, clientHeight, scrollHeight);
+      const detached = shouldShowScrollToLatest(scrollTop, clientHeight, scrollHeight);
+      if (!detached) latestIntentRef.current = false;
+      const shouldShow = revealScrollToLatest(detached, isAgentRunning && isAttached);
       setShowScrollToBottom((previous) => (previous === shouldShow ? previous : shouldShow));
       if (!wasAttached && isAttached && isAgentRunning && canFollowStream(lastUserScrollInputAtRef.current, performance.now())) {
         scrollToBottom("auto");
@@ -3017,17 +3036,16 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     const markUserInput = (event: Event) => {
       if (event instanceof KeyboardEvent && !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) return;
       lastUserScrollInputAtRef.current = performance.now();
+      latestIntentRef.current = false;
       if (liveFollowFrameRef.current !== null) {
         cancelAnimationFrame(liveFollowFrameRef.current);
         liveFollowFrameRef.current = null;
       }
     };
     for (const type of ["wheel", "touchstart", "keydown"]) container.addEventListener(type, markUserInput, { passive: true });
-    container.addEventListener("pointerdown", markUserInput, { passive: true });
     container.addEventListener("scroll", handleScrollPositionChange, { passive: true });
     return () => {
       for (const type of ["wheel", "touchstart", "keydown"]) container.removeEventListener(type, markUserInput);
-      container.removeEventListener("pointerdown", markUserInput);
       container.removeEventListener("scroll", handleScrollPositionChange);
     };
   }, [messages.length, loading, handleScrollPositionChange]);
@@ -3059,6 +3077,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
             previousScrollTopRef.current = container.scrollTop;
           }
         }
+      } else if (latestIntentRef.current && isNearBottomRef.current) {
+        // A page of older history landed after "back to latest": finish the jump.
+        scrollToBottom("auto");
       } else if (!agentRunningRef.current && isNearBottomRef.current && canFollowStream(lastUserScrollInputAtRef.current, performance.now())) {
         scrollToBottom("auto");
       }
@@ -3189,7 +3210,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     cancelEdit: editEntryId ? cancelEdit : undefined,
     setNoticePaused: setPausedNoticeId,
     handleToolPresetChange, handleThinkingLevelChange, handleSetDefaultModel, handleSetDefaultThinkingLevel, loadTools, loadSlashCommands, setActiveLeafId, setData, setMessages, loadContext,
-    scrollToBottom, scrollUserMsgToTop, scrollToMessage,
+    scrollToBottom, scrollToLatest, scrollUserMsgToTop, scrollToMessage,
     dispatch, setAgentRunning, setForkingEntryId,
     bashRunning, pendingBash, summarizationRetry, automation, handleSetAutomation,
     // Subscriptions

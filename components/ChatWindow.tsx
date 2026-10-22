@@ -341,7 +341,7 @@ export function ChatWindow({ session, workspaceKind, searchTarget, onSearchTarge
     handleRecallQueue,
     handleBuiltinSlashCommand,
     handleToolPresetChange, handleThinkingLevelChange, handleSetDefaultModel, handleSetDefaultThinkingLevel, loadSlashCommands, scrollUserMsgToTop,
-    loadContext, activeLeafId, scrollToBottom, scrollToMessage,
+    loadContext, activeLeafId, scrollToBottom, scrollToLatest, scrollToMessage,
   } = useAgentSession({
     session, sessionRunning, newSessionCwd, newSessionDraftKey, onAgentEnd: wrappedOnAgentEnd, onAttentionNeeded, onSessionCreated, onSessionForked,
     chatWorkspace: chatOnly,
@@ -1729,7 +1729,11 @@ export function ChatWindow({ session, workspaceKind, searchTarget, onSearchTarge
               className={`chat-scroll-to-bottom${showScrollToBottom && !pendingScrollRestore ? " is-visible" : ""}`}
               title={t("chat.scrollToLatest")}
               aria-label={t("chat.scrollToLatest")}
-              onClick={() => scrollToBottom("smooth")}
+              onClick={() => {
+                // A page of older history still in flight must not pull the view back up.
+                prevScrollDistanceRef.current = null;
+                scrollToLatest();
+              }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 5v14M5 12l7 7 7-7" />
