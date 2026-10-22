@@ -3,7 +3,7 @@ id: PIL-0117
 title: 复刻验收：C03 分段选择控件
 epic: E2
 priority: P1
-status: in_progress
+status: blocked
 owner: claude-cli:sonnet-high:impl
 lease_until: 2026-10-22T07:39Z
 branch: task/PIL-0117-parity-c03
@@ -72,3 +72,4 @@ waivers: []
 - 2026-10-22T04:42Z · claude-cli:sonnet-high:impl · 提交 SegmentedChoice + C03 CSS 分节 + 11 条夹具测试；下一步：浏览器量测与键盘实测、tsc/lint/guard/npm test
 - 2026-10-22T04:52Z · claude-cli:sonnet-high:impl · 做了：SegmentedChoice(radiogroup/roving tabindex/方向键/空值/多实例)+C03 CSS+11 测试；浏览器层键盘与双主题/窄宽实测 / 状态：提交 1fe9916，A5 自测全过（npm test 12 失败同基线）；A1/A3/A4 部分，A2 无 3.1623 参考待参考 / 下一步：协调者决定 consumer 接线范围（SettingsPanel）与 3.1623 补采 / 风险：无真实 consumer 未解；实现值待参考核对。详见 relay-evidence/PIL-0117/impl/HANDOFF.md
 - 2026-10-22T07:23Z · claude-cli:sonnet-high:impl · 实现已提交（fe540a7、1fe9916，分支 task/PIL-0117-parity-c03），夹具层自测通过；但 C03 无任何 3.1623 同态参考，且自然 consumer（SettingsPanel）不在范围内。阻塞待：用户补采分段控件参考图 + 规划接线 consumer。
+- 2026-10-22T07:23Z · claude-cli:sonnet-high:impl · in_progress → blocked：缺 3.1623 参考与真实 consumer
