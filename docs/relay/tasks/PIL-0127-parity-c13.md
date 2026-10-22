@@ -11,7 +11,7 @@ implementers: [codex-plus:gpt-xhigh:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/MarkdownBody.tsx, components/CodeCopyButton.tsx, components/MermaidBlock.tsx, components/MarkdownBody.test.mjs, components/MermaidBlock.test.mjs]
 files_shared: [app/native-theme.css]
-acceptance_sha: d96107ef040c
+acceptance_sha: af59818e4717
 waivers: []
 ---
 
@@ -31,10 +31,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 普通 fence/Mermaid source、溢出/横滚、悬停工具栏/复制浮签、pending/成功对勾/失败/重试。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0127/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 Tab/Enter 触发复制与 tooltip，成功/失败反馈保焦点，长代码横滚与正文纵滚分离；窄窗/三档 DPI/缩放/双主题核验。代码/源码只读，IME 和编辑快捷键不适用；原生剪贴板独立证明原文。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 按 code-copy-light／2026-10-21 核对代码块 hover 工具栏、复制 tooltip 和复制后对勾；普通 fence 与 Mermaid source 复制保原文，实测 pending/成功/失败/重试/重复点击及陈旧回调清理，Windows 原生剪贴板单独验；不因参考中的运行入口而新增未经授权的执行。 新批次版本与附件换算边界按 A1/A2 记录。
+- [ ] A1 本卡范围（用户 2026-10-22 决定拆卡）：仅已有 3.1623 原生同态参考的状态——深色、zh-CN、144DPI、应用缩放 100% 的 main-window-native/2026-10-22/07（代码块 hover 工具栏＋复制浮签）；其余状态用夹具层（真实 MarkdownBody→CodeBlock/MessageView＋全量真实 CSS，隔离 Chromium）登记。逐图登记来源／版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题／语言、公开字体及功能开关，并给可复现进入步骤。深色 pending／成功／失败／重试、浅色 hover／成功、Mermaid source、横滚、空闲态等无 3.1623 原生同态参考的状态，以及物理 100／150／200% DPI、Windows 原生剪贴板、WebView2 键盘事件，移至 PIL-0206。
+- [ ] A2 对 A1 所列有参考状态（07：深色 hover＋复制浮签），在同帧／同状态／同测试数据、相同客户区／系统 DPI／应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。3.1623 原生截图 CSS px = 原像素 ÷ 1.5（显示器 150%、AppliedDPI 144、应用缩放 100%）；聊天附件批次只登记机制。抗锯齿与字形 ink 差异单列为残差。叠图只作整数裁剪／平移，不插值；量测表与差异图存 relay-evidence/PIL-0127/。其余状态的数值项（深色 pending／成功／失败，浅色，Mermaid source，横滚，空闲态）移至 PIL-0206。
+- [ ] A3 浏览器层：Tab／Enter 触发复制与 tooltip，成功／失败反馈保焦点，长代码横滚与正文纵滚分离；双主题、窄窗与模拟 DPI／缩放矩阵无横向溢出、块不越界、浮签在视口内。代码／源码只读，IME 和编辑快捷键不适用。验证层为浏览器合成事件；物理 100／150／200% DPI、Claude 应用缩放、WebView2 键盘事件及视觉项移至 PIL-0206。
+- [ ] A4 浏览器层：普通 fence 与 Mermaid source 复制保原文，pending／成功／失败／重试／重复点击（仅一次 writeText）及陈旧回调清理，工具栏显隐与参考 07 一致（同消息全部块同显），不因参考中的运行入口新增未经授权的执行。Windows 原生剪贴板、空闲态参考、横滚后按钮右侧残字观察项移至 PIL-0206。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test components/MarkdownBody.test.mjs components/MermaidBlock.test.mjs components/MarkdownBody.caret.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0127`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -70,3 +70,4 @@ waivers: []
 - 2026-10-22T03:22Z · codex-plus:gpt-xhigh:impl · in_progress → verify
 - 2026-10-22T03:55Z · codex-plus:gpt-xhigh:impl · 返工 FIX1(7158931)：代码文字色→#e5e7eb(ΔE00 3.69→0)、浮签上内距→2/4px(Δ+0.67css)、消息级 hover/focus 显示工具栏；定向74/74、tsc、lint、guard 通过、浏览器矩阵54/54；npm test 受共享 node_modules 缺 @earendil-works 影响未得可比结果
 - 2026-10-22T04:25Z · codex-plus:gpt-xhigh:impl · A5 修复：键盘聚焦用例改为纯键盘激活 Source、去掉 hover，MermaidBlock 连跑 5 次全过，npm test 仅剩基线 12 失败
+- 2026-10-22T04:27Z · user · 修订验收标准 d96107ef040c → af59818e4717：用户 2026-10-22 拆卡政策：已验夹具层与深色有参考项留在本卡，缺图状态与 Windows 原生层移出，见 PIL-0206
