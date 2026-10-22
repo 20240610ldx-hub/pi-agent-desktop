@@ -976,7 +976,15 @@
   align-self: center;
 }
 
-.settings-option-list + .settings-option-action {
+.settings-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-option-list + .settings-option-action,
+.settings-option-list + .settings-action-group {
   margin-top: 10px;
 }
 
