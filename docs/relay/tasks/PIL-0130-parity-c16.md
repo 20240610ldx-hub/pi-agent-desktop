@@ -75,3 +75,4 @@ waivers: []
 - 2026-10-22T10:06Z · claude:opus:coordinator · 范围 [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs] → [components/CompactCommandText.tsx, components/CodemodeToolView.tsx, components/CompactCommandText.test.mjs, components/ToolStepView.tsx, components/ToolStepView.test.mjs, components/restored-wiring.test.mjs, components/NonChatModels.wiring.test.mjs]：ToolCallBlock 迁出 MessageView 后，两处源码字符串断言须改读 ToolStepView.tsx；断言内容不变
 - 2026-10-22T10:13Z · codex-plus:luna-high:impl · wiring 测试改读 ToolStepView.tsx（restored-wiring 的 patch diff 用例、NonChatModels 的结果图片下载用例），断言不变；4 个相关文件 69/69 通过，npm test 3651 中 12 个失败，均为基线
 - 2026-10-22T10:14Z · codex-plus:luna-high:impl · in_progress → verify
+- 2026-10-22T10:39Z · codex-plus:luna-high:impl · 返工1：命令盒外高 44.0、结果底内距 7px、还原无参考视图 padding；定向65/65 tsc lint guard 通过，npm test 12=基线
