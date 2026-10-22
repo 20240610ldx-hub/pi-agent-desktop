@@ -8,7 +8,7 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0014, PIL-0030, PIL-0188]
+depends_on: [PIL-0014, PIL-0030, PIL-0188, PIL-0203]
 files_allowed: [components/ToolPermissionDecisionCard.tsx, components/ToolPermissionDecisionCard.test.mjs, components/AskUserQuestionCard.tsx, components/AskUserQuestionCard.test.mjs]
 files_shared: [components/ChatWindow.tsx, lib/i18n/messages/*.ts, app/native-theme.css]
 acceptance_sha: 2ec85a002a42

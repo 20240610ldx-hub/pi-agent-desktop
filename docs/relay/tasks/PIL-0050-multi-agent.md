@@ -8,7 +8,7 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0030]
+depends_on: [PIL-0030, PIL-0202]
 files_allowed: [lib/subagent*, app/api/subagents/**, components/AgentsConfig.tsx]
 files_shared: [lib/rpc-manager*, hooks/useAgentSession*, lib/agent-event-stream*, lib/agent-event-wire*, lib/types.ts, lib/session-reader*, lib/i18n/messages/*.ts, app/native-theme.css, components/ChatWindow.tsx]
 acceptance_sha: 

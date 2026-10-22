@@ -8,7 +8,7 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0030]
+depends_on: [PIL-0030, PIL-0203]
 files_allowed: [lib/side-chat-service.ts, lib/side-chat-service.test.mjs, lib/side-chat-store.ts, lib/side-chat-session-adapter.ts, app/api/side-chat/route.ts, app/api/side-chat/[id]/route.ts, app/api/side-chat/[id]/events/route.ts]
 files_shared: []
 acceptance_sha: b9238c755409

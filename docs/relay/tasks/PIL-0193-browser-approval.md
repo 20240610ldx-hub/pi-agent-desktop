@@ -8,7 +8,7 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0192, PIL-0030]
+depends_on: [PIL-0192, PIL-0030, PIL-0203]
 files_allowed: [lib/managed-browser-approval*.ts, lib/managed-browser-approval*.test.mjs, lib/managed-browser-origins*.ts, e2e/managed-browser-approval*.mjs, app/api/browser/approval/**]
 files_shared: [lib/managed-browser-tools.ts, components/Permission*, lib/i18n/messages/*.ts, lib/types.ts]
 acceptance_sha:

@@ -8,7 +8,7 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0014, PIL-0010, PIL-0111]
+depends_on: [PIL-0014, PIL-0010, PIL-0111, PIL-0200]
 files_allowed: [components/desktop/WindowControls.tsx, lib/desktop-native.ts, src-tauri/src/lib.rs, components/AppShell.native-menu.test.mjs]
 files_shared: [components/AppShell.tsx, app/native-theme.css]
 acceptance_sha: 3ffa014a76f2

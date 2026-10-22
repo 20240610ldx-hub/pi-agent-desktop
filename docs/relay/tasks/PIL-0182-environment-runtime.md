@@ -8,7 +8,7 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0181, PIL-0030]
+depends_on: [PIL-0181, PIL-0030, PIL-0203]
 files_allowed: [lib/environment-runtime.ts, lib/environment-runtime.test.mjs, lib/environment-local-adapter.ts, lib/environment-session-routing.ts, lib/environment-execution-contract.ts, app/api/environments/[id]/run/route.ts]
 files_shared: [lib/rpc-manager.ts, lib/types.ts, app/api/agent/new/route.ts]
 acceptance_sha: 877d03169fcc

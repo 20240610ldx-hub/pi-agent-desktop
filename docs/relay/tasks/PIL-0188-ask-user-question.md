@@ -8,7 +8,7 @@ owner:
 lease_until:
 branch:
 implementers: []
-depends_on: [PIL-0030]
+depends_on: [PIL-0030, PIL-0203]
 files_allowed: [lib/ask-user-question.ts, lib/ask-user-question.test.mjs, lib/ask-user-question-extension.ts, lib/ask-user-question-extension.test.mjs]
 files_shared: [lib/rpc-manager.ts, lib/types.ts, hooks/useAgentSession.ts]
 acceptance_sha: 84e5165da004
