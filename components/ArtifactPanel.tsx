@@ -56,6 +56,8 @@ export function ArtifactPanel({ sessionId, identifier, title, versionRequest }: 
   const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
   const [showSource, setShowSource] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saveError, setSaveError] = useState<{ version: ArtifactVersion; message: string } | null>(null);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const options = useHtmlPreviewOptions();
 
@@ -82,7 +84,7 @@ export function ArtifactPanel({ sessionId, identifier, title, versionRequest }: 
       : null
   ), [version, framed, frameKind, options, runtimeState.runtime]);
 
-  const { errors, addError, dismiss } = useHtmlPreviewErrors(`${identifier}:${index}:${version?.content.length ?? 0}`);
+  const { errors, addError, dismiss } = useHtmlPreviewErrors(`${identifier}:${index}:${previewAttempt}:${version?.content ?? ""}`);
   useHtmlPreviewFrameMessages(frameRef, { onError: addError }, framed);
 
   if (!entry || !version) {
@@ -103,9 +105,10 @@ export function ArtifactPanel({ sessionId, identifier, title, versionRequest }: 
   };
 
   const download = () => {
+    setSaveError(null);
     const url = URL.createObjectURL(new Blob([version.content], { type: MIME_TYPES[version.type] }));
     void downloadUrlAsFile(url, artifactFileName(identifier, version))
-      .catch(() => {})
+      .catch((error: unknown) => setSaveError({ version, message: String(error instanceof Error ? error.message : error).slice(0, 500) }))
       .finally(() => setTimeout(() => URL.revokeObjectURL(url), 0));
   };
 
@@ -212,8 +215,15 @@ export function ArtifactPanel({ sessionId, identifier, title, versionRequest }: 
         </div>
       </div>
       <HtmlPreviewErrorBar
+        errors={saveError?.version === version ? [saveError.message] : []}
+        title={`${t("i18n.downloadFile")} · ${t("i18n.failed")}`}
+        onRetry={download}
+        onDismiss={() => setSaveError(null)}
+      />
+      <HtmlPreviewErrorBar
         errors={framed ? (runtimeState.error ? [t("preview.runtimeLoadFailed", { error: runtimeState.error }), ...errors] : errors) : []}
         onFix={fixSessionId === sessionId && !runtimeState.error ? fix : undefined}
+        onRetry={!runtimeState.error ? () => setPreviewAttempt((attempt) => attempt + 1) : undefined}
         onDismiss={dismiss}
       />
       <div className={`artifact-panel-body${srcDoc ? " is-frame" : ""}`}>
@@ -222,7 +232,7 @@ export function ArtifactPanel({ sessionId, identifier, title, versionRequest }: 
         ) : srcDoc ? (
           <iframe
             ref={frameRef}
-            key={`${identifier}:${index}`}
+            key={`${identifier}:${index}:${previewAttempt}`}
             className={`artifact-panel-frame${frameKind && htmlPreviewFollowsTheme(frameKind, version.content) ? " is-themed" : ""}`}
             srcDoc={srcDoc}
             sandbox={HTML_PREVIEW_SANDBOX}

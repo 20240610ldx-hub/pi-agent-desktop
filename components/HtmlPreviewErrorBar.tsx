@@ -17,11 +17,15 @@ export function formatPreviewErrors(errors: readonly string[]): string {
  */
 export function HtmlPreviewErrorBar({
   errors,
+  title,
   onFix,
+  onRetry,
   onDismiss,
 }: {
   errors: readonly string[];
+  title?: string;
   onFix?: () => void;
+  onRetry?: () => void;
   onDismiss: () => void;
 }) {
   const { t } = useI18n();
@@ -34,12 +38,17 @@ export function HtmlPreviewErrorBar({
         <path d="M12 9v4M12 17h.01" />
       </svg>
       <span className="html-preview-error-text">
-        <span className="html-preview-error-title">{t("preview.errorTitle")}</span>
+        <span className="html-preview-error-title">{title ?? t("preview.errorTitle")}</span>
         <span className="html-preview-error-detail" title={errors.join("\n")}>
           {errors[0]}
           {more > 0 && <span className="html-preview-error-more">{t("preview.moreErrors", { count: more })}</span>}
         </span>
       </span>
+      {onRetry && (
+        <button type="button" className="html-preview-error-fix" onClick={onRetry}>
+          {t("common.retry")}
+        </button>
+      )}
       {onFix && (
         <button type="button" className="html-preview-error-fix" onClick={onFix}>
           {t("preview.fix")}

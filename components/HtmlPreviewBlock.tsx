@@ -69,6 +69,8 @@ export function HtmlPreviewBlock({ code, lang, kind, isStreaming, streamingCaret
   if (isStreaming) rememberStreamed(code);
   const [fullscreen, setFullscreen] = useState(false);
   const [height, setHeight] = useState(HTML_PREVIEW_DEFAULT_HEIGHT);
+  const [saveError, setSaveError] = useState<{ code: string; message: string } | null>(null);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const previewVisible = showPreview && !isStreaming;
   const options = useHtmlPreviewOptions();
@@ -80,7 +82,7 @@ export function HtmlPreviewBlock({ code, lang, kind, isStreaming, streamingCaret
       : buildHtmlPreviewDocument(kind, code, { ...options, runtime: runtimeState.runtime })
   ), [kind, code, options, runtimeState.runtime]);
   const themed = htmlPreviewFollowsTheme(kind, code);
-  const { errors, addError, dismiss } = useHtmlPreviewErrors(code);
+  const { errors, addError, dismiss } = useHtmlPreviewErrors(`${previewAttempt}:${code}`);
   const activeSessionId = useActiveArtifactSession();
   const fixSessionId = useArtifactFixSessionId();
 
@@ -107,9 +109,10 @@ export function HtmlPreviewBlock({ code, lang, kind, isStreaming, streamingCaret
   }
 
   const download = () => {
+    setSaveError(null);
     const url = URL.createObjectURL(new Blob([code], { type: KIND_MIME[kind] }));
     void downloadUrlAsFile(url, htmlPreviewFileName(kind))
-      .catch(() => {})
+      .catch((error: unknown) => setSaveError({ code, message: String(error instanceof Error ? error.message : error).slice(0, 500) }))
       .finally(() => setTimeout(() => URL.revokeObjectURL(url), 0));
   };
 
@@ -162,6 +165,7 @@ export function HtmlPreviewBlock({ code, lang, kind, isStreaming, streamingCaret
         </>
       ) : (
         <iframe
+          key={previewAttempt}
           ref={frameRef}
           className={frameClass}
           srcDoc={srcDoc}
@@ -172,8 +176,15 @@ export function HtmlPreviewBlock({ code, lang, kind, isStreaming, streamingCaret
         />
       )}
       <HtmlPreviewErrorBar
+        errors={saveError?.code === code ? [saveError.message] : []}
+        title={`${t("i18n.downloadFile")} · ${t("i18n.failed")}`}
+        onRetry={download}
+        onDismiss={() => setSaveError(null)}
+      />
+      <HtmlPreviewErrorBar
         errors={runtimeState.error ? [t("preview.runtimeLoadFailed", { error: runtimeState.error }), ...errors] : errors}
         onFix={canFix && !runtimeState.error ? fix : undefined}
+        onRetry={!runtimeState.error ? () => setPreviewAttempt((attempt) => attempt + 1) : undefined}
         onDismiss={dismiss}
       />
     </div>

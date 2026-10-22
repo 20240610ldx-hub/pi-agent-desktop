@@ -6,6 +6,7 @@ import { useI18n } from "@/hooks/useI18n";
 import { isTauriDesktop, openExternal } from "@/lib/desktop-native";
 import {
   HTML_PREVIEW_ERROR_MESSAGE,
+  HTML_PREVIEW_MAX_ERRORS,
   HTML_PREVIEW_OPEN_MESSAGE,
   HTML_PREVIEW_SIZE_MESSAGE,
   type HtmlPreviewMessages,
@@ -65,9 +66,8 @@ interface FrameMessageHandlers {
 }
 
 /**
- * Listens to one preview frame. Messages are matched by `event.source`, so a
- * page cannot speak for another frame; a link is opened only when it is an
- * http(s) URL, whatever the page sent.
+ * Only the current sandboxed srcdoc (opaque origin "null") may report bounded
+ * size/error/link messages. Never reply with host data or expose a command API.
  */
 export function useHtmlPreviewFrameMessages(
   frameRef: RefObject<HTMLIFrameElement | null>,
@@ -82,14 +82,19 @@ export function useHtmlPreviewFrameMessages(
     if (!active) return;
     const onMessage = (event: MessageEvent) => {
       const frame = frameRef.current;
-      if (!frame || event.source !== frame.contentWindow) return;
+      if (!frame?.contentWindow || event.source !== frame.contentWindow || event.origin !== "null") return;
       const data = event.data as { type?: unknown; height?: unknown; message?: unknown; url?: unknown } | null;
-      if (!data || typeof data !== "object") return;
-      if (data.type === HTML_PREVIEW_SIZE_MESSAGE && typeof data.height === "number") {
+      // Exact, flat schemas avoid traversing/stringifying arbitrary payloads.
+      if (!data || typeof data !== "object" || Array.isArray(data)
+        || Object.keys(data).length !== 2 || !Object.hasOwn(data, "type")) return;
+      if (data.type === HTML_PREVIEW_SIZE_MESSAGE && Object.hasOwn(data, "height")
+        && typeof data.height === "number" && Number.isFinite(data.height) && data.height >= 0) {
         handlersRef.current.onSize?.(data.height);
-      } else if (data.type === HTML_PREVIEW_ERROR_MESSAGE && typeof data.message === "string") {
-        handlersRef.current.onError?.(data.message.slice(0, 500));
-      } else if (data.type === HTML_PREVIEW_OPEN_MESSAGE && typeof data.url === "string") {
+      } else if (data.type === HTML_PREVIEW_ERROR_MESSAGE && Object.hasOwn(data, "message")
+        && typeof data.message === "string" && data.message.length > 0 && data.message.length <= 500) {
+        handlersRef.current.onError?.(data.message);
+      } else if (data.type === HTML_PREVIEW_OPEN_MESSAGE && Object.hasOwn(data, "url")
+        && typeof data.url === "string" && data.url.length <= 2048) {
         let url: URL;
         try {
           url = new URL(data.url);
@@ -123,7 +128,8 @@ export function useHtmlPreviewErrors(documentKey: string): {
     errors: current.dismissed ? [] : current.errors,
     addError: (message) => setState((previous) => {
       const base = previous.key === documentKey ? previous : { key: documentKey, errors: [], dismissed: false };
-      return base.errors.includes(message) ? base : { ...base, errors: [...base.errors, message] };
+      return base.errors.length >= HTML_PREVIEW_MAX_ERRORS || base.errors.includes(message)
+        ? base : { ...base, errors: [...base.errors, message] };
     }),
     dismiss: () => setState({ key: documentKey, errors: current.errors, dismissed: true }),
   };
