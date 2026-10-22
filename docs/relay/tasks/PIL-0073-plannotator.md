@@ -49,3 +49,4 @@ waivers: []
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 迁移：由接力治理初始化从旧 handoff / plan / 扩展矩阵转写。
 - 2026-10-19T09:50Z · claude:opus-medium:coord · 验收标准取自用户确认过的验收出口，迁移时冻结；请用户抽查。
 - 2026-10-22T12:55Z · codex-plus:luna-high:impl · 领取，租约至 2026-10-22T15:55Z
+- 2026-10-22T13:42Z · codex-plus:luna-high:impl · 接手（claude-cli:sonnet-high:impl）：复述目标——A1 用组件测试+真实 next dev 断言脚本证明面板渲染计划；A2 用 store/RPC 单测覆盖各决策路径与迟到；A3 资源缺失=错误；A4 执行计数；A5 tsc/lint/guard。已写 lib/plan-review-runtime.ts、session-plan-review.ts、builtin-plannotator-extension.ts、rpc-manager 接线、usePlanReview、PlanReviewPanel。
