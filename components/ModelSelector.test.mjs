@@ -52,7 +52,7 @@ const options = Array.from({ length: 4 }, (_, i) => ({
 }));
 
 async function fixture(config = {}, viewport = { width: 900, height: 720 }) {
-  const page = await browser.newPage({ viewport });
+  const page = await browser.newPage({ viewport, hasTouch: config.touch ?? false });
   page.setDefaultTimeout(3000);
   await page.route("**/*", route => route.request().url() === `${origin}/`
     ? route.fulfill({ contentType: "text/html", body: `<style>${css}</style><div id="root"></div><script>${bundle.replaceAll("</script", "<\\/script")}</script>` })
@@ -62,6 +62,74 @@ async function fixture(config = {}, viewport = { width: 900, height: 720 }) {
   await page.getByRole("button", { name: "Fixture model", exact: true }).waitFor();
   return page;
 }
+
+test("plain menu checks sit at the reference right inset at desktop and narrow widths", async () => {
+  for (const width of [900, 390]) {
+    const page = await fixture({}, { width, height: 720 });
+    try {
+      await page.getByRole("button", { name: "Fixture model", exact: true }).click();
+      await page.locator(".model-selector-menu").evaluate(el => Promise.all(el.getAnimations({ subtree: true }).map(animation => animation.finished)));
+      const inset = await page.locator(".model-selector-check").evaluate(el => {
+        const panel = el.closest(".model-selector-menu").getBoundingClientRect();
+        return panel.right - el.getBoundingClientRect().right;
+      });
+      // Reference ink ends 17 / 1.5 = 11.33px from the panel; the 14px SVG
+      // has about 3px of empty space after its stroke.
+      assert.ok(Math.abs(inset - 8.33) <= 1, `width=${width}, SVG right inset=${inset}`);
+    } finally { await page.close(); }
+  }
+});
+
+test("selected checks leave a gap before both save buttons and default stars including touch", async () => {
+  for (const touch of [false, true]) {
+    const page = await fixture({ stars: true, touch });
+    try {
+      await page.getByRole("button", { name: "Fixture model", exact: true }).click();
+      await page.locator(".model-selector-menu").evaluate(el => Promise.all(el.getAnimations({ subtree: true }).map(animation => animation.finished)));
+      const selected = page.locator(".app-option-row[data-selected]");
+      const gap = () => selected.evaluate(el => {
+        const check = el.querySelector(".model-selector-check").getBoundingClientRect();
+        const star = el.querySelector(".app-default-star").getBoundingClientRect();
+        return star.left - check.right;
+      });
+      assert.ok(await gap() >= 8, `save button overlap, touch=${touch}`);
+      await selected.getByRole("button", { name: "Save as default" }).click();
+      assert.equal(await selected.locator(".app-default-star.is-default").count(), 1);
+      assert.ok(await gap() >= 8, `default marker overlap, touch=${touch}`);
+    } finally { await page.close(); }
+  }
+});
+
+test("menu checks use the dark reference blue and preserve light system blue while labels inherit C01 text", async () => {
+  for (const dark of [false, true]) {
+    const page = await fixture();
+    try {
+      // Supply the C01 parent token: this worktree predates its integration.
+      const text = dark ? "rgb(240, 239, 236)" : "rgb(11, 11, 11)";
+      const systemBlue = await page.evaluate(({ dark, text }) => {
+        document.documentElement.classList.toggle("dark", dark);
+        document.getElementById("anchor").style.setProperty("--text", text);
+        const probe = document.createElement("span");
+        probe.style.color = "var(--menu-selection-color)";
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      }, { dark, text });
+      await page.getByRole("button", { name: "Fixture model", exact: true }).click();
+      await page.locator(".model-selector-menu").evaluate(el => Promise.all(el.getAnimations({ subtree: true }).map(animation => animation.finished)));
+      assert.equal(await page.locator(".model-selector-check").evaluate(el => getComputedStyle(el).color),
+        dark ? "rgb(41, 117, 209)" : systemBlue);
+      const labels = await page.getByRole("option").evaluateAll(rows => rows.map(el => getComputedStyle(el.querySelector("span")).color));
+      assert.deepEqual(labels, options.map(() => text));
+      // Changing the shared parent token must reach every model label.
+      await page.locator("#anchor").evaluate(el => el.style.setProperty("--text", "rgb(100, 110, 120)"));
+      await page.locator(".model-selector-menu").evaluate(el => Promise.all(el.getAnimations({ subtree: true }).map(animation => animation.finished)));
+      assert.deepEqual(await page.getByRole("option").evaluateAll(rows => rows.map(el => getComputedStyle(el.querySelector("span")).color)),
+        options.map(() => "rgb(100, 110, 120)"));
+    } finally { await page.close(); }
+  }
+});
 
 test("keyboard navigation crosses provider groups and Escape restores the trigger", async () => {
   const page = await fixture();
