@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 130 张任务卡：todo 98 · in_progress 4 · verify 1 · review 0 · done 20 · blocked 2 · parked 5
+共 131 张任务卡：todo 99 · in_progress 4 · verify 1 · review 0 · done 20 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -142,6 +142,7 @@
 | PIL-0215 | P2 | E0 | tmp-settings-icon-catalogue | 否 | — |
 | PIL-0216 | P2 | E0 | tmp-sidebar-message-contracts | 否 | — |
 | PIL-0217 | P2 | E0 | tmp-branch-summary-fixture | 否 | — |
+| PIL-0218 | P2 | E0 | tmp-env-trust-windows | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 | PIL-0207 | P3 | E2 | C08 分叉发送入口（待用户开启） | 是 | PIL-0122, PIL-0189 |
 
