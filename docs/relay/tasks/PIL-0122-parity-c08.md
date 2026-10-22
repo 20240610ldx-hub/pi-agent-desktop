@@ -72,3 +72,4 @@ waivers: []
 - 2026-10-22T07:55Z · claude-cli:sonnet-high:impl · implementer：量测校准(卡内行起点/文字基线/发送图标/聚焦亮边框/键帽色，ΔE≤2)、补 5 项 ChatInput 测试、窄窗底栏空首列修复；tsc/lint/guard/定向71通过，npm test 12 失败与基线逐名一致；分叉发送移出待拆卡，麦克风不渲染；提交 2a40c84，待验证。交接见 relay-evidence/PIL-0122/impl/HANDOFF.md
 - 2026-10-22T07:55Z · claude-cli:sonnet-high:impl · in_progress → verify
 - 2026-10-22T07:59Z · user · 修订验收标准 042e78bfeb93 → 7f2336e0b28d：分叉发送 UI 按用户决定先隐藏，移至 PIL-0207
+- 2026-10-22T08:19Z · claude-cli:sonnet-high:impl · fix F1-F4（附件+透明、缩略图1px描边、Esc关提示、发送图标0.4px）；Ctrl+Alt+Enter 在分叉 UI 隐藏期间按普通发送，协调者接受
