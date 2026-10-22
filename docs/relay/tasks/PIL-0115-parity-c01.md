@@ -3,7 +3,7 @@ id: PIL-0115
 title: 复刻验收：C01 主题、文字与图标
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: claude:sonnet-high:impl
 lease_until: 2026-10-21T15:40Z
 branch: task/PIL-0115-parity-c01
@@ -82,3 +82,4 @@ waivers: []
 - 2026-10-22T02:52Z · claude:sonnet-high:impl · verify → in_progress：A2 失败：亮/暗侧栏会话标题与分组标题未采用三档令牌（亮会话标题 ΔE 21.55，分组 12.26 因 native-theme.css:2632 旧覆盖；暗 3.65/3.74），图标中心 x 差 7px 未处理；复现见 verify/compare-ink.txt。范围需协调者扩大或拆侧栏卡
 - 2026-10-22T03:50Z · claude:opus-medium:planner · 用户 2026-10-22 决定拆卡：A1–A4 收窄为已有原生参考的主区/顶栏文字令牌与行距；侧栏消费者偏差归 PIL-0147；无参考状态转 PIL-0199。
 - 2026-10-22T02:53Z · user · 修订验收标准 6cc05af0a7e0 → 1b38071c64d4：用户 2026-10-22 拆卡决定：已有原生参考的状态在本卡验收，侧栏消费者偏差归 PIL-0147，其余转 PIL-0199
+- 2026-10-22T02:54Z · claude:sonnet-high:verify · in_progress → verify：按 amend 后范围重判
