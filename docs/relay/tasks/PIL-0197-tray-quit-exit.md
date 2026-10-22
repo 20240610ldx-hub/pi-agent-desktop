@@ -49,6 +49,7 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 | A4 | 修复前失败：impl before-fix-whilemenuopen.txt（Quit 后进程存活=True、日志无 exit，沿用实现者记录，未自行构建父提交）；修复后：验证者重跑 repro-tray-quit.ps1 -WhileMenuOpen 通过；cargo test shell::(2 个看门狗测试，仅测 spawn_exit_watchdog 夹具层，不覆盖 force_exit 本身)、cargo test 全量 30 通过、tsc 0、npm run lint 0、relay guard --task PIL-0197 无问题 | 通过 | D:/pilaude/relay-evidence/PIL-0197/verify/cargo-test.txt, D:/pilaude/relay-evidence/PIL-0197/verify/cargo-test-all.txt, D:/pilaude/relay-evidence/PIL-0197/verify/tsc.txt, D:/pilaude/relay-evidence/PIL-0197/verify/lint.txt, D:/pilaude/relay-evidence/PIL-0197/verify/guard.txt, D:/pilaude/relay-evidence/PIL-0197/verify/repro-whilemenuopen-rerun.txt | 02a0ce6 | claude:sonnet-high:verify |
 | A1 | Windows 原生(desktop:dev 构建，真实托盘窗口与弹出菜单)。重跑 repro-tray-quit.ps1：-WhileMenuOpen 共4次均 Quit 后3.5s 进程已退出，其中3次走强制路径，日志 'quit requested'→2s 'exit forced…'→'exit (forced)'，1次走正常路径日志 'exit'；-Hide -Mouse(关窗进托盘后真实鼠标点菜单项)进程退出，日志 'quit requested'→7ms 'exit'。desktop:dev 无本地服务子进程，打包构建子进程残留未测 | 通过 | D:/pilaude/relay-evidence/PIL-0197/verify/r2/whilemenuopen.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/whilemenuopen-2.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/whilemenuopen-3.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/whilemenuopen-4.txt, D:/pilaude/relay-evidence/PIL-0197/verify/r2/hide-mouse.txt | 3854190 | claude:sonnet-high:verify |
 | A2 | 需管理员 powercfg /requests（验证者无管理员权限），卡片要求用户管理员终端前后对照；先前通过证据针对 02a0ce6，新提交 3854190 需新对照 | 未运行 | 无（用户步骤见任务日志） | 3854190 | claude:sonnet-high:verify |
+| A3 | 关窗进托盘后进程仍存活且托盘菜单可响应(-Hide -Mouse 已见)、quit_application 正常路径 exit 行正常；但 keep-awake 保持不变需管理员 powercfg，验证者无权限，旧提交证据不能挪用 | 未运行 | D:/pilaude/relay-evidence/PIL-0197/verify/r2/hide-mouse.txt | 3854190 | claude:sonnet-high:verify |
 
 ## 日志
 - 2026-10-21T12:46Z · planner · 创建
@@ -68,3 +69,4 @@ Windows 托盘菜单「Quit Pilaude」真正结束应用进程，并走与 `quit
 - 2026-10-22T02:56Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-22T03:02Z · claude:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T03:02Z · claude:sonnet-high:verify · 证据 A2：未运行
+- 2026-10-22T03:02Z · claude:sonnet-high:verify · 证据 A3：未运行
