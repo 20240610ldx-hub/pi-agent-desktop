@@ -8,6 +8,29 @@ import { isImeComposing } from "../lib/ime.ts";
 const source = (await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 const sessionItemSource = source.slice(source.indexOf("function SessionItem("));
 
+test("C33 session corners and trailing controls match the native reference geometry", async () => {
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  const c33 = css.slice(css.indexOf("/* C33 侧栏项目／会话、搜索、状态及重排"));
+  assert.match(c33, /\.sidebar-project-tree-children \.session-item \{[^}]*height: 28px !important;[^}]*padding: 0 0 0 10px !important;[^}]*border-radius: 6px;/);
+  // Row padding cannot override the earlier absolute right:3.2px menu slot.
+  assert.match(c33, /\.app-shell \.session-sidebar \.session-item-trailing \{ right: 0; \}/);
+  assert.match(css, /\.app-shell \.session-item-more \{ width: 24px; height: 24px;/);
+  // The marker's 7.2px diameter and 8.7px right offset retain a 12.3px centre.
+  assert.match(css, /\.session-activity-dot \{[^}]*width: 7\.2px; height: 7\.2px;/);
+  assert.match(c33, /\.session-item-main \.session-activity-dot:not\(\.is-idle\) \{[^}]*right: 8\.7px;/);
+});
+
+test("C33 selected idle row reserves no trailing width; hover, menu and marker rows keep it", async () => {
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  const c33 = css.slice(css.indexOf("/* C33 侧栏项目／会话、搜索、状态及重排"));
+  // Resting selected row: hidden "···" and the title ends ~9.3 from the row edge (reference 9.33).
+  const rest = ".session-item.is-selected:not(:hover, :focus-within, :has(.session-item-more.is-open, .session-activity-dot:not(.is-idle)))";
+  assert.ok(c33.includes(`${rest} .session-item-main { padding-right: 8px; }`));
+  // The generic 27.2px reservation stays for hover / focus / open menu / marker rows (and unselected rows).
+  assert.match(css, /\.app-shell \.session-item:has\(\.session-item-trailing:not\(\[hidden\]\)\) \.session-item-main \{ padding-right: 27\.2px; \}/);
+  assert.ok(css.indexOf("padding-right: 27.2px; }") < css.indexOf(rest), "override must come after the generic reservation");
+});
+
 test("project-list notifications change only when ordered paths or the receiver change", () => {
   const ast = ts.createSourceFile("SessionSidebar.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const component = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "SessionSidebar");
@@ -542,4 +565,60 @@ test("manual unread waits for a real select and authoritative SSE replaces needs
   assert.match(source, /sseAuthoritativeRef\.current = true/);
   assert.match(source, /window\.addEventListener\("storage", sync\)/);
   assert.match(source, /sidebar\.archivedSessions/);
+});
+
+// Rendered, not textual: the real native-theme.css in Chromium over markup shaped like SessionItem.
+test("C33 trailing slot and row height render correctly on touch and on desktop", async () => {
+  const { chromium } = await import("playwright");
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  const row = (cls, title) => `<div class="session-tree-item" data-session-depth="0"><div>
+    <div class="session-item ${cls}" style="height:54px;display:flex;align-items:center;padding-left:11px;padding-right:8px;border-left:2px solid transparent;gap:6px;overflow:hidden"><button class="session-item-main" type="button"><span class="session-activity-dot is-idle"></span><span class="sidebar-title session-item-title">${title}</span></button>
+    <div class="session-item-trailing"><button class="session-item-more" type="button"><svg width="12" height="12"></svg></button></div></div></div></div>`;
+  const html = `<!doctype html><style>${css}</style><body><div class="app-shell"><div class="session-sidebar" style="width:216px">
+    <div class="sidebar-project-tree-children">${row("is-selected", "Selected idle session with a rather long title that must not run under the dots")}${row("", "Plain session")}</div></div></div></body>`;
+  const browser = await chromium.launch();
+  try {
+    const measure = async (page, selector) => page.locator(selector).evaluate((item) => {
+      const trailing = item.querySelector(".session-item-trailing"), main = item.querySelector(".session-item-main");
+      const t = trailing.getBoundingClientRect(), r = item.getBoundingClientRect();
+      return { height: r.height, right: r.right, trailing: getComputedStyle(trailing).display, trailingLeft: t.left, trailingWidth: t.width, padRight: getComputedStyle(main).paddingRight, titleRight: item.querySelector(".sidebar-title").getBoundingClientRect().right };
+    });
+    const selected = ".sidebar-project-tree-children .session-item.is-selected", plain = ".sidebar-project-tree-children .session-item:not(.is-selected)";
+
+    const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const touchPage = await touch.newPage();
+    await touchPage.setContent(html);
+    assert.equal(await touchPage.evaluate(() => matchMedia("(hover: none)").matches), true, "touch context has no hover");
+    const t = await measure(touchPage, selected);
+    assert.equal(t.trailing, "flex", "selected idle row keeps its \"···\" on touch");
+    assert.equal(t.trailingWidth, 24);
+    assert.equal(t.padRight, "27.2px", "27.2px reservation stays so the title never sits under \"···\"");
+    assert.ok(t.titleRight <= t.trailingLeft, `title ends at ${t.titleRight}, trailing starts at ${t.trailingLeft}`);
+    assert.ok(t.height >= 44, `project-tree selected row is ${t.height}px high on touch`);
+    assert.ok((await measure(touchPage, plain)).height >= 44, "project-tree plain row is at least 44px high on touch");
+    await touch.close();
+
+    const desktop = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page = await desktop.newPage();
+    await page.setContent(html);
+    await page.mouse.move(600, 600);
+    const rest = await measure(page, selected);
+    assert.equal(rest.trailing, "none", "selected idle row hides \"···\" at rest on desktop");
+    assert.equal(rest.padRight, "8px");
+    assert.equal(rest.height, 28);
+    await page.locator(selected).hover();
+    const hover = await measure(page, selected);
+    assert.equal(hover.trailing, "flex");
+    assert.equal(hover.padRight, "27.2px");
+    assert.ok(hover.titleRight <= hover.trailingLeft);
+    await desktop.close();
+  } finally {
+    await browser.close();
+  }
+});
+
+test("C33 touch block matches the specificity of the project-tree 28px row rule", async () => {
+  const css = await readFile(new URL("../app/native-theme.css", import.meta.url), "utf8");
+  const touch = css.slice(css.indexOf("@media (hover: none) {", css.indexOf("/* C33 侧栏项目／会话、搜索、状态及重排")));
+  assert.match(touch, /\.sidebar-project-tree-children \.session-item,[^{]*\{ height: 44px !important; min-height: 44px; \}/);
 });
