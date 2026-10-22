@@ -10650,3 +10650,120 @@ html.dark .model-selector-menu {
   .model-selector-menu .app-default-star { width: 44px !important; height: 44px !important; }
 }
 /* End C19 模型切换菜单 */
+
+/* C13 代码块、Mermaid source 与复制反馈 */
+.c13-code-block {
+  --c13-code-surface: #fff;
+  --c13-code-border: #dedede;
+  --c13-code-text: #202020;
+  --c13-code-hover: #f2f2f2;
+  min-width: 0;
+  margin: 10.6667px 0;
+  border: 1px solid var(--c13-code-border);
+  border-radius: 8px;
+  overflow: visible;
+  background: var(--c13-code-surface);
+}
+html.dark .c13-code-block {
+  --c13-code-surface: #1a1a19;
+  --c13-code-border: #2d2d2d;
+  --c13-code-text: #e6e5e2;
+  --c13-code-hover: #2b2b2a;
+}
+.c13-code-block > .markdown-code-header {
+  position: absolute;
+  z-index: 1;
+  top: 3px;
+  right: 6px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.c13-code-block > .markdown-code-header > .markdown-code-lang { display: none; }
+.c13-code-block .markdown-code-actions {
+  gap: 4px;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  border-radius: 5px;
+  background: var(--c13-code-surface);
+}
+.c13-code-block:is(:hover, :focus-within) .markdown-code-actions,
+.c13-code-block:has(.c13-copy-control:not([data-copy-state="idle"])) .markdown-code-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.c13-code-block > .c13-code-content {
+  padding: 5.3333px 48px 5.3333px 16px !important;
+  border-radius: 7px !important;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  background: var(--c13-code-surface) !important;
+  color: var(--c13-code-text) !important;
+  font: 400 calc(12.5px + var(--chat-font-size-offset, 0px))/20px var(--font-mono) !important;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  tab-size: 4;
+}
+.c13-code-block:has(.markdown-code-actions > button) > .c13-code-content { padding-right: 108px !important; }
+.c13-code-block .markdown-code-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  border: 0;
+  border-radius: 5px;
+  padding: 0 6px;
+  background: transparent;
+  color: var(--c13-code-text);
+  line-height: 16px;
+}
+.c13-code-block .markdown-code-copy { width: 24px; padding: 0; }
+.c13-code-block .markdown-code-action:is(:hover, :active, .is-active),
+.c13-copy-control[data-copy-state="copied"] .markdown-code-copy { background: var(--c13-code-hover); }
+.c13-code-block .markdown-code-action:hover:not(:disabled) { color: var(--c13-code-text); }
+.c13-code-block :is(.markdown-code-action, .c13-code-content):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.c13-copy-control { position: relative; display: inline-flex; }
+.c13-copy-control .markdown-code-copy[aria-disabled="true"] { cursor: progress; }
+.c13-copy-tooltip {
+  position: fixed;
+  z-index: 1000;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 3px 7px;
+  border: 1px solid #373736;
+  border-radius: 5px;
+  background: #20201f;
+  color: #f0efec;
+  box-shadow: 0 2px 6px #0003;
+  font: 400 13px/16px "Segoe UI", "Microsoft YaHei", sans-serif;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.c13-copy-tooltip[data-copy-state="failed"] { white-space: normal; }
+.c13-copy-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.c13-copy-pending { transform-origin: center; animation: c13-copy-spin 0.8s linear infinite; }
+@keyframes c13-copy-spin { to { transform: rotate(360deg); } }
+@media (hover: none) {
+  .c13-code-block .markdown-code-actions { opacity: 1; pointer-events: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .c13-copy-pending { animation: none; }
+}
+/* End C13 */
