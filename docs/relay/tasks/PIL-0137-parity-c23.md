@@ -58,6 +58,7 @@ waivers: []
 | A2 | 实现侧按钮几何/颜色记录（button-measure.json），同态比对移至 PIL-0212 | 通过 | D:\pilaude\relay-evidence\PIL-0137\verify\VERIFY.md | 8d46a622 | claude-cli:sonnet:verify |
 | A3 | 真实应用：滚轮/PageUp/Home/End/滚动条拖动；F1 回到最新后无累积漂移；前插锚点 0–0.3px；会话切换恢复 | 通过 | D:\pilaude\relay-evidence\PIL-0137\verify\VERIFY-2.md | 8d46a622 | claude-cli:sonnet:verify |
 | A4 | 真实应用：F1/F2/F4 通过，150ms 意图锁不抢回，F3 拖动暂停跟随不回退 | 通过 | D:\pilaude\relay-evidence\PIL-0137\verify\VERIFY-2.md | 8d46a622 | claude-cli:sonnet:verify |
+| A5 | 独立运行：定向 158/158，tsc 0，lint 0，guard 无警告；npm test 11 失败均属基线 | 通过 | D:\pilaude\relay-evidence\PIL-0137\review\REVIEW.md | 8d46a622 | claude-cli:sonnet-high:review |
 
 ## 日志
 
@@ -76,3 +77,4 @@ waivers: []
 - 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A2：通过
 - 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A3：通过
 - 2026-10-22T11:16Z · claude-cli:sonnet:verify · 证据 A4：通过
+- 2026-10-22T11:16Z · claude-cli:sonnet-high:review · 证据 A5：通过
