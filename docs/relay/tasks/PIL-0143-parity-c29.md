@@ -11,7 +11,7 @@ implementers: [codex-plus:sol-high:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs, hooks/useHtmlPreviewFrame.ts, hooks/useHtmlPreviewFrame.test.mjs]
 files_shared: [app/native-theme.css]
-acceptance_sha: 13b41ae1ace1
+acceptance_sha: fd7b216b5c6c
 waivers: []
 ---
 
@@ -30,12 +30,13 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 Artifact 卡片活动/完成、inline/侧板、版本切换、预览/保存、加载失败/重试与恶意文档隔离。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0143/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 键盘进入卡片/预览/版本/保存，关闭侧板回原卡，iframe 与外层焦点边界可退出；版本/失败重试保滚动与当前文档，窄窗/三档 DPI/缩放/双主题核验。IME 仅在预览文档实际输入字段测原生组合；卡片外壳只读不强加编辑快捷键。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：真实Artifact版本、inline活动到完成、预览／保存／失败均覆盖；保sandbox隔离，不给同一iframe同时添加allow-scripts与allow-same-origin。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
-- [ ] A5 由独立验证者运行受影响定向测试：`node --test components/artifact-panel-styles.test.mjs components/HtmlPreviewErrorBar.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0143`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
+每条可以被一个不了解实现过程的人独立判定通过或失败。本卡只验收夹具层与已有深色/安全边界项；被移出的项已转入 PIL-0210。
 
+- [ ] A1 夹具层状态：Artifact 卡片活动/完成、版本切换、预览/保存/失败/重试、恶意文档隔离在浏览器夹具中可进入，并给出可复现步骤。验证：`node --test components/artifact-panel-styles.test.mjs components/HtmlPreviewErrorBar.test.mjs` 通过；夹具矩阵记入 relay-evidence/PIL-0143/verify/。逐图同态参考、Windows/WebView2 层、数值量测移至 PIL-0210 A1、A2。
+- [ ] A2 （移至 PIL-0210 A1、A2：C29 无 3.1623 同态参考，数值量测与视觉结论本卡不登记。）
+- [ ] A3 保存失败、取消、重试与版本隔离：保存失败保留 iframe 与内部滚动（500→500→500）；取消静默；重试内容逐字节一致，Blob 全部 revoke；保存错误按版本隔离；外层聊天滚动保持；键盘 Enter 触发 Retry；390px 双主题无横向溢出。验证：浏览器夹具复现（relay-evidence/PIL-0143/verify/verify-browser.log）。预览失败重试保滚动、关闭侧板回原卡、原生 IME 与 DPI/缩放移至 PIL-0210 A3、A4、A5、A9。
+- [ ] A4 iframe 桥接与沙箱隔离：sandbox 不含 allow-same-origin；真实沙箱 iframe 探测父文档、存储与顶层均被拒；桥接的合法消息被接受、伪造与畸形消息被忽略、外链仅 http(s) 且有冷却、洪泛有上限。验证：hooks/useHtmlPreviewFrame.test.mjs 与真实 Edge 探测脚本（B1–B10）记入 relay-evidence/PIL-0143/verify/。inline 流式到完成、真实 Pi/SDK consumer、Tauri 真实保存、评审残差移至 PIL-0210 A6、A7、A8、A10。
+- [ ] A5 定向测试与守卫：`node --test components/artifact-panel-styles.test.mjs components/HtmlPreviewErrorBar.test.mjs hooks/useHtmlPreviewFrame.test.mjs lib/html-preview.test.mjs lib/artifacts.test.mjs lib/artifact-store.test.mjs lib/preview-runtime.test.mjs` 通过；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0143` 无阻断；npm test 失败名与基线一致、无新增。
 ## 范围外
 
 不修改app/globals.css、app/settings.css及受保护基线；不拷贝私人截图、字体或秘密，不转写图中账号／邮箱／个人路径。不借本卡扩建执行后端或更改权限／模型／会话语义；缺依赖能力或文件范围不足时先交规划者拆卡或授权调整。其他组件及关联任务原有验收不在本卡改写。
@@ -67,3 +68,4 @@ waivers: []
 - 2026-10-22T09:20Z · claude:opus:coordinator · 范围 [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs] → [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs, hooks/useHtmlPreviewFrame.ts, hooks/useHtmlPreviewFrame.test.mjs]：实现者发现 iframe 桥接缺 origin 校验（安全缺口），该文件无卡归属；本卡 A4 桥接需修复并补负向测试
 - 2026-10-22T10:02Z · codex-plus:sol-high:impl · claude impl: 桥接安全加固+保存失败/重试，定向62/62 tsc lint guard 通过，npm test 12 失败与基线逐名一致；C29 同态参考待补
 - 2026-10-22T10:02Z · codex-plus:sol-high:impl · in_progress → verify
+- 2026-10-22T10:14Z · user · 修订验收标准 13b41ae1ace1 → fd7b216b5c6c：拆卡政策（用户 2026-10-22 批准）：已验部分合入，缺图与原生项移出至 PIL-0210（预览失败重试保滚动、C29 同态参考补采、关闭侧板回原卡、inline 流式、真实 SDK、Tauri 保存、原生 IME/DPI、评审残差）
