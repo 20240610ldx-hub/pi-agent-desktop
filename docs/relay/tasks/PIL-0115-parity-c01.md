@@ -3,9 +3,9 @@ id: PIL-0115
 title: 复刻验收：C01 主题、文字与图标
 epic: E2
 priority: P1
-status: review
+status: done
 owner: claude:sonnet-high:impl
-lease_until: 2026-10-21T15:40Z
+lease_until:
 branch: task/PIL-0115-parity-c01
 implementers: [claude:sonnet-high:impl]
 depends_on: [PIL-0014]
@@ -93,3 +93,4 @@ waivers: []
 - 2026-10-22T02:57Z · claude:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T02:57Z · claude:sonnet-high:impl · verify → review
 - 2026-10-22T02:59Z · claude:sonnet-high:review · 做了：评审 2525b0d（native-theme.css C01 分节+4 条契约测试）；全局 --text-muted/--text-dim 重指向与原生墨迹色一致，浅色 dim 3.50:1 为实测原生色(#898781)，消费点为次要元数据/占位/标签，无关键信息(错误/危险/状态)依赖；.markdown-body 行高末尾覆盖同特异性靠顺序，可接受(分节注释已说明)；无 !important，globals/settings 未动；与当前 fusion 及 fusion+PIL-0147 的 merge-tree 均无冲突 / 状态：评审通过 / 下一步：协调者合入 / 风险：(1)浅色 dim 小字(10-12px)低于 AA，原生忠实取舍；(2)全局 --cds-text-* 改指灰阶梯，暗色主按钮底(--cds-btn-primary-bg=text-primary)由 gray-80 类色变为 gray-50，微幅；(3)旧 5080 行 line-height:1.6 保留为死规则，建议合入后由后续卡清理；(4)分支落后 fusion 的 relay 提交，合入用 merge 不要 rebase 覆盖卡文件
+- 2026-10-22T03:00Z · claude:sonnet-high:review · review → done（评审 claude:sonnet-high:review）
