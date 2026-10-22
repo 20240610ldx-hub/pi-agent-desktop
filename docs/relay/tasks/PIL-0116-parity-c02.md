@@ -73,3 +73,4 @@ waivers: []
 - 2026-10-21T13:07Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-21T13:08Z · claude:opus-medium:planner · 范围 [vendor/open-claude-ui/CdsButton.tsx, vendor/open-claude-ui/CdsButton.test.mjs] → [vendor/open-claude-ui/CdsButton.tsx, vendor/open-claude-ui/CdsButton.test.mjs, package.json, scripts/release-workflows.test.mjs]：卡定测试路径 vendor/open-claude-ui/CdsButton.test.mjs 不在 npm test glob 内，需把 vendor/**/*.test.mjs 纳入 npm test 与覆盖检查
 - 2026-10-21T13:08Z · claude:sonnet-high:impl · verify → in_progress：补 npm test glob 覆盖 vendor 测试
+- 2026-10-22T02:36Z · claude:sonnet-high:impl · 复述：补 npm test glob 与覆盖正则，并用新原生参考 main-window-native 补量 C02 的 sm/深色/图标钮悬停
