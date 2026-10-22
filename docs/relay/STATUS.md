@@ -25,14 +25,14 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 122 张任务卡：todo 95 · in_progress 4 · verify 2 · review 0 · done 14 · blocked 2 · parked 5
+共 122 张任务卡：todo 95 · in_progress 4 · verify 1 · review 1 · done 14 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0002 | P0 | in_progress | 建立可信的测试基线并逐项登记已知失败 | codex-plus:luna-medium:impl | 2026-10-22T12:04Z | task/PIL-0002-test-baseline |
-| PIL-0111 | P1 | verify | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | claude-cli:sonnet-high:impl | 已过期 2026-10-22T06:54Z | task/PIL-0111-windows-native-baseline |
+| PIL-0111 | P1 | review | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | claude-cli:sonnet-high:impl | 已过期 2026-10-22T06:54Z | task/PIL-0111-windows-native-baseline |
 | PIL-0126 | P1 | verify | 复刻验收：C12 助手正文与消息操作条 | codex-plus:gpt-xhigh:impl | 2026-10-22T10:25Z | task/PIL-0126-parity-c12 |
 | PIL-0128 | P1 | in_progress | 复刻验收：C14 思考摘要与展开正文 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0128-parity-c14 |
 | PIL-0137 | P1 | in_progress | 复刻验收：C23 长会话滚动跟随与历史恢复 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0137-parity-c23 |
