@@ -59,3 +59,4 @@ waivers: [R6:user-requested-initial-governance-2026-10-19]
 - 2026-10-19T14:19Z · codex:gpt:coord · 路径校正：上一条实现者日志中的反斜杠和D;为终端转义结果。实际证据目录为D:/pilaude/relay-evidence/PIL-0001/，包括wip-mapping.md、wip-mapping.json、cleanup-review.json、a5-hook-probe.json和bootstrap-precheck/relay-test.metadata.json。14:07后新增材料应另存，不能覆盖已有快照。原日志保留，本条为可接续的准确路径。
 - 2026-10-22T09:42Z · unknown · 2026-10-22 用户决定：9 条 docs/engineering/** 历史文档标为归档、无需任务卡归属（AGENTS.md 已定为历史档案）；用户书面追认 A4：主 checkout 已恢复干净，旧改动以 wip/pre-relay-2026-10-19 与 -index 快照分支为准。审计见 relay-evidence/PIL-0001/audit-2026-10-22.md。
 - 2026-10-22T09:45Z · claude-cli:haiku:impl · 领取，租约至 2026-10-22T12:45Z
+- 2026-10-22T09:47Z · claude-cli:haiku:impl · 2026-10-22 用户裁定：9 条 docs/engineering/** 历史档案归档、无需任务卡归属；快照映射未归属数 9→0（证据 D:\pilaude\relay-evidence\PIL-0001\wip-mapping.md）。提交守卫因 files_allowed 不含新增文件被阻断，未提交归档文件；待用户批准 scope 豁免后再提交。
