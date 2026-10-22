@@ -121,13 +121,61 @@ const execFileAsync = (file, args, options = {}) => new Promise((resolve, reject
   });
 });
 
-const PROCESS_LIST_SCRIPT = "Get-CimInstance Win32_Process | ForEach-Object { [pscustomobject]@{ pid = [int]$_.ProcessId; ppid = [int]$_.ParentProcessId; name = $_.Name; created = $(if ($_.CreationDate) { $_.CreationDate.ToUniversalTime().ToString('o') } else { '' }); cmd = $_.CommandLine } } | ConvertTo-Json -Compress";
+// Toolhelp snapshot + GetProcessTimes through one tiny Add-Type: ~0.5 s per call against ~1.3 s for Get-CimInstance, which
+// matters because cleanup is bounded to 5 s. It carries no command lines (those need WMI, see `commandLinesOf`).
+const PROCESS_LIST_CS = String.raw`using System;using System.Runtime.InteropServices;using System.Text;
+public static class PilProc{
+[StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]public struct PE{public uint dwSize,cntUsage,th32ProcessID;public IntPtr th32DefaultHeapID;public uint th32ModuleID,cntThreads,th32ParentProcessID;public int pcPriClassBase;public uint dwFlags;[MarshalAs(UnmanagedType.ByValTStr,SizeConst=260)]public string szExeFile;}
+[DllImport("kernel32.dll",SetLastError=true)]public static extern IntPtr CreateToolhelp32Snapshot(uint f,uint p);
+[DllImport("kernel32.dll",CharSet=CharSet.Unicode)]public static extern bool Process32FirstW(IntPtr h,ref PE e);
+[DllImport("kernel32.dll",CharSet=CharSet.Unicode)]public static extern bool Process32NextW(IntPtr h,ref PE e);
+[DllImport("kernel32.dll")]public static extern bool CloseHandle(IntPtr h);
+[DllImport("kernel32.dll")]public static extern IntPtr OpenProcess(uint a,bool i,uint pid);
+[DllImport("kernel32.dll")]public static extern bool GetProcessTimes(IntPtr h,out long c,out long e,out long k,out long u);
+public static string All(){
+var sb=new StringBuilder();var h=CreateToolhelp32Snapshot(2,0);var e=new PE();e.dwSize=(uint)Marshal.SizeOf(typeof(PE));
+if(Process32FirstW(h,ref e)){do{
+string cr="";long c,x,k,u;IntPtr p=OpenProcess(0x1000,false,e.th32ProcessID);
+if(p!=IntPtr.Zero){if(GetProcessTimes(p,out c,out x,out k,out u)&&c>0)cr=DateTime.FromFileTimeUtc(c).ToString("o");CloseHandle(p);}
+sb.Append(e.th32ProcessID.ToString()+"\t"+e.th32ParentProcessID.ToString()+"\t"+cr+"\t"+e.szExeFile+"\n");
+}while(Process32NextW(h,ref e));}
+CloseHandle(h);return sb.ToString();}}`;
+const PS_PREAMBLE = "$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';[Console]::OutputEncoding=[Text.Encoding]::UTF8;";
+const encodedCommand = (script) => Buffer.from(script, "utf16le").toString("base64");
+const PROCESS_LIST_ARGS = ["-NoProfile", "-NonInteractive", "-EncodedCommand", encodedCommand(`${PS_PREAMBLE}Add-Type -TypeDefinition @'\n${PROCESS_LIST_CS}\n'@\n[Console]::Out.Write([PilProc]::All())`)];
 
-/** All processes as `{ pid, ppid, name, created, cmd }`. `cmd` stays in memory; reports drop it. */
+/** Parses `pid<TAB>ppid<TAB>created<TAB>name` lines from the snapshot script. `cmd` is null: command lines are fetched only on demand. */
+export function parseProcessList(stdout) {
+  const rows = [];
+  for (const line of String(stdout).split(/\r?\n/)) {
+    if (!line) continue;
+    const [pid, ppid, created, ...name] = line.split("\t");
+    if (!/^\d+$/.test(pid) || !/^\d+$/.test(ppid ?? "")) continue;
+    rows.push({ pid: Number(pid), ppid: Number(ppid), name: name.join("\t"), created, cmd: null });
+  }
+  return rows;
+}
+
+/** All processes as `{ pid, ppid, name, created, cmd: null }`; reports drop everything but pid/ppid/name/created. */
 export async function listProcesses() {
-  const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", PROCESS_LIST_SCRIPT]);
-  const parsed = JSON.parse(stdout);
-  return (Array.isArray(parsed) ? parsed : [parsed]).map((row) => ({ ...row, cmd: row.cmd ?? "" }));
+  const { stdout } = await execFileAsync("powershell.exe", PROCESS_LIST_ARGS);
+  const rows = parseProcessList(stdout);
+  if (rows.length === 0) throw new HarnessError("process snapshot returned no rows");
+  return rows;
+}
+
+/** Command lines (WMI, ~1 s) of just these processes, as Map pid -> { created, cmd }. */
+export async function commandLinesOf(pids) {
+  if (pids.length === 0) return new Map();
+  const filter = pids.map((pid) => `ProcessId=${Number(pid)}`).join(" OR ");
+  const script = `${PS_PREAMBLE}Get-CimInstance Win32_Process -Filter '${filter}' -Property ProcessId,CreationDate,CommandLine | ForEach-Object { '{0}\t{1}\t{2}' -f $_.ProcessId, $(if ($_.CreationDate) { $_.CreationDate.ToUniversalTime().ToString('o') } else { '' }), ($_.CommandLine -replace '[\r\n\t]+', ' ') }`;
+  const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encodedCommand(script)]);
+  const found = new Map();
+  for (const line of stdout.split(/\r?\n/)) {
+    const [pid, created, ...cmd] = line.split("\t");
+    if (/^\d+$/.test(pid)) found.set(Number(pid), { created, cmd: cmd.join("\t") });
+  }
+  return found;
 }
 
 export const processKey = (processInfo) => `${processInfo.pid}@${processInfo.created}`;
@@ -185,7 +233,7 @@ export function ownedProcesses({ rootPid, profileDir, processes, preexisting, no
   if (profileDir) {
     const marker = profileDir.toLowerCase();
     for (const item of processes) {
-      if (/^msedgewebview2(\.exe)?$/i.test(item.name) && item.cmd.toLowerCase().includes(marker)) owned.set(processKey(item), item);
+      if (/^msedgewebview2(\.exe)?$/i.test(item.name) && (item.cmd ?? "").toLowerCase().includes(marker)) owned.set(processKey(item), item);
     }
   }
   for (const key of preexisting) owned.delete(key);
@@ -193,52 +241,105 @@ export function ownedProcesses({ rootPid, profileDir, processes, preexisting, no
 }
 
 /** No `/T`: taskkill would expand the tree by ppid on its own, bypassing the pid+creation-time checks done here. */
-export const taskkillArgs = (pid) => ["/PID", String(pid), "/F"];
+export const taskkillArgs = (...pids) => [...pids.flatMap((pid) => ["/PID", String(pid)]), "/F"];
 
-export async function taskkillPid(pid) {
+/** One taskkill process for all pids, in the order given (it works through them in that order and keeps going after a failure). */
+export async function taskkillPids(pids) {
+  if (pids.length === 0) return false;
   try {
-    await execFileAsync("taskkill.exe", taskkillArgs(pid));
+    await execFileAsync("taskkill.exe", taskkillArgs(...pids));
     return true;
   } catch (error) {
-    // 128 = no such process (already gone); anything else is a real failure.
+    // 128 = some process was already gone; anything else (e.g. access denied) is a real failure.
     if (error.code === 128) return false;
-    throw new HarnessError(`taskkill failed for ${pid}: ${String(error.stderr || error.message).trim()}`);
+    throw new HarnessError(`taskkill failed for ${pids.join(",")}: ${String(error.stderr || error.message).trim()}`);
   }
 }
+
+const isWebView = (item) => /^msedgewebview2(\.exe)?$/i.test(item.name);
 
 /**
  * Kill only what this run owns, then verify nothing of it survives within `graceMs`.
  * `known` holds the rows (pid + creation time) seen alive while the root was still running; they are the
  * only roots the tree is expanded from, so a pid the OS recycled after the app exited is never treated as ours.
- * Processes are killed one pid at a time, children before parents, each key at most once.
+ * One snapshot decides the kill set; pids are then killed by number (no `/T`), children before parents, each key at most
+ * once: all in one `killMany` call (default: a single taskkill), or, when a per-pid `kill` is injected, one depth level at a time. A second snapshot confirms; it only loops again for
+ * processes that were not killed yet (e.g. spawned in between) until `graceMs` runs out.
  * `preexisting` is a Set of process keys that existed before the run; they are never killed.
+ * `isGone(row)` marks a row whose process is known to have exited already (its pid may be recycled): never killed.
+ * A failing kill is recorded in `errors` and does not stop the rest of the cleanup.
+ * `timings` (ms) lists every snapshot, kill batch and command-line lookup, for the evidence log.
  */
-export async function cleanupOwned({ known = [], profileDir, preexisting, list = listProcesses, kill = taskkillPid, graceMs = 5000, pollMs = 250 }) {
+export async function cleanupOwned({
+  known = [], profileDir, preexisting, list = listProcesses, commandLines = commandLinesOf, kill, killMany = taskkillPids, isGone = () => false, graceMs = 5000, pollMs = 250,
+}) {
+  const started = Date.now();
+  const timings = { snapshotsMs: [], killsMs: [], commandLinesMs: [], totalMs: 0 };
   const ownedKeys = new Map();
   const killedKeys = new Set();
+  const lookedUp = new Set();
   const killed = [];
-  const deadline = Date.now() + graceMs;
+  const errors = [];
+  const deadline = started + graceMs;
+  const timed = async (bucket, fn) => {
+    const t0 = Date.now();
+    try { return await fn(); } finally { bucket.push(Date.now() - t0); }
+  };
   for (const item of known) if (!preexisting.has(processKey(item))) ownedKeys.set(processKey(item), item);
-  for (;;) {
-    const processes = await list();
+  for (let round = 0; ; round += 1) {
+    if (round > 1) await delay(pollMs); // round 1 is the confirmation; its own snapshot already takes a while
+    let processes = await timed(timings.snapshotsMs, list);
     const present = new Set(processes.map(processKey));
     for (const row of [...ownedKeys.values()]) {
       if (!present.has(processKey(row))) continue;
       for (const item of ownedProcesses({ rootPid: row.pid, rootCreated: row.created, processes, preexisting })) ownedKeys.set(processKey(item), item);
     }
-    for (const item of ownedProcesses({ profileDir, processes, preexisting })) ownedKeys.set(processKey(item), item);
-    const alive = [...ownedKeys.values()].filter((item) => present.has(processKey(item)));
+    if (profileDir) {
+      // Orphaned WebView2 helpers are recognised by our profile folder in their command line: fetch it only for
+      // WebView2 processes that are neither ours yet nor older than the run, once each.
+      const candidates = processes.filter((item) => isWebView(item) && item.cmd == null && !preexisting.has(processKey(item)) && !ownedKeys.has(processKey(item)) && !lookedUp.has(processKey(item)));
+      if (candidates.length) {
+        for (const item of candidates) lookedUp.add(processKey(item));
+        const lines = await timed(timings.commandLinesMs, () => commandLines(candidates.map((item) => item.pid))).catch((error) => { errors.push(`command lines: ${error.message}`); return new Map(); });
+        processes = processes.map((item) => {
+          const line = lines.get(item.pid);
+          // The lookup ran after the snapshot: accept it only for the same process (creation time within 5 ms).
+          return line && item.cmd == null && Math.abs(createdMs(line.created) - createdMs(item.created)) < 5 ? { ...item, cmd: line.cmd } : item;
+        });
+      }
+      for (const item of ownedProcesses({ profileDir, processes, preexisting })) ownedKeys.set(processKey(item), item);
+    }
+    const alive = [...ownedKeys.values()].filter((item) => present.has(processKey(item)) && !isGone(item));
     const ownedSeen = [...ownedKeys.values()].map(publicProcess);
-    if (alive.length === 0) return { killed, residual: [], ownedSeen };
-    if (Date.now() >= deadline) return { killed, residual: alive.map(publicProcess), ownedSeen };
+    const finish = (residual) => { timings.totalMs = Date.now() - started; return { killed, residual, ownedSeen, errors, timings, snapshot: processes }; };
+    if (alive.length === 0) return finish([]);
+    if (Date.now() >= deadline) return finish(alive.map(publicProcess));
     const byPid = new Map(alive.map((item) => [item.pid, item]));
     const depth = (item) => { let n = 0; for (let at = byPid.get(item.ppid); at && n < 64; at = byPid.get(at.ppid)) n += 1; return n; };
-    for (const item of alive.filter((candidate) => !killedKeys.has(processKey(candidate))).sort((a, b) => depth(b) - depth(a))) {
+    const todo = alive.filter((candidate) => !killedKeys.has(processKey(candidate)));
+    const levels = new Map();
+    for (const item of todo) {
       killedKeys.add(processKey(item));
-      await kill(item.pid);
-      killed.push(item.pid);
+      const level = depth(item);
+      if (!levels.has(level)) levels.set(level, []);
+      levels.get(level).push(item);
     }
-    await delay(pollMs);
+    const ordered = [...levels.keys()].sort((a, b) => b - a);
+    await timed(timings.killsMs, async () => {
+      if (!kill) {
+        // Deepest first, all in one taskkill call: a call costs ~0.4 s, which would otherwise be paid per tree level.
+        const pids = ordered.flatMap((level) => levels.get(level).map((item) => item.pid));
+        killed.push(...pids);
+        try { await killMany(pids); } catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
+        return;
+      }
+      for (const level of ordered) {
+        await Promise.all(levels.get(level).map(async (item) => {
+          killed.push(item.pid);
+          try { await kill(item.pid); } catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
+        }));
+      }
+    });
   }
 }
 
@@ -246,8 +347,9 @@ export async function cleanupOwned({ known = [], profileDir, preexisting, list =
 const liveRoots = new Set();
 let exitHookInstalled = false;
 /**
- * Registers a started root for the exit hook; the caller drops it again when the process exits. `/T` is safe
- * here only because the root is still running (Node holds its handle), so every ppid link to it is genuine.
+ * Registers a started root for the exit hook; the caller drops it again when the process exits. The root's pid
+ * cannot be recycled while it runs (Node holds its handle), but `/T` also follows stale ppid links of unrelated
+ * older processes: it is a last resort for a harness that is dying anyway, never part of the normal cleanup.
  */
 function trackRoot(pid) {
   liveRoots.add(pid);
@@ -645,6 +747,7 @@ export async function runBaseline(options) {
   let appStderr = "";
   let appExit = null;
   let cleanup;
+  let cleanupFailed = false;
   let failure;
   let exitCode = EXIT.ok;
   let spawnedAt;
@@ -794,7 +897,14 @@ export async function runBaseline(options) {
     }
     if (app?.pid) {
       await Promise.allSettled([...pendingSnapshots]);
-      cleanup = await cleanupOwned({ known: [...known.values()], profileDir, preexisting });
+      try {
+        // A root that has exited may have had its pid recycled: never kill it by number.
+        cleanup = await cleanupOwned({ known: [...known.values()], profileDir, preexisting, isGone: (item) => item.pid === app.pid && (appExit !== null || app.exitCode !== null) });
+        for (const message of cleanup.errors) report.warnings.push(`cleanup: ${message}`);
+      } catch (error) {
+        report.warnings.push(`cleanup failed: ${error.message}`);
+        cleanupFailed = true;
+      }
       liveRoots.delete(app.pid);
     }
     if (proxy) {
@@ -810,12 +920,13 @@ export async function runBaseline(options) {
       }
       await proxy.close();
     }
-    const after = (await listProcesses()).filter((item) => isPilaudeOrWebView(item.name));
+    // The cleanup's confirming snapshot is the post-run state; take a fresh one only when no cleanup ran.
+    const after = (cleanup?.snapshot ?? await listProcesses()).filter((item) => isPilaudeOrWebView(item.name));
     report.processes.after = after.map(publicProcess);
     const afterKeys = new Set(after.map(processKey));
     const killedPreexisting = cleanup ? cleanup.ownedSeen.filter((item) => preexisting.has(processKey(item))) : [];
     report.hygiene = {
-      ownedProcessesSeen: cleanup?.ownedSeen.length ?? 0, killedPids: cleanup?.killed ?? [], residual: cleanup?.residual ?? [],
+      ownedProcessesSeen: cleanup?.ownedSeen.length ?? 0, killedPids: cleanup?.killed ?? [], residual: cleanup?.residual ?? [], cleanupTimings: cleanup?.timings ?? null, cleanupFailed,
       preexistingTouched: killedPreexisting.length, preexistingMissingAfter: [...preexistingApp].filter((key) => !afterKeys.has(key)),
     };
     let profileRemoved = false;
@@ -831,7 +942,7 @@ export async function runBaseline(options) {
     report.hygiene.profileRemoved = profileRemoved;
     const log = readLogSince(logFile, logBefore);
     report.desktopLog = { available: log.available, ...inspectDesktopLog(log.text) };
-    const hygieneOk = report.hygiene.residual.length === 0 && report.hygiene.preexistingTouched === 0 && profileRemoved
+    const hygieneOk = !cleanupFailed && report.hygiene.residual.length === 0 && report.hygiene.preexistingTouched === 0 && profileRemoved
       && (!app?.pid || (report.desktopLog.hasStartup && !report.desktopLog.hasPanic));
     addCheck("N3", "Process tree and exit hygiene", hygieneOk,
       `residual=${report.hygiene.residual.length}, preexistingTouched=${report.hygiene.preexistingTouched}, profileRemoved=${profileRemoved}, log startup=${report.desktopLog.hasStartup} panic=${report.desktopLog.hasPanic}`);

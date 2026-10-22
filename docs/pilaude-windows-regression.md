@@ -48,7 +48,7 @@
 | N8 | 原生文件对话框 | 系统对话框，不由底座自动化 | 不涉及 | 是 | PIL-0167 |
 | N9 | 系统通知 toast | 系统通知，不由底座自动化 | 不涉及 | 是 | PIL-0166 |
 
-报告字段说明：`directBaseRequests` 只统计 CDP 接入之后页面直接发往真实 dev server 的请求，接入之前的不可见，是下限；`realApiRequests` 以代理计数加接入后的直连计数为准，N1 在收尾时按最终计数再判一次。进程清理只对运行期间（app 未退出时）记录过的 `pid@创建时间` 展开后代，逐个 `taskkill /PID <pid> /F`（不加 `/T`）；app 提前退出后不再把其 PID 当根。
+报告字段说明：`directBaseRequests` 只统计 CDP 接入之后页面直接发往真实 dev server 的请求，接入之前的不可见，是下限；`realApiRequests` 以代理计数加接入后的直连计数为准，N1 在收尾时按最终计数再判一次。进程清理只对运行期间（app 未退出时）记录过的 `pid@创建时间` 展开后代，逐个 `taskkill /PID <pid> /F`（不加 `/T`）；app 提前退出后不再把其 PID 当根，其行即使仍在快照里也不会被杀。清理用一次 Toolhelp 快照（约 0.5 秒，不含命令行）决定待杀集合，一次 `taskkill /PID … /F` 按从子到父的顺序杀掉，再用一次快照确认；`hygiene.cleanupTimings` 记录各阶段耗时。命令行只对未归属、非预先存在的 WebView2 进程按需查询（用于识别带本次 profile 的孤儿）。单个 taskkill 失败记入 `warnings` 而不中断后续收尾。app 在第一次快照返回前就退出时，已拉起的非 WebView 子进程无法归属，也不会进入 `residual`（保守取舍，避免误杀）。
 
 ### 运行前提
 

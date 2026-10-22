@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 import {
   CHECKS, DPI_LABELS, EXIT, HarnessError, assertInside, cleanupOwned, descendantsOf, formatCheckList, inspectDesktopLog,
-  listProcesses, normalizeRequestPath, taskkillArgs, ownedProcesses, parseArgs, parseBaseOrigin, parseDpiLabel, parseProbeOutput, processKey, readPng, runBaseline,
+  listProcesses, normalizeRequestPath, parseProcessList, taskkillArgs, ownedProcesses, parseArgs, parseBaseOrigin, parseDpiLabel, parseProbeOutput, processKey, readPng, runBaseline,
   runProbe, startFixtureProxy,
 } from "./native-harness.mjs";
 
@@ -160,6 +160,7 @@ describe("process ownership (pure)", () => {
 
   test("taskkill never expands the tree itself (no /T)", () => {
     assert.deepEqual(taskkillArgs(42), ["/PID", "42", "/F"]);
+    assert.deepEqual(taskkillArgs(3, 2, 1), ["/PID", "3", "/PID", "2", "/PID", "1", "/F"], "several pids share one call");
   });
 
   const noop = { profileDir: undefined, graceMs: 300, pollMs: 50 };
@@ -195,6 +196,82 @@ describe("process ownership (pure)", () => {
     assert.deepEqual(result.residual, []);
   });
 
+  test("a normal tree costs one deciding snapshot and one confirming snapshot", async () => {
+    const root = p(10, 1, "pi-agent-desktop.exe", "", 20);
+    let current = [root, p(11, 10, "node.exe", "", 21), p(12, 11, "node.exe", "", 22)];
+    let snapshots = 0;
+    const result = await cleanupOwned({
+      ...noop, known: [root], preexisting: new Set(),
+      list: async () => { snapshots += 1; return current; },
+      kill: async (pid) => { current = current.filter((item) => item.pid !== pid); },
+    });
+    assert.equal(snapshots, 2);
+    assert.deepEqual(result.killed, [12, 11, 10]);
+    assert.deepEqual(result.residual, []);
+    assert.equal(result.timings.snapshotsMs.length, 2);
+    assert.equal(result.timings.killsMs.length, 1);
+  });
+
+  test("the default path kills the whole set in one call, deepest first", async () => {
+    const root = p(10, 1, "pi-agent-desktop.exe", "", 20);
+    let current = [root, p(11, 10, "node.exe", "", 21), p(12, 11, "node.exe", "", 22), p(13, 10, "node.exe", "", 23)];
+    const calls = [];
+    await cleanupOwned({
+      ...noop, known: [root], preexisting: new Set(), list: async () => current,
+      killMany: async (pids) => { calls.push(pids); current = []; },
+    });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0], [12, 11, 13, 10]);
+  });
+
+  test("a root that already exited is skipped even though its row is still listed", async () => {
+    const root = p(10, 1, "pi-agent-desktop.exe", "", 20);
+    const all = [root, p(11, 10, "node.exe", "", 21)];
+    const killed = [];
+    const result = await cleanupOwned({ ...noop, known: [root], preexisting: new Set(), list: async () => all, kill: async (pid) => { killed.push(pid); }, isGone: (item) => item.pid === 10 });
+    assert.deepEqual(killed, [11]);
+    assert.ok(!result.residual.some((item) => item.pid === 10));
+  });
+
+  test("a kill that throws is recorded and the rest of the tree is still killed", async () => {
+    const root = p(10, 1, "pi-agent-desktop.exe", "", 20);
+    let current = [root, p(11, 10, "node.exe", "", 21), p(12, 11, "node.exe", "", 22)];
+    const result = await cleanupOwned({
+      ...noop, known: [root], preexisting: new Set(), list: async () => current,
+      kill: async (pid) => {
+        if (pid === 12) throw new Error("taskkill failed for 12: Access is denied");
+        current = current.filter((item) => item.pid !== pid);
+      },
+    });
+    assert.deepEqual(result.killed, [12, 11, 10], "every pid was attempted");
+    assert.deepEqual(result.errors, ["taskkill failed for 12: Access is denied"]);
+    assert.deepEqual(result.residual.map((item) => item.pid), [12]);
+  });
+
+  test("orphaned WebView2 helpers are found by command line, fetched only for unowned non-preexisting ones", async () => {
+    const profile = "C:\Temp\pilaude-native-webview-xyz";
+    const row = (pid, second) => ({ ...p(pid, 99, "msedgewebview2.exe", "", second), cmd: null });
+    const orphan = row(70, 30); const other = row(71, 31); const old = row(72, 5);
+    let current = [orphan, other, old];
+    const asked = [];
+    const killed = [];
+    await cleanupOwned({
+      ...noop, known: [], profileDir: profile, preexisting: new Set([processKey(old)]), list: async () => current,
+      commandLines: async (pids) => {
+        asked.push(...pids);
+        return new Map([[70, { created: orphan.created, cmd: `msedgewebview2 --user-data-dir=${profile}\EBWebView` }], [71, { created: other.created, cmd: "msedgewebview2 --user-data-dir=C:\Other" }]]);
+      },
+      kill: async (pid) => { killed.push(pid); current = current.filter((item) => item.pid !== pid); },
+    });
+    assert.deepEqual(asked, [70, 71], "the pre-existing process is never looked up");
+    assert.deepEqual(killed, [70]);
+  });
+
+  test("snapshot output parses into rows; garbage lines are ignored", () => {
+    const rows = parseProcessList("4\t0\t\tSystem\r\n812\t4\t2026-10-22T08:26:44.0682222Z\tnode.exe\r\nnoise\r\n\r\n");
+    assert.deepEqual(rows.map((row) => [row.pid, row.ppid, row.created, row.name]), [[4, 0, "", "System"], [812, 4, "2026-10-22T08:26:44.0682222Z", "node.exe"]]);
+  });
+
   test("a live recorded root expands to descendants and kills them one pid at a time", async () => {
     const root = p(10, 1, "pi-agent-desktop.exe", "", 20);
     const all = [root, p(11, 10, "node.exe", "", 21), p(12, 11, "node.exe", "", 22), p(13, 12, "node.exe", "", 5)];
@@ -213,8 +290,10 @@ describe("process cleanup (real processes)", () => {
     assert.ok(tree.length >= 2, "root has a grandchild");
     const started = Date.now();
     const result = await cleanupOwned({ known: tree, profileDir: undefined, preexisting: new Set() });
+    const elapsed = Date.now() - started;
+    console.log(`cleanup of ${tree.length} processes: ${elapsed} ms, phases ${JSON.stringify(result.timings)}`);
     try {
-      assert.ok(Date.now() - started < 5500);
+      assert.ok(elapsed < 5500);
       assert.deepEqual(result.residual, []);
       for (const item of tree) assert.equal(await waitDead(item.pid, 1000), true, `pid ${item.pid} is gone`);
       assert.equal(alive(decoy.pid), true, "decoy outside the tree survives");
