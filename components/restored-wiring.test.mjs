@@ -30,7 +30,7 @@ test("model scope warnings can be dismissed and link to provider setup (#48)", a
 });
 
 test("patch diffs in chat follow the diff display setting", async () => {
-  const messageView = await read("./MessageView.tsx");
+  const messageView = await read("./ToolStepView.tsx");
   const splitPatch = messageView.slice(messageView.indexOf("function SplitPatchView("), messageView.indexOf("function SplitFilesView("));
   assert.match(splitPatch, /const \{ mode \} = useDiffViewMode\(\);/);
   assert.match(splitPatch, /<SplitFilesView files=\{files\} mode=\{mode\} \/>/);
