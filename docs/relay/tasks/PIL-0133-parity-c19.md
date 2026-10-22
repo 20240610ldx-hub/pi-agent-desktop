@@ -3,7 +3,7 @@ id: PIL-0133
 title: 复刻验收：C19 模型切换菜单
 epic: E2
 priority: P2
-status: in_progress
+status: verify
 owner: codex-plus:gpt-xhigh:impl
 lease_until: 2026-10-22T05:42Z
 branch: task/PIL-0133-parity-c19
@@ -65,3 +65,4 @@ waivers: []
 - 2026-10-21T12:36Z · planner · 冻结验收标准 a4cb17ca21d9
 - 2026-10-22T02:42Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-22T05:42Z
 - 2026-10-22T03:13Z · codex-plus:gpt-xhigh:impl · Codex 实现提交：搜索/当前项/键盘/IME/焦点；行高24、圆角10.667；定向88/88，npm test 无新增失败。证据 relay-evidence/PIL-0133/impl/HANDOFF.md。转验证（CLI 账号 Sonnet）。
+- 2026-10-22T03:13Z · codex-plus:gpt-xhigh:impl · in_progress → verify

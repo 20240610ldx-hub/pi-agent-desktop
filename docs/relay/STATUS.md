@@ -25,14 +25,14 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 112 张任务卡：todo 94 · in_progress 3 · verify 0 · review 0 · done 10 · blocked 0 · parked 5
+共 112 张任务卡：todo 94 · in_progress 2 · verify 1 · review 0 · done 10 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
 | PIL-0127 | P1 | in_progress | 复刻验收：C13 代码块、Mermaid source 与复制反馈 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0127-parity-c13 |
-| PIL-0133 | P2 | in_progress | 复刻验收：C19 模型切换菜单 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0133-parity-c19 |
+| PIL-0133 | P2 | verify | 复刻验收：C19 模型切换菜单 | codex-plus:gpt-xhigh:impl | 2026-10-22T05:42Z | task/PIL-0133-parity-c19 |
 | PIL-0147 | P2 | in_progress | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | claude:sonnet-high:impl | 2026-10-22T05:41Z | task/PIL-0147-parity-c33 |
 
 ### 阻塞
