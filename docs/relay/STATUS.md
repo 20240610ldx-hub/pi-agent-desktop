@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 125 张任务卡：todo 94 · in_progress 3 · verify 1 · review 1 · done 19 · blocked 2 · parked 5
+共 125 张任务卡：todo 94 · in_progress 3 · verify 1 · review 0 · done 20 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -34,7 +34,6 @@
 | PIL-0002 | P0 | verify | 建立可信的测试基线并逐项登记已知失败 | codex-plus:luna-medium:impl | 2026-10-22T12:04Z | task/PIL-0002-test-baseline |
 | PIL-0010 | P1 | in_progress | Changes 面板在独立窗口打开（功能迁入与浏览器层验证） | codex-plus:sol-high:impl | 2026-10-22T12:54Z | task/PIL-0010-changes-popout-window |
 | PIL-0030 | P1 | in_progress | 统一执行前授权并接入 pi-permission-system（普通 coding 会话授权门） | codex-plus:sol-xhigh:impl | 2026-10-22T12:54Z | task/PIL-0030-permission-gate |
-| PIL-0137 | P1 | review | 复刻验收：C23 长会话滚动跟随与历史恢复 | codex-plus:luna-high:impl | 2026-10-22T12:04Z | task/PIL-0137-parity-c23 |
 | PIL-0011 | P2 | in_progress | 查清并修复 FileViewer 窄 pane 下载被取消 | codex-plus:sol-high:impl | 2026-10-22T12:35Z | task/PIL-0011-fileviewer-download |
 
 ### 阻塞
@@ -141,7 +140,7 @@
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 | PIL-0207 | P3 | E2 | C08 分叉发送入口（待用户开启） | 是 | PIL-0122, PIL-0189 |
 
-### 已完成（19）
+### 已完成（20）
 
-PIL-0001 接力治理落地与工作树分流；PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0111 Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生）；PIL-0115 复刻验收：C01 主题、文字与图标；PIL-0116 复刻验收：C02 按钮尺寸与交互状态；PIL-0122 复刻验收：C08 输入器主框与提交控件；PIL-0126 复刻验收：C12 助手正文与消息操作条；PIL-0127 复刻验收：C13 代码块、Mermaid source 与复制反馈；PIL-0130 复刻验收：C16 工具步骤、参数结果与紧凑命令；PIL-0143 复刻验收：C29 Artifact 卡片、预览与 iframe 桥接；PIL-0180 Windows 保持唤醒能力与退出释放；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown；PIL-0187 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）；PIL-0189 在分叉会话中发送（fork-send）；PIL-0197 Windows 托盘 Quit 只隐藏窗口不结束进程；PIL-0133 复刻验收：C19 模型切换菜单；PIL-0147 复刻验收：C33 侧栏项目／会话、搜索、状态及重排；PIL-0177 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
+PIL-0001 接力治理落地与工作树分流；PIL-0113 合入上游 abcwyc main 2026-10-20（desktop 0.7.5）；PIL-0014 把组件复刻基准拆成逐组件任务卡；PIL-0111 Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生）；PIL-0115 复刻验收：C01 主题、文字与图标；PIL-0116 复刻验收：C02 按钮尺寸与交互状态；PIL-0122 复刻验收：C08 输入器主框与提交控件；PIL-0126 复刻验收：C12 助手正文与消息操作条；PIL-0127 复刻验收：C13 代码块、Mermaid source 与复制反馈；PIL-0130 复刻验收：C16 工具步骤、参数结果与紧凑命令；PIL-0137 复刻验收：C23 长会话滚动跟随与历史恢复；PIL-0143 复刻验收：C29 Artifact 卡片、预览与 iframe 桥接；PIL-0180 Windows 保持唤醒能力与退出释放；PIL-0186 修复 relay set done 校验把 depends_on 误报为 unknown；PIL-0187 视觉复刻基准迁移到 Windows Claude Desktop 3.1623.0.0（用户决定）；PIL-0189 在分叉会话中发送（fork-send）；PIL-0197 Windows 托盘 Quit 只隐藏窗口不结束进程；PIL-0133 复刻验收：C19 模型切换菜单；PIL-0147 复刻验收：C33 侧栏项目／会话、搜索、状态及重排；PIL-0177 删除无消费者的 recent-sessions 并把菜单文档改为全走 DOM（用户决定）
 <!-- relay:board:end -->
