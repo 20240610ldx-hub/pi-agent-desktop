@@ -10656,6 +10656,7 @@ html.dark .model-selector-menu {
   --c13-code-surface: #fff;
   --c13-code-border: #dedede;
   --c13-code-text: #202020;
+  --c13-code-action-text: #202020;
   --c13-code-hover: #f2f2f2;
   min-width: 0;
   margin: 10.6667px 0;
@@ -10667,7 +10668,8 @@ html.dark .model-selector-menu {
 html.dark .c13-code-block {
   --c13-code-surface: #1a1a19;
   --c13-code-border: #2d2d2d;
-  --c13-code-text: #e6e5e2;
+  --c13-code-text: #e5e7eb;
+  --c13-code-action-text: #e6e5e2;
   --c13-code-hover: #2b2b2a;
 }
 .c13-code-block > .markdown-code-header {
@@ -10689,6 +10691,7 @@ html.dark .c13-code-block {
   border-radius: 5px;
   background: var(--c13-code-surface);
 }
+:is(.message-assistant, .message-user, .markdown-body):is(:hover, :focus-within) .c13-code-block .markdown-code-actions,
 .c13-code-block:is(:hover, :focus-within) .markdown-code-actions,
 .c13-code-block:has(.c13-copy-control:not([data-copy-state="idle"])) .markdown-code-actions {
   opacity: 1;
@@ -10717,13 +10720,13 @@ html.dark .c13-code-block {
   border-radius: 5px;
   padding: 0 6px;
   background: transparent;
-  color: var(--c13-code-text);
+  color: var(--c13-code-action-text);
   line-height: 16px;
 }
 .c13-code-block .markdown-code-copy { width: 24px; padding: 0; }
 .c13-code-block .markdown-code-action:is(:hover, :active, .is-active),
 .c13-copy-control[data-copy-state="copied"] .markdown-code-copy { background: var(--c13-code-hover); }
-.c13-code-block .markdown-code-action:hover:not(:disabled) { color: var(--c13-code-text); }
+.c13-code-block .markdown-code-action:hover:not(:disabled) { color: var(--c13-code-action-text); }
 .c13-code-block :is(.markdown-code-action, .c13-code-content):focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
@@ -10736,7 +10739,7 @@ html.dark .c13-code-block {
   width: max-content;
   max-width: min(280px, calc(100vw - 32px));
   box-sizing: border-box;
-  padding: 3px 7px;
+  padding: 2px 7px 4px;
   border: 1px solid #373736;
   border-radius: 5px;
   background: #20201f;

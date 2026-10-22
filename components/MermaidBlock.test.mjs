@@ -185,11 +185,19 @@ test("code copy browser lifecycle preserves source, focus and the current attemp
       import {I18nProvider} from "./hooks/useI18n";
       import {CodeBlock, MermaidBlock} from "./components/MermaidBlock";
       import {MarkdownBody} from "./components/MarkdownBody";
+      import {MessageView} from "./components/MessageView";
       function Harness(){const [code,setCode]=React.useState("\\tconst x = '中文';\\r\\n\\n");const [shown,setShown]=React.useState(true);
         window.changeCode=setCode;window.showCode=setShown;
         return <I18nProvider><button id="start">Start</button><div id="plain" className="markdown-body" style={{marginTop:80,width:318}}>{shown&&<CodeBlock code={code} lang="javascript"/>}</div>
           <div id="mermaid"><MermaidBlock code={"graph TD\\n  A --> B\\n"}/></div>
-          <div id="markdown"><MarkdownBody>{"~~~text\\n  original\\n\\tline\\n\\n~~~"}</MarkdownBody></div></I18nProvider>;
+          <div id="markdown"><MarkdownBody>{"~~~text\\n  original\\n\\tline\\n\\n~~~"}</MarkdownBody></div>
+          <button id="message-start">Before messages</button>
+          <MessageView entryId="c13-first" message={{role:"assistant",provider:"fixture",model:"fixture",stopReason:"stop",content:[
+            {type:"text",text:"Message prose\\n\\n~~~bash\\nnpm run desktop:dev\\n~~~\\n\\n~~~text\\nsecond fence\\n~~~"},
+            {type:"text",text:"~~~mermaid\\ngraph TD\\n  A --> B\\n~~~"}]}}/>
+          <MessageView entryId="c13-other" message={{role:"assistant",provider:"fixture",model:"fixture",stopReason:"stop",content:[
+            {type:"text",text:"Other message\\n\\n~~~text\\nother fence\\n~~~"}]}}/>
+          <button id="message-end">After messages</button></I18nProvider>;
       }createRoot(document.getElementById("root")).render(<React.StrictMode><Harness/></React.StrictMode>);`, resolveDir: project, loader: "tsx" },
     bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic", logLevel: "silent", tsconfig: `${project}/tsconfig.json`,
   })).outputFiles[0].text;
@@ -214,6 +222,63 @@ test("code copy browser lifecycle preserves source, focus and the current attemp
       await page.evaluate(({ index, failed }) => { const write = window.writes[index]; if (failed) write.reject(new Error("Clipboard denied")); else write.resolve(); }, { index, failed });
       await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
     };
+
+    const toolbarVisibility = (message) => message.locator(".markdown-code-actions").evaluateAll(elements => elements.map(el => {
+      const style = getComputedStyle(el);
+      return { opacity: style.opacity, pointerEvents: style.pointerEvents };
+    }));
+    const visible = { opacity: "1", pointerEvents: "auto" };
+    const hidden = { opacity: "0", pointerEvents: "none" };
+
+    for (const theme of ["light", "dark"]) {
+      await t.test(`${theme}: hovering a message reveals all its fences and Mermaid source without revealing another message`, async () => {
+        const { page, context } = await fixture();
+        try {
+          await page.evaluate(theme => document.documentElement.classList.toggle("dark", theme === "dark"), theme);
+          const first = page.locator('[data-entry-id="c13-first"]');
+          const other = page.locator('[data-entry-id="c13-other"]');
+          await first.getByRole("button", { name: "Source", exact: true }).click();
+          await page.locator("#message-start").focus();
+          await page.locator("#message-start").hover();
+          assert.deepEqual(await toolbarVisibility(first), [hidden, hidden, hidden]);
+          assert.deepEqual(await toolbarVisibility(other), [hidden]);
+          await first.locator("p").first().hover();
+          assert.deepEqual(await toolbarVisibility(first), [visible, visible, visible]);
+          assert.deepEqual(await toolbarVisibility(other), [hidden]);
+          await first.locator(".c13-code-content").first().hover();
+          assert.deepEqual(await toolbarVisibility(first), [visible, visible, visible]);
+          assert.deepEqual(await toolbarVisibility(other), [hidden]);
+          await other.locator("p").first().hover();
+          assert.deepEqual(await toolbarVisibility(first), [hidden, hidden, hidden]);
+          assert.deepEqual(await toolbarVisibility(other), [visible]);
+        } finally { await context.close(); }
+      });
+
+      await t.test(`${theme}: keyboard focus reveals every toolbar in only the focused message and clears on exit`, async () => {
+        const { page, context } = await fixture();
+        try {
+          await page.evaluate(theme => document.documentElement.classList.toggle("dark", theme === "dark"), theme);
+          const first = page.locator('[data-entry-id="c13-first"]');
+          const other = page.locator('[data-entry-id="c13-other"]');
+          await first.getByRole("button", { name: "Source", exact: true }).click();
+          await page.locator("#message-start").hover();
+          await page.locator("#message-start").focus();
+          await page.keyboard.press("Tab");
+          assert.equal(await first.locator(".markdown-code-copy").first().evaluate(el => el === document.activeElement), true);
+          assert.deepEqual(await toolbarVisibility(first), [visible, visible, visible]);
+          assert.deepEqual(await toolbarVisibility(other), [hidden]);
+          await page.keyboard.press("Tab");
+          assert.equal(await first.locator(".c13-code-content").first().evaluate(el => el === document.activeElement), true);
+          assert.deepEqual(await toolbarVisibility(first), [visible, visible, visible]);
+          await other.locator(".markdown-code-copy").focus();
+          assert.deepEqual(await toolbarVisibility(first), [hidden, hidden, hidden]);
+          assert.deepEqual(await toolbarVisibility(other), [visible]);
+          await page.locator("#message-end").focus();
+          assert.deepEqual(await toolbarVisibility(first), [hidden, hidden, hidden]);
+          assert.deepEqual(await toolbarVisibility(other), [hidden]);
+        } finally { await context.close(); }
+      });
+    }
 
     await t.test("keyboard copy exposes a tooltip, stays focused and admits one pending write", async () => {
       const { page, context, button } = await fixture();
