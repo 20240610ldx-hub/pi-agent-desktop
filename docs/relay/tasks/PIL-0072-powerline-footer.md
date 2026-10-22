@@ -46,6 +46,7 @@ waivers: []
 | A1 | 390×340 叠字复现存证（impl/before）并经验证者复核 | 通过 | D:\pilaude\relay-evidence\PIL-0072\verify\VERIFY.md | cb654972 | claude-cli:sonnet-high:verify |
 | A2 | 真实 next dev 脚本：三尺寸浅深色不透明不重叠；consumer 夹具断言修复前失败；变异去掉 serverExternalPackages 脚本失败 | 通过 | D:\pilaude\relay-evidence\PIL-0072\verify\VERIFY-2.md | cb654972 | claude-cli:sonnet-medium:verify |
 | A3 | 真实层：默认直接显示，扩展重载/SSE 重连/刷新/会话往返保持，草稿保留 | 通过 | D:\pilaude\relay-evidence\PIL-0072\verify\VERIFY-2.md | cb654972 | claude-cli:sonnet-medium:verify |
+| A4 | THIRD_PARTY_NOTICES 记录 manifest MIT 与无 LICENSE；卡日志记用户决定随安装包打包；stage 断言通过 | 通过 | D:\pilaude\relay-evidence\PIL-0072\verify\VERIFY-2.md | cb654972 | claude-cli:sonnet-medium:verify |
 
 ## 日志
 
@@ -63,3 +64,4 @@ waivers: []
 - 2026-10-22T13:43Z · claude-cli:sonnet-high:verify · 证据 A1：通过
 - 2026-10-22T13:43Z · claude-cli:sonnet-medium:verify · 证据 A2：通过
 - 2026-10-22T13:43Z · claude-cli:sonnet-medium:verify · 证据 A3：通过
+- 2026-10-22T13:43Z · claude-cli:sonnet-medium:verify · 证据 A4：通过
