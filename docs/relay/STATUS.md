@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 115 张任务卡：todo 97 · in_progress 1 · verify 2 · review 0 · done 10 · blocked 0 · parked 5
+共 116 张任务卡：todo 98 · in_progress 1 · verify 2 · review 0 · done 10 · blocked 0 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -83,6 +83,7 @@
 | PIL-0195 | P1 | E5 | 受控浏览器人工接管、取消与恢复 | 否 | PIL-0192, PIL-0193 |
 | PIL-0200 | P1 | E2 | Changes 独立窗口的 Windows 原生实测 | 否 | — |
 | PIL-0202 | P1 | E4 | 子代理与 child 会话的授权上限与撤权 | 否 | — |
+| PIL-0203 | P1 | E4 | 公开审批服务、入口覆盖清单与未覆盖入口默认拒绝 | 否 | — |
 | PIL-0003 | P2 | E1 | 产品与更新身份收尾核验 | 否 | — |
 | PIL-0011 | P2 | E2 | 查清并修复 FileViewer 窄 pane 下载被取消 | 是 | — |
 | PIL-0020 | P2 | E3 | 本地数据隔离与凭据加密验收 | 否 | — |
