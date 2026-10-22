@@ -56,6 +56,7 @@ waivers: []
 | --- | --- | --- | --- | --- | --- |
 | A1 | 无 C01 专属 3.1623 同态参考：窄窗、disabled 图标色、100/125% DPI、字体回退、主题切换器键盘未重跑；仅确认亮/暗令牌渲染（见 A2） | 未运行 | D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md | 2525b0d | claude:sonnet-high:verify |
 | A2 | next dev --webpack，1706x1017 DSF1.5 浏览器层；ink 色 CIEDE2000 对 00/01 原生：正文/导航/占位/暗侧栏标题 ΔE 0~0.4 通过，行距 20 vs 19.97 通过，T 大写高 10.0=10.0；但亮侧栏会话标题 21.55、亮侧栏分组/项目标题 12.26（旧规则 native-theme.css:2632 覆盖 --text-dim）、暗侧栏会话 3.65/项目名 3.74 超 ΔE2；图标中心 x 参考 26.0 实现 33.0、尺寸未对齐，PilaudeIcon 零改动。字体不同为残差 | 失败 | D:/pilaude/relay-evidence/PIL-0115/verify/compare-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-light-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/native-dark-ink.txt; D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md | 2525b0d | claude:sonnet-high:verify |
+| A3 | 无同态原生参考；100/125/150% 原生 DPI 与应用缩放、主题切换器键盘均未由验证者运行 | 未运行 | D:/pilaude/relay-evidence/PIL-0115/verify/VERIFY-LOG.md | 2525b0d | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -73,3 +74,4 @@ waivers: []
 - 2026-10-22T02:40Z · claude:sonnet-high:impl · in_progress → verify
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A1：未运行
 - 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A2：失败
+- 2026-10-22T02:52Z · claude:sonnet-high:verify · 证据 A3：未运行
