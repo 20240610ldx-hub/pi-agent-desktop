@@ -25,7 +25,7 @@
 ## 任务板（自动生成，勿手改）
 
 <!-- relay:board:start -->
-共 126 张任务卡：todo 94 · in_progress 4 · verify 1 · review 0 · done 20 · blocked 2 · parked 5
+共 127 张任务卡：todo 95 · in_progress 4 · verify 1 · review 0 · done 20 · blocked 2 · parked 5
 
 ### 进行中 / 待验证 / 待评审
 
@@ -138,6 +138,7 @@
 | PIL-0209 | P2 | E2 | C08 输入器补采与原生验收 | 是 | PIL-0122 |
 | PIL-0210 | P2 | E2 | C29 Artifact 预览补采、重试保滚动与原生验收 | 是 | PIL-0143 |
 | PIL-0213 | P2 | E0 | tmp-shadow-tokens | 否 | — |
+| PIL-0214 | P2 | E0 | tmp-appshell-contracts | 否 | — |
 | PIL-0012 | P3 | E2 | 公式流式光标的特殊情形 | 否 | — |
 | PIL-0207 | P3 | E2 | C08 分叉发送入口（待用户开启） | 是 | PIL-0122, PIL-0189 |
 
