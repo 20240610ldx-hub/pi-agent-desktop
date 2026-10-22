@@ -3,9 +3,9 @@ id: PIL-0010
 title: Changes 面板在独立窗口打开（功能迁入与浏览器层验证）
 epic: E2
 priority: P1
-status: review
+status: done
 owner: codex-plus:sol-high:impl
-lease_until: 2026-10-22T12:54Z
+lease_until:
 branch: task/PIL-0010-changes-popout-window
 implementers: [codex-plus:sol-high:impl]
 depends_on: [PIL-0001]
@@ -77,3 +77,4 @@ Windows 原生开窗、移动、DPI、关闭与进程清理的实机验证（PIL
 - 2026-10-22T13:21Z · claude-cli:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T13:21Z · claude-cli:opus-high:review · 证据 A5：通过
 - 2026-10-22T13:21Z · claude-cli:sonnet-high:verify · 证据 A6：通过
+- 2026-10-22T13:21Z · claude-cli:opus-high:review APPROVE · review → done（评审 claude-cli:opus-high:review APPROVE）
