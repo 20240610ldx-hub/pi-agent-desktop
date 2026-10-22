@@ -3,7 +3,7 @@ id: PIL-0143
 title: 复刻验收：C29 Artifact 卡片、预览与 iframe 桥接
 epic: E2
 priority: P1
-status: in_progress
+status: verify
 owner: codex-plus:sol-high:impl
 lease_until: 2026-10-22T12:04Z
 branch: task/PIL-0143-parity-c29
@@ -66,3 +66,4 @@ waivers: []
 - 2026-10-22T09:04Z · codex-plus:sol-high:impl · 领取，租约至 2026-10-22T12:04Z
 - 2026-10-22T09:20Z · claude:opus:coordinator · 范围 [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs] → [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs, hooks/useHtmlPreviewFrame.ts, hooks/useHtmlPreviewFrame.test.mjs]：实现者发现 iframe 桥接缺 origin 校验（安全缺口），该文件无卡归属；本卡 A4 桥接需修复并补负向测试
 - 2026-10-22T10:02Z · codex-plus:sol-high:impl · claude impl: 桥接安全加固+保存失败/重试，定向62/62 tsc lint guard 通过，npm test 12 失败与基线逐名一致；C29 同态参考待补
+- 2026-10-22T10:02Z · codex-plus:sol-high:impl · in_progress → verify
