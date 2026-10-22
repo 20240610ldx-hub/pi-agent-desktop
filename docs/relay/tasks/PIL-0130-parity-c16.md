@@ -71,3 +71,4 @@ waivers: []
 - 2026-10-22T08:20Z · codex-plus:luna-high:impl · 协调者决定：本卡的核心是把 MessageView.tsx 的 ToolCallBlock 及其工具 helper 迁到 ToolStepView.tsx；授权在 MessageView.tsx 中仅做 删除被迁出的块 + import 新组件的改动，不改其他逻辑。因 MessageView.tsx 现由 PIL-0126 持有且在返工，本卡等 PIL-0126 合入后再串行实施。luna 试跑首轮正确识别范围并停止，无代码改动。
 - 2026-10-22T08:20Z · codex-plus:luna-high:impl · in_progress → blocked：等 PIL-0126 合入后串行实施（MessageView.tsx 归属）
 - 2026-10-22T09:26Z · codex-plus:luna-high:impl · blocked → in_progress：PIL-0126 已合入，串行实施
+- 2026-10-22T10:05Z · codex-plus:luna-high:impl · 做了：ToolCallBlock 迁入 ToolStepView，C16 紧凑命令间距按 06 原生图量测收紧（盒高 50→42.06，参考 42.7）/ 状态：A1/A2(仅06图覆盖项)完成，A3 未运行，其余状态待参考；迁移致 2 个源码字符串测试失败（restored-wiring、NonChatModels.wiring，不在范围）/ 下一步：协调者 relay scope 授权这两处改读 ToolStepView.tsx / 风险：见 impl/HANDOFF.md
