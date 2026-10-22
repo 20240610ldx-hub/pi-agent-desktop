@@ -43,6 +43,7 @@ waivers: []
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 复核 check-deps/tsc/lint/npm test 命令、退出码、耗时与 impl 日志一致 | 通过 | D:\pilaude\relay-evidence\PIL-0002\verify\VERIFY-3.md | 4a8ae575 | claude-cli:haiku:verify |
 
 ## 日志
 
@@ -51,3 +52,4 @@ waivers: []
 - 2026-10-22T09:04Z · codex-plus:luna-medium:impl · 领取，租约至 2026-10-22T12:04Z
 - 2026-10-22T09:43Z · codex-plus:luna-medium:impl · in_progress → verify
 - 2026-10-22T12:54Z · codex-plus:luna-medium:impl · 用户 2026-10-22 同意在 GitHub Actions 跑一次 Linux CI（草稿 PR 触发，被自动模式拦截，待用户执行）
+- 2026-10-22T13:13Z · claude-cli:haiku:verify · 证据 A1：通过
