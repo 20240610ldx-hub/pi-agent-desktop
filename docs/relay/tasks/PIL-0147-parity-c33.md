@@ -54,6 +54,7 @@ waivers: []
 
 | 验收项 | 命令/步骤 | 结果 | 证据位置 | 提交 | 验证者 |
 | --- | --- | --- | --- | --- | --- |
+| A1 | 有参考状态（选中行/子项缩进/导航行/悬停···/浅深配色）已验子集 | 通过 | D:\pilaude\relay-evidence\PIL-0147\verify\VERIFY-2.md | 820949d | claude-cli:sonnet-high:verify |
 
 ## 日志
 
@@ -73,3 +74,4 @@ waivers: []
 - 2026-10-22T04:21Z · claude:sonnet-high:impl · 返工2：选中行静止态不预留 trailing，标题右端距行右缘 9.33/10.0（参考 9.33）；测试 63/63、tsc/lint/guard 通过、npm test 新增失败 0（基线 12）
 - 2026-10-22T04:23Z · user · 修订验收标准 a61465879994 → 086c3471a705：用户2026-10-22拆卡政策：已验部分留本卡（有3.1623参考的夹具层与深/浅色项），缺参考与原生项移至PIL-0205
 - 2026-10-22T04:42Z · claude:sonnet-high:impl · 返工3：触屏选中静止行 ··· 常驻并保留 27.2px 预留（hover:hover 包裹隐藏规则）、项目树触屏行高选择器补齐、孤儿注释删除；渲染级测试+量测，证据 FIX3.md
+- 2026-10-22T07:22Z · claude-cli:sonnet-high:verify · 证据 A1：通过

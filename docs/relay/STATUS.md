@@ -31,9 +31,9 @@
 
 | ID | 优先级 | 状态 | 标题 | 持有者 | 租约到期 (UTC) | 分支 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PIL-0111 | P1 | verify | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | claude-cli:sonnet-high:impl | 2026-10-22T06:54Z | task/PIL-0111-windows-native-baseline |
+| PIL-0111 | P1 | verify | Windows 原生验收基线（启动接入、窗口探针、DPI、进程卫生） | claude-cli:sonnet-high:impl | 已过期 2026-10-22T06:54Z | task/PIL-0111-windows-native-baseline |
 | PIL-0117 | P1 | in_progress | 复刻验收：C03 分段选择控件 | claude-cli:sonnet-high:impl | 2026-10-22T07:39Z | task/PIL-0117-parity-c03 |
-| PIL-0147 | P2 | verify | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | claude:sonnet-high:impl | 2026-10-22T05:41Z | task/PIL-0147-parity-c33 |
+| PIL-0147 | P2 | verify | 复刻验收：C33 侧栏项目／会话、搜索、状态及重排 | claude:sonnet-high:impl | 已过期 2026-10-22T05:41Z | task/PIL-0147-parity-c33 |
 
 ### 阻塞
 
