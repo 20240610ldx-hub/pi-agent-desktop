@@ -52,8 +52,12 @@ use shell::{build_linux_tray, show_main_window};
 const DESKTOP_API_TOKEN_ENV: &str = "PI_DESKTOP_API_TOKEN";
 const DESKTOP_INSTANCE_ID_ENV: &str = "PI_DESKTOP_INSTANCE_ID";
 const DESKTOP_INSTANCE_ID_HEADER: &str = "x-pi-desktop-instance";
-#[cfg(not(feature = "custom-protocol"))]
+#[cfg(any(not(feature = "custom-protocol"), test))]
 const DEV_SERVER_URL: &str = "http://127.0.0.1:30141";
+/// Development-only runtime override for the server origin (the compiled-in
+/// `devUrl` otherwise wins). Still validated by `development_server_url`.
+#[cfg(any(not(feature = "custom-protocol"), test))]
+const DEV_SERVER_URL_ENV: &str = "PILAUDE_DEV_URL";
 /// Preferred localhost port for the packaged Next server. Keeping this stable
 /// matters because the webview's localStorage is origin-scoped (`host:port`).
 #[cfg(feature = "custom-protocol")]
@@ -830,11 +834,88 @@ mod tests {
     }
 }
 
+/// Development connects to the configured existing server; only a bare local
+/// HTTP origin may become a trusted WebView/IPC origin. Packaged startup keeps
+/// its independently selected server origin and never uses this helper.
+#[cfg(any(not(feature = "custom-protocol"), test))]
+fn development_server_url(configured: Option<&Url>) -> Result<Url, String> {
+    let url = configured
+        .cloned()
+        .unwrap_or_else(|| DEV_SERVER_URL.parse().expect("valid default development origin"));
+    if url.scheme() != "http"
+        || url.host_str() != Some("127.0.0.1")
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.path() != "/"
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return Err("Development requires a bare http://127.0.0.1 server origin".into());
+    }
+    Ok(url)
+}
+
+/// The runtime override (when set) replaces the compiled-in `devUrl`; either
+/// way the result goes through `development_server_url`.
+#[cfg(any(not(feature = "custom-protocol"), test))]
+fn development_origin(override_value: Option<&str>, configured: Option<&Url>) -> Result<Url, String> {
+    match override_value.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => {
+            let parsed = Url::parse(value).map_err(|error| format!("Invalid {DEV_SERVER_URL_ENV}: {error}"))?;
+            development_server_url(Some(&parsed))
+        }
+        None => development_server_url(configured),
+    }
+}
+
+#[cfg(test)]
+mod development_origin_tests {
+    use super::{development_origin, development_server_url, DEV_SERVER_URL};
+    use tauri::Url;
+
+    #[test]
+    fn configured_loopback_origin_is_used_without_starting_another_server() {
+        let configured = Url::parse("http://127.0.0.1:30142").unwrap();
+        assert_eq!(development_server_url(Some(&configured)).unwrap().as_str(), "http://127.0.0.1:30142/");
+        assert_eq!(development_server_url(None).unwrap().as_str(), format!("{DEV_SERVER_URL}/"));
+    }
+
+    #[test]
+    fn development_origin_rejects_nonloopback_credentials_and_route_payloads() {
+        for value in [
+            "https://example.com",
+            "http://localhost:30142",
+            "http://192.168.0.1:30142",
+            "http://user@127.0.0.1:30142",
+            "http://127.0.0.1:30142/changes",
+            "http://127.0.0.1:30142/?token=private",
+            "http://127.0.0.1:30142/#fragment",
+            "file:///app",
+        ] {
+            assert!(development_server_url(Some(&Url::parse(value).unwrap())).is_err(), "{value}");
+        }
+    }
+
+    #[test]
+    fn runtime_override_replaces_configured_origin_and_is_validated() {
+        let configured = Url::parse("http://127.0.0.1:30141").unwrap();
+        assert_eq!(development_origin(Some("http://127.0.0.1:45678"), Some(&configured)).unwrap().as_str(), "http://127.0.0.1:45678/");
+        assert_eq!(development_origin(Some("  "), Some(&configured)).unwrap().as_str(), "http://127.0.0.1:30141/");
+        assert_eq!(development_origin(None, None).unwrap().as_str(), format!("{DEV_SERVER_URL}/"));
+        for value in ["http://example.com:1", "http://127.0.0.1:1/x", "not a url"] {
+            assert!(development_origin(Some(value), Some(&configured)).is_err(), "{value}");
+        }
+    }
+}
+
 #[cfg(not(feature = "custom-protocol"))]
 fn start_development_server(
-    _app: &tauri::AppHandle,
+    app: &tauri::AppHandle,
 ) -> Result<(Url, DesktopServer), Box<dyn std::error::Error>> {
-    Ok((DEV_SERVER_URL.parse()?, DesktopServer::empty()))
+    let override_value = std::env::var(DEV_SERVER_URL_ENV).ok();
+    let url = development_origin(override_value.as_deref(), app.config().build.dev_url.as_ref())
+        .map_err(io::Error::other)?;
+    Ok((url, DesktopServer::empty()))
 }
 
 /// Single-instance guard (Linux only). Launching the app binary again starts a
