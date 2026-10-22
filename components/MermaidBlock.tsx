@@ -353,21 +353,21 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
   const { isDark } = useTheme();
 
   return (
-    <div className="markdown-code-block">
+    <div className="markdown-code-block c13-code-block">
       <div className="markdown-code-header">
         <span className="markdown-code-lang">{lang || "text"}</span>
         <div className="markdown-code-actions">
           {headerAction}
-          <CodeCopyButton code={code} />
+          <CodeCopyButton code={code} iconOnly />
         </div>
       </div>
       {isStreaming ? (
         <pre
+          className="c13-code-content"
+          tabIndex={0}
+          aria-label={lang || "text"}
           style={{
             margin: 0,
-            padding: "11px 13px",
-            fontSize: "calc(12.5px + var(--chat-font-size-offset, 0px))",
-            lineHeight: 1.62,
             overflowX: "auto",
             backgroundColor: "color-mix(in srgb, var(--bg) 92%, var(--bg-panel))",
           }}
@@ -378,13 +378,11 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
         <SyntaxHighlighter
           language={lang || "text"}
           style={isDark ? codeBlockDarkTheme : vs}
-          showLineNumbers
-          lineNumberStyle={{ color: "var(--text-dim)", fontStyle: "normal" }}
+          className="c13-code-content"
+          tabIndex={0}
+          aria-label={lang || "text"}
           customStyle={{
             margin: 0,
-            padding: "11px 13px",
-            fontSize: "calc(12.5px + var(--chat-font-size-offset, 0px))",
-            lineHeight: 1.62,
             // The light `vs` theme puts its own 1px #ddd border on <pre>; the
             // block's wrapper already draws the frame.
             border: "none",
