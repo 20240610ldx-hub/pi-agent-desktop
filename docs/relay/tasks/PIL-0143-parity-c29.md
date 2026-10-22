@@ -11,7 +11,7 @@ implementers: [codex-plus:sol-high:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/ArtifactCard.tsx, components/ArtifactPanel.tsx, components/HtmlPreviewBlock.tsx, components/HtmlPreviewErrorBar.tsx, components/artifact-panel-styles.test.mjs, components/HtmlPreviewErrorBar.test.mjs, hooks/useHtmlPreviewFrame.ts, hooks/useHtmlPreviewFrame.test.mjs]
 files_shared: [app/native-theme.css]
-acceptance_sha: fd7b216b5c6c
+acceptance_sha: 1010d618183b
 waivers: []
 ---
 
@@ -33,7 +33,6 @@ waivers: []
 每条可以被一个不了解实现过程的人独立判定通过或失败。本卡只验收夹具层与已有深色/安全边界项；被移出的项已转入 PIL-0210。
 
 - [ ] A1 夹具层状态：Artifact 卡片活动/完成、版本切换、预览/保存/失败/重试、恶意文档隔离在浏览器夹具中可进入，并给出可复现步骤。验证：`node --test components/artifact-panel-styles.test.mjs components/HtmlPreviewErrorBar.test.mjs` 通过；夹具矩阵记入 relay-evidence/PIL-0143/verify/。逐图同态参考、Windows/WebView2 层、数值量测移至 PIL-0210 A1、A2。
-- [ ] A2 （移至 PIL-0210 A1、A2：C29 无 3.1623 同态参考，数值量测与视觉结论本卡不登记。）
 - [ ] A3 保存失败、取消、重试与版本隔离：保存失败保留 iframe 与内部滚动（500→500→500）；取消静默；重试内容逐字节一致，Blob 全部 revoke；保存错误按版本隔离；外层聊天滚动保持；键盘 Enter 触发 Retry；390px 双主题无横向溢出。验证：浏览器夹具复现（relay-evidence/PIL-0143/verify/verify-browser.log）。预览失败重试保滚动、关闭侧板回原卡、原生 IME 与 DPI/缩放移至 PIL-0210 A3、A4、A5、A9。
 - [ ] A4 iframe 桥接与沙箱隔离：sandbox 不含 allow-same-origin；真实沙箱 iframe 探测父文档、存储与顶层均被拒；桥接的合法消息被接受、伪造与畸形消息被忽略、外链仅 http(s) 且有冷却、洪泛有上限。验证：hooks/useHtmlPreviewFrame.test.mjs 与真实 Edge 探测脚本（B1–B10）记入 relay-evidence/PIL-0143/verify/。inline 流式到完成、真实 Pi/SDK consumer、Tauri 真实保存、评审残差移至 PIL-0210 A6、A7、A8、A10。
 - [ ] A5 定向测试与守卫：`node --test components/artifact-panel-styles.test.mjs components/HtmlPreviewErrorBar.test.mjs hooks/useHtmlPreviewFrame.test.mjs lib/html-preview.test.mjs lib/artifacts.test.mjs lib/artifact-store.test.mjs lib/preview-runtime.test.mjs` 通过；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0143` 无阻断；npm test 失败名与基线一致、无新增。
@@ -78,3 +77,4 @@ waivers: []
 - 2026-10-22T10:15Z · claude-cli:sonnet-high:verify · 证据 A4：通过
 - 2026-10-22T10:15Z · claude-cli:sonnet-high:verify · 证据 A5：通过
 - 2026-10-22T10:15Z · codex-plus:sol-high:impl · verify → review（评审 claude-cli:opus-high:review）
+- 2026-10-22T10:15Z · user · 修订验收标准 fd7b216b5c6c → 1010d618183b：拆卡政策：A2 整项移至 PIL-0210，删除空项
