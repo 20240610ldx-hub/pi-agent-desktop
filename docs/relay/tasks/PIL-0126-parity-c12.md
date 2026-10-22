@@ -11,7 +11,7 @@ implementers: [codex-plus:gpt-xhigh:impl]
 depends_on: [PIL-0014]
 files_allowed: [components/MessageView.tsx, components/MessageView.test.mjs]
 files_shared: [app/native-theme.css]
-acceptance_sha: 3cdd326cbfe6
+acceptance_sha: 94ea750078ed
 waivers: []
 ---
 
@@ -30,10 +30,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 助手正文 rest/hover/focus/touch、复制/分叉的 pending/成功/失败及长答案；Pin/朗读无能力时登记缺口。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
-- [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0126/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 Tab/hover/touch 均能进入操作条，复制/分叉成功或失败后焦点不丢；长答案阅读滚动不抢位置，窄窗/三档 DPI/缩放/双主题核验。助手正文只读，IME/文本编辑 Home/End 不适用；子菜单方向键仅按其语义验。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：核对rest／hover／focus／touch操作入口、复制与分叉；Pin／朗读若无能力须保缺口，不伪按钮成功。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
+- [ ] A1 已验子集（夹具层）：复制/分叉的 pending/成功/失败反馈在浏览器夹具中可见且与状态一致；Pin/朗读无能力，操作条未加伪按钮（登记为缺口）。rest/hover/focus/touch 操作条各态及操作条同态参考，以及真实 Pi 分叉成功/失败/取消，移至 PIL-0208。
+- [ ] A2 已验子集：内联代码徽记几何（外框宽 68.0 CSS px、高 18.67 CSS px 容差内、文字到框内距、段间隙、填充色 ΔE 0.84）在 3.1623 浅色参考（00-main-window-light.png，原像素 ÷1.5）下达标，量测表存 relay-evidence/PIL-0126/。以下移至 PIL-0208：内联代码文字色（复验 ΔE00=31.7，未达标）、边框、圆角、宽高比、操作条框/间距/图标/tooltip、文字基线、列表缩进/标记。
+- [ ] A3 已验子集（浏览器合成层）：900/390px × DPR 1/1.5/2 × 浅/深双主题共 8 组无横向溢出；桌面 rest 隐藏、hover/Tab 显示操作条，390px 触屏常显。WebView2 原生键盘/触摸/系统 DPI/应用缩放及窄窗原生核验移至 PIL-0208。
+- [ ] A4 已验子集（夹具层）：复制失败后焦点保持、80 段长答案滚动位置不变（测试 `components/MessageView.test.mjs`）。真实 Pi 分叉成功/失败/取消与跨会话焦点（链路在 ChatWindow.tsx、useAgentSession.ts，超出本卡文件范围）移至 PIL-0208；Pin/朗读缺口逐条登记。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test components/MessageView.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0126`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -66,3 +66,4 @@ waivers: []
 - 2026-10-22T07:25Z · codex-plus:gpt-xhigh:impl · 领取，租约至 2026-10-22T10:25Z
 - 2026-10-22T07:52Z · codex-plus:gpt-xhigh:impl · Codex 实现提交：内联代码内距 4px、复制反馈、分叉等待焦点；定向55、npm test 无新增。A2 宽高比/颜色残差未达标，缺操作条同态参考。转验证。
 - 2026-10-22T07:52Z · codex-plus:gpt-xhigh:impl · in_progress → verify
+- 2026-10-22T08:27Z · user · 修订验收标准 3cdd326cbfe6 → 94ea750078ed：拆卡政策（用户 2026-10-22 批准）：已验子集留本卡，缺同态参考或真实 Pi 链路的状态移至 PIL-0208（C12 补采与原生验收）。内联代码文字色按复验 ΔE00=31.7 未达标，改移 PIL-0208。
