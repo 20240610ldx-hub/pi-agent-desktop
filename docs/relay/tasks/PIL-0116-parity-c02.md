@@ -11,7 +11,7 @@ implementers: [claude:sonnet-high:impl]
 depends_on: [PIL-0014]
 files_allowed: [vendor/open-claude-ui/CdsButton.tsx, vendor/open-claude-ui/CdsButton.test.mjs, package.json, scripts/release-workflows.test.mjs]
 files_shared: [components/PilaudeDataSection.tsx, components/SettingsUi.tsx, app/native-theme.css]
-acceptance_sha: 4633dd54c86e
+acceptance_sha: f290638aa589
 waivers: []
 ---
 
@@ -30,10 +30,10 @@ waivers: []
 
 ## 验收标准
 
-- [ ] A1 建立 实际 consumer 的文本/图标按钮，default、hover、pressed、focus-visible、disabled、loading 及长标签；空列表/展开属于宿主。 逐图登记来源/版本关联、Windows/WebView2、客户区、系统 DPI、应用缩放、主题/语言、公开字体及功能开关，按上述状态逐条给可复现进入步骤；缺图或版本不明记待参考，不用 actual/演示数据代参考或真实 Pi consumer。
+- [ ] A1 本卡范围（用户 2026-10-22 决定拆卡）：仅已有 3.1623 原生同态参考的按钮状态——xs 描边钮默认（浅色，agent-panels-light/2026-10-21/00 Skip）、xs 填充主按钮默认（浅色，00/06 Submit/下一步）、sm 次级钮默认（深色，main-window-native/2026-10-22/09「管理」）、xs 图标钮悬停（深色，main-window-native/2026-10-22/07 复制钮）。逐图登记来源/版本关联、系统 DPI、应用缩放、主题/语言，给可复现进入步骤。其余尺寸、变体与 pressed/focus-visible/disabled/loading 原生外观转 PIL-0198，补采后另验。
 - [ ] A2 在同帧/同状态/同测试数据、相同客户区/系统 DPI/应用缩放下给出参考值、实现值、原像素与 CSS px、差值和残差。采用用户 2026-10-21 批准容差：同 DPI 下盒子宽高与间距 ≤1 CSS px；文字基线 ≤1 CSS px；宽高比 ±1%；圆角 ≤0.5 CSS px；图标中心对齐 ≤1 CSS px；颜色 ΔE ≤2（CIEDE2000，sRGB→CIELAB D65，在同一像素采样区取中位色；不得改用较宽松算法）。抗锯齿与字形 ink 差异单列为残差，不计入几何容差。参考值换算：3.1623 原生截图按 SAMPLING 记录（显示器 150%、AppliedDPI 144；Claude 应用缩放 100%，用户 2026-10-21 确认），CSS px = 原像素 ÷ 1.5；聊天附件（manifest 标注可能降采样/重编码）、macOS 及版本/缩放未知的批次只登记机制，不由图宽或嵌入 DPI 反推 CSS px，其数值项记未运行并待 3.1623 原生补采。验证方法：量测表与差异图存 relay-evidence/PIL-0116/。叠图只作整数裁剪/平移，不对原图插值重采样；不以残差登记替代数值达标。
-- [ ] A3 Tab 到按钮，Enter/Space 仅触发一次，禁用/加载不触发，操作后焦点按宿主恢复；窄窗、长标签、三档 DPI/应用缩放与双主题不裁切。IME、方向/Home/End、内部滚动不适用：按钮不是编辑器或列表。 原生与浏览器合成事件分层记录，缺少同态参考的视觉项记未运行。
-- [ ] A4 本组件专属核验：逐尺寸覆盖默认、悬停、按下、键盘焦点、禁用和加载；同一consumer的图标按钮与文本按钮不可只验其中一个。 对本卡已知残差逐条给出处理结果与可复现操作；真实请求／数据／状态与可见反馈一致，失败、取消和恢复保留，不伪造能力。
+- [ ] A3 Tab 到按钮，Enter/Space 仅触发一次，禁用/加载不触发且加载中保持可聚焦；窄窗（320/900）、长标签、DPR 1/1.5/2 与双主题不裁切、不溢出。本卡验浏览器合成事件层；Windows 原生/WebView2、真机三档 DPI 与 Claude 应用缩放层转 PIL-0198。IME、方向/Home/End、内部滚动不适用。
+- [ ] A4 本组件专属核验：A1 所列四个状态的盒尺寸、圆角、文字墨迹边距/基线、填充/文字/边框色逐项给参考值、实现值与差值并达标；同一 consumer 的图标按钮与文本按钮各至少一个状态被量测。对本卡已知残差逐条给出处理结果；primary 改黑的依据记录在证据中。
 - [ ] A5 由独立验证者运行受影响定向测试：`node --test vendor/open-claude-ui/CdsButton.test.mjs components/SettingsUi.blocks.test.mjs components/SettingsUi.group-switch.test.mjs components/SettingsUi.test.mjs`；`node_modules/.bin/tsc --noEmit`、`npm run lint`、`node scripts/relay.mjs guard --task PIL-0116`。期望：测试、类型检查和 lint 全部通过，guard 无阻断；不得删减/跳过测试或放宽阈值。逐 A 项记录实际结果、步骤/命令、仓库外证据、对应提交和验证者标签；单元/夹具、真实 SDK/进程、浏览器、Windows 原生及视觉证据分层，缺条件记未运行，不能据此称产品验收通过。
 
 ## 范围外
@@ -91,3 +91,5 @@ waivers: []
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A4：未运行
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A5：通过
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 做了：独立重量测并跑 A5 全部命令。状态：8b5bdcc；A2/A3 已测子集与 A5 通过，A1/A4 及其余状态因无 3.1623 原生参考记未运行。下一步：补采参考后再验，保持 verify。风险：primary 变黑与 sm 字号 12→14 影响 PilaudeDataSection，sm primary 无原生参考；07 帧悬停归属未确认。证据 D:/pilaude/relay-evidence/PIL-0116/verify/
+- 2026-10-22T03:20Z · claude:opus-medium:planner · 用户 2026-10-22 决定：UI 卡已量测部分达标即可拆卡合入，缺 3.1623 参考的状态转补采卡。A1/A3/A4 收窄为已有原生参考的状态，其余转 PIL-0198。
+- 2026-10-22T02:47Z · user · 修订验收标准 4633dd54c86e → f290638aa589：用户 2026-10-22 决定拆卡：已有原生参考的状态在本卡验收合入，其余转 PIL-0198 补采后另验
