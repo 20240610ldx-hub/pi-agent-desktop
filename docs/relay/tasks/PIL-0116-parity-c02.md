@@ -64,6 +64,7 @@ waivers: []
 | A3 | 浏览器合成事件层 node h/keys.mjs：light/dark x DPR1/1.5/2 x 宽900/320；Tab 到 skip，Enter/Space 各 1 次，disabled/loading 不触发，loading 可聚焦，长标签省略无溢出 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/keys-result.json | 8b5bdcc | claude:sonnet-high:verify |
 | A3 | Windows 原生/WebView2、DPI 100/125/150 真机、真实 consumer 操作后焦点恢复、无原生同态参考的视觉项 | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
 | A4 | 逐尺寸×逐状态矩阵不完整：pressed/focus/disabled/loading 全尺寸及 md/lg/xxs 无 3.1623 原生参考；仅 xs 文本/图标钮与 sm secondary 深色默认有参考 | 未运行 | D:/pilaude/relay-evidence/PIL-0116/verify/measurements.md | 8b5bdcc | claude:sonnet-high:verify |
+| A5 | node --test 四个定向文件 40/40；tsc --noEmit 0；npm run lint 0；npm test 3605 例 12 失败均在 PIL-0113 基线名单，新增 0；relay guard --task PIL-0116 无问题 | 通过 | D:/pilaude/relay-evidence/PIL-0116/verify/A5-targeted.log; D:/pilaude/relay-evidence/PIL-0116/verify/A5-tsc.log; D:/pilaude/relay-evidence/PIL-0116/verify/A5-lint.log; D:/pilaude/relay-evidence/PIL-0116/verify/A5-npm-test.log; D:/pilaude/relay-evidence/PIL-0116/verify/fail-names.txt; D:/pilaude/relay-evidence/PIL-0116/verify/A5-guard.log | 8b5bdcc | claude:sonnet-high:verify |
 
 ## 日志
 
@@ -88,3 +89,4 @@ waivers: []
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A3：通过
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A3：未运行
 - 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A4：未运行
+- 2026-10-22T02:46Z · claude:sonnet-high:verify · 证据 A5：通过
