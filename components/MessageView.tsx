@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useRef, useEffect, useMemo, useId } from "react";
+import { memo, useState, useRef, useEffect, useLayoutEffect, useMemo, useId } from "react";
 import ReactMarkdown from "react-markdown";
 import { MarkdownBody } from "./MarkdownBody";
 import { ImagePreview } from "./ImagePreview";
@@ -743,7 +743,11 @@ function AssistantMessageView({
   const providerError = getAssistantErrorMessage(message, { isStreaming });
   const truncated = isAssistantTruncated(message, { isStreaming });
   const unansweredTruncation = truncated && !hasAssistantAnswer(message);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "pending" | "copied" | "failed">("idle");
+  const copyRequest = useRef<{ attempt: number; pending: boolean; timer: ReturnType<typeof setTimeout> | null }>({ attempt: 0, pending: false, timer: null });
+  const copied = copyState === "copied";
+  const copyFeedback = copyState === "failed" ? t("pilaude.codeCopyFailed")
+    : copied ? t("i18n.copied") : copyState === "pending" ? t("i18n.loading") : "";
   const streamStartRef = useRef<number | null>(null);
   const [tps, setTps] = useState<number | null>(null);
   const blockItemsRef = useRef(blockItems);
@@ -801,11 +805,47 @@ function AssistantMessageView({
     .map((b) => b.text)
     .join("\n");
 
-  const copyContent = () => {
-    copyText(textContent).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
+  useLayoutEffect(() => {
+    const request = copyRequest.current;
+    setCopyState("idle");
+    request.pending = false;
+    return () => {
+      request.attempt++;
+      if (request.timer !== null) clearTimeout(request.timer);
+      request.timer = null;
+    };
+  }, [textContent, entryId]);
+
+  const copyContent = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    const request = copyRequest.current;
+    if (request.pending) return;
+    request.pending = true;
+    const button = event.currentTarget;
+    const hadFocus = document.activeElement === button;
+    const current = ++request.attempt;
+    if (request.timer !== null) clearTimeout(request.timer);
+    request.timer = null;
+    setCopyState("pending");
+    try {
+      await copyText(textContent);
+      if (current !== request.attempt) return;
+      setCopyState("copied");
+      request.timer = setTimeout(() => {
+        request.timer = null;
+        setCopyState("idle");
+      }, 1500);
+    } catch {
+      if (current === request.attempt) setCopyState("failed");
+    } finally {
+      if (current === request.attempt) {
+        request.pending = false;
+        // The clipboard fallback selects a temporary textarea. Restore only
+        // focus it lost, without scrolling or taking focus from another field.
+        if (hadFocus && button.isConnected && document.activeElement === document.body) {
+          button.focus({ preventScroll: true });
+        }
+      }
+    }
   };
 
   useEffect(() => {
@@ -973,9 +1013,7 @@ function AssistantMessageView({
         <TurnWrittenFiles files={writtenFiles} onOpenFile={onOpenFile} />
       )}
 
-      <div className="message-assistant-footer" style={{
-        display: "flex", alignItems: "center", gap: 8, marginTop: 4,
-      }}>
+      <div className="message-assistant-footer" aria-busy={copyState === "pending" || !!forking}>
         {message.usage && !isStreaming && (
           <div className="message-meta" style={{ fontSize: 11, color: "var(--text-dim)" }}>
             {formatUsage(message.usage)}
@@ -983,23 +1021,13 @@ function AssistantMessageView({
         )}
         {textContent && !isStreaming && (
           <button
+            type="button"
             onClick={copyContent}
             aria-label={copied ? t("i18n.copied") : t("i18n.copyMessage")}
             className="message-copy-action"
-            aria-live="polite"
-            style={{
-              display: "flex", alignItems: "center", gap: 4,
-              padding: "3px 8px", height: 22,
-              background: "none", border: "none",
-              borderRadius: 5,
-              color: copied ? "var(--accent)" : "var(--text-dim)",
-              cursor: "pointer",
-              fontSize: 11, fontWeight: 400,
-              whiteSpace: "nowrap",
-              transition: "opacity 0.12s, color 0.12s",
-            }}
-            onMouseEnter={(e) => { if (!copied) e.currentTarget.style.color = "var(--accent)"; }}
-            onMouseLeave={(e) => { if (!copied) e.currentTarget.style.color = "var(--text-dim)"; }}
+            aria-busy={copyState === "pending"}
+            aria-disabled={copyState === "pending"}
+            data-copy-state={copyState}
           >
             {copied ? (
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -1011,25 +1039,27 @@ function AssistantMessageView({
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
             )}
-            <span className="pilaude-action-tooltip" aria-hidden="true">{copied ? t("i18n.copied") : t("i18n.copy")}</span>
+            <span className="pilaude-action-tooltip" aria-hidden="true">{copyFeedback || t("i18n.copy")}</span>
           </button>
         )}
         {textContent && !isStreaming && entryId && onFork && (
           <button
             type="button"
             aria-label={t("pilaude.forkFromHere")}
-            disabled={forking}
-            onClick={() => onFork(entryId, "after")}
+            aria-disabled={!!forking}
+            aria-busy={!!forking}
+            onClick={() => { if (!forking) onFork(entryId, "after"); }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M4 12h6m0 0 8-8m-8 8 8 8M14 4h4v4m-4 12h4v-4" />
             </svg>
             <span className="pilaude-action-tooltip pilaude-action-tooltip--description" aria-hidden="true">
-              <strong>{t("pilaude.forkFromHere")}</strong>
+              <strong>{t(forking ? "i18n.creatingSession" : "pilaude.forkFromHere")}</strong>
               <span>{t("pilaude.forkDescription")}</span>
             </span>
           </button>
         )}
+        <span role="status" className="c12-copy-status">{copyFeedback}</span>
         {time && !isStreaming && <ResponseTime timestamp={message.timestamp!} /> }
       </div>
     </div>

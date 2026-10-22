@@ -10522,6 +10522,62 @@ html.dark .app-shell {
 }
 /* end C01 */
 
+/* C12 助手正文与消息操作条
+   Body rest: native 3.1623 light/dark main-window captures. The existing
+   20px line pitch and 10px paragraph gap are within the measured tolerance.
+   Action states have no same-state native reference; retain their geometry. */
+.message-assistant {
+  --c12-prose-gap: 10px;
+  --c12-action-gap: 8px;
+  --c12-inline-inset: 4px;
+}
+.message-assistant-content { gap: var(--c12-prose-gap) !important; }
+.message-assistant-content > [data-message-text] > .markdown-body > p:not(:last-child) {
+  margin-bottom: var(--c12-prose-gap);
+}
+/* Native inline badge: 103 raw px wide around eight mono characters;
+   4px side insets retain that compact width (was 5px on each side). */
+.message-assistant-content > [data-message-text] > .markdown-body .markdown-inline-code {
+  padding-inline: var(--c12-inline-inset);
+}
+.message-assistant-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--c12-action-gap);
+}
+.app-shell .message-assistant-footer[aria-busy="true"] { opacity: 1; }
+.app-shell .message-assistant-footer > button[aria-disabled="true"] {
+  cursor: wait;
+}
+.app-shell .message-assistant-footer > .message-copy-action {
+  color: var(--text-dim);
+  border-radius: 5px;
+}
+.message-assistant-footer > .message-copy-action > .pilaude-action-tooltip {
+  left: 0;
+  transform: none;
+  max-width: calc(100vw - 16px);
+  white-space: normal;
+}
+.app-shell .message-assistant-footer > .message-copy-action[data-copy-state="copied"] {
+  color: var(--text);
+}
+.message-assistant-footer > .message-copy-action:not([data-copy-state="idle"]) > .pilaude-action-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0ms;
+}
+.message-assistant-footer .c12-copy-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* end C12 */
+
 /* C19 模型切换菜单 */
 .model-selector-menu {
   /* 3.1623 native reference at 150%: 36px row pitch, 16px outer radius. */
