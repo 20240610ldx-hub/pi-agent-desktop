@@ -1,5 +1,26 @@
 # Layout, settings and client behavior — fork notes
 
+## Streaming Markdown
+
+`MarkdownBody` coalesces preprocessing snapshots at 48–96ms, then passes the
+existing Pi components and remark/rehype safety pipeline to `StreamingMarkdown`.
+The headless `@lobehub/streamdown` engine owns stable block caching, processor
+reuse and paced word fades (`realtime`); no Lobe UI theme is imported. Completion,
+stop and replacement flush authoritative text. A replaced stream starts a new
+queue, and finished/user/history messages use the ordinary static renderer.
+
+Reference links/footnotes, YAML frontmatter, raw HTML and display math keep one
+syntax tree (`needsWholeMarkdownDocument`); conservative matches inside fences
+also take that path. Reduced-motion users receive the unanimated renderer, with
+no reveal backlog. Pi's existing code highlighting and delayed Mermaid/HTML
+previews remain in charge; this change does not add streaming code highlighting.
+
+Run `node e2e/streaming-markdown.mjs` for real-browser incremental replay, old vs
+new parse-volume measurement, desktop/mobile light/dark snapshots, replacement,
+stop, reduced motion, file links, document-wide syntax and HTML sanitization.
+The fixture uses local generated content and never contacts a model. Results
+and screenshots go to the ignored `test-results/streaming-markdown/` directory.
+
 Fork-owned notes moved out of `AGENTS.md` to keep it short. The upstream doc on the same topic (`docs/agents/*.md` without the `fork-` prefix) may describe the same area in other words; where they disagree, these notes describe this fork. Hard rules that must survive a merge are also listed in `AGENTS.md` under **Hard rules**.
 
 ## Conversation navigation
@@ -74,6 +95,8 @@ The topbar renders exactly ONE toolbar group (`app-topbar-actions`: history/bran
 `pi-web/settings.json` 的 `fonts`，旧读取不能覆盖新选择；失败保留本地预览并提供重试。
 `FONT_INIT_SCRIPT` 只从本地缓存恢复首屏，服务器选择负责跨端口恢复。
 界面字体同时覆盖标题，代码字体更新已有 xterm 的字体与尺寸，不重建终端会话。
+默认字体栈保留上游的原生等宽字体优先级和中文回退；通过 `--font-*-default`
+接入字体选择器，恢复默认时同时恢复上游的字体顺序。
 字体名称为单个本机 family，不下载字体，不改写用户样式表。
 桌面外观页通过 `listInstalledFontsNative()` 和受桌面进程 token 保护的 `/api/desktop/fonts`
 读取本机字体；Windows 使用系统字体集合及其本地化名称，macOS 使用 system_profiler，Linux 使用 fontconfig。
