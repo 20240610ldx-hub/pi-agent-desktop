@@ -16,6 +16,7 @@ import { checkSidebarBreakpoint } from "./sidebar-breakpoint.mjs";
 import { checkMcpManager } from "./mcp-manager.mjs";
 import { checkMissingWorkspace, MISSING_WORKSPACE, missingWorkspaceReply } from "./missing-workspace.mjs";
 import { checkCodeBackground } from "./code-background.mjs";
+import { createE2EServerEnv } from "../scripts/e2e-server-env.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const mode = process.env.E2E_SERVER_MODE || "dev";
@@ -70,6 +71,11 @@ process.once("SIGINT", interrupt);
 process.once("SIGTERM", interrupt);
 
 try {
+  const serverEnv = createE2EServerEnv(process.env, agentDir, mode);
+  for (const key of ["HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_DOWNLOAD_DIR", "APPDATA", "LOCALAPPDATA"]) {
+    mkdirSync(serverEnv[key], { recursive: true });
+  }
+
   // Seed before startup so the first catalogue scan sees every fixture.
   mkdirSync(join(agentDir, "extensions"));
   writeFileSync(join(agentDir, "extensions", "e2e-dialog.js"), extensionSource);
@@ -153,7 +159,7 @@ try {
   const base = `http://127.0.0.1:${port}`;
   server = spawn(process.execPath, [join(root, "node_modules/next/dist/bin/next"), mode, "-H", "127.0.0.1", "-p", String(port)], {
     cwd: root,
-    env: { ...process.env, PI_CODING_AGENT_DIR: agentDir, PI_WEB_PASSWORD: "", NEXT_TELEMETRY_DISABLED: "1" },
+    env: serverEnv,
     stdio: ["ignore", "pipe", "pipe"],
   });
   server.once("error", (error) => { serverError = error; });
@@ -191,6 +197,8 @@ try {
     assert.ok(Date.now() < deadline, "Server readiness timed out; see server.log");
     await delay(250);
   }
+
+  assert.deepEqual(await api("/api/home"), { home: serverEnv.HOME }, "The app must use the isolated test home");
 
   const detail = await api(`/api/sessions/${LONG}?deferThinking=1&deferMedia=1`);
   assert.deepEqual(detail.context.entryIds, ids(4950, 5000));
