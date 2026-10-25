@@ -808,7 +808,11 @@ export function ChatWindow({ session, workspaceKind, searchTarget, onSearchTarge
   useEffect(() => () => { onContextUsageChange?.(null); }, [onContextUsageChange]);
 
   const cwd = chatOnly ? undefined : session?.cwd ?? newSessionCwd;
-  const openFile = chatOnly ? undefined : onOpenFile;
+  // A chat with its own folder opens what it made in the right panel; a legacy
+  // chat (shared hidden cwd) has no folder to show. The browser takes the folder
+  // from the server-classified session, never from a path it builds itself.
+  const chatFolderCwd = chatOnly && session?.chatFolder ? session.cwd : undefined;
+  const openFile = chatOnly ? (chatFolderCwd ? onOpenFile : undefined) : onOpenFile;
   const projectImportBusyRef = useRef(false);
 
   // Documents/other files are copied into the project root and @mentioned so
@@ -992,7 +996,7 @@ export function ChatWindow({ session, workspaceKind, searchTarget, onSearchTarge
   }, [isEmptyNew, scrollContainerRef]);
 
   const hasStreamingContent = Boolean(streamState.streamingMessage?.content.length);
-  const messageCwd = chatOnly ? undefined : session?.cwd ?? newSessionCwd ?? undefined;
+  const messageCwd = chatOnly ? chatFolderCwd : session?.cwd ?? newSessionCwd ?? undefined;
   // Keys that do not change when a sent or streamed message gets its entry id
   // on the post-run reload; keying by the id remounted the sent bubble.
   const messageKeyTrackerRef = useRef<{ sessionId: string | null; tracker: ReturnType<typeof createMessageKeyTracker> } | null>(null);
