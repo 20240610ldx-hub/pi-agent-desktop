@@ -42,6 +42,7 @@ import { canUseNativeMenu, menuPointBelow, showNativeMenu } from "@/lib/desktop-
 import { useNativeContextMenu } from "@/hooks/useNativeContextMenu";
 import { DomContextMenuHost } from "./DomContextMenuHost";
 import { getFileName } from "@/lib/file-paths";
+import { isPathInside } from "@/lib/file-links";
 import { buildAtMentionText, buildFileAtMentionsText, buildFileLineMentionText } from "@/lib/file-fuzzy";
 import { PRODUCT_NAME } from "@/lib/branding";
 import { isImeComposing } from "@/lib/ime";
@@ -781,6 +782,11 @@ export function AppShell() {
   // Project-scoped chrome (trust, pickers, file tree, window title) must never
   // receive the hidden chat workspace path.
   const visibleProjectCwd = isChatWorkspaceActive ? null : activeCwd;
+  // A chat that owns a folder shows that folder (file tree + viewer) in the right
+  // panel so what it made can be opened. Terminals, trust and the rest of the
+  // workbench stay project-only, so they keep using visibleProjectCwd.
+  const chatFolderCwd = isChatWorkspaceActive && selectedSession?.chatFolder ? selectedSession.cwd : null;
+  const workbenchCwd = visibleProjectCwd ?? chatFolderCwd;
   const projectPickerStartCwd = isChatWorkspaceActive
     ? null
     : selectedSession?.cwd ?? newSessionCwd ?? activeCwd;
@@ -792,14 +798,21 @@ export function AppShell() {
       && initialNavigation.requestedCwd
       && initialNavigation.requestedCwd !== chatWorkspaceCwd,
   );
+  const selectedChatSessionId = selectedSession?.id ?? null;
   useEffect(() => {
     if (!isChatWorkspaceActive) return;
-    setRightPanelOpen(false);
-    setRightPanelExpanded(false);
-    setFileTreeOpen(false);
-    setFileTabs([]);
-    setActiveFileTabId(null);
-  }, [isChatWorkspaceActive]);
+    const resetPanel = () => {
+      setRightPanelOpen(false);
+      setRightPanelExpanded(false);
+      setFileTreeOpen(false);
+      setFileTabs([]);
+      setActiveFileTabId(null);
+    };
+    resetPanel();
+    // A chat's files belong to its own folder: they never follow into another
+    // chat or a project.
+    return resetPanel;
+  }, [isChatWorkspaceActive, selectedChatSessionId]);
   // True once the initial ?session= URL param has been resolved (or confirmed absent)
   const [initialSessionRestored, setInitialSessionRestored] = useState<boolean>(() => !initialSessionId);
   // sessionStorage is empty during SSR. Applying the tab's remembered session
@@ -1527,7 +1540,7 @@ export function AppShell() {
     fileName: string,
     options?: { sourceSessionId?: string | null; modeHint?: "diff"; page?: number },
   ) => {
-    if (isChatWorkspaceActive) return;
+    if (isChatWorkspaceActive && !(chatFolderCwd && isPathInside(filePath, chatFolderCwd))) return;
     const sourceSessionId = options?.sourceSessionId;
     const modeHint = options?.modeHint;
     const page = options?.page;
@@ -1544,7 +1557,7 @@ export function AppShell() {
     setRightPanelOpen(true);
     // On mobile the file panel is full-screen; close the drawer so it shows.
     if (isMobile) setSidebarOpen(false);
-  }, [isChatWorkspaceActive, isMobile]);
+  }, [chatFolderCwd, isChatWorkspaceActive, isMobile]);
 
   const [copiedSessionField, setCopiedSessionField] = useState<SessionCopyField | null>(null);
   const sessionCopyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1557,9 +1570,8 @@ export function AppShell() {
   }, []);
 
   const handleOpenLinkedFile = useCallback((filePath: string, page?: number) => {
-    if (isChatWorkspaceActive) return;
     handleOpenFile(filePath, getFileName(filePath), { sourceSessionId: selectedSession?.id ?? null, page });
-  }, [handleOpenFile, isChatWorkspaceActive, selectedSession?.id]);
+  }, [handleOpenFile, selectedSession?.id]);
 
   const handleOpenTerminal = useCallback((cwd: string) => {
     if (isChatWorkspaceActive) return;
@@ -1900,7 +1912,7 @@ export function AppShell() {
 
   // The workspace can still show a terminal or artifact while Scheduled is open,
   // and the overlay always needs its own visible way back to the page.
-  const showFilePanelToggle = !isChatWorkspaceActive && (isMobile || !scheduledOpen || rightPanelOpen);
+  const showFilePanelToggle = (!isChatWorkspaceActive || Boolean(chatFolderCwd)) && (isMobile || !scheduledOpen || rightPanelOpen);
 
   const renderMainFileToggle = () => {
     return (
@@ -2750,7 +2762,7 @@ export function AppShell() {
               projectOptions={selectedSession || isChatWorkspaceActive ? [] : availableProjectRoots}
               onProjectChange={selectedSession || isChatWorkspaceActive ? undefined : handleProjectChangeFromComposer}
               onOpenModelsConfig={() => setSettingsSection("models")}
-              onOpenFile={isChatWorkspaceActive ? undefined : handleOpenLinkedFile}
+              onOpenFile={handleOpenLinkedFile}
               onOpenSession={handleOpenSession}
               onAskInNewChat={handleAskInNewChat}
               quoteSelectionEnabled={quoteSelectionEnabled}
@@ -2978,7 +2990,7 @@ export function AppShell() {
               onNewTerminal={visibleProjectCwd ? () => handleOpenTerminal(visibleProjectCwd) : undefined}
             />
           </div>
-          {visibleProjectCwd && (
+          {workbenchCwd && (
             <button
               type="button"
               className={`file-workbench-icon-button file-tree-toggle${fileTreeShown ? " is-active" : ""}`}
@@ -3043,7 +3055,7 @@ export function AppShell() {
             <FileViewer
               key={`${activeFileTab.id}:${activeFileTab.viewerRevision ?? 0}`}
               filePath={activeFileTab.filePath}
-              cwd={visibleProjectCwd ?? undefined}
+              cwd={workbenchCwd ?? undefined}
               sourceSessionId={activeFileTab.sourceSessionId}
               gitRefreshKey={explorerRefreshKey}
               initialDisplayMode={activeFileTab.initialDisplayMode}
@@ -3055,8 +3067,8 @@ export function AppShell() {
                 activeFileTab.viewerRevision ?? 0,
                 viewerState,
               )}
-              onMentionLines={rightPanelOpen ? handleFileLineMention : undefined}
-              onAtMention={handleAtMention}
+              onMentionLines={rightPanelOpen && !isChatWorkspaceActive ? handleFileLineMention : undefined}
+              onAtMention={isChatWorkspaceActive ? undefined : handleAtMention}
               onOpenFile={(filePath, page) => handleOpenFile(
                 filePath,
                 getFileName(filePath),
@@ -3067,7 +3079,7 @@ export function AppShell() {
             <div className="right-panel-empty">
               <span>{translate("files.noneOpen")}</span>
               {/* The file list starts hidden; offer it where the panel is empty. */}
-              {visibleProjectCwd && !fileTreeShown && (
+              {workbenchCwd && !fileTreeShown && (
                 <button type="button" className="right-panel-empty-action" onClick={handleFileTreeToggle}>
                   {translate("contextPanel.showFileList")}
                 </button>
@@ -3088,7 +3100,7 @@ export function AppShell() {
         </div>
       
         {/* Explorer column — always-on project file tree */}
-          {visibleProjectCwd && fileTreeShown && (
+          {workbenchCwd && fileTreeShown && (
             <>
               <div
                 {...fileTreeResizer.separatorProps}
@@ -3160,11 +3172,11 @@ export function AppShell() {
               <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
                 <FileExplorer
                   ref={fileExplorerRef}
-                  cwd={visibleProjectCwd}
+                  cwd={workbenchCwd}
                   onOpenFile={handleOpenFile}
                   refreshKey={explorerRefreshKey}
-                  onAtMention={handleAtMention}
-                  onAtMentions={handleAtMentions}
+                  onAtMention={isChatWorkspaceActive ? undefined : handleAtMention}
+                  onAtMentions={isChatWorkspaceActive ? undefined : handleAtMentions}
                   onUploadBusyChange={setExplorerUploadBusy}
                   changesCollapsed={changesCollapsed}
                   onChangesCountChange={setChangesCount}
