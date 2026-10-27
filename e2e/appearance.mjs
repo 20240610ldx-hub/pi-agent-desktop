@@ -37,7 +37,9 @@ const urls=servers.map(s=>'http://127.0.0.1:'+s.address().port);
 const browser=await chromium.launch();
 const selected=(page,id)=>page.waitForFunction(value=>document.documentElement.dataset.background===value,id);
 const saved=async()=>{for(let i=0;i<200;i++){if(activeWrites===0)return;await delay(20);}throw Error('Save did not finish');};
-const names=['Petal','Mist','Meadow','Dusk','Plain'];const ids=['rex','mist','meadow','dusk','plain'];
+const names=['Petal','Mist','Meadow','Dusk','Plain','Sea Salt','Wisteria','Peach','Celadon','Warm Sand'];
+const ids=['rex','mist','meadow','dusk','plain','sea','wisteria','peach','celadon','sand'];
+const contrastResults=[];
 try{
   // Saving a background must not move the following settings or scroll position.
   for (const theme of ['light', 'dark']) {
@@ -78,8 +80,10 @@ try{
         cards:[...grid.children].map(card=>{const rect=card.getBoundingClientRect();return {top:rect.top,right:rect.right};})};
     });
     if(width>=1024){
-      assert.equal(layout.cards.length,5);
-      assert.ok(layout.cards.every(card=>Math.abs(card.top-layout.cards[0].top)<1),`All five backgrounds must fit in one row at ${width}px`);
+      assert.equal(layout.cards.length,10);
+      assert.ok(layout.cards.slice(0,5).every(card=>Math.abs(card.top-layout.cards[0].top)<1),`Five backgrounds must fit per row at ${width}px`);
+      assert.ok(layout.cards.slice(5).every(card=>Math.abs(card.top-layout.cards[5].top)<1),'The second row must also contain five backgrounds');
+      assert.ok(layout.cards[5].top>layout.cards[0].top,'Desktop must use two balanced rows');
       assert.ok(Math.abs(layout.right-layout.sectionRight)<1,'Background choices must use the available section width');
       assert.ok(Math.abs(layout.cards.at(-1).right-layout.right)<1,'No empty grid column may reserve room after the last background');
     }
@@ -91,13 +95,42 @@ try{
       if(response)await response;
       assert.equal(await page.locator('input[name="background"]:checked').count(),1);
       gradients.push(await page.locator('.settings-dialog-surface').evaluate(el=>getComputedStyle(el).backgroundImage));
+      if(width===1280 && i>=5){
+        const contrast=await page.locator('.settings-dialog-surface').evaluate((el,dark)=>{
+          const style=getComputedStyle(el);
+          const prefix=dark?'--wash-dark':'--wash-light';
+          const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
+          const context=canvas.getContext('2d',{willReadFrequently:true});
+          const rgba=value=>{
+            context.clearRect(0,0,1,1);context.fillStyle=value;context.fillRect(0,0,1,1);
+            return [...context.getImageData(0,0,1,1).data];
+          };
+          const luminance=rgb=>rgb.slice(0,3).map(value=>{
+            const s=value/255;return s<=0.04045?s/12.92:((s+0.055)/1.055)**2.4;
+          }).reduce((sum,value,index)=>sum+value*[0.2126,0.7152,0.0722][index],0);
+          const glow=rgba(style.getPropertyValue(prefix+'-glow').trim());
+          const backgrounds=style.getPropertyValue(prefix+'-stops').split(',').flatMap(stop=>{
+            const base=rgba(stop.trim());
+            return [base,base.map((value,index)=>index<3?value*(1-glow[3]/255)+glow[index]*glow[3]/255:value)];
+          });
+          return Object.fromEntries(['--text','--text-muted'].map(token=>{
+            const foreground=luminance(rgba(style.getPropertyValue(token).trim()));
+            return [token,Math.min(...backgrounds.map(background=>{
+              const back=luminance(background);return (Math.max(foreground,back)+0.05)/(Math.min(foreground,back)+0.05);
+            }))];
+          }));
+        },theme==='dark');
+        for(const [token,ratio] of Object.entries(contrast))assert.ok(ratio>=4.5,`${ids[i]} ${theme} ${token}: ${ratio.toFixed(2)}:1`);
+        contrastResults.push({background:ids[i],theme,minimumContrast:contrast});
+        assert.equal(await page.locator(`[data-background-preview="${ids[i]}"]`).evaluate(el=>getComputedStyle(el).backgroundImage),gradients.at(-1),'Card preview and actual canvas must match');
+      }
     }
-    assert.equal(new Set(gradients).size,5,'All five backgrounds must be visually distinct');
-    await page.reload();await selected(page,'plain');assert.equal(await page.getByRole('radio',{name:'Plain',exact:true}).isChecked(),true);
-    await page.getByRole('radio',{name:'Plain',exact:true}).focus();await page.keyboard.press('ArrowLeft');await selected(page,'dusk');
+    assert.equal(new Set(gradients).size,10,'All ten backgrounds must be visually distinct');
+    await page.reload();await selected(page,'sand');assert.equal(await page.getByRole('radio',{name:'Warm Sand',exact:true}).isChecked(),true);
+    await page.getByRole('radio',{name:'Warm Sand',exact:true}).focus();await page.keyboard.press('ArrowLeft');await selected(page,'celadon');
     await page.getByRole('radio',{name:theme==='light'?'Dark':'Light',exact:true}).locator('..').click();
     await page.waitForFunction(t=>document.documentElement.dataset.theme===t,theme==='light'?'dark':'light');
-    assert.equal(await page.locator('html').getAttribute('data-background'),'dusk','Mode changes must preserve background');
+    assert.equal(await page.locator('html').getAttribute('data-background'),'celadon','Mode changes must preserve background');
     await page.getByRole('radio',{name:theme==='light'?'Light':'Dark',exact:true}).locator('..').click();
     await page.screenshot({path:`${out}/${theme}-${width}.png`});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
@@ -107,12 +140,12 @@ try{
   // The server setting restores the choice even when localStorage is on a new origin.
   const page=await browser.newPage({viewport:{width:1280,height:820}});
   await page.addInitScript(()=>localStorage.setItem('pi-locale','en'));
-  putDelay=120;await page.goto(urls[0]);await page.getByRole('radio',{name:'Petal',exact:true}).locator('..').click();
-  await page.getByRole('radio',{name:'Mist',exact:true}).locator('..').click();await page.getByRole('radio',{name:'Meadow',exact:true}).locator('..').click();
-  await page.getByRole('radio',{name:'Dusk',exact:true}).locator('..').click();await selected(page,'dusk');
+  putDelay=120;await page.goto(urls[0]);await page.getByRole('radio',{name:'Sea Salt',exact:true}).locator('..').click();
+  await page.getByRole('radio',{name:'Wisteria',exact:true}).locator('..').click();await page.getByRole('radio',{name:'Peach',exact:true}).locator('..').click();
+  await page.getByRole('radio',{name:'Warm Sand',exact:true}).locator('..').click();await selected(page,'sand');
   await page.waitForFunction(()=>!document.querySelector('[role="status"]'));await saved();
-  assert.equal(stored,'dusk');assert.equal(maxWrites,1,'Saves must be serialized');
-  await page.goto(urls[1]);await selected(page,'dusk');assert.equal(await page.getByRole('radio',{name:'Dusk',exact:true}).isChecked(),true);
+  assert.equal(stored,'sand');assert.equal(maxWrites,1,'Saves must be serialized');
+  await page.goto(urls[1]);await selected(page,'sand');assert.equal(await page.getByRole('radio',{name:'Warm Sand',exact:true}).isChecked(),true);
   // A delayed old read cannot undo a newer user selection.
   let release,markBlocked;const held=new Promise(r=>{release=r;});const blocked=new Promise(r=>{markBlocked=r;});
   await page.route('**/api/appearance',async route=>{
@@ -127,6 +160,6 @@ try{
   await page.getByRole('radio',{name:'Mist',exact:true}).locator('..').click();await page.getByRole('alert').waitFor();
   assert.equal(await page.locator('html').getAttribute('data-background'),'mist','Failed saves keep the local preview');
   await page.close();
-  await writeFile(out+'/results.json',JSON.stringify({backgrounds:ids,themes:['light','dark'],widths:[1464,1280,1024,800,640,390,320],maxWrites,persistence:true,staleRead:true,saveFailure:true},null,2));
-  console.log('PASS: five backgrounds, light/dark, desktop single row, narrow wrapping, keyboard, reload/new-origin persistence, ordered saves, stale reads and save errors');
+  await writeFile(out+'/results.json',JSON.stringify({backgrounds:ids,themes:['light','dark'],widths:[1464,1280,1024,800,640,390,320],contrastResults,maxWrites,persistence:true,staleRead:true,saveFailure:true},null,2));
+  console.log('PASS: ten backgrounds, light/dark, balanced desktop rows, narrow wrapping, preview matching, contrast, keyboard, reload/new-origin persistence, ordered saves, stale reads and save errors');
 }finally{await browser.close();for(const server of servers)await new Promise(r=>server.close(r));}

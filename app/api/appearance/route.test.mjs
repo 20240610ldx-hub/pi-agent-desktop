@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test, { after } from "node:test";
 import { createJiti } from "jiti";
+import { BACKGROUND_OPTIONS } from "../../../lib/backgrounds.ts";
 
 const originalDir = process.env.PI_CODING_AGENT_DIR;
 const dir = await mkdtemp(join(tmpdir(), "pi-appearance-test-"));
@@ -24,7 +25,7 @@ test("persists backgrounds without altering unrelated Pi Web settings", async ()
   assert.deepEqual(await (await GET()).json(), { background: null });
   await mkdir(join(dir, "pi-web"), { recursive: true });
   await writeFile(file, JSON.stringify({ artifactsPrompt: false, other: { enabled: true } }));
-  for (const background of ["rex", "mist", "meadow", "dusk", "plain"]) {
+  for (const { id: background } of BACKGROUND_OPTIONS) {
     const response = await PUT(request(JSON.stringify({ background })));
     assert.equal(response.status, 200);
     assert.deepEqual(await (await GET()).json(), { background });
