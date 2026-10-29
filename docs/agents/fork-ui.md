@@ -37,6 +37,25 @@ and screenshots go to the ignored `test-results/streaming-markdown/` directory.
 
 Fork-owned notes moved out of `AGENTS.md` to keep it short. The upstream doc on the same topic (`docs/agents/*.md` without the `fork-` prefix) may describe the same area in other words; where they disagree, these notes describe this fork. Hard rules that must survive a merge are also listed in `AGENTS.md` under **Hard rules**.
 
+## Conversation find
+
+`ConversationFind` is mounted by `ChatWindow`. Ctrl+F / Cmd+F searches the current
+conversation's loaded, expanded text (not the sidebar, composer or file panel).
+Opening reveals the loaded render window; older server pages are requested explicitly
+with “Load earlier messages”, idle-only through the existing guarded `loadContext`.
+Collapsed process content is not silently expanded or advertised as searched.
+Literal case-insensitive DOM ranges use CSS Custom Highlights, never DOM text replacement,
+so React, syntax highlighting and streaming remain intact. Enter / Shift+Enter cycle
+matches; Escape closes without aborting the agent and restores focus. DOM refreshes
+preserve the active range where possible (otherwise clamp its index), update counts
+without scrolling, and only explicit navigation or query edits move the viewport.
+Text traversal preserves document order and treats block elements, line breaks and
+excluded controls as boundaries while allowing matches across inline formatting.
+Session/leaf changes clear search; inert/hidden conversations never intercept find;
+modal dialogs and focused file workspaces retain their own keys.
+Run `node e2e/conversation-find.mjs` (or `PLAYWRIGHT_CHANNEL=chrome` for installed Chrome)
+for real-component light/dark, narrow-width, keyboard, history and streaming checks.
+
 ## Conversation navigation
 ConversationNavigator 仅在右侧工作面板关闭、对话滚动区宽度至少 1024px，且正文左边距至少 64px 时显示。
 沿用 ResizeObserver 同时观察滚动区和实际正文列，因此侧栏缩放、窗口变化和正文宽度设置都会重新判断；
