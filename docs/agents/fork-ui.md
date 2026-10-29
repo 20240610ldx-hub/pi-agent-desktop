@@ -102,17 +102,13 @@ The topbar renders exactly ONE toolbar group (`app-topbar-actions`: history/bran
 读取本机字体；Windows 使用系统字体集合及其本地化名称，macOS 使用 system_profiler，Linux 使用 fontconfig。
 两种字体选择器沿用 AppSelect 的菜单、键盘导航和间距，读取失败保留手动输入并提供重试。
 字体为默认值时隐藏恢复按钮，改动后显示可用的恢复操作；标题行保留高度。
-背景和字体保存状态仅供读屏播报，不插入可见行挤动布局；错误仍显示并可重试。
+字体保存状态仅供读屏播报，不插入可见行挤动布局；错误仍显示并可重试。
 嵌入设置的配置面板与侧栏共用 `--surface-elevated`，与常规/外观内容底色一致，控件和选中态仍使用各自 token。
 设置行的 `.settings-option-action` 使用 `align-self: center`，与多行说明整体居中。
 回归：`node e2e/fonts.mjs` 覆盖真实设置页、即时预览、保存/恢复、错误、菜单及按钮几何。
 
-外观页提供花瓣、薄雾、草地、黄昏、纯色五种背景卡片，明暗模式独立选择。
-卡片网格使用内容区可用宽度，默认桌面窗口五项排成一行；空间不足再换行，不能用固定宽度上限提前挤出第二行。
-卡片预览和实际背景共用 `native-theme.css` 的 `--wash-*`，选中用蓝色边缘及圆点。
-`useBackground` 负责即时显示、串行保存与过期读取保护，`/api/appearance` 将选择保存到
-Pi Web 自身的 `pi-web/settings.json`，保留其他字段；端口改变后从该文件恢复。
-`THEME_INIT_SCRIPT` 先使用浏览器缓存避免刷新闪烁。相关回归：`node e2e/appearance.mjs`。
+外观页只提供明暗模式，没有背景选择；侧栏、窗口和设置外框是同一个中性纯色（`--canvas-background`），
+强调色用 CSS `AccentColor` 跟随系统。`THEME_INIT_SCRIPT` 先使用浏览器缓存避免刷新闪烁。相关回归：`node e2e/appearance.mjs`。
 
 ## 设置选项细节
 

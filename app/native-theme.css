@@ -1013,8 +1013,8 @@
      Palette attribution and license: public/THIRD_PARTY_NOTICES.txt.
      Small labels use a darker shade of the same gray so
      they stay readable on selected rows and the tinted sidebar. */
-  --bg: #eceef4;
-  --bg-panel: #eceef4;
+  --bg: #f0f0f1;
+  --bg-panel: #f0f0f1;
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-selected: rgba(0, 0, 0, 0.07);
   --sidebar-selected: #ffffff;
@@ -1080,8 +1080,8 @@
 
 html.dark {
   color-scheme: dark;
-  --bg: #141418;
-  --bg-panel: #141418;
+  --bg: #19191a;
+  --bg-panel: #19191a;
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-selected: rgba(255, 255, 255, 0.10);
   --sidebar-selected: rgba(255, 255, 255, 0.10);
@@ -9012,51 +9012,8 @@ html.native-desktop :is(
   background: var(--bg-hover);
 }
 
-/* Background washes. The preview cards and the actual canvas share the
-   same stops; mode only chooses the corresponding light or dark variant. */
-:root,
-[data-background-preview="rex"] {
-  --wash-light-stops: #ebe0f3, #f3e7f1, #f7eee4, #f6efcf;
-  --wash-light-glow: rgba(247, 220, 241, 0.75);
-  --wash-dark-stops: #17141f, #191620, #1b1916;
-  --wash-dark-glow: rgba(120, 70, 120, 0.22);
-}
-:root[data-background="mist"],
-[data-background-preview="mist"] {
-  --wash-light-stops: #e3e9f4, #ebeff6, #f1f2f3, #f2f1ec;
-  --wash-light-glow: rgba(210, 225, 248, 0.75);
-  --wash-dark-stops: #12151b, #14171d, #17181b;
-  --wash-dark-glow: rgba(70, 100, 150, 0.22);
-}
-:root[data-background="meadow"],
-[data-background-preview="meadow"] {
-  --wash-light-stops: #e2eee5, #ebf2e7, #f3f2e2, #f5f0d6;
-  --wash-light-glow: rgba(214, 240, 222, 0.75);
-  --wash-dark-stops: #111814, #141a16, #181a14;
-  --wash-dark-glow: rgba(70, 130, 95, 0.2);
-}
-:root[data-background="dusk"],
-[data-background-preview="dusk"] {
-  --wash-light-stops: #e4dbf3, #efdeee, #f6e3dc, #f7e6cf;
-  --wash-light-glow: rgba(246, 206, 222, 0.8);
-  --wash-dark-stops: #191321, #1e161e, #221a17;
-  --wash-dark-glow: rgba(150, 80, 110, 0.25);
-}
-:root[data-background="plain"],
-[data-background-preview="plain"] {
-  --wash-light-stops: #eceef4, #eceef4;
-  --wash-light-glow: transparent;
-  --wash-dark-stops: #141418, #141418;
-  --wash-dark-glow: transparent;
-}
-:root {
-  --canvas-background: linear-gradient(225deg in oklab, var(--wash-light-glow), transparent 50%),
-    linear-gradient(180deg in oklab, var(--wash-light-stops));
-}
-html.dark {
-  --canvas-background: linear-gradient(225deg in oklab, var(--wash-dark-glow), transparent 50%),
-    linear-gradient(180deg in oklab, var(--wash-dark-stops));
-}
+/* One flat, neutral canvas for the sidebar, window and Settings chrome. */
+:root { --canvas-background: var(--bg-panel); }
 
 .settings-dialog-surface { background: var(--canvas-background); }
 .settings-dialog-main { background: var(--surface-elevated); }
@@ -9090,91 +9047,6 @@ html.dark {
   min-width: 0;
 }
 .settings-appearance .settings-theme-option-label { white-space: nowrap; }
-.settings-background-grid {
-  display: grid;
-  /* Use the available content width; empty columns must not force a wrap. */
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
-  gap: 18px 16px;
-}
-.settings-background-option {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  cursor: pointer;
-}
-.settings-background-swatch {
-  position: relative;
-  display: block;
-  aspect-ratio: 1.5;
-  overflow: hidden;
-  border: var(--hairline) solid var(--border);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(225deg in oklab, var(--wash-light-glow), transparent 50%),
-    linear-gradient(180deg in oklab, var(--wash-light-stops));
-  box-shadow: var(--shadow-control);
-}
-html.dark .settings-background-swatch {
-  background: linear-gradient(225deg in oklab, var(--wash-dark-glow), transparent 50%),
-    linear-gradient(180deg in oklab, var(--wash-dark-stops));
-}
-.settings-background-mini-card {
-  position: absolute;
-  inset: 16% 8% -8% 25%;
-  border-radius: 8px;
-  background: var(--workbench-bg);
-}
-.settings-background-mini-sidebar {
-  position: absolute;
-  top: 31%;
-  left: 8%;
-  width: 12%;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--text-dim);
-  opacity: 0.35;
-}
-.settings-background-name {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: var(--fs-body);
-}
-.settings-background-option:has(input:checked) .settings-background-name {
-  color: var(--text);
-  font-weight: 600;
-}
-.settings-background-option:has(input:checked) .settings-background-swatch {
-  box-shadow: inset 0 0 0 2px var(--menu-selection-color);
-}
-.settings-background-indicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--menu-selection-color);
-  display: none;
-  align-items: center;
-  justify-content: center;
-}
-.settings-background-indicator::after {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--workbench-bg);
-}
-.settings-background-option:has(input:checked) .settings-background-indicator { display: flex; }
-.settings-background-option:hover .settings-background-swatch {
-  border-color: var(--menu-selection-color);
-}
-.settings-background-option:has(input:focus-visible) .settings-background-swatch {
-  outline: 2px solid var(--menu-focus-ring);
-  outline-offset: 3px;
-}
-
 .settings-font-heading-row {
   display: flex;
   min-height: 32px;
@@ -9222,7 +9094,6 @@ html.dark .settings-background-swatch {
 @media (max-width: 640px) {
   .settings-font-option { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .settings-font-custom input { font-size: 16px; }
-  .settings-background-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
   .settings-appearance .settings-theme-options { width: 100%; }
   .settings-appearance .settings-theme-option { flex: 1 1 0; padding-inline: 5px; gap: 0; }
   .settings-appearance .settings-theme-option svg { display: none; }
@@ -9277,4 +9148,13 @@ html.dark .settings-background-swatch {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;
+}
+
+/* Accent follows the system (macOS Appearance > Accent color). The blue above
+   stays as the fallback for engines without the AccentColor keyword. */
+@supports (color: AccentColor) {
+  :root,
+  html.dark {
+    --menu-selection-color: AccentColor;
+  }
 }
