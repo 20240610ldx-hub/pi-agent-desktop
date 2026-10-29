@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
-import { SyntaxHighlighter, vs, vscDarkPlus } from "@/lib/syntax-highlighting";
+import { SyntaxHighlighter } from "@/lib/syntax-highlighting";
+import { calmCodeTheme } from "@/lib/code-theme";
 import { useTheme } from "@/hooks/useTheme";
 import { useI18n } from "@/hooks/useI18n";
 import { copyText } from "@/lib/clipboard";
@@ -328,17 +329,6 @@ interface CodeBlockProps {
   isStreaming?: boolean;
 }
 
-// Prism's light theme uses backgroundColor, while its dark theme uses the
-// background shorthand. Keep the pre background solely in customStyle so a
-// theme switch cannot remove/update one and reset the other in React's diff.
-const codeBlockDarkTheme = {
-  ...vscDarkPlus,
-  'pre[class*="language-"]': {
-    ...vscDarkPlus['pre[class*="language-"]'],
-  },
-};
-delete codeBlockDarkTheme['pre[class*="language-"]'].background;
-
 /**
  * Syntax-highlighted code block with copy button.
  * Used as the "source" view for mermaid blocks and for all non-mermaid code fences.
@@ -348,7 +338,6 @@ delete codeBlockDarkTheme['pre[class*="language-"]'].background;
  * highlighting a growing block re-tokenizes all of it on every chunk.
  */
 export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isStreaming }: CodeBlockProps) {
-  const { isDark } = useTheme();
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
@@ -389,7 +378,7 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
       ) : (
         <SyntaxHighlighter
           language={lang || "text"}
-          style={isDark ? codeBlockDarkTheme : vs}
+          style={calmCodeTheme}
           showLineNumbers
           lineNumberStyle={{ color: "var(--text-dim)", fontStyle: "normal" }}
           customStyle={{
@@ -397,8 +386,7 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
             padding: "11px 13px",
             fontSize: "calc(12.5px + var(--chat-font-size-offset, 0px))",
             lineHeight: 1.62,
-            // The light `vs` theme puts its own 1px #ddd border on <pre>; the
-            // block's wrapper already draws the frame.
+            // The wrapper draws the frame; the theme carries no border or background.
             border: "none",
             borderRadius: 0,
             backgroundColor: "color-mix(in srgb, var(--bg) 92%, var(--bg-panel))",

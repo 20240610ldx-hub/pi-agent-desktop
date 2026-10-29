@@ -9,9 +9,6 @@
   --fs-title: 15px;
   /* Hairlines: one device pixel on retina, where a CSS pixel is two. */
   --hairline: 1px;
-  /* Edge of cards and code blocks: --border alone (7% black) at 0.5px all but
-     vanishes on retina, so these surfaces get a text-derived edge instead. */
-  --card-edge: color-mix(in srgb, var(--text) 14%, transparent);
 }
 @media (min-resolution: 2dppx) {
   :root { --hairline: 0.5px; }
@@ -97,7 +94,7 @@
   background: var(--text);
 }
 .conversation-navigator-track:focus-visible {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .conversation-navigator-preview {
@@ -179,7 +176,7 @@
 .sidebar-project-tree::-webkit-scrollbar { width: 7px; }
 .sidebar-project-tree::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .sidebar-project-tree.is-scrolling::-webkit-scrollbar-thumb { background: var(--border); }
  .sidebar-project-tree-header {
@@ -211,7 +208,7 @@
   height: 26px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   background: transparent;
   cursor: pointer;
@@ -228,7 +225,7 @@
   min-width: 0;
   min-height: 34px;
   padding: 2px 10px 2px 16px;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
 }
 .sidebar-project-tree-row:hover,
 .sidebar-project-tree-group.is-active > .sidebar-project-tree-row {
@@ -290,12 +287,12 @@
   min-width: 17px;
   height: 17px;
   padding: 0 4px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   font-size: var(--fs-micro);
   font-weight: 650;
 }
 .sidebar-project-tree-chip.is-running { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.sidebar-project-tree-chip.is-unread { color: #0891b2; background: color-mix(in srgb, #0891b2 12%, transparent); }
+.sidebar-project-tree-chip.is-unread { color: var(--menu-selection-color); background: color-mix(in srgb, var(--menu-selection-color) 12%, transparent); }
 .sidebar-project-tree-row-actions {
   display: flex;
   flex-direction: row-reverse;
@@ -316,7 +313,7 @@
   width: 168px;
   padding: 4px;
   border: var(--hairline) solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
 }
@@ -325,7 +322,7 @@
   width: 100%;
   padding: 8px 10px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   background: transparent;
   font-size: var(--fs-small);
@@ -415,7 +412,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 6px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--danger) 6%, transparent);
   color: var(--text);
   font-size: var(--fs-caption);
@@ -431,7 +428,7 @@
   box-sizing: border-box;
   padding: 5px 8px;
   border: var(--hairline) solid var(--accent);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   outline: none;
   background: var(--bg);
   color: var(--text);
@@ -504,7 +501,7 @@
   color: var(--text);
   background: var(--bg-hover);
   border: var(--hairline) solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: background 0.12s ease, border-color 0.12s ease;
 }
@@ -599,7 +596,7 @@
   height: 28px;
   background: transparent;
   border-left: none;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   transition: color 120ms ease, background 120ms ease;
 }
@@ -661,7 +658,7 @@
   max-width: none;
   height: min(700px, calc(100dvh - 96px));
   max-height: none;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
 }
 
 /* Wide dialogs: split the sections into two explicit columns so the General
@@ -707,7 +704,7 @@
    unlabeled twin of the Version & Updates section below it. */
 .settings-general-overview {
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-panel);
 }
 
@@ -771,7 +768,7 @@
   min-height: 20px;
   padding: 1px 6px;
   border: var(--hairline) solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   color: var(--text);
   font-family: var(--font-mono);
@@ -794,7 +791,7 @@
   justify-content: space-between;
   gap: 10px 16px;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-panel);
 }
 
@@ -884,7 +881,7 @@
   width: 100%;
   max-width: none;
   background: var(--bg-panel);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .settings-option-list,
@@ -905,7 +902,7 @@
 
 .settings-option + .settings-option,
 .settings-chat-option + .settings-chat-option {
-  border-top: var(--hairline) solid var(--border);
+  border-top: var(--hairline) solid var(--separator);
 }
 
 /* The Send key choice does not shrink (its labels are nowrap), so on a phone
@@ -1018,17 +1015,20 @@
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-selected: rgba(0, 0, 0, 0.07);
   --sidebar-selected: #ffffff;
-  --border: rgba(0, 0, 0, 0.07);
-  --separator: rgba(0, 0, 0, 0.06);
+  /* Two edge tiers: --border outlines a surface (cards, inputs, code blocks);
+     --separator divides rows inside one. A hairline is 0.5px on retina, so
+     both sit well above the 7% a full pixel would need. */
+  --border: rgba(0, 0, 0, 0.12);
+  --separator: rgba(0, 0, 0, 0.08);
   --surface: #ffffff;
   /* Card colors form Pi's continuous reading surface. */
   --workbench-bg: #ffffff;
   --surface-muted: rgba(255, 255, 255, 0.64);
   --surface-elevated: #ffffff;
   --text: #1d1d1f;
-  --text-muted: #60606b;
-  --text-dim: #73737e;
-  --text-meta: #60606b;
+  --text-muted: #5f5f63;
+  --text-dim: #6e6e73;
+  --text-meta: #5f5f63;
   --accent: #1d1d1f;
   --accent-hover: #3a3a3c;
   --accent-contrast: #ffffff;
@@ -1045,7 +1045,11 @@
   --assistant-bg: transparent;
   --tool-bg: rgba(0, 0, 0, 0.04);
   --bg-subtle: rgba(0, 0, 0, 0.04);
-  --scroll-thumb: rgba(110, 110, 120, 0.3);
+  --scroll-thumb: rgba(110, 110, 110, 0.3);
+  /* Syntax colours (lib/code-theme.ts): one muted blue, one muted warm tone. */
+  --code-accent: #3f5f8f;
+  --code-warm: #8a5a2e;
+  --code-comment: #8e8e93;
 
   /* Typography. "Noto Sans SC" backstops CJK on Linux builds (deb target in
      release.yml), which this stack otherwise has no CJK fallback for once it
@@ -1067,13 +1071,13 @@
   --radius-xl: 16px;
   --control-height-sm: 28px;
   --control-height: 32px;
-  --shadow-control: 0 1px 2px rgba(15, 23, 42, 0.045);
-  --shadow-composer: 0 1px 2px rgba(15, 23, 42, 0.06),
-    0 12px 32px rgba(15, 23, 42, 0.08);
-  --shadow-popover: 0 16px 44px rgba(15, 23, 42, 0.14),
-    0 2px 8px rgba(15, 23, 42, 0.06);
-  --shadow-dialog: 0 28px 80px rgba(15, 23, 42, 0.22),
-    0 4px 16px rgba(15, 23, 42, 0.08);
+  --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.045);
+  --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.06),
+    0 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-popover: 0 16px 44px rgba(0, 0, 0, 0.14),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-dialog: 0 28px 80px rgba(0, 0, 0, 0.22),
+    0 4px 16px rgba(0, 0, 0, 0.08);
   --ease-native: cubic-bezier(0.2, 0.75, 0.25, 1);
   --ease-sheet: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -1085,19 +1089,19 @@ html.dark {
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-selected: rgba(255, 255, 255, 0.10);
   --sidebar-selected: rgba(255, 255, 255, 0.10);
-  --border: rgba(255, 255, 255, 0.08);
-  --separator: rgba(255, 255, 255, 0.07);
-  --surface: #232328;
-  --workbench-bg: #232328;
-  --surface-muted: rgba(35, 35, 40, 0.72);
-  --surface-elevated: #232327;
-  --text: #ececf0;
-  --text-muted: #a9a9b4;
-  --text-dim: #83838f;
-  --text-meta: #a9a9b4;
-  --accent: #ececf0;
+  --border: rgba(255, 255, 255, 0.14);
+  --separator: rgba(255, 255, 255, 0.09);
+  --surface: #242424;
+  --workbench-bg: #242424;
+  --surface-muted: rgba(36, 36, 36, 0.72);
+  --surface-elevated: #262626;
+  --text: #ececec;
+  --text-muted: #a8a8ad;
+  --text-dim: #8a8a8e;
+  --text-meta: #a8a8ad;
+  --accent: #ececec;
   --accent-hover: #ffffff;
-  --accent-contrast: #161618;
+  --accent-contrast: #161616;
   --accent-soft: rgba(245, 245, 247, 0.14);
   --accent-border: rgba(245, 245, 247, 0.3);
   --menu-selection-color: #6b93ff;
@@ -1111,7 +1115,10 @@ html.dark {
   --assistant-bg: transparent;
   --tool-bg: rgba(255, 255, 255, 0.06);
   --bg-subtle: rgba(255, 255, 255, 0.06);
-  --scroll-thumb: rgba(169, 169, 180, 0.3);
+  --scroll-thumb: rgba(169, 169, 169, 0.3);
+  --code-accent: #8fb0dc;
+  --code-warm: #cfa77c;
+  --code-comment: #8a8a8e;
   --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.24);
   --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.28),
     0 14px 36px rgba(0, 0, 0, 0.3);
@@ -1211,7 +1218,7 @@ html.dark {
   border-color: var(--separator);
   border-radius: var(--radius-lg);
   background: var(--surface-elevated);
-  box-shadow: var(--shadow-control), 0 10px 28px rgba(15, 23, 42, 0.1);
+  box-shadow: var(--shadow-control), 0 10px 28px rgba(0, 0, 0, 0.1);
   transform: translateY(-50%);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1399,7 +1406,7 @@ html.dark .conversation-navigator-preview {
   align-items: center;
   gap: 7px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: default;
@@ -1464,7 +1471,7 @@ html.dark .conversation-navigator-preview {
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: transparent;
   cursor: pointer;
@@ -1503,7 +1510,7 @@ html.dark .conversation-navigator-preview {
   justify-content: center;
   flex: 0 0 28px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -1523,7 +1530,7 @@ html.dark .conversation-navigator-preview {
   align-items: center;
   justify-content: center;
   border: var(--hairline) solid transparent;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -1657,7 +1664,7 @@ html.dark .conversation-navigator-preview {
   align-items: center;
   justify-content: center;
   border: var(--hairline) solid transparent;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -1857,7 +1864,7 @@ pre, code {
   padding: 0;
   flex-shrink: 0;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -1884,7 +1891,7 @@ pre, code {
   padding: 0 8px;
   box-sizing: border-box;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text);
   font-size: var(--fs-body);
@@ -1944,7 +1951,7 @@ pre, code {
   height: 24px !important;
   padding: 0;
   flex-shrink: 0;
-  border-radius: 6px !important;
+  border-radius: var(--radius-sm) !important;
   opacity: 0;
   cursor: pointer;
   transition: opacity 140ms ease, background 140ms ease, color 140ms ease;
@@ -1988,7 +1995,7 @@ pre, code {
   background: var(--surface);
   box-shadow:
     0 0 0 0.5px rgba(60, 60, 67, 0.08),
-    0 1px 2.5px rgba(15, 23, 42, 0.12);
+    0 1px 2.5px rgba(0, 0, 0, 0.12);
   transition: transform 260ms var(--ease-native);
   will-change: transform;
 }
@@ -2055,7 +2062,7 @@ html.dark .sidebar-view-switcher-thumb {
   height: 28px;
   padding: 0 26px 0 26px;
   border: var(--hairline) solid var(--separator);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
   color: var(--text);
   font-size: var(--fs-small);
@@ -2091,7 +2098,7 @@ html.dark .sidebar-view-switcher-thumb {
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-dim);
   cursor: pointer;
@@ -2217,7 +2224,7 @@ html.dark .sidebar-view-switcher-thumb {
   padding: 0;
   background: transparent;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -2289,7 +2296,7 @@ html.dark .sidebar-view-switcher-thumb {
   padding: 0 8px;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   font-size: var(--fs-small);
   text-align: left;
@@ -2328,7 +2335,7 @@ html.dark .sidebar-view-switcher-thumb {
   height: auto;
   padding: 0 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   font-size: var(--fs-body);
@@ -2405,7 +2412,7 @@ html.dark .sidebar-view-switcher-thumb {
   min-width: 16px;
   height: 16px;
   padding: 0 5px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: var(--fs-micro);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -2417,8 +2424,8 @@ html.dark .sidebar-view-switcher-thumb {
 }
 
 .sidebar-project-tree-chip.is-unread {
-  color: #0891b2;
-  background: color-mix(in srgb, #0891b2 14%, transparent);
+  color: var(--menu-selection-color);
+  background: color-mix(in srgb, var(--menu-selection-color) 14%, transparent);
 }
 
 /* Project header: folder + name at rest; "+" and "…" fade in over the row's
@@ -2530,7 +2537,7 @@ html.dark .sidebar-view-switcher-thumb {
   margin: 2px 8px 2px 30px;
   padding: 0 8px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-dim);
   font-size: var(--fs-small);
@@ -2588,7 +2595,7 @@ html.dark .sidebar-view-switcher-thumb {
   margin: 2px 10px;
   padding-right: 7px !important;
   border-left: 0 !important;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 /* Session rows are treeitems, but the native div does not expose a focus
@@ -2651,7 +2658,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   margin: 0 7px 7px;
   overflow: hidden !important;
   border: var(--hairline) solid var(--separator);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface) 46%, transparent);
 }
 
@@ -2662,7 +2669,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 }
 
 .sidebar-file-action-button {
-  border-radius: 7px !important;
+  border-radius: var(--radius-md) !important;
   transition:
     color 120ms ease,
     background 120ms ease,
@@ -2695,7 +2702,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   inset: 3px;
   z-index: 5;
   border: 1.5px dashed var(--accent-border);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--accent) 4%, transparent);
   pointer-events: none;
 }
@@ -2711,7 +2718,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   margin: 4px 6px 2px;
   padding: 6px 8px;
   border: var(--hairline) solid var(--accent-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--surface) 88%, var(--accent));
   color: var(--text);
   font-size: var(--fs-caption);
@@ -2738,7 +2745,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   padding-right: 7px;
   align-items: center;
   gap: 5px;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: default;
@@ -2847,7 +2854,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   justify-content: center;
   gap: 4px;
   border: var(--hairline) solid var(--separator);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   box-shadow: var(--shadow-control);
   color: var(--text-muted);
@@ -2912,7 +2919,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-dim);
   cursor: pointer;
@@ -2933,7 +2940,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 .file-tree-loading > span {
   width: var(--skeleton-width);
   height: 21px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(
     90deg,
     var(--bg-subtle) 20%,
@@ -2966,7 +2973,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   height: 27px;
   padding: 0 9px;
   border: var(--hairline) solid var(--separator);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--shadow-control);
   color: var(--text);
@@ -3085,7 +3092,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   padding: 0 !important;
   align-items: center;
   justify-content: center;
-  border-radius: 7px !important;
+  border-radius: var(--radius-md) !important;
   background: transparent !important;
 }
 
@@ -3182,7 +3189,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   height: 28px !important;
   padding: 0 9px !important;
   border: 0 !important;
-  border-radius: 7px !important;
+  border-radius: var(--radius-md) !important;
   font-size: var(--fs-small) !important;
   font-weight: 500;
 }
@@ -3229,7 +3236,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
   height: 24px;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--bg-subtle);
 }
 
@@ -3287,7 +3294,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 
 .native-popover button {
   min-height: 30px;
-  border-radius: 7px !important;
+  border-radius: var(--radius-md) !important;
   transition:
     color 110ms ease,
     background 110ms ease;
@@ -3307,7 +3314,7 @@ html:not(.dark) .session-item.is-selected .session-item-time {
 
 .native-popover input:not([type="checkbox"]):not([type="radio"]) {
   border-color: var(--separator) !important;
-  border-radius: 7px !important;
+  border-radius: var(--radius-md) !important;
   background: var(--surface-muted) !important;
 }
 
@@ -3827,7 +3834,7 @@ html.dark {
 
 .native-modal {
   border: var(--hairline) solid var(--border) !important;
-  border-radius: 14px !important;
+  border-radius: var(--radius-lg) !important;
   background: var(--surface-elevated) !important;
   box-shadow: var(--shadow-dialog) !important;
   animation: native-modal-in 220ms var(--ease-sheet) both;
@@ -3856,7 +3863,7 @@ html.dark {
   align-items: center;
   justify-content: center;
   border: 0 !important;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent !important;
   color: var(--text-muted) !important;
   cursor: pointer;
@@ -3873,7 +3880,7 @@ html.dark {
 
 .native-settings-card {
   border-color: var(--separator) !important;
-  border-radius: 10px !important;
+  border-radius: var(--radius-lg) !important;
   background: color-mix(in srgb, var(--surface) 60%, transparent) !important;
 }
 
@@ -4021,7 +4028,7 @@ html.dark {
 .native-button-compact {
   min-height: 26px;
   padding: 0 9px !important;
-  border-radius: 7px !important;
+  border-radius: var(--radius-md) !important;
   font-size: var(--fs-caption) !important;
 }
 
@@ -4198,7 +4205,7 @@ html.dark {
 
 .provider-picker-card {
   border-color: var(--separator) !important;
-  border-radius: 10px !important;
+  border-radius: var(--radius-lg) !important;
   background: var(--surface-muted) !important;
   box-shadow: var(--shadow-control);
 }
@@ -4287,7 +4294,7 @@ html.dark {
 .settings-dialog-close {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   transition:
     color 140ms ease,
     background 140ms ease;
@@ -4376,8 +4383,8 @@ html.dark {
     min-width: 64px;
     height: 52px;
     padding: 0 8px;
-    border-radius: 7px;
-    font-size: 11px;
+    border-radius: var(--radius-md);
+    font-size: var(--fs-caption);
     transition:
       color 140ms ease,
       background 140ms ease;
@@ -4412,7 +4419,7 @@ html.dark {
   width: 40px;
   height: 20px;
   border-color: var(--text-muted);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: transparent;
 }
 
@@ -4447,7 +4454,7 @@ html.dark {
 :root[data-platform="windows"] .settings-dialog-surface .config-switch.is-small {
   width: 30px;
   height: 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 :root[data-platform="windows"] .settings-dialog-surface .config-switch.is-small .config-switch-knob {
@@ -4471,7 +4478,7 @@ html.dark {
     grid-template-columns: 208px minmax(0, 1fr);
     grid-template-rows: 48px minmax(0, 1fr);
     width: min(1120px, calc(100vw - 64px));
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 
   :root[data-platform="windows"] .settings-dialog-header,
@@ -4484,7 +4491,7 @@ html.dark {
     grid-area: 1 / 1;
     align-self: center;
     padding-left: 20px;
-    font-size: 13px;
+    font-size: var(--fs-body);
     font-weight: 600;
   }
 
@@ -4508,7 +4515,7 @@ html.dark {
     width: auto;
     padding: 0 12px;
     border-radius: var(--choice-row-radius);
-    font-size: 13px;
+    font-size: var(--fs-body);
     transition:
       color 120ms ease,
       background 120ms ease;
@@ -4751,7 +4758,7 @@ html.dark {
   height: 32px;
   padding: 0 12px;
   border: var(--hairline) solid color-mix(in srgb, var(--queue-hue) 38%, transparent);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--queue-hue) 12%, transparent);
   color: color-mix(in srgb, var(--queue-hue) 72%, var(--text));
   font-size: var(--fs-small);
@@ -4787,7 +4794,7 @@ html.dark {
   gap: 8px;
   padding: 6px 9px 4px;
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
 }
 
@@ -4809,10 +4816,10 @@ html.dark {
   width: 100%;
   padding: 7px 9px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
@@ -5006,7 +5013,7 @@ html.dark {
   max-width: none;
   padding: 7px 12px;
   border: none;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--user-bg);
   color: var(--text);
   font-size: var(--fs-title);
@@ -5047,7 +5054,7 @@ html.dark {
   min-height: 28px !important;
   padding: 4px 9px !important;
   border: var(--hairline) solid var(--separator) !important;
-  border-radius: 8px !important;
+  border-radius: var(--radius-md) !important;
   background: var(--bg-subtle) !important;
   color: var(--text-muted) !important;
   font-size: var(--fs-small) !important;
@@ -5067,7 +5074,7 @@ html.dark {
 .process-details-content {
   padding: 10px 11px 1px;
   border: var(--hairline) solid var(--separator);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface) 34%, transparent);
 }
 
@@ -5173,7 +5180,7 @@ html.dark {
 .markdown-body a:hover { text-decoration-color: var(--accent); }
 .markdown-body .markdown-inline-code {
   background: var(--bg-subtle);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 1px 5px 2px;
   color: var(--text);
   font-family: var(--font-mono);
@@ -5232,8 +5239,8 @@ html.dark {
   margin: 8px 0;
   overflow-x: auto;
   overflow-y: hidden;
-  border: var(--hairline) solid var(--card-edge);
-  border-radius: 10px;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-lg);
 }
 .markdown-body table {
   border-collapse: separate;
@@ -5247,7 +5254,7 @@ html.dark {
 .markdown-table-wrap > table { width: auto; }
 .markdown-body th, .markdown-body td {
   border: 0;
-  border-bottom: var(--hairline) solid var(--card-edge);
+  border-bottom: var(--hairline) solid var(--separator);
   padding: 6px 10px;
   text-align: left;
   vertical-align: top;
@@ -5336,7 +5343,7 @@ html.dark {
 .compaction-file-details {
   margin-top: 10px;
   padding-top: 8px;
-  border-top: var(--hairline) solid var(--border);
+  border-top: var(--hairline) solid var(--separator);
   color: var(--text-muted);
   font-size: var(--fs-small);
 }
@@ -5360,7 +5367,7 @@ html.dark {
   padding: 7px 8px;
   overflow: auto;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg-panel);
   font-family: var(--font-mono);
   font-size: var(--fs-caption);
@@ -5377,8 +5384,8 @@ html.dark {
 .markdown-code-block {
   position: relative;
   margin: 6px 0;
-  border: var(--hairline) solid var(--card-edge);
-  border-radius: 7px;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--bg);
   box-shadow: none;
@@ -5386,7 +5393,7 @@ html.dark {
 .markdown-code-header {
   padding: 5px 10px;
   background: var(--bg-panel);
-  border-bottom: var(--hairline) solid var(--card-edge);
+  border-bottom: var(--hairline) solid var(--separator);
   color: var(--text-dim);
   font-size: var(--fs-caption);
   display: flex;
@@ -5406,7 +5413,7 @@ html.dark {
 }
 .markdown-code-action {
   border: var(--hairline) solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   padding: 2px 7px;
   background: var(--bg);
   color: var(--text-muted);
@@ -5530,7 +5537,7 @@ html.dark {
   height: var(--control-height-sm);
   padding: 0 10px;
   border: var(--hairline) solid var(--separator);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--shadow-control);
   color: var(--text);
@@ -5554,7 +5561,7 @@ html.dark {
   height: var(--control-height-sm);
   padding: 0;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -5580,7 +5587,7 @@ html.dark {
   max-width: 440px;
   margin: 8px 0;
   padding: 8px 12px 8px 8px;
-  border: var(--hairline) solid var(--card-edge);
+  border: var(--hairline) solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-control);
@@ -5824,7 +5831,7 @@ html.dark {
 
 
 .file-add-menu button {
-  border-radius: 8px !important;
+  border-radius: var(--radius-md) !important;
   display: flex;
   width: 100%;
   min-height: 42px;
@@ -5889,7 +5896,7 @@ html.dark {
   padding: 0;
   flex-shrink: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -5921,7 +5928,7 @@ html.dark {
   height: 26px;
   padding: 0 10px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   font-size: var(--fs-small);
@@ -5947,7 +5954,7 @@ html.dark {
   min-width: 18px;
   height: 16px;
   padding: 0 5px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-hover);
   color: var(--text-dim);
   font-size: var(--fs-micro);
@@ -5997,7 +6004,7 @@ html.dark {
   justify-content: center;
   height: 28px;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -6019,7 +6026,7 @@ html.dark {
   justify-content: center;
   height: 28px;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
   font: inherit;
@@ -6047,7 +6054,7 @@ html.dark {
   flex: 1;
   padding: 0 10px;
   border: var(--hairline) solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   outline: none;
   background: var(--bg-panel);
   color: var(--text);
@@ -6096,7 +6103,7 @@ html.dark {
   align-items: center;
   justify-content: center;
   border: var(--hairline) solid var(--separator);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--surface-muted);
   color: var(--text-muted);
 }
@@ -6168,7 +6175,7 @@ html.dark {
   flex: 0 0 26px;
   padding: 0;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -6200,7 +6207,7 @@ html.dark {
   gap: 6px;
   padding: 0 6px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -6505,7 +6512,7 @@ html.dark {
   margin-top: 5px;
   padding: 0 10px;
   border: var(--hairline) solid var(--separator);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--shadow-control);
   color: var(--text);
@@ -6563,8 +6570,8 @@ html.dark {
 .markdown-file-preview p { margin: 0 0 12px; }
 .markdown-file-preview pre {
   background: var(--bg-panel);
-  border: var(--hairline) solid var(--card-edge);
-  border-radius: 6px;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-sm);
   padding: 12px 16px;
   overflow-x: auto;
   font-family: var(--font-mono);
@@ -6629,8 +6636,8 @@ span.linenumber {
   border-color: var(--separator) !important;
   background: color-mix(in srgb, var(--surface-elevated) 94%, transparent) !important;
   box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.05),
-    0 10px 28px -16px rgba(15, 23, 42, 0.24) !important;
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 10px 28px -16px rgba(0, 0, 0, 0.24) !important;
   color: var(--text-muted) !important;
   font-size: var(--fs-body) !important;
   font-weight: 500;
@@ -6705,7 +6712,7 @@ span.linenumber {
   flex: 0 0 auto;
   min-height: 26px;
   border: 1px solid var(--separator);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
   background: transparent;
@@ -6715,7 +6722,7 @@ span.linenumber {
 .app-notice-action {
   padding: 0 10px;
   color: var(--accent);
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 650;
 }
 
@@ -6748,7 +6755,7 @@ span.linenumber {
 
 .native-update-reminder {
   border-color: var(--separator) !important;
-  border-radius: 14px !important;
+  border-radius: var(--radius-lg) !important;
   background: color-mix(in srgb, var(--surface-elevated) 94%, transparent) !important;
   box-shadow: var(--shadow-popover) !important;
   -webkit-backdrop-filter: blur(22px) saturate(130%);
@@ -6785,7 +6792,7 @@ span.linenumber {
   height: 24px;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--accent-soft);
   color: var(--accent);
   font-size: 14px !important;
@@ -6800,7 +6807,7 @@ span.linenumber {
 .native-update-reminder-row {
   padding: 10px 11px !important;
   border-color: var(--separator) !important;
-  border-radius: 9px !important;
+  border-radius: var(--radius-md) !important;
   background: var(--surface-muted) !important;
 }
 
@@ -7123,7 +7130,7 @@ span.linenumber {
   height: 28px;
   padding: 0 10px;
   border: var(--hairline) solid var(--separator);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
   outline: none !important;
   font-size: var(--fs-body);
@@ -7253,7 +7260,7 @@ span.linenumber {
   transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease, transform 120ms var(--ease-native);
   height: 26px;
   padding: 0 11px;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   font-size: var(--fs-small);
 }
 
@@ -7274,7 +7281,7 @@ span.linenumber {
   width: 30px;
   height: 30px;
   flex-basis: 30px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 /* The desktop topbar's panel toggle shares the sidebar chrome-button language:
@@ -7290,7 +7297,7 @@ span.linenumber {
   justify-content: center;
   flex-shrink: 0;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -7375,7 +7382,7 @@ span.linenumber {
   height: 24px;
   padding: 0 8px;
   border: var(--hairline) solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
   font-size: var(--fs-caption);
@@ -7385,7 +7392,7 @@ span.linenumber {
   height: 24px;
   padding: 0 8px;
   border: var(--hairline) solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text-muted);
   font-size: var(--fs-caption);
@@ -7425,7 +7432,7 @@ span.linenumber {
 .nonchat-models-group {
   margin-bottom: 10px;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 .nonchat-models-provider {
@@ -7435,7 +7442,7 @@ span.linenumber {
   gap: 8px;
   padding: 5px 10px;
   background: var(--bg-panel);
-  border-bottom: var(--hairline) solid var(--border);
+  border-bottom: var(--hairline) solid var(--separator);
   color: var(--text);
   font-size: var(--fs-small);
   font-weight: 600;
@@ -7454,7 +7461,7 @@ span.linenumber {
   padding: 5px 10px;
   font-size: var(--fs-small);
 }
-.nonchat-models-row + .nonchat-models-row { border-top: var(--hairline) solid var(--border); }
+.nonchat-models-row + .nonchat-models-row { border-top: var(--hairline) solid var(--separator); }
 .nonchat-models-name { color: var(--text); }
 .nonchat-models-id {
   min-width: 0;
@@ -7507,7 +7514,7 @@ span.linenumber {
   height: 18px;
   padding: 0 5px;
   box-sizing: border-box;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--accent);
   color: var(--accent-contrast);
   font-size: var(--fs-caption);
@@ -7825,7 +7832,7 @@ span.linenumber {
   height: 18px;
   padding: 0 5px;
   box-sizing: border-box;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--accent);
   color: var(--accent-contrast);
   font-size: var(--fs-caption);
@@ -8124,7 +8131,7 @@ span.linenumber {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(15, 23, 42, 0.32);
+  background: rgba(0, 0, 0, 0.32);
 }
 
 .scheduled-dialog {
@@ -8284,7 +8291,7 @@ html.native-desktop :is(
 .composer-queue-recall {
   background: transparent;
   border: var(--hairline) solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   transition: background 120ms ease, border-color 120ms ease;
 }
 .composer-queue-recall:hover {
@@ -8325,7 +8332,7 @@ html.native-desktop :is(
   flex-shrink: 0;
   background: none;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -8349,7 +8356,7 @@ html.native-desktop :is(
   flex-shrink: 0;
   background: none;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease;
@@ -8472,8 +8479,8 @@ html.native-desktop :is(
   width: 100%;
   margin-top: 10px;
   overflow: hidden;
-  border: var(--hairline) solid var(--card-edge);
-  border-radius: 10px;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface) 48%, transparent);
 }
 
@@ -8498,7 +8505,7 @@ html.native-desktop :is(
   background: var(--bg-hover);
 }
 .turn-files-row {
-  border-top: var(--hairline) solid var(--card-edge);
+  border-top: var(--hairline) solid var(--separator);
 }
 
 .turn-files-header-icon,
@@ -8560,12 +8567,12 @@ html.native-desktop :is(
   justify-content: center;
   gap: 10px;
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--fs-small);
 }
 .right-panel-empty-action {
   padding: 4px 12px;
   border: var(--hairline) solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   font: inherit;
@@ -8605,7 +8612,7 @@ html.native-desktop :is(
   flex-shrink: 0;
   padding: 0 4px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: var(--fs-micro);
   line-height: 15px;
 }
 .models-spec-unsaved {
@@ -8619,7 +8626,7 @@ html.native-desktop :is(
 .models-override-notice {
   margin-top: 8px;
   padding: 6px 9px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--accent-soft);
   color: var(--text-muted);
   font-size: var(--fs-caption);
@@ -8641,7 +8648,7 @@ html.native-desktop :is(
   padding: 0;
   list-style: none;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 .models-override-row {
@@ -8650,7 +8657,7 @@ html.native-desktop :is(
   gap: 4px 10px;
   padding: 6px 10px;
 }
-.models-override-row + .models-override-row { border-top: var(--hairline) solid var(--border); }
+.models-override-row + .models-override-row { border-top: var(--hairline) solid var(--separator); }
 .models-override-id {
   min-width: 0;
   overflow: hidden;
@@ -8689,7 +8696,7 @@ html.native-desktop :is(
   min-height: 24px;
   padding: 2px 4px 2px 8px;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg-hover);
   color: var(--text-muted);
   font-size: var(--fs-small);
@@ -8737,7 +8744,7 @@ html.native-desktop :is(
 .message-attached-file {
   min-width: 0;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg-panel);
 }
 
@@ -8775,7 +8782,7 @@ html.native-desktop :is(
   margin: 0;
   padding: 8px 10px;
   overflow: auto;
-  border-top: var(--hairline) solid var(--border);
+  border-top: var(--hairline) solid var(--separator);
   font-family: var(--font-mono);
   font-size: var(--fs-small);
   line-height: 1.5;
@@ -8814,7 +8821,7 @@ html.native-desktop :is(
   min-width: 0;
   padding: 6px 8px;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -8872,7 +8879,7 @@ html.native-desktop :is(
 .composer-outbox-mark { flex: 0 0 auto; color: var(--text-dim); }
 .composer-outbox button {
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -8962,7 +8969,7 @@ html.native-desktop :is(
   margin: 6px 10px 8px;
   padding: 8px 10px;
   border: var(--hairline) solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-panel);
   color: var(--text-muted);
 }
@@ -9001,7 +9008,7 @@ html.native-desktop :is(
   flex: 0 0 auto;
   padding: 4px 10px;
   border: var(--hairline) solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text);
   font-size: var(--fs-small);
@@ -9083,7 +9090,7 @@ html.native-desktop :is(
   display: grid;
   gap: 6px;
   padding: 16px 14px;
-  border-top: var(--hairline) solid var(--border);
+  border-top: var(--hairline) solid var(--separator);
   font-size: var(--fs-body);
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -9139,7 +9146,7 @@ html.native-desktop :is(
   align-items: center;
   gap: 8px;
   margin-top: 12px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--text);
   cursor: pointer;
 }
@@ -9156,5 +9163,25 @@ html.native-desktop :is(
   :root,
   html.dark {
     --menu-selection-color: AccentColor;
+    --focus-ring: color-mix(in srgb, AccentColor 60%, transparent);
+    --selection: color-mix(in srgb, AccentColor 26%, transparent);
+    --info: AccentColor;
   }
+}
+
+/* Code blocks scroll sideways on long lines. Overlay scrollbars hide at rest,
+   so give the bar its own gutter and keep a slim thumb visible as the hint,
+   instead of letting it sit on the last line against the frame. */
+.markdown-code-block pre[class*="language-"] {
+  padding-bottom: 14px !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+.markdown-code-block pre[class*="language-"]::-webkit-scrollbar { height: 10px; }
+.markdown-code-block pre[class*="language-"]::-webkit-scrollbar-track { background: transparent; }
+.markdown-code-block pre[class*="language-"]::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
 }
