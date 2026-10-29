@@ -9369,7 +9369,6 @@ html.dark .terminal-panel {
 .terminal-status-dot.is-exited,
 .terminal-status-dot.is-error { background: var(--danger); }
 .terminal-xterm .xterm-viewport { background-color: var(--surface); }
-=======
 /* Prism renders gutter numbers as text and already sets unprefixed user-select
    inline. Add the WebKit-prefixed form for desktop selection compatibility;
    scope both declarations to the gutter so code tokens remain selectable.
@@ -9418,4 +9417,3 @@ html.dark .terminal-panel {
   .conversation-find-row button { width: 44px; height: 44px; }
   .conversation-find input { min-height: 44px; }
 }
->>>>>>> pr171
