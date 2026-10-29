@@ -340,7 +340,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     if (worktreeState && worktreeState.forCwd === cwd) return worktreeState.projectRoot;
     // Any path in the loaded worktree list belongs to that project — covers
     // worktrees without sessions, so switching to them keeps the row mounted.
-    if (worktreeState?.worktrees.some((w) => w.path === cwd)) return worktreeState.projectRoot;
+    // Only for a top-level checkout: a repo subfolder's list also holds the
+    // parent repo, which keeps its own project identity.
+    if (worktreeState?.isTopLevel && worktreeState.worktrees.some((w) => w.path === cwd)) return worktreeState.projectRoot;
     const match = allSessions.find((s) => s.cwd === cwd);
     return match?.projectRoot ?? cwd;
   }, [allSessions, isChatCwd, worktreeState]);
@@ -832,7 +834,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     }
     // Any path in the loaded worktree list belongs to that project — covers
     // worktrees without sessions, so switching to them keeps the row mounted.
-    if (worktreeState?.worktrees.some((w) => w.path === cwd)) {
+    // Only for a top-level checkout: a repo subfolder's list also holds the
+    // parent repo, which keeps its own project identity.
+    if (worktreeState?.isTopLevel && worktreeState.worktrees.some((w) => w.path === cwd)) {
       return projectSelection(worktreeState.projectRoot, worktreeState.projectKey);
     }
     const match = allSessions.find((session) => (
