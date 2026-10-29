@@ -9276,6 +9276,15 @@ html.dark .settings-background-swatch {
   color: #fff;
 }
 
+/* Prism renders gutter numbers as text and already sets unprefixed user-select
+   inline. Add the WebKit-prefixed form for desktop selection compatibility;
+   scope both declarations to the gutter so code tokens remain selectable.
+   Chromium drag selection is covered by E2E; native WebKit needs desktop QA. */
+.markdown-code-block .react-syntax-highlighter-line-number {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Conversation-local find: a normal flex row outside the transcript scrollport,
    so scrolling never moves the controls or adds searchable text to the results.
    Match colors intentionally keep dark text on an opaque warm surface in both
