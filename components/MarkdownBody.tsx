@@ -21,6 +21,9 @@ import { isTauriDesktop } from "@/lib/desktop-updater";
 
 const MarkdownLinkContext = createContext(false);
 
+// One shared empty map: a fresh Map per streamed delta would rebuild `components` and re-parse every completed block.
+const NO_FENCE_FILES: Map<number, string> = new Map();
+
 interface MarkdownBodyProps {
   children: string;
   className?: string;
@@ -265,9 +268,10 @@ export const MarkdownBody = memo(function MarkdownBody({ children, className, is
     () => normalizeDisplayMath(artifacts && markdown.includes(":::artifact") ? encodeArtifactsForMarkdown(markdown) : markdown),
     [markdown, artifacts],
   );
+  const trackFences = !isStreaming && !!onOpenFile;
   const fenceFiles = useMemo(
-    () => (isStreaming || !onOpenFile ? new Map<number, string>() : fenceFilePaths(normalizedMarkdown, cwd)),
-    [normalizedMarkdown, cwd, onOpenFile, isStreaming],
+    () => (trackFences ? fenceFilePaths(normalizedMarkdown, cwd) : NO_FENCE_FILES),
+    [normalizedMarkdown, cwd, trackFences],
   );
   const components = useMemo(
     () => buildComponents(isStreaming, cwd, onOpenFile, fenceFiles),
