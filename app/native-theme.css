@@ -2590,12 +2590,15 @@ html.dark .sidebar-view-switcher-thumb {
 /* Session rows match the view-switcher tab height (28px).
    Horizontal inset (10px) matches the view switcher and search box. */
 .session-item {
+  --session-row-height: 28px;
+  --session-row-radius: 8px;
+  --session-action-inset: var(--choice-row-gap);
   width: calc(100% - 20px);
-  height: 28px !important;
+  height: var(--session-row-height) !important;
   margin: 2px 10px;
-  padding-right: 7px !important;
+  padding-right: 0 !important;
   border-left: 0 !important;
-  border-radius: var(--radius-md);
+  border-radius: var(--session-row-radius);
 }
 
 /* Session rows are treeitems, but the native div does not expose a focus
@@ -6715,9 +6718,10 @@ span.linenumber {
 
 .app-notice-shelf {
   position: fixed;
-  top: 14px;
+  top: calc(60px + env(safe-area-inset-top, 0px));
   right: 16px;
-  z-index: 1200;
+  /* Keep the toolbar reachable and let menus/dialogs cover background notices. */
+  z-index: 650;
   display: flex;
   width: min(420px, calc(100vw - 24px));
   flex-direction: column;
@@ -6726,16 +6730,33 @@ span.linenumber {
 }
 
 .app-notice-item {
+  --notice-color: var(--accent);
   position: relative;
   display: flex;
   min-height: 48px;
   max-height: 460px;
-  align-items: flex-start;
-  gap: 9px;
-  margin-bottom: 7px;
+  align-items: center;
+  gap: var(--choice-inset);
+  margin-bottom: var(--choice-inset);
   overflow: hidden;
-  padding: 10px 9px 10px 13px;
+  padding: var(--choice-inset);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-lg);
   pointer-events: auto;
+}
+
+.app-notice-item.is-error { --notice-color: var(--danger); }
+.app-notice-item.is-warning { --notice-color: var(--warning); }
+.app-notice-item.is-success { --notice-color: var(--success); }
+
+.app-notice-item .notice-shelf-indicator {
+  width: 6px;
+  height: 6px;
+  margin: 0 4px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  color: var(--notice-color);
+  background: currentColor;
 }
 
 .app-notice-item.is-exiting {
@@ -8370,27 +8391,55 @@ html.native-desktop :is(
 
 
 /* Small controls in the sidebar and topbar whose hover used to be set from JS. */
+.session-item-trailing {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: var(--session-row-height);
+  height: 100%;
+  flex-shrink: 0;
+}
 .session-item-more {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 100%;
+  height: 100%;
   padding: 0;
   flex-shrink: 0;
   background: none;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--session-row-radius);
   color: var(--text-muted);
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
+  transition: color 120ms ease;
 }
-.session-item-more:hover,
-.session-item-more.is-open {
+.session-item-more-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: calc(var(--session-row-height) - 2 * var(--session-action-inset));
+  height: calc(var(--session-row-height) - 2 * var(--session-action-inset));
+  border-radius: calc(var(--session-row-radius) - var(--session-action-inset));
+  transition: background 120ms ease;
+}
+.session-item-more-icon svg { display: block; flex: none; }
+.session-item-more:hover .session-item-more-icon,
+.session-item-more.is-open .session-item-more-icon,
+.session-item-more:focus-visible .session-item-more-icon {
   background: var(--bg-selected);
 }
 .session-item-more:hover {
   color: var(--text);
+}
+.session-item-more:focus-visible { outline: none; }
+.session-item-more:focus-visible .session-item-more-icon {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+}
+.session-item-trailing .session-item-time {
+  padding-inline-end: var(--session-action-inset) !important;
 }
 
 .worktree-remove-button {
@@ -9111,7 +9160,8 @@ html.native-desktop :is(
   margin-bottom: 6px;
 }
 .settings-font-heading-row .settings-general-heading { margin: 0; }
-.settings-font-option {
+.settings-font-option,
+.settings-terminal-option {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
   align-items: center;
@@ -9119,6 +9169,10 @@ html.native-desktop :is(
   padding-block: 14px;
 }
 .settings-font-control { display: grid; min-width: 0; gap: 8px; }
+.settings-terminal-option {
+  grid-template-columns: minmax(96px, 1fr) minmax(120px, 220px);
+  column-gap: 16px;
+}
 .settings-font-control .app-select-trigger { width: 100%; min-width: 0; }
 .settings-font-custom { display: flex; align-items: center; gap: 8px; }
 .settings-font-custom input {
@@ -9147,7 +9201,8 @@ html.native-desktop :is(
 .settings-font-preview code { color: var(--text-muted); white-space: pre-wrap; }
 .settings-font-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 @media (max-width: 640px) {
-  .settings-font-option { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .settings-font-option,
+  .settings-terminal-option { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .settings-font-custom input { font-size: 16px; }
   .settings-appearance .settings-theme-options { width: 100%; }
   .settings-appearance .settings-theme-option { flex: 1 1 0; padding-inline: 5px; gap: 0; }
@@ -9233,3 +9288,84 @@ html.native-desktop :is(
   background: var(--scroll-thumb);
   background-clip: padding-box;
 }
+/* Shared conversation confirmations use the workbench's quiet danger action,
+   rather than packing a filled button into a 28px sidebar row. */
+.chat-confirm-dialog {
+  width: 400px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-popover);
+}
+.chat-confirm-dialog .project-trust-body { padding: 20px; }
+.chat-confirm-dialog .project-trust-error {
+  padding-inline: 20px;
+  color: var(--danger);
+}
+.chat-confirm-subject {
+  margin-block-start: 12px;
+  max-height: min(180px, 30dvh);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--text);
+}
+.chat-confirm-dialog .project-trust-footer {
+  gap: var(--choice-inset);
+  padding: 0 20px 20px;
+  border-top: 0;
+}
+.chat-confirm-dialog .project-trust-button {
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+}
+.chat-confirm-dialog .project-trust-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.chat-confirm-dialog .project-trust-button.is-danger {
+  border-color: color-mix(in srgb, var(--danger) 24%, var(--border));
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface-elevated));
+  color: color-mix(in srgb, var(--danger) 85%, var(--text));
+}
+.chat-confirm-dialog .project-trust-button.is-danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface-elevated));
+}
+.terminal-panel {
+  --terminal-magenta: #9042a8;
+  --terminal-cyan: #087e8b;
+  background: var(--surface);
+  color: var(--text);
+}
+html.dark .terminal-panel {
+  --terminal-magenta: #d8a0ed;
+  --terminal-cyan: #67d5df;
+}
+.terminal-panel-header {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-muted);
+  gap: 8px;
+}
+.terminal-panel-path { flex: 1; }
+.terminal-panel-header button {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.terminal-panel-header button:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.terminal-panel-exit { color: var(--text-muted); }
+.terminal-panel-error {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  border-color: var(--border);
+  color: var(--danger);
+}
+.terminal-status-dot { background: var(--warning); }
+.terminal-status-dot.is-ready { background: var(--success); }
+.terminal-status-dot.is-exited,
+.terminal-status-dot.is-error { background: var(--danger); }
+.terminal-xterm .xterm-viewport { background-color: var(--surface); }
