@@ -9275,3 +9275,43 @@ html.dark .settings-background-swatch {
   border-color: var(--danger);
   color: #fff;
 }
+
+/* Conversation-local find: a normal flex row outside the transcript scrollport,
+   so scrolling never moves the controls or adds searchable text to the results.
+   Match colors intentionally keep dark text on an opaque warm surface in both
+   themes; active orange distinguishes keyboard navigation from passive matches.
+   All other surfaces, focus rings and typography use the shared theme tokens. */
+.conversation-find {
+  z-index: 45;
+  flex: 0 0 auto;
+  width: min(520px, calc(100% - 24px));
+  margin: 8px 12px 0 auto;
+  padding: 6px 8px;
+  border: var(--hairline) solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-control);
+  color: var(--text);
+  font-size: var(--fs-small);
+}
+.conversation-find-row { display: flex; align-items: center; gap: 4px; }
+.conversation-find input {
+  flex: 1; min-width: 0; width: 0; padding: 5px 6px;
+  border: 0; border-radius: 5px; background: transparent; color: var(--text); font: inherit;
+}
+.conversation-find input:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.conversation-find-count { flex-shrink: 0; min-width: 42px; text-align: center; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.conversation-find button { flex-shrink: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text); cursor: pointer; font: inherit; }
+.conversation-find-row button { width: 28px; height: 28px; font-size: 18px; }
+.conversation-find button:hover:not(:disabled) { background: var(--bg-hover); }
+.conversation-find button:disabled { opacity: .4; cursor: default; }
+.conversation-find button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.conversation-find-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 3px 6px 0; color: var(--text-dim); font-size: var(--fs-caption); }
+.conversation-find-hint button { color: var(--accent); padding: 2px 0; }
+::highlight(conversation-find) { background-color: #f5ce65; color: #302000; }
+::highlight(conversation-find-active) { background-color: #ee8c35; color: #211000; }
+/* Match the app's 44px touch targets without widening desktop controls. */
+@media (pointer: coarse) {
+  .conversation-find-row button { width: 44px; height: 44px; }
+  .conversation-find input { min-height: 44px; }
+}
