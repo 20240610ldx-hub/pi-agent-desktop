@@ -321,6 +321,15 @@ function MermaidZoomDialog({ svg, onClose }: { svg: string; onClose: () => void 
   );
 }
 
+/** Blocks longer than this fold to their first lines until expanded. */
+export const CODE_FOLD_LINES = 30;
+/** A one- or two-line snippet (a command, a path) reads better without a gutter. */
+export const CODE_LINE_NUMBER_MIN_LINES = 3;
+
+export function codeLineCount(code: string): number {
+  return code.replace(/\n$/, "").split("\n").length;
+}
+
 interface CodeBlockProps {
   code: string;
   lang: string;
@@ -351,6 +360,13 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
   const { isDark } = useTheme();
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [wrap, setWrap] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const lineCount = codeLineCount(code);
+  // A block keeps growing while it streams, so it only folds once complete.
+  const foldable = !isStreaming && lineCount > CODE_FOLD_LINES;
+  const folded = foldable && !expanded;
+  const showLineNumbers = lineCount >= CODE_LINE_NUMBER_MIN_LINES;
 
   const copy = () => {
     copyText(code).then(() => {
@@ -366,6 +382,13 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
         <div className="markdown-code-actions">
           {headerAction}
           <button
+            onClick={() => setWrap((value) => !value)}
+            className={`markdown-code-action${wrap ? " is-active" : ""}`}
+            aria-pressed={wrap}
+          >
+            {wrap ? t("chat.codeNoWrap") : t("chat.codeWrap")}
+          </button>
+          <button
             onClick={copy}
             className="markdown-code-action"
           >
@@ -373,6 +396,7 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
           </button>
         </div>
       </div>
+      <div className={`markdown-code-body${folded ? " is-folded" : ""}${wrap ? " is-wrapped" : ""}`}>
       {isStreaming ? (
         <pre
           style={{
@@ -390,7 +414,7 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
         <SyntaxHighlighter
           language={lang || "text"}
           style={isDark ? codeBlockDarkTheme : vs}
-          showLineNumbers
+          showLineNumbers={showLineNumbers}
           lineNumberStyle={{ color: "var(--text-dim)", fontStyle: "normal" }}
           customStyle={{
             margin: 0,
@@ -407,6 +431,17 @@ export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isS
         >
           {code}
         </SyntaxHighlighter>
+      )}
+      </div>
+      {foldable && (
+        <button
+          type="button"
+          className="markdown-code-fold"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? t("chat.codeCollapse") : t("chat.codeExpand", { count: lineCount })}
+        </button>
       )}
     </div>
   );

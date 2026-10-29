@@ -1,11 +1,12 @@
 "use client";
 
-import { createContext, memo, useContext, useMemo, type ComponentProps, type MouseEvent } from "react";
+import { createContext, memo, useContext, useEffect, useMemo, useState, type ComponentProps, type MouseEvent } from "react";
 import { type Components, type ExtraProps } from "react-markdown";
 import { useStreamingMarkdownText } from "@/hooks/useStreamingMarkdown";
 import { StreamingMarkdown } from "./StreamingMarkdown";
 import { useFileContextMenu } from "@/hooks/useFileContextMenu";
-import { inlineCodeFilePath } from "@/lib/file-context-menu";
+import { useI18n } from "@/hooks/useI18n";
+import { fenceFilePaths, inlineCodeFilePath } from "@/lib/file-context-menu";
 import { parsePdfPageFragment, resolveLocalFileHref, shouldOpenLocalFileInApp } from "@/lib/file-links";
 import { encodeFilePathForApi } from "@/lib/file-paths";
 import { markdownRehypePlugins, markdownRemarkPlugins, markdownUrlTransform, markdownUserRemarkPlugins, normalizeDisplayMath } from "@/lib/markdown";
@@ -15,7 +16,8 @@ import { HtmlPreviewBlock } from "./HtmlPreviewBlock";
 import { htmlPreviewKind } from "@/lib/html-preview";
 import { ArtifactCard } from "./ArtifactCard";
 import { ARTIFACT_FENCE_LANG, decodeArtifactFence, encodeArtifactsForMarkdown } from "@/lib/artifacts";
-import { handleExternalLinkClick } from "@/lib/desktop-native";
+import { handleExternalLinkClick, openPathNative } from "@/lib/desktop-native";
+import { isTauriDesktop } from "@/lib/desktop-updater";
 
 const MarkdownLinkContext = createContext(false);
 
@@ -81,6 +83,44 @@ function MarkdownInlineCode({
   );
 }
 
+/** "Open" beside Copy on a code block the prose above attributes to a saved file; shown once the server confirms the file exists. */
+function CodeBlockOpenFile({ filePath, onOpenFile }: { filePath: string; onOpenFile: (filePath: string) => void }) {
+  const { t } = useI18n();
+  const [exists, setExists] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setExists(false);
+    fetch(`/api/files/${encodeFilePathForApi(filePath)}?type=meta`)
+      .then((res) => { if (!cancelled) setExists(res.ok); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [filePath]);
+  if (!exists) return null;
+  const name = filePath.split(/[\\/]/).pop() ?? filePath;
+  return (
+    <>
+      <button
+        type="button"
+        className="markdown-code-action"
+        title={t("chat.openWrittenFile", { name })}
+        onClick={() => onOpenFile(filePath)}
+      >
+        {t("sidebar.open")}
+      </button>
+      {isTauriDesktop() && (
+        <button
+          type="button"
+          className="markdown-code-action"
+          title={t("chat.openDefaultAppTitle", { name })}
+          onClick={() => { openPathNative(filePath).catch((error) => console.error("Open with default app failed", error)); }}
+        >
+          {t("chat.openDefaultApp")}
+        </button>
+      )}
+    </>
+  );
+}
+
 /** A markdown link to a local file; right-click offers the file menu. */
 function MarkdownLocalFileLink({
   filePath,
@@ -119,9 +159,10 @@ function buildComponents(
   isStreaming: boolean | undefined,
   cwd: string | undefined,
   onOpenFile: ((filePath: string, page?: number) => void) | undefined,
+  fenceFiles: Map<number, string>,
 ): Components {
   return {
-    code({ className, children, ...props }) {
+    code({ className, children, node, ...props }) {
       const lang = className?.replace("language-", "").toLowerCase() ?? "";
       const raw = String(children);
       const isBlock = className?.includes("language-") || raw.includes("\n");
@@ -151,7 +192,15 @@ function buildComponents(
             />
           );
         }
-        return <CodeBlock code={raw.replace(/\n$/, "")} lang={lang} isStreaming={isStreaming} />;
+        const savedPath = !isStreaming && onOpenFile ? fenceFiles.get(node?.position?.start.line ?? 0) : undefined;
+        return (
+          <CodeBlock
+            code={raw.replace(/\n$/, "")}
+            lang={lang}
+            isStreaming={isStreaming}
+            headerAction={savedPath && onOpenFile ? <CodeBlockOpenFile filePath={savedPath} onOpenFile={onOpenFile} /> : undefined}
+          />
+        );
       }
       return (
         <MarkdownInlineCode cwd={cwd} onOpenFile={onOpenFile} {...props}>
@@ -216,9 +265,13 @@ export const MarkdownBody = memo(function MarkdownBody({ children, className, is
     () => normalizeDisplayMath(artifacts && markdown.includes(":::artifact") ? encodeArtifactsForMarkdown(markdown) : markdown),
     [markdown, artifacts],
   );
+  const fenceFiles = useMemo(
+    () => (isStreaming || !onOpenFile ? new Map<number, string>() : fenceFilePaths(normalizedMarkdown, cwd)),
+    [normalizedMarkdown, cwd, onOpenFile, isStreaming],
+  );
   const components = useMemo(
-    () => buildComponents(isStreaming, cwd, onOpenFile),
-    [isStreaming, cwd, onOpenFile],
+    () => buildComponents(isStreaming, cwd, onOpenFile, fenceFiles),
+    [isStreaming, cwd, onOpenFile, fenceFiles],
   );
   // Reuse the element when a new network delta has not published a snapshot.
   const body = useMemo(() => (
