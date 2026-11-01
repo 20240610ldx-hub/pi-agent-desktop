@@ -114,49 +114,45 @@ jobs:
           tagName: v__VERSION__
           releaseName: pi-agent-desktop v__VERSION__
           releaseBody: |
-            ## Pi Agent Desktop 0.7.8
+            ## Pi Agent Desktop 0.8.0
 
             ### New
 
-            - **Find in conversation.** Press Ctrl/Cmd+F to search the loaded part of a conversation, with match highlighting, a counter, Enter / Shift+Enter to step through matches and Esc to return to the composer. Matches stay put while a reply is streaming.
-            - **Choose the terminal shell.** General settings now lets you pick the shell used by "Open in terminal". Windows prefers PowerShell 7, then Windows PowerShell, then CMD; macOS and Linux keep your login shell. The choice applies to new or restarted terminals.
-            - **Richer replies.** A leading YAML block is shown as a code block instead of disappearing, GitHub alerts (`> [!NOTE]`) render as callouts, long code blocks fold, and code blocks that the reply says were saved to a file get an Open button.
-            - **Conversation titles.** Title generation shows its progress and gives an actionable message when it fails.
+            - **A welcome screen for new sessions.** An empty session now greets you with the project name and four starter prompts (different ones for chats and projects). Picking one fills the composer without sending it.
+            - **Artifacts page shows what you asked for.** By default it lists the files you named or the agent handed you (HTML, Markdown, PDF, Office, CSV, images, media), including pages produced by shell commands. Files the agent only edited as part of its work stay out of the way, and credentials are never listed. Switch the filter to see process files or everything, and move any file between the two.
+            - **Favorites and a right-click menu on the Artifacts page.** Star an artifact or file and filter the list to favorites. Right-click a row to open the conversation that made it, open the file with its default app, or reveal it in Finder / Explorer. The list column can be resized and remembers its width.
 
             ### Improved
 
-            - **A calmer look.** Neutral grays, a flat window and sidebar canvas, thinner two-tier borders that stay visible on Retina screens, softer code colors and consistent corner radii. The accent color follows the system. The background presets from 0.7.7 are gone, replaced by this neutral canvas; light, dark and system modes remain.
-            - Terminals use the workbench's light and dark colors and start faster, and closing a terminal on Windows no longer errors.
-            - Project and session menus stay inside the window, and delete confirmations are shared and keyboard friendly.
-            - Line numbers are excluded when you select code.
+            - **Clearer typography and quieter chrome.** Font weights are unified so Latin and Chinese text render at the same weight, small text is larger, headings and prose spacing are tuned, and message dates follow the app language instead of the system locale.
+            - **Friendlier wording and details.** Tool presets show readable names, the usage footer shows just the cost (hover for token counts), and the scheduler notice is one line with details on demand.
+            - **Files that were moved or deleted are explained.** An "Edited N files" row for a file that no longer exists is dimmed and labelled, and opening it says the file was moved or deleted instead of a bare "Not found".
 
             ### Fixed
 
-            - A project that is a subfolder of a Git repository no longer shows the parent repository's worktrees in the sidebar.
+            - A hydration error in the sidebar when the Chats section had been collapsed.
 
             Bundled components: pi 1.4.0, pi-web 0.10.0.
 
             ---
 
-            ## Pi Agent Desktop 0.7.8
+            ## Pi Agent Desktop 0.8.0
 
             ### 新增
 
-            - **对话内查找。** 按 Ctrl/Cmd+F 搜索已加载的对话内容：高亮匹配、显示计数，Enter / Shift+Enter 在匹配间跳转，Esc 回到输入框。回复流式输出时，当前匹配位置保持不动。
-            - **选择终端 Shell。** “通用”设置可选择“在终端中打开”使用的 Shell。Windows 优先 PowerShell 7，其次 Windows PowerShell，再次 CMD；macOS 和 Linux 沿用登录 Shell。新建或重启的终端会使用该选择。
-            - **更丰富的回复渲染。** 开头的 YAML 块现在以代码块显示而不是消失；支持 GitHub 提示块（`> [!NOTE]`）；长代码块可折叠；回复中说明已保存到文件的代码块会出现“打开”按钮。
-            - **对话标题生成。** 标题生成会显示进度，失败时给出可操作的提示。
+            - **新会话欢迎页。** 空会话现在会显示问候、项目名和四条起手提示（聊天与项目各有不同的提示）。点选后只填入输入框，不会直接发送。
+            - **Artifacts 页面默认只显示你要的成果。** 默认列出你提到的、或 agent 交给你的文件（HTML、Markdown、PDF、Office、CSV、图片、媒体），包括由 shell 命令生成的页面；agent 工作过程中只是编辑过的文件不再干扰列表，凭据类文件永远不会列出。可切换筛选查看过程文件或全部，也能手动在两类之间移动文件。
+            - **Artifacts 页面支持收藏和右键菜单。** 可为 artifact 或文件加星，并按收藏筛选；右键某一行可打开产生它的对话、用默认应用打开文件，或在 Finder / 资源管理器中显示。列表栏可拖动调整宽度，并会记住宽度。
 
             ### 改进
 
-            - **更平静的外观。** 中性灰、统一的窗口与侧栏纯色底、更细的两档边线（在 Retina 屏上依然清晰）、更柔和的代码配色和统一圆角；强调色跟随系统。0.7.7 的背景预设已移除，由中性底色取代；浅色、深色与跟随系统模式保留。
-            - 终端使用工作台的明暗配色且启动更快；Windows 上关闭终端不再报错。
-            - 项目和会话菜单不会超出窗口，删除确认改为共用组件并支持键盘操作。
-            - 选择代码时不再选中行号。
+            - **排版更清晰、界面更安静。** 统一字重，使中英文在同一行中粗细一致；提升小字号；调整标题和正文行距；消息日期跟随应用语言而不是系统区域设置。
+            - **措辞和细节更友好。** 工具预设显示易读名称；用量页脚只显示费用（悬停可看 token 数）；调度器提示精简为一行，详情可展开。
+            - **说明已移动或删除的文件。** “编辑了 N 个文件”中已不存在的文件会变灰并标注；打开时会提示文件已被移动或删除，而不再只显示“Not found”。
 
             ### 修复
 
-            - 位于 Git 仓库子目录的项目，侧栏不再显示父仓库的 worktree。
+            - 修复折叠 Chats 区域后侧栏出现的 hydration 错误。
 
             内置组件版本：pi 1.4.0、pi-web 0.10.0。
           releaseDraft: true
