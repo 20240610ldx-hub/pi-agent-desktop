@@ -1867,8 +1867,33 @@ pre, code {
   background: var(--bg-panel) !important;
   background: var(--canvas-background) !important;
   border-right: var(--hairline) solid var(--separator) !important;
-  -webkit-backdrop-filter: saturate(130%) blur(24px);
-  backdrop-filter: saturate(130%) blur(24px);
+  /* No backdrop-filter: the sidebar paints an opaque background, so a blur
+     shows nothing, yet every repaint inside the sidebar (running spinners,
+     unread pulses, live counts) re-runs it over the full height. On Windows
+     that kept the GPU busy for as long as an agent ran (#199). */
+}
+
+/* Sidebar activity indicators animate transform/opacity only, so they stay on
+   the compositor. They were SVG SMIL animations (`animateTransform`, an
+   animated `r`), which repaint on the main thread every frame (#199). */
+.session-running-spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+.session-unread-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: session-unread-ring 1.6s ease-in-out infinite;
+}
+
+@keyframes session-unread-ring {
+  0%, 100% { transform: scale(1); opacity: 0.32; }
+  50% { transform: scale(2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-running-spinner,
+  .session-unread-ring { animation: none; }
 }
 
 /* No top padding: the header opens with the 48px .sidebar-controls-row, which
@@ -10056,51 +10081,12 @@ html.dark .terminal-panel {
   line-height: 1.5;
 }
 
-.new-session-welcome-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.new-session-welcome-chip {
-  height: var(--control-h-lg);
-  padding: 0 14px;
-  border: var(--hairline) solid var(--border);
-  border-radius: 999px;
-  background: var(--bg);
-  color: var(--text-muted);
-  font-size: var(--fs-body);
-  box-shadow: var(--shadow-control);
-  cursor: pointer;
-  transition:
-    color var(--dur-fast) var(--ease-native),
-    background var(--dur-fast) var(--ease-native),
-    border-color var(--dur-fast) var(--ease-native);
-}
-
-.new-session-welcome-chip:hover {
-  border-color: color-mix(in srgb, var(--text) 18%, transparent);
-  background: var(--bg-hover);
-  color: var(--text);
-}
-
-.new-session-welcome-chip:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
 @media (max-width: 640px) {
   .new-session-welcome-title { font-size: 22px; }
   .new-session-welcome-subtitle { font-size: var(--fs-body); }
 }
 
-/* Token counts are diagnostics: cost at rest, the full line while the cost
-   itself is hovered (hovering the whole footer would shove Copy sideways). */
 .message-meta { cursor: default; }
-.message-meta-detail { display: none; }
-.message-meta:hover .message-meta-detail { display: inline; }
 
 /* Upstream fades the whole button to 0.28, so the prose shows through it. */
 .chat-scroll-to-bottom.is-visible {
@@ -10293,4 +10279,51 @@ html.dark .artifacts-thumb[data-tone="data"] { --tone: #4fc1d6; }
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* Settings › General › Remote relay (components/RelaySection.tsx) */
+.relay-section .settings-option-list > .relay-note,
+.relay-section .settings-option-list > .relay-error {
+  padding: 0 14px 10px;
+}
+
+.relay-error { color: var(--danger); }
+
+.relay-pairing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 14px;
+  text-align: center;
+}
+
+.relay-qr {
+  width: min(240px, 100%);
+  padding: 8px;
+  border-radius: 10px;
+  /* QR codes need dark modules on light: keep it light in dark mode too. */
+  background: #ffffff;
+}
+
+.relay-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.relay-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  align-self: center;
+}
+
+.relay-devices {
+  display: flex;
+  flex-direction: column;
+}
+
+.relay-devices > .settings-option-hint {
+  padding: 10px 14px 0;
 }
